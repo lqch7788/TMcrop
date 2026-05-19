@@ -67,6 +67,7 @@ import alarmConfigsRouter from './alarmConfigs';
 import waterFertilizerRouter from './waterFertilizer';
 import plantSettingsRouter from './plantSettings';
 import projectDebugRouter from './projectDebug';
+import deviceDistributionRouter from './deviceDistribution';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -278,6 +279,9 @@ router.use('/plant-settings', requireAuth, plantSettingsRouter);
 
 // 工程调试路由 — iAGS ProjectDebug 集成
 router.use('/debug', requireAuth, projectDebugRouter);
+
+// 设备分配路由 — iAGS DeviceDistribution 集成
+router.use('/device-distributions', requireAuth, deviceDistributionRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

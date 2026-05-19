@@ -815,6 +815,38 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• plant_settings:', e.message);
   }
 
+  // 33. 创建 device_distributions 表（设备分配 — iAGS DeviceDistribution 预留端口）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS device_distributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oid TEXT UNIQUE NOT NULL,
+        device_name TEXT NOT NULL,
+        device_code TEXT,
+        site_name TEXT,
+        area_name TEXT,
+        device_type TEXT,
+        motor_name TEXT,
+        sort_order INTEGER DEFAULT 0,
+        allow_runtime TEXT,
+        rest_time TEXT,
+        initial_status TEXT,
+        circuit TEXT,
+        slave_devices TEXT,
+        start_time TEXT,
+        show_curve INTEGER DEFAULT 0,
+        specs TEXT,
+        remarks TEXT,
+        status TEXT DEFAULT 'active',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ device_distributions 表创建成功（设备分配）');
+  } catch (e: any) {
+    console.log('• device_distributions:', e.message);
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }
@@ -919,10 +951,5 @@ export function deduplicateDictionaries(): void {
   console.log('字典数据去重完成');
 }
 
-// 独立运行时执行
-async function main() {
-  await initDatabase();
-  await fixMissingSchema();
-}
-
-main().catch(console.error);
+// 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
+// 如需独立运行，执行: npx tsx src/db/fixMissingSchema.ts

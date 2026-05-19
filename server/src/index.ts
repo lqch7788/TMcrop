@@ -8,7 +8,7 @@ import cors from './middleware/cors';
 import { requestLogger } from './middleware/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
-import { initDatabase } from './db/index';
+import { initDatabase, saveDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
 import { fixMissingSchema, deduplicateDictionaries } from './db/fixMissingSchema';
 import path from 'path';
@@ -82,6 +82,11 @@ async function start() {
     console.log('正在导入物料编码分类数据...');
     const { seedMaterialCodeCategories } = await import('./db/seedMaterialCodeCategories');
     seedMaterialCodeCategories();
+
+    // 种子数据加载完成后持久化到磁盘
+    console.log('正在保存数据库...');
+    saveDatabase();
+    console.log('数据库保存完成');
 
     // 中间件
     app.use(cors);

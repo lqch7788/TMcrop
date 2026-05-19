@@ -1,10 +1,10 @@
 /**
- * 系统参数配置页面
- * 功能：系统配置的新增、编辑、删除、查询、导出
- * 架构：组件 → useSystemConfigStore (Zustand) → API
+ * 系统参数配置页面 — V2.1 架构标准
+ * 功能：系统配置的增删改查、分类筛选、导出
+ * 数据流：组件 → useSystemConfigStore → enhancedApiClient → 后端 API
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2,
@@ -12,63 +12,110 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '../stores';
-import type { SystemConfig } from '../services/apiBasicDataService';
+import type { SystemConfig } from '../stores';
 
-// 默认配置作为 API 返回空时的后备
-const DEFAULT_CONFIGS: SystemConfig[] = [
-  { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', category: 'system', description: '系统显示名称', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '2', configKey: 'system_version', configValue: 'V1.2.0', configType: 'string', category: 'system', description: '当前系统版本', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否启用演示模式', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '4', configKey: 'show_tutorial', configValue: 'true', configType: 'boolean', category: 'demo', description: '是否显示新手引导', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '5', configKey: 'theme_color', configValue: 'emerald', configType: 'string', category: 'ui', description: '系统主题色', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '6', configKey: 'auto_save_interval', configValue: '5000', configType: 'number', category: 'system', description: '自动保存间隔（毫秒）', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '7', configKey: 'page_size', configValue: '10', configType: 'number', category: 'ui', description: '列表默认分页大小', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '8', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用系统通知', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '9', configKey: 'data_retention_days', configValue: '365', configType: 'number', category: 'system', description: '本地数据保留天数', isActive: true, createdAt: '', updatedAt: '' },
-  { id: '10', configKey: 'enable_export', configValue: 'true', configType: 'boolean', category: 'feature', description: '是否启用数据导出功能', isActive: true, createdAt: '', updatedAt: '' },
-];
+// ==================== TAB 分类配置 ====================
+// 与后端 DB system_configs.category 字段对齐
+const CATEGORY_TABS = [
+  { value: 'all', label: '全部' },
+  { value: 'system', label: '系统设置' },
+  { value: 'task', label: '农事任务' },
+  { value: 'approval', label: '审批流程' },
+  { value: 'business', label: '业务参数' },
+] as const;
 
 // 弹窗最小尺寸
 const MODAL_MIN_WIDTH = 480;
 const MODAL_MIN_HEIGHT = 360;
 
+// ==================== 辅助函数 ====================
+
+/** 类型标签徽章 */
+function TypeBadge({ type }: { type: string }) {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    string: { bg: 'bg-blue-100', text: 'text-blue-700', label: '文本' },
+    number: { bg: 'bg-green-100', text: 'text-green-700', label: '数字' },
+    boolean: { bg: 'bg-purple-100', text: 'text-purple-700', label: '布尔' },
+  };
+  const s = map[type] || map.string;
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${s.bg} ${s.text}`}>
+      {s.label}
+    </span>
+  );
+}
+
+/** 分类标签徽章 */
+function CategoryBadge({ category }: { category: string }) {
+  const map: Record<string, { bg: string; text: string; label: string }> = {
+    system: { bg: 'bg-blue-100', text: 'text-blue-800', label: '系统设置' },
+    task: { bg: 'bg-orange-100', text: 'text-orange-800', label: '农事任务' },
+    approval: { bg: 'bg-violet-100', text: 'text-violet-800', label: '审批流程' },
+    business: { bg: 'bg-green-100', text: 'text-green-800', label: '业务参数' },
+  };
+  const s = map[category];
+  if (!s) return null;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${s.bg} ${s.text}`}>
+      {s.label}
+    </span>
+  );
+}
+
 export default function SystemConfig() {
-  const { configs, loading, error, loadConfigs, addConfig, updateConfig, removeConfig } = useSystemConfigStore();
+  // ========== 1. 从 Store 获取数据和方法 ==========
+  const configs = useSystemConfigStore((s) => s.configs);
+  const loading = useSystemConfigStore((s) => s.loading);
+  const error = useSystemConfigStore((s) => s.error);
+  const loadConfigs = useSystemConfigStore((s) => s.loadConfigs);
+  const addConfig = useSystemConfigStore((s) => s.addConfig);
+  const updateConfig = useSystemConfigStore((s) => s.updateConfig);
+  const removeConfig = useSystemConfigStore((s) => s.removeConfig);
+
+  // ========== 2. 组件挂载时加载数据 ==========
+  useEffect(() => { loadConfigs(); }, [loadConfigs]);
+
+  // ========== 3. 本地 UI 状态 ==========
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
 
-  // 新增弹窗状态
+  // 新增弹窗
   const [showAddModal, setShowAddModal] = useState(false);
   const [newConfig, setNewConfig] = useState<Partial<SystemConfig>>({});
 
   // 弹窗拖拽/缩放/最大化
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, left: 0, top: 0 });
+  const [isResizing, setIsResizing] = useState(false);
   const [resizeDir, setResizeDir] = useState('');
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0, left: 0, top: 0 });
 
-  useEffect(() => {
-    loadConfigs();
-  }, [loadConfigs]);
+  // ========== 4. 筛选（纯前端 useMemo）==========
+  const filteredConfigs = useMemo(() => {
+    if (activeCategory === 'all') return configs;
+    return configs.filter((c) => c.category === activeCategory);
+  }, [configs, activeCategory]);
 
-  // 使用 store 数据，空时回退到默认配置
-  const displayConfigs = configs.length > 0 ? configs : DEFAULT_CONFIGS;
+  // 计算每个分类的配置数量
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: configs.length };
+    for (const tab of CATEGORY_TABS) {
+      if (tab.value === 'all') continue;
+      counts[tab.value] = configs.filter((c) => c.category === tab.value).length;
+    }
+    return counts;
+  }, [configs]);
 
-  const filteredConfigs = activeCategory === 'all'
-    ? displayConfigs
-    : displayConfigs.filter(c => c.category === activeCategory);
+  // ========== 5. CRUD 操作回调 ==========
 
-  // ========== 行内编辑 ==========
-
-  const handleStartEdit = (config: SystemConfig) => {
+  const handleStartEdit = useCallback((config: SystemConfig) => {
     setEditingId(config.id);
     setEditValue(config.configValue);
-  };
+  }, []);
 
-  const handleSaveEdit = async (id: string) => {
+  const handleSaveEdit = useCallback(async (id: string) => {
     try {
       await updateConfig(id, { configValue: editValue });
       setEditingId(null);
@@ -77,14 +124,14 @@ export default function SystemConfig() {
       console.error('更新配置失败:', err);
       alert('更新配置失败');
     }
-  };
+  }, [updateConfig, editValue]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingId(null);
     setEditValue('');
-  };
+  }, []);
 
-  const handleDeleteConfig = async (id: string) => {
+  const handleDeleteConfig = useCallback(async (id: string) => {
     if (!confirm('确定要删除这个配置项吗？')) return;
     try {
       await removeConfig(id);
@@ -92,40 +139,57 @@ export default function SystemConfig() {
       console.error('删除配置失败:', err);
       alert('删除配置失败');
     }
-  };
+  }, [removeConfig]);
 
-  // ========== 新增弹窗 ==========
-
-  const openAddModal = () => {
-    setNewConfig({});
-    setIsMaximized(false);
-    setShowAddModal(true);
-  };
-
-  const handleAddConfig = async () => {
+  const handleAddConfig = useCallback(async () => {
     if (!newConfig.configKey) {
       alert('请填写配置键');
       return;
     }
     try {
-      await addConfig({
+      const result = await addConfig({
         configKey: newConfig.configKey,
         configValue: newConfig.configValue || '',
         configType: newConfig.configType || 'string',
         category: newConfig.category || 'system',
         description: newConfig.description || '',
       });
-      setNewConfig({});
-      setShowAddModal(false);
+      if (result) {
+        setNewConfig({});
+        setShowAddModal(false);
+      }
     } catch (err) {
       console.error('创建配置失败:', err);
       alert('创建配置失败');
     }
-  };
+  }, [newConfig, addConfig]);
 
-  // ========== 弹窗拖拽 ==========
+  const openAddModal = useCallback(() => {
+    setNewConfig({});
+    setIsMaximized(false);
+    setShowAddModal(true);
+  }, []);
 
-  const handleDragStart = (e: React.MouseEvent) => {
+  // ========== 6. 导出 CSV ==========
+
+  const handleExport = useCallback(() => {
+    const csv = ['配置键,配置值,类型,分类,描述,状态']
+      .concat(configs.map((c) =>
+        `${c.configKey},"${c.configValue}",${c.configType},${c.category},"${c.description}",${c.isActive ? '启用' : '禁用'}`
+      ))
+      .join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `系统配置_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [configs]);
+
+  // ========== 7. 弹窗拖拽/缩放事件 ==========
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
     if (isMaximized) return;
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
@@ -135,11 +199,9 @@ export default function SystemConfig() {
       const rect = dialog.getBoundingClientRect();
       setDragStart({ x: e.clientX, y: e.clientY, left: rect.left, top: rect.top });
     }
-  };
+  }, [isMaximized]);
 
-  // ========== 弹窗缩放 ==========
-
-  const handleResizeStart = (e: React.MouseEvent, dir: string) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent, dir: string) => {
     if (isMaximized) return;
     e.preventDefault();
     e.stopPropagation();
@@ -150,9 +212,8 @@ export default function SystemConfig() {
       const rect = dialog.getBoundingClientRect();
       setResizeStart({ x: e.clientX, y: e.clientY, w: rect.width, h: rect.height, left: rect.left, top: rect.top });
     }
-  };
+  }, [isMaximized]);
 
-  // 拖动+缩放鼠标事件
   useEffect(() => {
     if (!isDragging && !isResizing) return;
 
@@ -213,9 +274,7 @@ export default function SystemConfig() {
     };
   }, [isDragging, isResizing, dragStart, resizeStart, resizeDir]);
 
-  // ========== 最大化/还原 ==========
-
-  const toggleMaximize = () => {
+  const toggleMaximize = useCallback(() => {
     const dialog = document.getElementById('config-add-dialog');
     if (!isMaximized && dialog) {
       dialog.style.width = '100vw';
@@ -234,45 +293,10 @@ export default function SystemConfig() {
       dialog.style.left = '';
       dialog.style.top = '';
     }
-    setIsMaximized(!isMaximized);
-  };
+    setIsMaximized((v) => !v);
+  }, [isMaximized]);
 
-  // ========== 渲染辅助 ==========
-
-  const categories = [
-    { value: 'all', label: '全部' },
-    { value: 'system', label: '系统设置' },
-    { value: 'ui', label: '界面设置' },
-    { value: 'feature', label: '功能设置' },
-    { value: 'demo', label: '演示设置' },
-  ];
-
-  // 类型标签徽章
-  const getTypeBadge = (type: string) => {
-    const map: Record<string, { bg: string; text: string; label: string }> = {
-      string: { bg: 'bg-blue-100', text: 'text-blue-700', label: '文本' },
-      number: { bg: 'bg-green-100', text: 'text-green-700', label: '数字' },
-      boolean: { bg: 'bg-purple-100', text: 'text-purple-700', label: '布尔' },
-    };
-    const style = map[type] || map.string;
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${style.bg} ${style.text}`}>{style.label}</span>;
-  };
-
-  // 导出配置为CSV
-  const handleExport = () => {
-    const csv = ['配置键,配置值,类型,分类,描述,状态']
-      .concat(displayConfigs.map(c =>
-        `${c.configKey},"${c.configValue}",${c.configType},${c.category},"${c.description}",${c.isActive ? '启用' : '禁用'}`
-      ))
-      .join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `系统配置_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // ========== 8. 渲染 ==========
 
   const renderValue = (config: SystemConfig) => {
     if (editingId === config.id) {
@@ -309,7 +333,8 @@ export default function SystemConfig() {
     return <span className="text-sm text-gray-900">{config.configValue}</span>;
   };
 
-  if (loading) {
+  // 加载态
+  if (loading && configs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
@@ -318,7 +343,8 @@ export default function SystemConfig() {
     );
   }
 
-  if (error) {
+  // 错误态
+  if (error && configs.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <AlertTriangle className="w-8 h-8 text-red-500" />
@@ -340,11 +366,11 @@ export default function SystemConfig() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">系统参数配置</h1>
-            <p className="text-gray-500">管理系统名称、主题、功能开关等参数</p>
+            <p className="text-gray-500">管理系统运行参数、阈值、开关等配置项</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={handleExport}>
+          <Button size="sm" onClick={handleExport} disabled={configs.length === 0}>
             <Download className="w-4 h-4" />
             导出
           </Button>
@@ -355,9 +381,9 @@ export default function SystemConfig() {
         </div>
       </div>
 
-      {/* Category Tabs */}
+      {/* Category Tabs — 与数据库 category 字段对齐 */}
       <div className="flex items-center gap-2 border-b border-gray-200">
-        {categories.map(cat => (
+        {CATEGORY_TABS.map((cat) => (
           <button
             key={cat.value}
             onClick={() => setActiveCategory(cat.value)}
@@ -368,60 +394,63 @@ export default function SystemConfig() {
             }`}
           >
             {cat.label}
+            <span className="ml-1.5 text-xs text-gray-400">({categoryCounts[cat.value] ?? 0})</span>
           </button>
         ))}
       </div>
 
-      {/* 配置列表 */}
-      <div className="bg-white rounded-lg shadow divide-y divide-gray-200 max-w-2xl">
-        {filteredConfigs.map(config => (
-          <div key={config.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-gray-900">{config.configKey}</span>
-                  {getTypeBadge(config.configType)}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                    config.category === 'system' ? 'bg-blue-100 text-blue-800' :
-                    config.category === 'ui' ? 'bg-purple-100 text-purple-800' :
-                    config.category === 'feature' ? 'bg-green-100 text-green-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {categories.find(c => c.value === config.category)?.label}
-                  </span>
+      {/* 配置列表或空态 */}
+      {filteredConfigs.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-12 text-center max-w-2xl">
+          <Settings className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">
+            {activeCategory === 'all' ? '暂无配置数据，点击"新增配置"添加' : `"${CATEGORY_TABS.find(t => t.value === activeCategory)?.label}"分类下暂无配置`}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow divide-y divide-gray-300 max-w-2xl">
+          {filteredConfigs.map((config) => (
+            <div key={config.id} className="p-4 hover:bg-green-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-gray-900">{config.description || config.configKey}</span>
+                    <TypeBadge type={config.configType} />
+                    <CategoryBadge category={config.category} />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">{config.configKey}</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{config.description}</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="min-w-[120px]">
-                  {renderValue(config)}
-                </div>
-                <div className="flex items-center gap-1">
-                  {editingId === config.id ? (
-                    <>
-                      <button onClick={() => handleSaveEdit(config.id)} className="p-1 text-green-600 hover:text-green-800">
-                        <Save className="w-4 h-4" />
-                      </button>
-                      <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:text-gray-800">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => handleStartEdit(config)} className="p-1 text-blue-500 hover:text-blue-700">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDeleteConfig(config.id)} className="p-1 text-red-500 hover:text-red-700">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
+                <div className="flex items-center gap-4">
+                  <div className="min-w-[120px]">
+                    {renderValue(config)}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {editingId === config.id ? (
+                      <>
+                        <button onClick={() => handleSaveEdit(config.id)} className="p-1 text-green-600 hover:text-green-800">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:text-gray-800">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => handleStartEdit(config)} className="p-1 text-blue-500 hover:text-blue-700">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteConfig(config.id)} className="p-1 text-red-500 hover:text-red-700">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* 新增配置弹窗 — 可拖拽/缩放/最大化 */}
       {showAddModal && (
@@ -437,7 +466,6 @@ export default function SystemConfig() {
             >
               <h3 className="text-lg font-semibold text-white">新增系统配置</h3>
               <div className="flex items-center gap-1">
-                {/* 最大化/还原 */}
                 <button
                   onClick={toggleMaximize}
                   className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
@@ -453,7 +481,6 @@ export default function SystemConfig() {
                     </svg>
                   )}
                 </button>
-                {/* 关闭 */}
                 <button
                   onClick={() => { setShowAddModal(false); setNewConfig({}); }}
                   className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
@@ -473,7 +500,7 @@ export default function SystemConfig() {
                     value={newConfig.configKey || ''}
                     onChange={(e) => setNewConfig({ ...newConfig, configKey: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="如：system_name"
+                    placeholder="如：task_accept_warning_hours"
                   />
                 </div>
                 <div>
@@ -505,10 +532,9 @@ export default function SystemConfig() {
                     onChange={(e) => setNewConfig({ ...newConfig, category: e.target.value })}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    <option value="system">系统设置</option>
-                    <option value="ui">界面设置</option>
-                    <option value="feature">功能设置</option>
-                    <option value="demo">演示设置</option>
+                    {CATEGORY_TABS.filter(t => t.value !== 'all').map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -537,12 +563,10 @@ export default function SystemConfig() {
             {/* 缩放拖拽手柄（最大化时隐藏） */}
             {!isMaximized && (
               <>
-                {/* 四角 */}
                 <div className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
                 <div className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
                 <div className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
                 <div className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-emerald-400/40 rounded-sm z-10" onMouseDown={(e) => handleResizeStart(e, 'se')} />
-                {/* 四边 */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-n-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 'n')} />
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1.5 cursor-s-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 's')} />
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 cursor-w-resize hover:bg-emerald-400/40 rounded z-10" onMouseDown={(e) => handleResizeStart(e, 'w')} />

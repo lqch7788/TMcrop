@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Search, Eye, Download, AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { FileText, Search, Eye, Download, AlertTriangle, ChevronLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { enhancedApiClient } from '../lib/apiClient';
 
@@ -178,11 +178,20 @@ export default function AuditLog() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <ChevronLeft className="w-6 h-6 text-gray-600" />
-        </Link>
-        <h2 className="text-xl font-bold text-gray-900">操作日志审计</h2>
+      {/* 页面头部卡片 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </Link>
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+            <ClipboardList className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">操作日志</h1>
+            <p className="text-gray-500">记录用户操作行为，用于安全审计与问题追溯</p>
+          </div>
+        </div>
       </div>
 
       {/* 统计卡片 */}
