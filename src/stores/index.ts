@@ -83,6 +83,10 @@ export { useSeedSourceStore } from './useSeedSourceStore';
 export { useSeedlingStore } from './useSeedlingStore';
 
 export { usePlantingStore } from './usePlantingStore';
+export { useFarmPartitionStore } from './useFarmPartitionStore';
+export type { FarmPartition } from './useFarmPartitionStore';
+export { useAreaSystemStore } from './useAreaSystemStore';
+export type { AreaSystemMapping } from './useAreaSystemStore';
 export { usePlantLabelStore } from './usePlantLabelStore';
 export type { PlantLabel, PlantLabelResume, PlantMark, MoveFormData } from './usePlantLabelStore';
 

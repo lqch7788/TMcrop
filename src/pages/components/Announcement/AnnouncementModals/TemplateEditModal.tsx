@@ -102,7 +102,7 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
     const id = mode === 'add' ? `TPL_${Date.now()}_${Math.random().toString(36).substring(2, 7)}` : template?.id;
     onSave({
       id,
-      code: template?.code || mode === 'add' ? '' : template?.code,
+      code: mode === 'add' ? '' : (template?.code || ''),
       name: formData.name,
       category: formData.category,
       titleTemplate: formData.titleTemplate,

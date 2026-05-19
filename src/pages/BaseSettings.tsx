@@ -269,11 +269,11 @@ export default function BaseSettings() {
                 </div>
               </div>
               <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-                <Button variant="blue" onClick={() => setIsAddingNew(true)}>
+                <Button size="sm" onClick={() => setIsAddingNew(true)}>
                   <Plus className="w-4 h-4" />
                   新增
                 </Button>
-                <Button variant="blue" onClick={() => setIsEditing(!isEditing)}>
+                <Button size="sm" onClick={() => setIsEditing(!isEditing)}>
                   <Edit className="w-4 h-4" />
                   {isEditing ? '完成' : '编辑'}
                 </Button>
@@ -283,19 +283,19 @@ export default function BaseSettings() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-blue-50/80">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">所属公司</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">基地/区域名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">面积</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">当前作物</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">生长天数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">负责人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属公司</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">基地/区域名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">面积</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前作物</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生长天数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300 bg-white">
               {companyGroups.map((company) => (
                 <React.Fragment key={company.id}>
                   {/* 公司行 */}
@@ -328,7 +328,7 @@ export default function BaseSettings() {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
-                            variant="destructive"
+                            variant="ghost"
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -352,7 +352,7 @@ export default function BaseSettings() {
                             }}
                             title="删除公司"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
                       )}
@@ -404,7 +404,7 @@ export default function BaseSettings() {
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button
-                                variant="destructive"
+                                variant="ghost"
                                 size="icon"
                                 onClick={() => {
                                   setConfirmModalConfig({
@@ -432,7 +432,7 @@ export default function BaseSettings() {
                                 }}
                                 title="删除基地"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
                             </>
                           )}
@@ -555,12 +555,12 @@ export default function BaseSettings() {
       {(isAddingNew || editingItem) && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-blue-200">
-            <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">
+            <div className="px-6 py-4 border-b flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600">
+              <h2 className="text-lg font-semibold text-white">
                 {editingItem ? (editingItem.type === 'company' ? '编辑公司' : '编辑基地') : (addType === 'company' ? '新增公司' : '新增基地')}
               </h2>
               <Button variant="ghost" size="icon" onClick={() => { setIsAddingNew(false); setEditingItem(null); }}>
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-white" />
               </Button>
             </div>
             <div className="p-6 space-y-4">

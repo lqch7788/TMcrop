@@ -317,23 +317,20 @@ export default function DepartmentSettings() {
 
       {/* 表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">部门列表</h3>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">上级部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">负责人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">排序</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">上级部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">排序</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-400">加载中...</td>
@@ -346,15 +343,15 @@ export default function DepartmentSettings() {
                 </tr>
               ) : (
                 paginated.map((dept) => (
-                  <tr key={dept.id || dept.oid} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.code}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{dept.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                  <tr key={dept.id || dept.oid} className="hover:bg-blue-100 transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{dept.code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{dept.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       {(dept as any).parentName || '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{dept.managerName || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{dept.sortNumber || 0}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{dept.managerName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{dept.sortNumber || 0}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                           dept.status === 'active'
@@ -365,30 +362,28 @@ export default function DepartmentSettings() {
                         {dept.status === 'active' ? '启用' : '停用'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="编辑"
+                        <button
                           onClick={() => {
                             setEditItem(dept);
                             setModalOpen(true);
                           }}
+                          className="p-1.5 hover:bg-blue-50 rounded text-blue-500 hover:text-blue-600"
+                          title="编辑"
                         >
                           <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          title="删除"
+                        </button>
+                        <button
                           onClick={() => {
                             setDeleteTarget(dept);
                             setDeleteModalOpen(true);
                           }}
+                          className="p-1.5 hover:bg-red-50 rounded text-red-500 hover:text-red-600"
+                          title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -397,35 +392,37 @@ export default function DepartmentSettings() {
             </tbody>
           </table>
         </div>
-        {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {filtered.length} 条记录，第 {filtered.length === 0 ? 0 : currentPage}/{totalPages || 1} 页
+        {/* 分页 — 与生产计划表格一致 */}
+        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">每页</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setCurrentPage(1); }}
+              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">共 {filtered.length} 条</span>
             <Button
-              size="icon"
-              variant="ghost"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
+              variant="ghost"
+              size="icon"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            {[...Array(Math.min(totalPages, 5))].map((_, i) => (
-              <Button
-                key={i + 1}
-                size="sm"
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
+            <span className="text-sm">{currentPage} / {totalPages || 1}</span>
             <Button
-              size="icon"
-              variant="ghost"
               onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
+              disabled={currentPage >= totalPages || totalPages === 0}
+              variant="ghost"
+              size="icon"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

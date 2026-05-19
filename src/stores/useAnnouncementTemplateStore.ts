@@ -22,6 +22,8 @@ export interface AnnouncementTemplate {
   name: string;
   type: string;
   category: string;
+  titleTemplate?: string;
+  content?: string;
   usageCount: number;
   status: string;
   createTime?: string;
@@ -35,6 +37,8 @@ const FIELD_MAP: Record<string, string> = {
   name: 'name',
   type: 'type',
   category: 'category',
+  title_template: 'titleTemplate',
+  content: 'content',
   usage_count: 'usageCount',
   status: 'status',
   create_time: 'createTime',
@@ -127,13 +131,24 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           name: data.name || '',
           type: data.type || '',
           category: data.category || '',
+          title_template: data.titleTemplate || '',
+          content: data.contentTemplate || data.content || '',
           usageCount: data.usageCount ?? 0,
           status: data.status || '启用',
         };
 
         const now = new Date().toISOString();
+        // 乐观更新项使用驼峰字段名（与AnnouncementTemplate接口对齐）
         const optimisticItem: AnnouncementTemplate = {
-          ...body,
+          id: localId,
+          code: data.code || '',
+          name: data.name || '',
+          type: data.type || '',
+          category: data.category || '',
+          titleTemplate: data.titleTemplate || '',
+          content: data.contentTemplate || data.content || '',
+          usageCount: data.usageCount ?? 0,
+          status: data.status || '启用',
           createTime: now,
           updateTime: now,
         };
@@ -153,23 +168,46 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           }));
           return { ...optimisticItem, id: savedId, code: savedCode };
         } catch (error) {
-          console.warn('[AnnouncementTemplateStore] 创建模板API失败:', error);
-          set({ error: (error as Error).message });
-          return null;
+          // API失败：移除乐观更新项，抛出错误让调用方处理
+          const errMsg = (error as Error)?.message || '创建模板失败';
+          console.warn('[AnnouncementTemplateStore] 创建模板API失败:', errMsg);
+          set((state) => ({
+            templates: state.templates.filter((t) => t.id !== localId),
+            error: errMsg,
+          }));
+          throw new Error(errMsg);
         }
       },
 
       // ---------- 更新模板（乐观更新） ----------
       updateTemplate: async (id, updates) => {
+        // 保存原始值用于回滚
+        const prev = get().templates.find((t) => t.id === id);
         set((state) => ({
           templates: state.templates.map((t) =>
             t.id === id ? { ...t, ...updates, updateTime: new Date().toISOString() } : t
           ),
         }));
         try {
-          await enhancedApiClient.put(`/announcements/templates/${id}`, updates, { priority: 0 });
+          // 字段名转换：前端驼峰 → 后端蛇形
+          const normalized: Record<string, unknown> = { ...updates };
+          if ('contentTemplate' in normalized) {
+            normalized.content = normalized.contentTemplate;
+            delete normalized.contentTemplate;
+          }
+          const body = denormalizeItem(normalized as Partial<AnnouncementTemplate>);
+          await enhancedApiClient.put(`/announcements/templates/${id}`, body, { priority: 0 });
         } catch (error) {
-          console.warn('[AnnouncementTemplateStore] 更新模板API失败:', error);
+          // API失败：回滚乐观更新
+          const errMsg = (error as Error)?.message || '更新模板失败';
+          console.warn('[AnnouncementTemplateStore] 更新模板API失败:', errMsg);
+          if (prev) {
+            set((state) => ({
+              templates: state.templates.map((t) => (t.id === id ? prev : t)),
+              error: errMsg,
+            }));
+          }
+          throw new Error(errMsg);
         }
       },
 
