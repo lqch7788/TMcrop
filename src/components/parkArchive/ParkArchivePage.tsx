@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 // localStorage key - 与 BaseSettings 保持一致
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -329,7 +331,7 @@ export function ParkArchivePage() {
       </div>
 
       {isFullscreen && (
-        <Button variant="secondary" className="fixed top-4 left-4 z-[1001]" onClick={() => setIsFullscreen(false)}>
+        <Button variant="secondary" size="sm" className="fixed top-4 left-4 z-[1001]" onClick={() => setIsFullscreen(false)}>
           <ChevronLeft className="w-5 h-5 text-gray-600" />
           <span className="text-sm font-medium text-gray-700">返回</span>
         </Button>
@@ -419,12 +421,11 @@ export function ParkArchivePage() {
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
-                    <input
-                      type="text"
+                    <Input
                       placeholder="搜索基地..."
                       value={searchName}
                       onChange={(e) => setSearchName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800"
+                      className="pl-9 py-1.5 bg-gray-50 border-gray-200 text-gray-800"
                     />
                   </div>
                 </div>
@@ -537,35 +538,35 @@ export function ParkArchivePage() {
             <div className="p-6 bg-gray-100">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">基地/区域名称</label>
+                  <Label className="text-xs text-gray-500">基地/区域名称</Label>
                   <p className="font-semibold text-gray-900">{selectedField.name}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">面积</label>
+                  <Label className="text-xs text-gray-500">面积</Label>
                   <p className="font-semibold text-gray-900">{selectedField.area} {selectedField.unit}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">温室大棚数量</label>
+                  <Label className="text-xs text-gray-500">温室大棚数量</Label>
                   <p className="font-semibold text-gray-900">{selectedField.greenhouseCount || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">大田面积</label>
+                  <Label className="text-xs text-gray-500">大田面积</Label>
                   <p className="font-semibold text-gray-900">{selectedField.fieldArea ? `${selectedField.fieldArea}亩` : '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">地理坐标</label>
+                  <Label className="text-xs text-gray-500">地理坐标</Label>
                   <p className="font-semibold text-gray-900 text-sm">{selectedField.coords}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">负责人</label>
+                  <Label className="text-xs text-gray-500">负责人</Label>
                   <p className="font-semibold text-gray-900">{selectedField.manager}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">联系电话</label>
+                  <Label className="text-xs text-gray-500">联系电话</Label>
                   <p className="font-semibold text-gray-900">{selectedField.phone}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">当前状态</label>
+                  <Label className="text-xs text-gray-500">当前状态</Label>
                   <p className="font-semibold">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       selectedField.status === 'planting' ? 'bg-green-100 text-green-700 border border-green-200' :
@@ -580,7 +581,7 @@ export function ParkArchivePage() {
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-              <Button variant="secondary" onClick={() => setShowDetailModal(false)}>关闭</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowDetailModal(false)}>关闭</Button>
             </div>
           </div>
         </div>

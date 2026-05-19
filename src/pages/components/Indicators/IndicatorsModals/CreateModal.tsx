@@ -5,6 +5,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { Label } from '../../../../components/ui/label';
 import type { Indicator } from '../../../types/indicators.types';
 import { getIndicatorCategories } from '../../../hooks/useIndicators';
 
@@ -97,32 +99,31 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="text-gray-700">
                 指标编码 <span className="text-red-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 value={formData.code}
                 onChange={e => handleChange('code', e.target.value)}
                 placeholder="系统自动生成"
-                className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                disabled
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="text-gray-700">
                 指标名称 <span className="text-red-500">*</span>
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 value={formData.name}
                 onChange={e => handleChange('name', e.target.value)}
                 placeholder="请输入指标名称"
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
+                <Label className="text-gray-700">类别</Label>
                 <select
                   value={formData.category}
                   onChange={e => handleChange('category', e.target.value)}
@@ -134,39 +135,36 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
-                <input
+                <Label className="text-gray-700">单位</Label>
+                <Input
                   type="text"
                   value={formData.unit}
                   onChange={e => handleChange('unit', e.target.value)}
                   placeholder="如: %, 元, kg"
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">目标值</label>
-                <input
+                <Label className="text-gray-700">目标值</Label>
+                <Input
                   type="number"
                   value={formData.target}
                   onChange={e => handleChange('target', parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">实际值</label>
-                <input
+                <Label className="text-gray-700">实际值</Label>
+                <Input
                   type="number"
                   value={formData.actual}
                   onChange={e => handleChange('actual', parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">数据采集方式</label>
+                <Label className="text-gray-700">数据采集方式</Label>
                 <select
                   value={formData.source}
                   onChange={e => handleChange('source', e.target.value)}
@@ -177,12 +175,11 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">权重</label>
-                <input
+                <Label className="text-gray-700">权重</Label>
+                <Input
                   type="number"
                   value={formData.weight}
                   onChange={e => handleChange('weight', parseFloat(e.target.value) || 0)}
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
@@ -191,8 +188,8 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="default" onClick={handleSubmit}>保存</Button>
+          <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
+          <Button size="sm" variant="default" onClick={handleSubmit}>保存</Button>
         </div>
       </div>
     </div>

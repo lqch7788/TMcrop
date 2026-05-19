@@ -26,8 +26,8 @@ export default function DeleteModal({ isOpen, item, onClose, onConfirm }: Delete
           <p className="text-gray-600 mb-1">确定要删除指标「{item.name}」吗？</p>
           <p className="text-gray-400 text-sm mb-6">删除后无法恢复</p>
           <div className="flex justify-center gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+            <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
+            <Button size="sm" variant="destructive" onClick={onConfirm}>确认删除</Button>
           </div>
         </div>
       </div>

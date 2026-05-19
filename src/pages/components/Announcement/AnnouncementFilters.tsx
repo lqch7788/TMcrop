@@ -3,6 +3,8 @@
  * 提供类型筛选和关键词搜索功能
  */
 import { Search } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
 
 import type { ReactNode } from 'react';
 
@@ -31,17 +33,14 @@ export default function AnnouncementFilters({
           <span className="text-sm text-gray-600">类型：</span>
           <div className="flex flex-wrap gap-2">
             {types.map(type => (
-              <button
+              <Button
                 key={type}
+                variant={typeFilter === type ? 'blue' : 'ghost'}
+                size="sm"
                 onClick={() => onTypeChange(type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  typeFilter === type
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
-                    : 'bg-gray-50 text-gray-600 hover:bg-blue-50 border border-gray-200'
-                }`}
               >
                 {type}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -50,12 +49,11 @@ export default function AnnouncementFilters({
         <div className="w-64">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
+            <Input
               placeholder="搜索公告标题或编号..."
               value={searchKeyword}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="pl-10"
             />
           </div>
         </div>

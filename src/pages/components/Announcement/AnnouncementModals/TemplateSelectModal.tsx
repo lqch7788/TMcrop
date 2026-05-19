@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Search, X } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
 import { useAnnouncementTemplateStore } from '../../../../stores/useAnnouncementTemplateStore';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 
@@ -71,9 +72,9 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
             <FileText className="w-5 h-5" />
             从模板选择
           </h3>
-          <button onClick={onClose} className="text-white/80 hover:text-white p-1.5 rounded hover:bg-white/10 transition-colors">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white hover:bg-white/10">
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* 筛选栏 */}
@@ -113,10 +114,10 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredTemplates.map(template => (
-                <button
+                <div
                   key={template.id}
                   onClick={() => handleSelect(template)}
-                  className="text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                  className="text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition-all duration-200 cursor-pointer"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-semibold text-gray-900 text-sm">{template.name}</h4>
@@ -139,7 +140,7 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
                   <p className="text-xs text-gray-500">
                     使用次数：{template.usageCount || 0}
                   </p>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -147,7 +148,7 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
 
         {/* 底部 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end flex-shrink-0">
-          <button onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all duration-300">取消</button>
+          <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
         </div>
       </div>
     </div>
