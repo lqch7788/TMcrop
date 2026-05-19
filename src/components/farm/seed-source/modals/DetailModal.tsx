@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
 import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';
@@ -48,19 +49,21 @@ export function DetailModal({
     >
       {/* 标签页切换 */}
       <div className="flex border-b border-gray-200 mb-4">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('info')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
             activeTab === 'info'
               ? 'border-emerald-500 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           基本信息
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => setActiveTab('trace')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1 ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
             activeTab === 'trace'
               ? 'border-emerald-500 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -68,7 +71,7 @@ export function DetailModal({
         >
           <History className="w-4 h-4" />
           追溯链路
-        </button>
+        </Button>
       </div>
 
       {/* 标签页内容 */}

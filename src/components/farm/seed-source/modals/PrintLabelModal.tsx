@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
 import { SeedSource } from '../../../../types/crop';
 import { printLabel } from '../../../../services/seedSourceService';
 import { useUserStore } from '../../../../stores';
@@ -206,27 +207,30 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
           <div></div>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
             >
               取消
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="blue"
+              size="sm"
               onClick={handleExportExcel}
               disabled={loading}
-              className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               导出Excel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
               onClick={handlePrint}
               disabled={loading}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
             >
               {loading ? '处理中...' : '打印'}
-            </button>
+            </Button>
           </div>
         </div>
       }
@@ -267,9 +271,9 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-gray-600">选择标签（已选 {selectedLabels.length} 个）</label>
-                <button onClick={toggleSelectAll} className="text-xs text-blue-600 hover:text-blue-700">
+                <Button variant="link" size="sm" onClick={toggleSelectAll}>
                   {selectedLabels.length === allLabelNumbers.length ? '取消全选' : '全选'}
-                </button>
+                </Button>
               </div>
               <div className="max-h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-white">
                 <div className="grid grid-cols-4 gap-1">

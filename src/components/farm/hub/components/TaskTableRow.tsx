@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { FileText, Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
 import { OvertimeBadge } from './OvertimeBadge';
 
@@ -155,13 +156,15 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
 
       {/* 任务ID */}
       <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-        <button
+        <Button
+          variant="link"
+          size="sm"
           onClick={onViewDetail}
-          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+          className="text-blue-600 hover:text-blue-800 font-medium"
           title="点击查看详情"
         >
           {task.id}
-        </button>
+        </Button>
       </td>
 
       {/* 任务类型 */}
@@ -269,32 +272,38 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         <div className="flex items-center gap-1 flex-wrap">
           {/* 草稿状态 - 发布按钮 */}
           {task.status === 'draft' && onPublish && (
-            <button
+            <Button
+              variant="blue"
+              size="sm"
               onClick={onPublish}
-              className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+              className="text-xs"
             >
               发布
-            </button>
+            </Button>
           )}
 
           {/* 待验收 - 验收按钮 */}
           {task.status === 'waiting_acceptance' && onAccept && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onAccept}
-              className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+              className="text-xs"
             >
               验收
-            </button>
+            </Button>
           )}
 
           {/* pending 且无执行人 - 选择执行人按钮 */}
           {task.status === 'pending' && !task.assigneeId && onSelectExecutor && (
-            <button
+            <Button
+              variant="blue"
+              size="sm"
               onClick={onSelectExecutor}
-              className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+              className="text-xs"
             >
               选择执行人
-            </button>
+            </Button>
           )}
 
           {/* pending 且有执行人 */}
@@ -304,40 +313,48 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                 // 我的任务视图（执行人）：显示接受/拒绝
                 <>
                   {onAccept && (
-                    <button
+                    <Button
+                      variant="default"
+                      size="sm"
                       onClick={onAccept}
-                      className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                      className="text-xs"
                     >
                       接受
-                    </button>
+                    </Button>
                   )}
                   {onWithdraw && (
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={onWithdraw}
-                      className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                      className="text-xs"
                     >
                       拒绝
-                    </button>
+                    </Button>
                   )}
                 </>
               ) : (
                 // 农事任务表视图（管理者）：显示撤回/取消
                 <>
                   {onWithdraw && (
-                    <button
+                    <Button
+                      variant="warning"
+                      size="sm"
                       onClick={onWithdraw}
-                      className="px-2 py-1 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 transition-colors"
+                      className="text-xs"
                     >
                       撤回
-                    </button>
+                    </Button>
                   )}
                   {onCancel && (
-                    <button
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={onCancel}
-                      className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                      className="text-xs"
                     >
                       取消
-                    </button>
+                    </Button>
                   )}
                 </>
               )}
@@ -346,47 +363,54 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
 
           {/* accepted/in_progress - 取消按钮 */}
           {(task.status === 'accepted' || task.status === 'in_progress') && onCancel && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={onCancel}
-              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+              className="text-xs"
             >
               取消
-            </button>
+            </Button>
           )}
 
           {/* 超时严重 - 超时处理按钮 */}
           {task.timeout?.severity === 'critical' && onOvertime && (
-            <button
+            <Button
+              size="sm"
               onClick={onOvertime}
-              className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
+              className="bg-purple-600 text-white hover:bg-purple-700 text-xs"
             >
               超时处理
-            </button>
+            </Button>
           )}
 
           {/* rejected - 重新派发按钮（执行人拒绝后需要重新派发给其他人） */}
           {task.status === 'rejected' && onReassign && (
-            <button
+            <Button
+              size="sm"
               onClick={onReassign}
-              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
+              className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
             >
               重新派发
-            </button>
+            </Button>
           )}
 
           {/* failed/abandoned - 重新派发按钮 */}
           {(task.status === 'failed' || task.status === 'abandoned') && onReassign && (
-            <button
+            <Button
+              size="sm"
               onClick={onReassign}
-              className="px-2 py-1 bg-indigo-500 text-white text-xs rounded hover:bg-indigo-600 transition-colors"
+              className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
             >
               重新派发
-            </button>
+            </Button>
           )}
 
           {/* 催办按钮 - 已发布状态且非终态显示（pending无执行人时不显示催办） */}
           {!['draft', 'completed', 'cancelled', 'abandoned', 'pending'].includes(task.status) && onRemind && (
-            <button
+            <Button
+              variant={remindProps?.allowed ? 'destructive' : 'secondary'}
+              size="sm"
               onClick={() => {
                 const remindCheck = canRemind(task.id);
                 if (remindCheck.allowed) {
@@ -403,16 +427,12 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                 }
               }}
               disabled={!remindProps?.allowed}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                remindProps?.allowed
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
+              className="text-xs"
               title={remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}分钟后可催办` : `今日已催办${remindProps?.todayCount || 0}次`}
             >
               <Bell className="w-3 h-3 inline mr-1" />
               {remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}m` : '催办'}
-            </button>
+            </Button>
           )}
         </div>
       </td>

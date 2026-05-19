@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle, ClipboardList, GitBranch } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 
@@ -207,125 +208,138 @@ export function SeedSourceTable({
           {exportMode ? (
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={onConfirmExport}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { onExportCancel(); onSelectionChange([]); }}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : operationMode === 'edit' ? (
             /* 编辑模式 */
             <>
               <span className="text-sm text-gray-500 mr-2">请在表格中选择一条记录</span>
-              <button
+              <Button
+                variant="blue"
+                size="sm"
                 onClick={() => executeOperation('edit')}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit2 className="w-4 h-4" />
                 确认编辑
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={cancelOperation}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : operationMode === 'delete' ? (
             /* 删除模式 */
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={() => executeOperation('delete')}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 确认删除
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={cancelOperation}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : printMode ? (
             /* 打印模式 */
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={confirmPrint}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Printer className="w-4 h-4" />
                 确认打印
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={cancelPrintMode}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : (
             /* 正常模式 - 显示所有操作按钮 */
             <>
               {canCreate && onAdd && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onAdd}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   新增
-                </button>
+                </Button>
               )}
               {canEdit && (
-                <button
+                <Button
+                  variant="blue"
+                  size="sm"
                   onClick={() => onOperationModeChange('edit')}
-                  className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   <Edit2 className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {canDelete && (
-                <button
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={() => onOperationModeChange('delete')}
-                  className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {canExport && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={() => { onOperationModeChange('export'); }}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
               {canPrint && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={() => { onPrintModeChange(true); }}
-                  className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
                 >
                   <Printer className="w-4 h-4" />
                   标签打印
-                </button>
+                </Button>
               )}
             </>
           )}
@@ -398,13 +412,14 @@ export function SeedSourceTable({
                     </td>
                   )}
                   <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                    <button
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() => onDetail(record)}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
                       title="点击查看详情"
                     >
                       {record.seedCode}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.productionPlanCode ? (
@@ -471,46 +486,56 @@ export function SeedSourceTable({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onDetail(record)}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
                         title="查看详情"
                       >
                         <Image className="w-4 h-4" />
-                      </button>
+                      </Button>
                       {/* 繁殖途径操作按钮（非外购 + 未完成时显示） */}
                       {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && (
                         <>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onPropagationRecord(record)}
-                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded"
+                            className="text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
                             title="过程记录"
                           >
                             <ClipboardList className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onPropagationStage(record)}
-                            className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
+                            className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
                             title="阶段推进"
                           >
                             <GitBranch className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onEnd(record, 'normal')}
-                        className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
+                        className="text-gray-500 hover:text-green-600 hover:bg-green-50"
                         title="正常结束"
                       >
                         <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onEnd(record, 'abnormal')}
-                        className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
                         title="异常结束"
                       >
                         <XCircle className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
@@ -543,21 +568,23 @@ export function SeedSourceTable({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
             disabled={pagination.current === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
             disabled={pagination.current >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

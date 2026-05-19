@@ -14,6 +14,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip
 } from 'recharts';
 import { PageHeader, GaugeChart } from '../../components/summary';
+import { Button } from '../../components/ui';
 import { useSummaryDataStore } from '../../stores';
 
 // ========== 颜色常量 ==========
@@ -102,12 +103,7 @@ function EmptyView({ onRetry }: { onRetry: () => void }) {
       <div className="bg-white rounded-xl p-12 text-center">
         <Gauge className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 text-lg mb-4">暂无指标数据</p>
-        <button
-          onClick={onRetry}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm"
-        >
-          重新加载
-        </button>
+        <Button onClick={onRetry} size="sm" className="bg-slate-600 hover:bg-slate-700">重新加载</Button>
       </div>
     </div>
   );
@@ -279,17 +275,15 @@ export default function SummaryIndicators() {
       <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
           {PERIOD_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.value}
               onClick={() => setPeriodMode(opt.value)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                periodMode === opt.value
-                  ? 'bg-slate-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
+              size="sm"
+              variant={periodMode === opt.value ? "secondary" : "ghost"}
+              className={periodMode === opt.value ? "bg-slate-600 text-white hover:bg-slate-700 shadow-sm" : "text-gray-600"}
             >
               {opt.label}
-            </button>
+            </Button>
           ))}
         </div>
         {indicator?.period && (

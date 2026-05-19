@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Download, Plus, Edit, Trash2 } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -137,93 +138,103 @@ export function TaskTable({
           {/* 导出模式 */}
           {exportMode ? (
             <>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={onConfirmExport}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onCancelExport}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchEditMode ? (
             <>
-              <button
+              <Button
+                variant="blue"
+                size="sm"
                 onClick={onConfirmBatchEdit}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
                 确认编辑
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { onCancelBatchEdit?.(); }}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchDeleteMode ? (
             <>
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={onBatchDelete}
                 disabled={selectedRows.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 确认删除
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {}}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : (
             <>
               {/* 正常模式按钮 */}
               {onCreate && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onCreate}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   新建
-                </button>
+                </Button>
               )}
               {onBatchEdit && (
-                <button
+                <Button
+                  variant="blue"
+                  size="sm"
                   onClick={onBatchEdit}
-                  className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {onBatchDelete && (
-                <button
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={onBatchDelete}
-                  className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {onExport && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onExport}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   导出
-                </button>
+                </Button>
               )}
             </>
           )}

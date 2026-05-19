@@ -96,18 +96,12 @@ export function BatchDeleteConfirmDialog({ isOpen, count, supplierNames, onClose
 
         {/* 操作按钮 */}
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-          >
+          <Button size="sm" variant="secondary" className="flex-1" onClick={onClose}>
             取消
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-          >
+          </Button>
+          <Button size="sm" variant="destructive" className="flex-1" onClick={onConfirm}>
             已知晓风险，确认删除
-          </button>
+          </Button>
         </div>
       </div>
     </div>

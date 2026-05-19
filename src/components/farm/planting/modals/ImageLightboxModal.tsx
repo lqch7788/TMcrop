@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ImageLightboxModalProps {
@@ -26,20 +27,24 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center">
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+        className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-lg"
       >
         <X className="w-6 h-6" />
-      </button>
+      </Button>
 
       {images.length > 1 && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handlePrev}
-          className="absolute left-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+          className="absolute left-4 text-white hover:bg-white/20 rounded-lg"
         >
           <ChevronLeft className="w-8 h-8" />
-        </button>
+        </Button>
       )}
 
       <div className="max-w-4xl max-h-[90vh] mx-4">
@@ -51,12 +56,14 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
       </div>
 
       {images.length > 1 && (
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleNext}
-          className="absolute right-4 p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+          className="absolute right-4 text-white hover:bg-white/20 rounded-lg"
         >
           <ChevronRight className="w-8 h-8" />
-        </button>
+        </Button>
       )}
 
       {images.length > 1 && (

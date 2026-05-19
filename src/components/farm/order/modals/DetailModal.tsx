@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { X, Package, Calendar, User, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface DetailModalProps {
@@ -57,12 +58,13 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">订单详情</h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded"
           >
             <X className="w-5 h-5 text-gray-500" />
-          </button>
+          </Button>
         </div>
 
         {/* 详情内容 */}
@@ -197,12 +199,13 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
 
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
           >
             关闭
-          </button>
+          </Button>
         </div>
       </div>
     </div>

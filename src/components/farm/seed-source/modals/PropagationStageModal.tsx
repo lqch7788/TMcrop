@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
 import { ChevronRight, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import { SeedSource, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
@@ -220,14 +221,15 @@ export function PropagationStageModal({
                     {descriptions[nextStage] || ''}
                   </p>
                 </div>
-                <button
+                <Button
+                  variant="blue"
+                  size="sm"
                   onClick={handleAdvance}
                   disabled={confirming}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50"
                 >
                   <ArrowRight className="w-4 h-4" />
                   {confirming ? '处理中...' : '推进'}
-                </button>
+                </Button>
               </div>
             )}
 
@@ -250,14 +252,16 @@ export function PropagationStageModal({
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
-                  <button
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={handleComplete}
                     disabled={confirming || harvestQuantity <= 0}
-                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 disabled:opacity-50 self-end"
+                    className="self-end"
                   >
                     <CheckCircle className="w-4 h-4" />
                     {confirming ? '处理中...' : '确认入库'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

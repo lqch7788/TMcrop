@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
 import { Pagination } from './Pagination';
@@ -187,189 +188,214 @@ export function TaskTable({
           {/* 导出模式 */}
           {exportMode ? (
             <>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={onConfirmExport}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 确认导出
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onCancelExport}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchEditMode ? (
             <>
-              <button
+              <Button
+                variant="blue"
+                size="sm"
                 onClick={onConfirmBatchEdit}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit className="w-4 h-4" />
                 确认编辑
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { onCancelBatchEdit?.(); }}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchDeleteMode ? (
             <>
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={onConfirmBatchDelete}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 确认删除
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { onCancelBatchDelete?.(); }}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchDispatchMode ? (
             <>
-              <button
+              <Button
+                size="sm"
                 onClick={onConfirmBatchDispatch}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-purple-600 text-white hover:bg-purple-700"
               >
                 确认派发
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onCancelBatchDelete}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchVerifyMode ? (
             <>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={onConfirmBatchVerify}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 确认验收
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onCancelBatchDelete}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : batchReassignMode ? (
             <>
-              <button
+              <Button
+                variant="warning"
+                size="sm"
                 onClick={onConfirmBatchReassign}
                 disabled={selectedIds.length === 0}
-                className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 确认重派
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => { onCancelBatchReassign?.(); }}
-                className="h-8 px-3 flex items-center gap-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 取消
-              </button>
+              </Button>
             </>
           ) : (
             <>
               {/* 正常模式按钮 - 常用操作始终显示 */}
               {onCreate && (
-                <button
+                <Button
+                  variant="default"
+                  size="sm"
                   onClick={onCreate}
-                  className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   新建
-                </button>
+                </Button>
               )}
               {onBatchEdit && (
-                <button
+                <Button
+                  variant="blue"
+                  size="sm"
                   onClick={onBatchEdit}
-                  className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
                   编辑
-                </button>
+                </Button>
               )}
               {onBatchDelete && (
-                <button
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={onBatchDelete}
-                  className="h-8 px-3 flex items-center gap-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   删除
-                </button>
+                </Button>
               )}
               {/* 更多操作下拉 */}
               {(onBatchDispatch || onBatchVerify || onBatchReassign || onExport || onImport) && (
                 <div className="relative">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowMoreActions(!showMoreActions)}
-                    className="h-8 px-3 flex items-center gap-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors border border-gray-200"
                   >
                     更多
                     {showMoreActions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  </button>
+                  </Button>
                   {showMoreActions && (
                     <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-1.5 flex items-center gap-1">
                       {onBatchDispatch && (
-                        <button
+                        <Button
+                          size="sm"
                           onClick={() => { onBatchDispatch?.(); setShowMoreActions(false); }}
-                          className="h-8 px-3 flex items-center gap-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors whitespace-nowrap"
+                          className="bg-purple-600 text-white hover:bg-purple-700 whitespace-nowrap"
                         >
                           <Send className="w-4 h-4" />
                           派发
-                        </button>
+                        </Button>
                       )}
                       {onBatchVerify && (
-                        <button
+                        <Button
+                          variant="default"
+                          size="sm"
                           onClick={() => { onBatchVerify?.(); setShowMoreActions(false); }}
-                          className="h-8 px-3 flex items-center gap-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+                          className="whitespace-nowrap"
                         >
                           <CheckCircle className="w-4 h-4" />
                           验收
-                        </button>
+                        </Button>
                       )}
                       {onBatchReassign && (
-                        <button
+                        <Button
+                          variant="warning"
+                          size="sm"
                           onClick={() => { onBatchReassign?.(); setShowMoreActions(false); }}
-                          className="h-8 px-3 flex items-center gap-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors whitespace-nowrap"
+                          className="whitespace-nowrap"
                         >
                           <RotateCcw className="w-4 h-4" />
                           重派
-                        </button>
+                        </Button>
                       )}
                       {onExport && (
-                        <button
+                        <Button
+                          variant="default"
+                          size="sm"
                           onClick={() => { onExport?.(); setShowMoreActions(false); }}
-                          className="h-8 px-3 flex items-center gap-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                          className="whitespace-nowrap"
                         >
                           <Download className="w-4 h-4" />
                           导出
-                        </button>
+                        </Button>
                       )}
                       {onImport && (
-                        <button
+                        <Button
+                          variant="blue"
+                          size="sm"
                           onClick={() => { onImport?.(); setShowMoreActions(false); }}
-                          className="h-8 px-3 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
+                          className="whitespace-nowrap"
                         >
                           <Upload className="w-4 h-4" />
                           导入
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}

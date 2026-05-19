@@ -90,16 +90,16 @@ export default function Indicators() {
           <div className="flex items-center gap-3">
             <Button
               variant="secondary"
+              size="sm"
               onClick={handleEvaluate}
-              className="flex items-center gap-2"
             >
               <Award className="w-4 h-4" />考核评价
             </Button>
             {!exportMode ? (
               <Button
                 variant="default"
+                size="sm"
                 onClick={handleExport}
-                className="flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />导出
               </Button>
@@ -107,15 +107,15 @@ export default function Indicators() {
               <>
                 <Button
                   variant="default"
+                  size="sm"
                   onClick={handleExportConfirm}
-                  className="flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
                 </Button>
                 <Button
                   variant="secondary"
+                  size="sm"
                   onClick={handleCancelExport}
-                  className="flex items-center gap-2"
                 >
                   取消
                 </Button>
@@ -123,8 +123,8 @@ export default function Indicators() {
             )}
             <Button
               variant="blue"
+              size="sm"
               onClick={handleAdd}
-              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />新增指标
             </Button>

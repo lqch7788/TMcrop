@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // 搜索过滤器类型
 export interface InspectionSearchFilters {
@@ -127,19 +128,21 @@ export function InspectionSearch({
 
         {/* 按钮行 */}
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={onReset}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
           >
             重置
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
             onClick={onSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

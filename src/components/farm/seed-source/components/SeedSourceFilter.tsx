@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, RotateCcw, Filter } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { SeedSourceFilters, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
@@ -214,21 +215,22 @@ export function SeedSourceFilter({
         <div className="flex gap-2 items-end">
           {/* 更多筛选按钮 */}
           <div className="relative">
-            <button
+            <Button
               ref={triggerRef}
+              variant="outline"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className={`h-10 px-3 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors
-                ${hasAdvancedFilter
-                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                }`}
+              className={`h-10 font-medium ${
+                hasAdvancedFilter
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200'
+                  : ''
+              }`}
             >
               <Filter className="w-4 h-4" />
               更多筛选
               {hasAdvancedFilter && (
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
               )}
-            </button>
+            </Button>
 
             {/* 高级筛选 Popover */}
             {showAdvanced && (
@@ -238,7 +240,9 @@ export function SeedSourceFilter({
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-gray-900">高级筛选</h3>
-                  <button
+                  <Button
+                    variant="link"
+                    size="sm"
                     onClick={() => {
                       updateAdvanced({
                         cropType: '',
@@ -248,10 +252,10 @@ export function SeedSourceFilter({
                         surplusMax: undefined,
                       });
                     }}
-                    className="text-xs text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600"
                   >
                     清空高级筛选
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="space-y-4">
@@ -350,31 +354,32 @@ export function SeedSourceFilter({
 
                 {/* 底部按钮 */}
                 <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setShowAdvanced(false)}
-                    className="h-8 px-4 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
                   >
                     关闭
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
 
-          <button
+          <Button
+            variant="secondary"
             onClick={onReset}
-            className="h-10 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             重置
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
             onClick={onSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useMemo, useEffect, useState, useCallback } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
+import { Button } from '../ui/button';
 import { useDictionaryStore, useRegionStore } from '../../stores';
 
 interface SupplierFiltersProps {
@@ -166,22 +167,25 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
         {/* 操作按钮组 */}
         <div className="flex items-end gap-2">
-          <button
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => setShowMore(!showMore)}
-            className="h-8 px-3 bg-white border border-gray-200 text-gray-600 rounded-md text-xs hover:bg-gray-50 whitespace-nowrap flex items-center gap-1 transition-colors"
+            className="whitespace-nowrap gap-1"
           >
             {showMore ? (
               <>收起<ChevronUp className="w-3.5 h-3.5" /></>
             ) : (
               <>更多<ChevronDown className="w-3.5 h-3.5" /></>
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={onReset}
-            className="h-8 px-3 bg-emerald-600 text-white rounded-md text-xs hover:bg-emerald-700 whitespace-nowrap transition-colors"
+            className="whitespace-nowrap"
           >
             重置
-          </button>
+          </Button>
         </div>
       </div>
 

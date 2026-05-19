@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '../../../ui/button';
 import { PAGE_SIZE_OPTIONS } from '../constants/taskDispatchConstants';
 
 interface PaginationProps {
@@ -46,23 +47,25 @@ export function Pagination({
       {/* 页码导航 */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">共 {total} 条</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
         >
           <ChevronLeft className="w-4 h-4" />
-        </button>
+        </Button>
         <span className="text-sm">
           {currentPage} / {totalPages}
         </span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
         >
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
