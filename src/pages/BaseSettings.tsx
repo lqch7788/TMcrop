@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { TextArea } from '../components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 // localStorage key
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -101,6 +102,15 @@ export default function BaseSettings() {
     }
   }, [companyGroups]);
 
+  // 编辑弹窗打开/关闭时，同步单位字段状态
+  useEffect(() => {
+    if (editingItem?.type === 'base') {
+      setEditUnit((editingItem.data as BaseData).unit || '亩');
+    } else {
+      setEditUnit('亩');
+    }
+  }, [editingItem]);
+
   const [searchName, setSearchName] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cropFilter, setCropFilter] = useState('all');
@@ -121,6 +131,7 @@ export default function BaseSettings() {
   const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [editUnit, setEditUnit] = useState('亩'); // 编辑弹窗中单位字段的受控状态
 
   // 更新状态并保存到 localStorage
   const setCompanyGroups = (newData: CompanyGroup[]) => {
@@ -214,34 +225,42 @@ export default function BaseSettings() {
           </div>
           <div className="flex-1 min-w-[200px]">
             <Label className="text-gray-700">状态</Label>
-            <select
+            <Select
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+              onValueChange={(val) => {
+                setStatusFilter(val);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
             >
-              <option value="all">全部状态</option>
-              <option value="planting">种植中</option>
-              <option value="fallow">休耕中</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="planting">种植中</SelectItem>
+                <SelectItem value="fallow">休耕中</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex-1 min-w-[200px]">
             <Label className="text-gray-700">作物类型</Label>
-            <select
+            <Select
               value={cropFilter}
-              onChange={(e) => {
-                setCropFilter(e.target.value);
+              onValueChange={(val) => {
+                setCropFilter(val);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
             >
-              <option value="all">全部作物</option>
-              {crops.map(crop => (
-                <option key={crop} value={crop}>{crop}</option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="全部作物" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部作物</SelectItem>
+                {crops.map(crop => (
+                  <SelectItem key={crop} value={crop}>{crop}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -462,18 +481,22 @@ export default function BaseSettings() {
         <div className="px-4 py-3 border-t border-blue-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => {
+                setPageSize(Number(val));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
             <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">
@@ -573,30 +596,37 @@ export default function BaseSettings() {
               {!editingItem && (
                 <div>
                   <Label className="text-gray-700 mb-2">新增类型</Label>
-                  <select
+                  <Select
                     value={addType}
-                    onChange={(e) => setAddType(e.target.value as 'company' | 'base')}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700"
+                    onValueChange={(val) => setAddType(val as 'company' | 'base')}
                   >
-                    <option value="company">新增公司</option>
-                    <option value="base">新增基地</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="company">新增公司</SelectItem>
+                      <SelectItem value="base">新增基地</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
               {(!editingItem && addType === 'base') && (
                 <div>
                   <Label className="text-gray-700 mb-2">所属公司</Label>
-                  <select
-                    value={selectedCompanyId || ''}
-                    onChange={(e) => setSelectedCompanyId(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700"
+                  <Select
+                    value={selectedCompanyId ? String(selectedCompanyId) : ''}
+                    onValueChange={(val) => setSelectedCompanyId(val ? Number(val) : 0)}
                   >
-                    <option value="">请选择公司</option>
-                    {companyGroups.map(company => (
-                      <option key={company.id} value={company.id}>{company.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="请选择公司" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companyGroups.map(company => (
+                        <SelectItem key={company.id} value={String(company.id)}>{company.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -621,11 +651,16 @@ export default function BaseSettings() {
                     </div>
                     <div>
                       <Label className="text-gray-700 mb-2">单位</Label>
-                      <select id="editUnit" defaultValue={editingItem?.data?.unit || '亩'} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
-                        <option value="亩">亩</option>
-                        <option value="平方米">平方米</option>
-                        <option value="公顷">公顷</option>
-                      </select>
+                      <Select value={editUnit} onValueChange={setEditUnit}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="亩">亩</SelectItem>
+                          <SelectItem value="平方米">平方米</SelectItem>
+                          <SelectItem value="公顷">公顷</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -722,7 +757,7 @@ export default function BaseSettings() {
                               id: Date.now(),
                               name,
                               area: Number((document.getElementById('editArea') as HTMLInputElement)?.value) || 0,
-                              unit: (document.getElementById('editUnit') as HTMLSelectElement)?.value || '亩',
+                              unit: editUnit,
                               crop: (document.getElementById('editCrop') as HTMLInputElement)?.value || '',
                               growthDay: 0,
                               status: 'planting',

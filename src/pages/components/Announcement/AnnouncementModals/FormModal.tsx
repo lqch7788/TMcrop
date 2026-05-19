@@ -11,6 +11,7 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { TextArea } from '../../../../components/ui/TextArea';
 import { Label } from '../../../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import type { Notice } from '../../../types/announcement.types';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import TemplateSelectModal from './TemplateSelectModal';
@@ -179,39 +180,46 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-700">公告分类 <span className="text-red-500">*</span></Label>
-                  <select
+                  <Select
                     value={formData.category}
-                    onChange={e => handleChange('category', e.target.value)}
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                    onValueChange={val => handleChange('category', val)}
                   >
-                    <option value="">请选择分类</option>
-                    {categoryOptions.length > 0 ? (
-                      categoryOptions.map(opt => (
-                        <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="行政通知">行政通知</option>
-                        <option value="培训通知">培训通知</option>
-                        <option value="采购通知">采购通知</option>
-                        <option value="活动通知">活动通知</option>
-                        <option value="制度修订">制度修订</option>
-                        <option value="生产公告">生产公告</option>
-                      </>
-                    )}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="请选择分类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.length > 0 ? (
+                        categoryOptions.map(opt => (
+                          <SelectItem key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="行政通知">行政通知</SelectItem>
+                          <SelectItem value="培训通知">培训通知</SelectItem>
+                          <SelectItem value="采购通知">采购通知</SelectItem>
+                          <SelectItem value="活动通知">活动通知</SelectItem>
+                          <SelectItem value="制度修订">制度修订</SelectItem>
+                          <SelectItem value="生产公告">生产公告</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-gray-700">优先级 <span className="text-red-500">*</span></Label>
-                  <select
+                  <Select
                     value={formData.priority}
-                    onChange={e => handleChange('priority', e.target.value)}
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                    onValueChange={val => handleChange('priority', val)}
                   >
-                    <option value="高">高</option>
-                    <option value="中">中</option>
-                    <option value="低">低</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="高">高</SelectItem>
+                      <SelectItem value="中">中</SelectItem>
+                      <SelectItem value="低">低</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

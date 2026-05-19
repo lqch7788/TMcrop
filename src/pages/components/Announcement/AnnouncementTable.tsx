@@ -4,6 +4,8 @@
  */
 import { Megaphone, Eye, Edit, Trash2, Send, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Checkbox } from '../../../components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import type { Notice } from '../../types/announcement.types';
 import { getStatusColor, getPriorityColor } from './utils';
 
@@ -80,11 +82,9 @@ export default function AnnouncementTable({
             <tr>
               {exportMode && (
                 <th className="px-3 py-3 text-left text-sm font-semibold w-10">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedIds.length === notices.length && notices.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -108,11 +108,9 @@ export default function AnnouncementTable({
                 >
                   {exportMode && (
                     <td className="px-3 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedIds.includes(notice.id)}
-                        onChange={() => onToggleSelect(notice.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        onCheckedChange={() => onToggleSelect(notice.id)}
                       />
                     </td>
                   )}
@@ -226,16 +224,20 @@ export default function AnnouncementTable({
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-blue-500 bg-white"
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => onPageSizeChange(Number(val))}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
               <span className="text-sm text-gray-600">条</span>
             </div>
           </div>

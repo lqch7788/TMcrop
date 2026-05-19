@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '@/components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface Indicator {
   id: number;
@@ -141,6 +142,13 @@ export function IndicatorsPage() {
     setNewTarget({ code: '', type: '产量目标', content: '', target: '', current: '', publisher: '', publishDate: '', status: '进行中', remarks: '', region: '' });
   };
 
+  // Select组件的选项数组
+  const regionOptions = ['弘智耘种植园', '1号棚', '2号棚', '3号棚', '4号棚', '5号棚', '6号棚'];
+  const typeOptions = ['产量目标', '产值目标', '质量目标', '成本目标', '进度目标', '环保目标', '安全目标', '创新目标', '能耗目标', '技术目标', '服务目标', '培训目标'];
+  const statusOptions = ['进行中', '已完成', '已过期'];
+  const changeReasonOptions = ['目标调整', '数据更新', '情况变化', '计算错误', '其他原因'];
+  const pageSizeOptions = [10, 20, 50];
+
   return (
     <div className="space-y-6">
       {showModal && (
@@ -173,16 +181,21 @@ export function IndicatorsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-700">区域</Label>
-                  <select value={newTarget.region} onChange={(e) => setNewTarget({ ...newTarget, region: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                    <option value="">请选择区域</option>
-                    <option>弘智耘种植园</option><option>1号棚</option><option>2号棚</option><option>3号棚</option><option>4号棚</option><option>5号棚</option><option>6号棚</option>
-                  </select>
+                  <Select value={newTarget.region} onValueChange={(val) => setNewTarget({ ...newTarget, region: val })}>
+                    <SelectTrigger><SelectValue placeholder="请选择区域" /></SelectTrigger>
+                    <SelectContent>
+                      {regionOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-gray-700">目标类型</Label>
-                  <select value={newTarget.type} onChange={(e) => setNewTarget({ ...newTarget, type: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                    <option>产量目标</option><option>产值目标</option><option>质量目标</option><option>成本目标</option><option>进度目标</option><option>环保目标</option><option>安全目标</option><option>创新目标</option><option>能耗目标</option><option>技术目标</option><option>服务目标</option><option>培训目标</option>
-                  </select>
+                  <Select value={newTarget.type} onValueChange={(val) => setNewTarget({ ...newTarget, type: val })}>
+                    <SelectTrigger><SelectValue placeholder="请选择目标类型" /></SelectTrigger>
+                    <SelectContent>
+                      {typeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -208,9 +221,12 @@ export function IndicatorsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-700">状态</Label>
-                  <select value={newTarget.status} onChange={(e) => setNewTarget({ ...newTarget, status: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                    <option>进行中</option><option>已完成</option><option>已过期</option>
-                  </select>
+                  <Select value={newTarget.status} onValueChange={(val) => setNewTarget({ ...newTarget, status: val })}>
+                    <SelectTrigger><SelectValue placeholder="请选择状态" /></SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -267,10 +283,12 @@ export function IndicatorsPage() {
               </div>
               <div>
                 <Label className="text-gray-700">变更原因</Label>
-                <select value={editForm.changeReason} onChange={(e) => setEditForm({ ...editForm, changeReason: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
-                  <option value="">请选择变更原因</option>
-                  <option>目标调整</option><option>数据更新</option><option>情况变化</option><option>计算错误</option><option>其他原因</option>
-                </select>
+                <Select value={editForm.changeReason} onValueChange={(val) => setEditForm({ ...editForm, changeReason: val })}>
+                  <SelectTrigger><SelectValue placeholder="请选择变更原因" /></SelectTrigger>
+                  <SelectContent>
+                    {changeReasonOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
@@ -404,9 +422,12 @@ export function IndicatorsPage() {
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">每页</span>
-            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
-              <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
-            </select>
+            <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
+              <SelectTrigger className="w-20 h-8 px-2"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map(opt => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">
