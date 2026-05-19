@@ -493,6 +493,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC048', code: 'source_type', name: '种源类型', module: 'crop', description: '种源类型(繁殖方式)', sortOrder: 48, status: 'active' },
   { id: 'DC049', code: 'feedback_personnel', name: '反馈人员', module: 'inspection', description: '巡查记录反馈人员列表（金庸武侠人物）', sortOrder: 49, status: 'active' },
   { id: 'DC050', code: 'farm_activity_type', name: '农事任务类型', module: 'production', description: '农事任务类型分类（灌溉/施肥/病虫害防治/采收/除草/修剪/巡田/播种/整地/定植/育苗/中耕培土/覆膜/搭架引蔓/整枝打杈/授粉/疏花疏果/清园/土壤改良/测产验收）', sortOrder: 50, status: 'active' },
+  { id: 'DC051', code: 'indicator_category', name: '指标类别', module: 'production', description: '生产管理指标类别（生产/资源/质量/成本/效率/效益/服务/设备/安全）', sortOrder: 51, status: 'active' },
 ];
 
 // ============================================
@@ -862,6 +863,16 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'FAT018', categoryCode: 'farm_activity_type', dictCode: '清园', dictLabel: '清园', dictValue: '清园', color: 'slate', sortOrder: 18, isDefault: 1, status: 'active' },
   { id: 'FAT019', categoryCode: 'farm_activity_type', dictCode: '土壤改良', dictLabel: '土壤改良', dictValue: '土壤改良', color: 'neutral', sortOrder: 19, isDefault: 1, status: 'active' },
   { id: 'FAT020', categoryCode: 'farm_activity_type', dictCode: '测产验收', dictLabel: '测产验收', dictValue: '测产验收', color: 'sky', sortOrder: 20, isDefault: 1, status: 'active' },
+  // 指标类别（V2.1 指标模块字典化）
+  { id: 'IC01', categoryCode: 'indicator_category', dictCode: '生产指标', dictLabel: '生产指标', dictValue: 'production', color: 'cyan', sortOrder: 1, isDefault: 1, status: 'active' },
+  { id: 'IC02', categoryCode: 'indicator_category', dictCode: '资源指标', dictLabel: '资源指标', dictValue: 'resource', color: 'blue', sortOrder: 2, isDefault: 1, status: 'active' },
+  { id: 'IC03', categoryCode: 'indicator_category', dictCode: '质量指标', dictLabel: '质量指标', dictValue: 'quality', color: 'purple', sortOrder: 3, isDefault: 1, status: 'active' },
+  { id: 'IC04', categoryCode: 'indicator_category', dictCode: '成本指标', dictLabel: '成本指标', dictValue: 'cost', color: 'green', sortOrder: 4, isDefault: 1, status: 'active' },
+  { id: 'IC05', categoryCode: 'indicator_category', dictCode: '效率指标', dictLabel: '效率指标', dictValue: 'efficiency', color: 'amber', sortOrder: 5, isDefault: 1, status: 'active' },
+  { id: 'IC06', categoryCode: 'indicator_category', dictCode: '效益指标', dictLabel: '效益指标', dictValue: 'benefit', color: 'emerald', sortOrder: 6, isDefault: 1, status: 'active' },
+  { id: 'IC07', categoryCode: 'indicator_category', dictCode: '服务指标', dictLabel: '服务指标', dictValue: 'service', color: 'pink', sortOrder: 7, isDefault: 1, status: 'active' },
+  { id: 'IC08', categoryCode: 'indicator_category', dictCode: '设备指标', dictLabel: '设备指标', dictValue: 'equipment', color: 'sky', sortOrder: 8, isDefault: 1, status: 'active' },
+  { id: 'IC09', categoryCode: 'indicator_category', dictCode: '安全指标', dictLabel: '安全指标', dictValue: 'safety', color: 'red', sortOrder: 9, isDefault: 1, status: 'active' },
 ];
 
 // ============================================
@@ -1698,6 +1709,47 @@ export function seedCodeRuleCategories() {
   }
 }
 
+// ============================================
+// 指标评估种子数据
+// ============================================
+const defaultIndicatorEvaluations = [
+  { id: '1', name: '上海松江基地', productionScore: 92, qualityScore: 95, costScore: 88, efficiencyScore: 90, totalScore: 91.25, rank: 1 },
+  { id: '2', name: '上海崇明基地', productionScore: 88, qualityScore: 92, costScore: 85, efficiencyScore: 87, totalScore: 88.0, rank: 2 },
+  { id: '3', name: '上海嘉定基地', productionScore: 85, qualityScore: 90, costScore: 90, efficiencyScore: 85, totalScore: 87.5, rank: 3 },
+  { id: '4', name: '上海奉贤基地', productionScore: 90, qualityScore: 88, costScore: 82, efficiencyScore: 88, totalScore: 87.0, rank: 4 },
+  { id: '5', name: '西安雁塔基地', productionScore: 82, qualityScore: 85, costScore: 88, efficiencyScore: 86, totalScore: 85.25, rank: 5 },
+  { id: '6', name: '西安高新基地', productionScore: 80, qualityScore: 88, costScore: 85, efficiencyScore: 84, totalScore: 84.25, rank: 6 },
+  { id: '7', name: '宁波北仑基地', productionScore: 78, qualityScore: 82, costScore: 86, efficiencyScore: 82, totalScore: 82.0, rank: 7 },
+  { id: '8', name: '宁波镇海基地', productionScore: 75, qualityScore: 80, costScore: 84, efficiencyScore: 80, totalScore: 79.75, rank: 8 },
+];
+
+export function seedIndicatorEvaluations() {
+  const db = getDatabase();
+  let inserted = 0;
+
+  for (const item of defaultIndicatorEvaluations) {
+    const checkStmt = db.prepare('SELECT id FROM indicator_evaluations WHERE id = ?');
+    checkStmt.bind([item.id]);
+    const exists = checkStmt.step();
+    checkStmt.free();
+
+    if (exists) continue;
+
+    const now = new Date().toISOString();
+    db.run(`
+      INSERT INTO indicator_evaluations
+      (id, name, production_score, quality_score, cost_score, efficiency_score, total_score, rank, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      item.id, item.name, item.productionScore, item.qualityScore,
+      item.costScore, item.efficiencyScore, item.totalScore, item.rank, now, now
+    ]);
+    inserted++;
+  }
+
+  if (inserted > 0) console.log(`已导入 ${inserted} 条指标评估数据`);
+}
+
 export function exportBasicData() {
   seedDepartments();
   seedWarehouses();
@@ -1706,6 +1758,7 @@ export function exportBasicData() {
   seedTeams();
   seedDictionaryCategories();
   seedDictionaries();
+  seedIndicatorEvaluations();
   seedNotificationChannels();
   seedNotificationRules();
   seedApprovalWorkflows();

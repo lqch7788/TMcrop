@@ -15,7 +15,7 @@ export default function AnalyzePanel({ analyzeData }: AnalyzePanelProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 月度达成率趋势 */}
         <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">月度达成率趋势</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">指标达成率趋势</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={analyzeData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -52,7 +52,7 @@ export default function AnalyzePanel({ analyzeData }: AnalyzePanelProps) {
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-3 py-3 text-left text-sm font-semibold">月份</th>
+                <th className="px-3 py-3 text-left text-sm font-semibold">指标名称</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold">目标值</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold">实际值</th>
                 <th className="px-3 py-3 text-left text-sm font-semibold">差距</th>

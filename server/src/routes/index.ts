@@ -40,6 +40,7 @@ import monitoringRouter from './monitoring';
 import syncRouter from './sync';
 import announcementRouter from './announcement';
 import indicatorsRouter from './indicators';
+import indicatorEvaluationsRouter from './indicatorEvaluations';
 import scheduleRouter from './schedule';
 import attendanceRouter from './attendance';
 import personnelRouter from './personnel';
@@ -59,6 +60,13 @@ import backupRouter from './backup';
 import plantingRecordRouter from './plantingRecord';
 import farmPartitionsRouter from './farmPartitions';
 import areaSystemsRouter from './areaSystems';
+import deviceSystemsRouter from './deviceSystems';
+import camerasRouter from './cameras';
+import energyConfigsRouter from './energyConfigs';
+import alarmConfigsRouter from './alarmConfigs';
+import waterFertilizerRouter from './waterFertilizer';
+import plantSettingsRouter from './plantSettings';
+import projectDebugRouter from './projectDebug';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -190,6 +198,9 @@ router.use('/announcements', requireAuth, announcementRouter);
 // 指标路由 - 需要认证
 router.use('/indicators', requireAuth, indicatorsRouter);
 
+// 指标评估路由 - 需要认证
+router.use('/indicator-evaluations', requireAuth, indicatorEvaluationsRouter);
+
 // 排班管理路由 - 需要认证
 router.use('/schedules', requireAuth, scheduleRouter);
 
@@ -246,6 +257,27 @@ router.use('/farm-partitions', requireAuth, farmPartitionsRouter);
 
 // 区域系统路由 — iAGS AreaSystem 集成
 router.use('/area-systems', requireAuth, areaSystemsRouter);
+
+// 设备系统路由 — iAGS deviceSystem 集成
+router.use('/device-systems', requireAuth, deviceSystemsRouter);
+
+// 摄像头路由 — iAGS Camera 集成
+router.use('/cameras', requireAuth, camerasRouter);
+
+// 能耗配置路由 — iAGS AreaEnery 集成
+router.use('/energy-configs', requireAuth, energyConfigsRouter);
+
+// 警报配置路由 — iAGS Warning 集成
+router.use('/alarm-configs', requireAuth, alarmConfigsRouter);
+
+// 水肥一体机路由 — iAGS WaterFertilizer 集成
+router.use('/water-fertilizer', requireAuth, waterFertilizerRouter);
+
+// 种植设置路由 — iAGS Plantset 集成
+router.use('/plant-settings', requireAuth, plantSettingsRouter);
+
+// 工程调试路由 — iAGS ProjectDebug 集成
+router.use('/debug', requireAuth, projectDebugRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

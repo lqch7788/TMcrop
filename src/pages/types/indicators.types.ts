@@ -17,6 +17,8 @@ export interface Indicator {
   source: string;
   warning: number;
   weight: number;
+  createTime?: string;
+  updateTime?: string;
 }
 
 // 评估数据项
