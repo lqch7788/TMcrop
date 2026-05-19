@@ -1498,7 +1498,17 @@ router.post('/system-configs', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
     `, [id, configKey, configValue, configType || 'string', category || 'system', description || '', now, now]);
 
-    res.json({ success: true, message: '系统配置创建成功', data: { id, configKey, configValue } });
+    // 查询完整记录返回
+    const created = db.exec(`SELECT * FROM system_configs WHERE id = ?`, [id]);
+    if (created.length > 0 && created[0].values.length > 0) {
+      const cols = created[0].columns;
+      const row = created[0].values[0];
+      const full: any = {};
+      cols.forEach((c, i) => { full[c] = row[i]; });
+      res.json({ success: true, message: '系统配置创建成功', data: full });
+    } else {
+      res.json({ success: true, message: '系统配置创建成功', data: { id, configKey, configValue } });
+    }
   } catch (error) {
     console.error('创建系统配置失败:', error);
     res.status(500).json({ success: false, error: '创建系统配置失败' });

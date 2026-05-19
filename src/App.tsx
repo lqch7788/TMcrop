@@ -63,6 +63,7 @@ import AlarmConfigManagement from './pages/system/AlarmConfigManagement';
 import WaterFertilizerManagement from './pages/system/WaterFertilizerManagement';
 import ProjectDebugManagement from './pages/system/ProjectDebugManagement';
 import PlantSettingManagement from './pages/system/PlantSettingManagement';
+import DeviceDistributionManagement from './pages/system/DeviceDistributionManagement';
 
 import BaseSettings from './pages/BaseSettings';
 import Traceability from './pages/Traceability';
@@ -274,6 +275,7 @@ function AppContent() {
             <Route path="water-fertilizer" element={<WaterFertilizerManagement />} />
             <Route path="project-debug" element={<ProjectDebugManagement />} />
             <Route path="plant-settings" element={<PlantSettingManagement />} />
+            <Route path="device-distribution" element={<DeviceDistributionManagement />} />
 
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />

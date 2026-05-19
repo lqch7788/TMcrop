@@ -560,6 +560,81 @@ SQLite 数据库文件 `server/data/yuanxingtu.db` **必须提交到 Git**。这
 **构建状态：** ✅ 前端 + 后端 TypeScript 均通过
 **涉及文件：** `materialCodeCategories.ts`, `fixMissingSchema.ts`, `seedBasicData.ts`, `useSupplierCodeRuleStore.ts`, `SupplierCodeRule.tsx`, `CodeRule.tsx`
 
+### 2026-05-19 会话 — iAGS系统设置集成 Phase 5-8 + 登录修复
+
+**完成的工作：**
+
+1. **Phase 5-6** (前次会话完成): 水肥一体机、种植设置、工程调试 — 后端路由+Store+页面
+
+2. **Phase 7 - Settings Hub 重构**
+   - `src/pages/Settings.tsx`：7组重新分布
+   - 基础数据(5)/农场结构(6)/权限管理(3)/生产配置(4)/IoT设备(5)/监控告警(4)/运营管理(3)
+
+3. **登录问题根因诊断与修复 (CRITICAL)**
+   - 根因: `fixMissingSchema.ts` 底部模块级 `main()` 在导入时抢先调用 `initDatabase()` + `fixMissingSchema()` + `saveDatabase()`，导致数据库在种子数据加载前被写盘
+   - 修复1: 删除 `fixMissingSchema.ts` 模块级 `main()`（第922-928行）
+   - 修复2: `index.ts` 种子加载后添加 `saveDatabase()` 统一持久化
+   - 测试发现: Windows curl 无法正确传递中文字符（乱码），使用 Node.js http.request 验证登录正常
+
+4. **Phase 8 - 全量API测试**
+   - 8个新模块端点全部通过：device-systems/cameras/energy-configs/alarm-contacts/water-fertilizer/plant-settings + debug/diagnostics + debug/hmi
+   - 登录token获取正常（陆启闯/123456）
+
+5. **PlantSettingManagement.tsx JSX 语法修复**
+   - ternary链 map回调括号不匹配修复
+
+**涉及文件修改：**
+- `server/src/db/fixMissingSchema.ts` — 删除模块级main()
+- `server/src/index.ts` — 导入saveDatabase，种子后持久化
+- `src/pages/Settings.tsx` — 7组重构
+- `src/pages/system/PlantSettingManagement.tsx` — JSX修复
+- `server/src/routes/authority.ts` — 临时debug日志(已清理)
+
+**构建状态：** ✅ 前端+后端 TypeScript + Vite build 均通过
+**iAGS集成状态：** Phase 1-8 完成，Phase 9 (文档+清理) 待执行
+
+### 2026-05-19 会话 (第二阶段) — 系统参数配置模块 V2.1 架构改造
+
+**问题诊断：**
+1. TAB 分类硬编码 `system/ui/feature/demo`，但 DB 实际分类为 `system/task/approval/business`，导致"界面设置""功能设置""演示设置"3 个 TAB 无数据
+2. 页面硬编码 10 条 DEFAULT_CONFIGS 作为 API 空值时的后备（违反 V2.1 铁律）
+3. Store 缺少 FIELD_MAP/normalize/denormalize 标准模式
+4. 后端 POST 只返回 `{id, configKey, configValue}`，不返回完整记录
+
+**完成的工作：**
+
+1. **`useSystemConfigStore.ts` 完全重写为 V2.1 标准模板**
+   - 自包含 `SystemConfig` 类型定义（8 字段）
+   - FIELD_MAP（8 个 snake_case → camelCase 映射）+ normalize/denormalize
+   - 改用 `enhancedApiClient` 直接调用（cache-first 策略）
+   - 乐观更新模式：update/delete 先操作本地再调 API
+   - API 响应格式容错（嵌套 `{success, data}` + 扁平数组）
+   - persist + partialize（仅持久化 configs）
+   - 零 any 类型、零 lint 警告
+
+2. **`SystemConfig.tsx` 页面重写**
+   - 移除硬编码 10 条 DEFAULT_CONFIGS
+   - TAB 分类修复：`system|ui|feature|demo` → `system|task|approval|business`
+   - TAB 标签显示各分类数量：全部(21)、系统设置(6)、农事任务(7)、审批流程(4)、业务参数(4)
+   - 移除 `useState` 管理业务数据，全部使用 Store 选择器
+   - `useMemo` 做筛选、`useCallback` 做事件回调
+   - 新增空态提示
+   - 导入 `SystemConfig` 类型改为从 stores 而非 apiBasicDataService
+
+3. **后端 POST 路由修复**（`basicData.ts`）
+   - 创建后 `SELECT *` 查询完整记录返回（之前只返回 3 个字段）
+
+4. **`stores/index.ts`** 新增 `SystemConfig` 类型导出
+
+**验证结果：**
+- TypeScript: 零错误
+- ESLint: 零错误零警告
+- Vite build: 通过
+- API CRUD: POST → GET → PUT → DELETE 全链路通过
+- 数据分布: system(6)/task(7)/approval(4)/business(4) 四个 TAB 全部有数据
+
+**涉及文件：** `useSystemConfigStore.ts`, `SystemConfig.tsx`, `basicData.ts`, `stores/index.ts`
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

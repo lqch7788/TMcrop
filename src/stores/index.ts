@@ -194,6 +194,7 @@ export type { CostCategoryItem, CostBudgetItem } from '../services/apiBasicDataS
 
 // ==================== 系统配置 Store ====================
 export { useSystemConfigStore } from './useSystemConfigStore';
+export type { SystemConfig } from './useSystemConfigStore';
 
 // ==================== 审批流程 Store ====================
 export { useApprovalWorkflowStore } from './useApprovalWorkflowStore';
@@ -320,3 +321,7 @@ export { INTERVAL_UNITS } from './useWaterFertilizerStore';
 // iAGS 种植设置 V1.0
 export { usePlantSettingStore } from './usePlantSettingStore';
 export type { PlantSetting } from './usePlantSettingStore';
+
+// iAGS 设备分配 V1.0
+export { useDeviceDistributionStore } from './useDeviceDistributionStore';
+export type { DeviceDistribution } from '../services/apiDeviceDistributionService';
