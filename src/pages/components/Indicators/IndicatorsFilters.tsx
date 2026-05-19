@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
 import type { IndicatorCategory } from '../../types/indicators.types';
 import { getIndicatorCategories } from '../../hooks/useIndicators';
 
@@ -32,6 +33,7 @@ export default function IndicatorsFilters({
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
               <Button
+                size="sm"
                 key={cat}
                 variant={categoryFilter === cat ? 'blue' : 'ghost'}
                 onClick={() => onCategoryChange(cat)}
@@ -47,12 +49,12 @@ export default function IndicatorsFilters({
         <div className="flex-1 min-w-[200px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="搜索指标名称或编码..."
               value={searchKeyword}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="pl-10"
             />
           </div>
         </div>

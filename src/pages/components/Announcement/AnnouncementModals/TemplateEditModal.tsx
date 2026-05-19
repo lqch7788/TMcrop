@@ -6,6 +6,10 @@
  */
 import { useState, useEffect } from 'react';
 import { Plus, Edit, FileText } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { TextArea } from '../../../../components/ui/TextArea';
+import { Label } from '../../../../components/ui/label';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import type { AnnouncementTemplate } from '../../../../stores/useAnnouncementTemplateStore';
 
@@ -163,9 +167,7 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
             {titleInfo.icon}
             {titleInfo.text}
           </h3>
-          <button onClick={onClose} className="text-white/80 hover:text-white transition-colors text-2xl leading-none">
-            &times;
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white">&times;</Button>
         </div>
 
         {/* 表单内容 */}
@@ -173,24 +175,18 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
           <div className="space-y-4">
             {/* 模板名称 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                模板名称 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <Label className="text-gray-700">模板名称 <span className="text-red-500">*</span></Label>
+              <Input
                 value={formData.name}
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="请输入模板名称"
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
 
             {/* 公告分类 + 默认优先级 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  公告分类 <span className="text-red-500">*</span>
-                </label>
+                <Label className="text-gray-700">公告分类 <span className="text-red-500">*</span></Label>
                 <select
                   value={formData.category}
                   onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
@@ -212,7 +208,7 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">默认优先级</label>
+                <Label className="text-gray-700">默认优先级</Label>
                 <select
                   value={formData.priority}
                   onChange={e => setFormData(prev => ({ ...prev, priority: e.target.value }))}
@@ -228,52 +224,53 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
             {/* 标题模板 */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium text-gray-700">标题模板</label>
+                <Label className="text-gray-700">标题模板</Label>
                 <div className="flex items-center gap-1">
                   {VARIABLES.map(v => (
-                    <button
+                    <Button
                       key={v.key}
-                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => insertVariable(v.key, 'titleTemplate')}
-                      className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                      className="px-2 py-0.5 text-xs"
                     >
                       {v.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
-              <input
-                type="text"
+              <Input
                 value={formData.titleTemplate}
                 onChange={e => setFormData(prev => ({ ...prev, titleTemplate: e.target.value }))}
                 placeholder="支持变量占位符，如：关于{申请人}的{申请日期}工作计划"
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-mono focus:outline-none focus:border-emerald-500 transition-colors"
+                className="font-mono"
               />
             </div>
 
             {/* 正文模板 */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-sm font-medium text-gray-700">正文模板</label>
+                <Label className="text-gray-700">正文模板</Label>
                 <div className="flex items-center gap-1">
                   {VARIABLES.map(v => (
-                    <button
+                    <Button
                       key={v.key}
-                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => insertVariable(v.key, 'content')}
-                      className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                      className="px-2 py-0.5 text-xs"
                     >
                       {v.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
-              <textarea
-                rows={6}
+              <TextArea
+                minRows={6}
                 value={formData.content}
                 onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 placeholder="支持变量占位符，如：{申请人}提交了一份关于...的公告，申请日期为{申请日期}"
-                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm font-mono focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+                className="font-mono"
               />
             </div>
 
@@ -315,10 +312,8 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 flex-shrink-0">
-          <button onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all duration-300">取消</button>
-          <button onClick={handleSubmit} className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-            {mode === 'add' ? '创建模板' : '保存修改'}
-          </button>
+          <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="default" size="sm" onClick={handleSubmit}>{mode === 'add' ? '创建模板' : '保存修改'}</Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Target, Plus, Edit, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { TextArea } from '@/components/ui/TextArea';
 
 export interface Indicator {
   id: number;
@@ -159,60 +162,60 @@ export function IndicatorsPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">目标编号</label>
-                  <input type="text" value={newTarget.code} onChange={(e) => setNewTarget({ ...newTarget, code: e.target.value })} placeholder="请输入目标编号" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">目标编号</Label>
+                  <Input type="text" value={newTarget.code} onChange={(e) => setNewTarget({ ...newTarget, code: e.target.value })} placeholder="请输入目标编号" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">种植季</label>
-                  <input type="text" value={newTarget.current} onChange={(e) => setNewTarget({ ...newTarget, current: e.target.value })} placeholder="请输入种植季" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">种植季</Label>
+                  <Input type="text" value={newTarget.current} onChange={(e) => setNewTarget({ ...newTarget, current: e.target.value })} placeholder="请输入种植季" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">区域</label>
+                  <Label className="text-gray-700">区域</Label>
                   <select value={newTarget.region} onChange={(e) => setNewTarget({ ...newTarget, region: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                     <option value="">请选择区域</option>
                     <option>弘智耘种植园</option><option>1号棚</option><option>2号棚</option><option>3号棚</option><option>4号棚</option><option>5号棚</option><option>6号棚</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">目标类型</label>
+                  <Label className="text-gray-700">目标类型</Label>
                   <select value={newTarget.type} onChange={(e) => setNewTarget({ ...newTarget, type: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                     <option>产量目标</option><option>产值目标</option><option>质量目标</option><option>成本目标</option><option>进度目标</option><option>环保目标</option><option>安全目标</option><option>创新目标</option><option>能耗目标</option><option>技术目标</option><option>服务目标</option><option>培训目标</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">目标内容</label>
-                <textarea value={newTarget.content} onChange={(e) => setNewTarget({ ...newTarget, content: e.target.value })} placeholder="请输入目标内容" rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none" />
+                <Label className="text-gray-700">目标内容</Label>
+                <TextArea value={newTarget.content} onChange={(e) => setNewTarget({ ...newTarget, content: e.target.value })} placeholder="请输入目标内容" minRows={2} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">目标值</label>
-                  <input type="text" value={newTarget.target} onChange={(e) => setNewTarget({ ...newTarget, target: e.target.value })} placeholder="请输入目标值" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">目标值</Label>
+                  <Input type="text" value={newTarget.target} onChange={(e) => setNewTarget({ ...newTarget, target: e.target.value })} placeholder="请输入目标值" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">发布人</label>
-                  <input type="text" value={newTarget.publisher} onChange={(e) => setNewTarget({ ...newTarget, publisher: e.target.value })} placeholder="请输入发布人" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">发布人</Label>
+                  <Input type="text" value={newTarget.publisher} onChange={(e) => setNewTarget({ ...newTarget, publisher: e.target.value })} placeholder="请输入发布人" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">发布时间</label>
-                  <input type="date" value={newTarget.publishDate} onChange={(e) => setNewTarget({ ...newTarget, publishDate: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">发布时间</Label>
+                  <Input type="date" value={newTarget.publishDate} onChange={(e) => setNewTarget({ ...newTarget, publishDate: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                  <Label className="text-gray-700">状态</Label>
                   <select value={newTarget.status} onChange={(e) => setNewTarget({ ...newTarget, status: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                     <option>进行中</option><option>已完成</option><option>已过期</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <textarea value={newTarget.remarks} onChange={(e) => setNewTarget({ ...newTarget, remarks: e.target.value })} placeholder="请输入备注信息" rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none" />
+                <Label className="text-gray-700">备注</Label>
+                <TextArea value={newTarget.remarks} onChange={(e) => setNewTarget({ ...newTarget, remarks: e.target.value })} placeholder="请输入备注信息" minRows={3} />
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
@@ -249,21 +252,21 @@ export function IndicatorsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">变更</label>
-                <textarea value={editForm.change} onChange={(e) => setEditForm({ ...editForm, change: e.target.value })} placeholder="请输入变更内容" rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none" />
+                <Label className="text-gray-700">变更</Label>
+                <TextArea value={editForm.change} onChange={(e) => setEditForm({ ...editForm, change: e.target.value })} placeholder="请输入变更内容" minRows={3} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">变更人</label>
-                  <input type="text" value={editForm.changePerson} onChange={(e) => setEditForm({ ...editForm, changePerson: e.target.value })} placeholder="请输入变更人" className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">变更人</Label>
+                  <Input type="text" value={editForm.changePerson} onChange={(e) => setEditForm({ ...editForm, changePerson: e.target.value })} placeholder="请输入变更人" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">变更时间</label>
-                  <input type="datetime-local" value={editForm.changeTime} onChange={(e) => setEditForm({ ...editForm, changeTime: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500" />
+                  <Label className="text-gray-700">变更时间</Label>
+                  <Input type="datetime-local" value={editForm.changeTime} onChange={(e) => setEditForm({ ...editForm, changeTime: e.target.value })} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">变更原因</label>
+                <Label className="text-gray-700">变更原因</Label>
                 <select value={editForm.changeReason} onChange={(e) => setEditForm({ ...editForm, changeReason: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                   <option value="">请选择变更原因</option>
                   <option>目标调整</option><option>数据更新</option><option>情况变化</option><option>计算错误</option><option>其他原因</option>
@@ -326,24 +329,24 @@ export function IndicatorsPage() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">种植季</label>
-            <input type="text" placeholder="搜索种植季" value={currentSearch} onChange={(e) => setCurrentSearch(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <Label className="text-gray-700">种植季</Label>
+            <Input type="text" placeholder="搜索种植季" value={currentSearch} onChange={(e) => setCurrentSearch(e.target.value)} />
           </div>
           <div className="flex-1 min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">目标类型</label>
-            <input type="text" placeholder="搜索目标类型" value={typeSearch} onChange={(e) => setTypeSearch(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <Label className="text-gray-700">目标类型</Label>
+            <Input type="text" placeholder="搜索目标类型" value={typeSearch} onChange={(e) => setTypeSearch(e.target.value)} />
           </div>
           <div className="flex-1 min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">发布人</label>
-            <input type="text" placeholder="搜索发布人" value={publisherSearch} onChange={(e) => setPublisherSearch(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <Label className="text-gray-700">发布人</Label>
+            <Input type="text" placeholder="搜索发布人" value={publisherSearch} onChange={(e) => setPublisherSearch(e.target.value)} />
           </div>
           <div className="flex-1 min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-            <input type="date" value={startDate || ''} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <Label className="text-gray-700">开始日期</Label>
+            <Input type="date" value={startDate || ''} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="flex-1 min-w-[120px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-            <input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <Label className="text-gray-700">结束日期</Label>
+            <Input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={resetFilters}>重置</Button>

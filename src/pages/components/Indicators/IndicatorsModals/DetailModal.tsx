@@ -167,7 +167,7 @@ export default function DetailModal({ isOpen, indicator, modalType, onClose }: D
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>关闭</Button>
+          <Button size="sm" variant="secondary" onClick={onClose}>关闭</Button>
         </div>
       </div>
     </div>

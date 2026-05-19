@@ -7,6 +7,10 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Send, AlertTriangle, FileText } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { TextArea } from '../../../../components/ui/TextArea';
+import { Label } from '../../../../components/ui/label';
 import type { Notice } from '../../../types/announcement.types';
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import TemplateSelectModal from './TemplateSelectModal';
@@ -155,9 +159,7 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
               {titleInfo.icon}
               {titleInfo.text}
             </h3>
-            <button onClick={onClose} className="text-white/80 hover:text-white transition-colors text-2xl leading-none">
-              &times;
-            </button>
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white">&times;</Button>
           </div>
 
           {/* 表单内容 */}
@@ -165,24 +167,18 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
             <div className="space-y-4">
               {/* 公告标题 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  公告标题 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
+                <Label className="text-gray-700">公告标题 <span className="text-red-500">*</span></Label>
+                <Input
                   value={formData.title}
                   onChange={e => handleChange('title', e.target.value)}
                   placeholder="请输入公告标题"
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
 
               {/* 公告分类 + 优先级 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    公告分类 <span className="text-red-500">*</span>
-                  </label>
+                  <Label className="text-gray-700">公告分类 <span className="text-red-500">*</span></Label>
                   <select
                     value={formData.category}
                     onChange={e => handleChange('category', e.target.value)}
@@ -206,9 +202,7 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    优先级 <span className="text-red-500">*</span>
-                  </label>
+                  <Label className="text-gray-700">优先级 <span className="text-red-500">*</span></Label>
                   <select
                     value={formData.priority}
                     onChange={e => handleChange('priority', e.target.value)}
@@ -224,51 +218,46 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
               {/* 从模板选择（仅新增模式） */}
               {mode === 'add' && (
                 <div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowTemplateModal(true)}
-                    className="w-full px-4 py-2 border border-emerald-300 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                    className="w-full"
                   >
                     <FileText className="w-4 h-4" />
                     从模板选择
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {/* 接收对象 + 截止日期 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">接收对象</label>
-                  <input
-                    type="text"
+                  <Label className="text-gray-700">接收对象</Label>
+                  <Input
                     value={formData.recipients}
                     onChange={e => handleChange('recipients', e.target.value)}
                     placeholder="请输入接收对象"
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">截止日期</label>
-                  <input
+                  <Label className="text-gray-700">截止日期</Label>
+                  <Input
                     type="date"
                     value={formData.deadline}
                     onChange={e => handleChange('deadline', e.target.value)}
-                    className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                   />
                 </div>
               </div>
 
               {/* 公告内容 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  公告内容 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={6}
+                <Label className="text-gray-700">公告内容 <span className="text-red-500">*</span></Label>
+                <TextArea
+                  minRows={6}
                   value={formData.content}
                   onChange={e => handleChange('content', e.target.value)}
                   placeholder="请输入公告内容"
-                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:border-emerald-500 transition-colors resize-none"
                 />
               </div>
 
@@ -286,10 +275,8 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
 
           {/* 底部按钮 */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-            <button onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all duration-300">取消</button>
-            <button onClick={handleSubmit} className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
-              {mode === 'send' ? '确认发布' : '保存'}
-            </button>
+            <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
+            <Button variant="default" size="sm" onClick={handleSubmit}>{mode === 'send' ? '确认发布' : '保存'}</Button>
           </div>
         </div>
       </div>

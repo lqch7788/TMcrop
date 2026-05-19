@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, Building2, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Input, TextArea, Label } from '@/components/ui';
 import { useBaseStore } from '../../stores';
 import type { Base } from '../../services/apiBasicDataService';
 
@@ -129,24 +129,28 @@ export default function CompanyBaseTab() {
             </div>
           </div>
           <div className="space-y-0.5 max-h-[500px] overflow-y-auto">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setSelectedCompanyId('')}
-              className={`w-full text-left text-xs px-2 py-1.5 rounded transition-colors ${!selectedCompanyId ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              className="w-full text-left justify-start"
             >
               全部公司 ({bases.length})
-            </button>
+            </Button>
             {companies.map((c) => {
               const count = bases.filter((b) => b.companyOid === c.id).length;
               return (
-                <button
+                <Button
                   key={c.id}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSelectedCompanyId(c.id)}
-                  className={`w-full text-left text-xs px-2 py-1.5 rounded transition-colors truncate flex justify-between ${selectedCompanyId === c.id ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className="w-full text-left justify-start"
                   title={c.name}
                 >
                   <span className="truncate">{c.name}</span>
                   <span className="text-gray-400 ml-1">{count}</span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -159,12 +163,12 @@ export default function CompanyBaseTab() {
         <div className="flex items-center gap-3 mb-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="搜索基地名称/编码..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="pl-9"
             />
           </div>
           <Button size="sm" onClick={handleAdd}>
@@ -223,12 +227,12 @@ export default function CompanyBaseTab() {
                         </td>
                         <td className="px-4 py-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => handleEdit(base)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded" title="编辑">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(base)} className="text-blue-500 hover:text-blue-600" title="编辑">
                               <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setShowDeleteConfirm(base)} className="p-1.5 hover:bg-red-50 text-red-500 rounded" title="删除">
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(base)} className="text-red-500 hover:text-red-600" title="删除">
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -306,32 +310,28 @@ function BaseFormModal({
           <h3 className="text-white font-semibold text-base">
             {editingBase ? '编辑基地' : '新增基地'}
           </h3>
-          <button onClick={onClose} className="text-white/80 hover:text-white">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white/80 hover:text-white">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </Button>
         </div>
 
         {/* 表单内容 */}
         <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-3">
             <FormField label="基地名称" required>
-              <input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
             </FormField>
             <FormField label="基地编码">
-              <input value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
             </FormField>
             <FormField label="所属公司" required>
-              <input value={formData.companyName || ''} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.companyName || ''} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} />
             </FormField>
             <FormField label="面积">
               <div className="flex gap-1">
-                <input type="number" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })}
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                <Input type="number" className="flex-1" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })} />
                 <select value={formData.unit || '亩'} onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                   className="px-2 py-1.5 text-sm border border-gray-300 rounded">
                   <option value="亩">亩</option>
@@ -341,33 +341,26 @@ function BaseFormModal({
               </div>
             </FormField>
             <FormField label="省份">
-              <input value={formData.province || ''} onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.province || ''} onChange={(e) => setFormData({ ...formData, province: e.target.value })} />
             </FormField>
             <FormField label="城市">
-              <input value={formData.city || ''} onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.city || ''} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
             </FormField>
             <FormField label="负责人">
-              <input value={formData.manager || ''} onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.manager || ''} onChange={(e) => setFormData({ ...formData, manager: e.target.value })} />
             </FormField>
             <FormField label="联系电话">
-              <input value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
             </FormField>
             <FormField label="土壤类型">
-              <input value={formData.soilType || ''} onChange={(e) => setFormData({ ...formData, soilType: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input value={formData.soilType || ''} onChange={(e) => setFormData({ ...formData, soilType: e.target.value })} />
             </FormField>
             <FormField label="pH值">
-              <input type="number" step="0.1" value={formData.ph || ''} onChange={(e) => setFormData({ ...formData, ph: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+              <Input type="number" step="0.1" value={formData.ph || ''} onChange={(e) => setFormData({ ...formData, ph: Number(e.target.value) })} />
             </FormField>
           </div>
           <FormField label="简介">
-            <textarea value={formData.intro || ''} onChange={(e) => setFormData({ ...formData, intro: e.target.value })} rows={2}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none resize-none" />
+            <TextArea value={formData.intro || ''} onChange={(e) => setFormData({ ...formData, intro: e.target.value })} minRows={2} />
           </FormField>
           <FormField label="状态">
             <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -392,9 +385,9 @@ function BaseFormModal({
 function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-gray-600">
+      <Label className="text-xs text-gray-600 mb-0">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
+      </Label>
       {children}
     </div>
   );

@@ -4,6 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Eye, X } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
 import type { Notice } from '../../../types/announcement.types';
 import { getPriorityColor } from '../utils';
 
@@ -150,9 +151,11 @@ export default function DetailModal({ isOpen, notice, onClose }: DetailModalProp
           </h3>
           <div className="flex items-center gap-1">
             {/* 最大化/还原按钮 */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleMaximize}
-              className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded transition-colors"
+              className="text-white/80 hover:text-white hover:bg-white/10"
               title={isMaximized ? '还原' : '最大化'}
             >
               {isMaximized ? (
@@ -164,14 +167,16 @@ export default function DetailModal({ isOpen, notice, onClose }: DetailModalProp
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
               )}
-            </button>
+            </Button>
             {/* 关闭按钮 */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onClose}
-              className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded transition-colors"
+              className="text-white/80 hover:text-white hover:bg-white/10"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -226,7 +231,7 @@ export default function DetailModal({ isOpen, notice, onClose }: DetailModalProp
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 flex-shrink-0 rounded-b-xl">
-          <button onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all duration-300">关闭</button>
+          <Button variant="secondary" size="sm" onClick={onClose}>关闭</Button>
         </div>
       </div>
     </div>

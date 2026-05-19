@@ -3,6 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { TextArea } from '../components/ui/TextArea';
 
 // localStorage key
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -194,10 +197,10 @@ export default function BaseSettings() {
       <div className="bg-white/90 backdrop-blur-sm border border-blue-200/60 rounded-xl shadow-lg shadow-blue-200/20 p-4">
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">基地/区域名称</label>
+            <Label className="text-gray-700">基地/区域名称</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500/50" />
-              <input
+              <Input
                 type="text"
                 placeholder="搜索基地/区域名称..."
                 value={searchName}
@@ -205,12 +208,12 @@ export default function BaseSettings() {
                   setSearchName(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
+                className="pl-9"
               />
             </div>
           </div>
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <Label className="text-gray-700">状态</Label>
             <select
               value={statusFilter}
               onChange={(e) => {
@@ -225,7 +228,7 @@ export default function BaseSettings() {
             </select>
           </div>
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物类型</label>
+            <Label className="text-gray-700">作物类型</Label>
             <select
               value={cropFilter}
               onChange={(e) => {
@@ -372,6 +375,7 @@ export default function BaseSettings() {
                       <td className="px-4 py-3">
                         <Button
                           variant="ghost"
+                          size="sm"
                           onClick={() => navigate('/', { state: { baseId: item.id, baseName: item.name } })}
                           className="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                         >
@@ -533,12 +537,14 @@ export default function BaseSettings() {
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
               <Button
                 variant="secondary"
+                size="sm"
                 onClick={() => setShowConfirmModal(false)}
               >
                 取消
               </Button>
               <Button
                 variant={confirmModalConfig.type === 'danger' ? 'destructive' : 'default'}
+                size="sm"
                 onClick={() => {
                   confirmModalConfig.onConfirm();
                   setShowConfirmModal(false);
@@ -566,7 +572,7 @@ export default function BaseSettings() {
             <div className="p-6 space-y-4">
               {!editingItem && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">新增类型</label>
+                  <Label className="text-gray-700 mb-2">新增类型</Label>
                   <select
                     value={addType}
                     onChange={(e) => setAddType(e.target.value as 'company' | 'base')}
@@ -580,7 +586,7 @@ export default function BaseSettings() {
 
               {(!editingItem && addType === 'base') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">所属公司</label>
+                  <Label className="text-gray-700 mb-2">所属公司</Label>
                   <select
                     value={selectedCompanyId || ''}
                     onChange={(e) => setSelectedCompanyId(Number(e.target.value))}
@@ -595,14 +601,13 @@ export default function BaseSettings() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label className="text-gray-700 mb-2">
                   {editingItem?.type === 'company' || addType === 'company' ? '公司名称' : '基地名称'}
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="editName"
                   defaultValue={editingItem?.data?.name || ''}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400"
                   placeholder={editingItem?.type === 'company' || addType === 'company' ? '请输入公司名称' : '请输入基地名称'}
                 />
               </div>
@@ -611,11 +616,11 @@ export default function BaseSettings() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">面积</label>
-                      <input type="number" id="editArea" defaultValue={editingItem?.data?.area || ''} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400" placeholder="如：300" />
+                      <Label className="text-gray-700 mb-2">面积</Label>
+                      <Input type="number" id="editArea" defaultValue={editingItem?.data?.area || ''} placeholder="如：300" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">单位</label>
+                      <Label className="text-gray-700 mb-2">单位</Label>
                       <select id="editUnit" defaultValue={editingItem?.data?.unit || '亩'} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
                         <option value="亩">亩</option>
                         <option value="平方米">平方米</option>
@@ -625,21 +630,21 @@ export default function BaseSettings() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">作物</label>
-                      <input type="text" id="editCrop" defaultValue={editingItem?.data?.crop || ''} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400" placeholder="如：水稻" />
+                      <Label className="text-gray-700 mb-2">作物</Label>
+                      <Input type="text" id="editCrop" defaultValue={editingItem?.data?.crop || ''} placeholder="如：水稻" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">负责人</label>
-                      <input type="text" id="editManager" defaultValue={editingItem?.data?.manager || ''} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400" placeholder="请输入负责人" />
+                      <Label className="text-gray-700 mb-2">负责人</Label>
+                      <Input type="text" id="editManager" defaultValue={editingItem?.data?.manager || ''} placeholder="请输入负责人" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">联系电话</label>
-                    <input type="text" id="editPhone" defaultValue={editingItem?.data?.phone || ''} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400" placeholder="请输入联系电话" />
+                    <Label className="text-gray-700 mb-2">联系电话</Label>
+                    <Input type="text" id="editPhone" defaultValue={editingItem?.data?.phone || ''} placeholder="请输入联系电话" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">基地简介</label>
-                    <textarea id="editIntro" rows={3} defaultValue={editingItem?.data?.intro || ''} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400" placeholder="请输入基地简介"></textarea>
+                    <Label className="text-gray-700 mb-2">基地简介</Label>
+                    <TextArea id="editIntro" minRows={3} defaultValue={editingItem?.data?.intro || ''} placeholder="请输入基地简介" />
                   </div>
                 </>
               )}
@@ -647,12 +652,14 @@ export default function BaseSettings() {
             <div className="px-6 py-4 border-t border-blue-100 flex justify-end gap-2">
               <Button
                 variant="secondary"
+                size="sm"
                 onClick={() => { setIsAddingNew(false); setEditingItem(null); }}
               >
                 取消
               </Button>
               <Button
                 variant="default"
+                size="sm"
                 onClick={() => {
                   const nameInput = document.getElementById('editName') as HTMLInputElement;
                   const name = nameInput?.value;
