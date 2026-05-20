@@ -3,7 +3,10 @@
  */
 import React, { useRef } from 'react';
 import { Plus, Trash2, Upload, RefreshCw } from 'lucide-react';
-import { Modal, FormField, Input, Select } from '../ui/Modal';
+import { Modal, FormField } from '../ui/Modal';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import * as XLSX from 'xlsx';
 
@@ -186,14 +189,14 @@ export function CreatePlanModal({
                 placeholder="PA2026XXXXX"
                 className="flex-1"
               />
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={handleGenerateCode}
-                className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 whitespace-nowrap"
               >
                 <RefreshCw className="w-4 h-4" />
                 生成
-              </button>
+              </Button>
             </div>
           </FormField>
         </div>
@@ -201,40 +204,43 @@ export function CreatePlanModal({
           <FormField label="采购类型">
             <Select
               value={createForm.purchaseType}
-              onChange={(e) => {
-                const newType = e.target.value;
-                onFormChange('purchaseType', newType);
+              onValueChange={(v) => {
+                onFormChange('purchaseType', v);
                 // 生产物资采购必须关联批次，其他类型不关联
-                if (newType !== '生产物资采购') {
+                if (v !== '生产物资采购') {
                   onFormChange('relatedBatchCode', '');
                 }
               }}
-              options={[
-                { value: '生产物资采购', label: '生产物资采购' },
-                { value: '紧急采购', label: '紧急采购' },
-                { value: '常规采购', label: '常规采购' },
-                { value: '通用物资', label: '通用物资' },
-                { value: '劳保用品', label: '劳保用品' },
-                { value: '设备采购', label: '设备采购' },
-                { value: '其他', label: '其他' },
-              ]}
-            />
+            >
+              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="生产物资采购">生产物资采购</SelectItem>
+                <SelectItem value="紧急采购">紧急采购</SelectItem>
+                <SelectItem value="常规采购">常规采购</SelectItem>
+                <SelectItem value="通用物资">通用物资</SelectItem>
+                <SelectItem value="劳保用品">劳保用品</SelectItem>
+                <SelectItem value="设备采购">设备采购</SelectItem>
+                <SelectItem value="其他">其他</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField label="关联生产批次号">
             <Select
               value={createForm.relatedBatchCode || ''}
-              onChange={(e) => onFormChange('relatedBatchCode', e.target.value || undefined)}
-              options={[
-                { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
-                { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
-                { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
-                { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
-                { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
-                { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
-                { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
-                { value: 'other', label: '其他' },
-              ]}
-            />
+              onValueChange={(v) => onFormChange('relatedBatchCode', v || undefined)}
+            >
+              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
+                <SelectItem value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</SelectItem>
+                <SelectItem value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</SelectItem>
+                <SelectItem value="YMB2026-001">YMB2026-001 - 番茄育苗批次</SelectItem>
+                <SelectItem value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</SelectItem>
+                <SelectItem value="JZB2026-001">JZB2026-001 - 番茄种源批次</SelectItem>
+                <SelectItem value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</SelectItem>
+                <SelectItem value="other">其他</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
           {createForm.relatedBatchCode === 'other' && (
             <FormField label="其他说明">
@@ -282,28 +288,31 @@ export function CreatePlanModal({
           <FormField label="优先级">
             <Select
               value={createForm.priority}
-              onChange={(e) => onFormChange('priority', e.target.value)}
-              options={[
-                { value: '紧急', label: '紧急' },
-                { value: '高', label: '高' },
-                { value: '中', label: '中' },
-                { value: '低', label: '低' },
-              ]}
-            />
+              onValueChange={(v) => onFormChange('priority', v)}
+            >
+              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="紧急">紧急</SelectItem>
+                <SelectItem value="高">高</SelectItem>
+                <SelectItem value="中">中</SelectItem>
+                <SelectItem value="低">低</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <FormField label="审批人">
             <Select
               value={createForm.approvalPerson || ''}
-              onChange={(e) => onFormChange('approvalPerson', e.target.value)}
-              options={[
-                { value: '', label: '请选择' },
-                { value: '陆启闯', label: '陆启闯' },
-                { value: '周总', label: '周总' },
-                { value: 'Susan', label: 'Susan' },
-              ]}
-            />
+              onValueChange={(v) => onFormChange('approvalPerson', v)}
+            >
+              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="陆启闯">陆启闯</SelectItem>
+                <SelectItem value="周总">周总</SelectItem>
+                <SelectItem value="Susan">Susan</SelectItem>
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField label="备注">
             <Input
@@ -319,22 +328,23 @@ export function CreatePlanModal({
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-gray-800">物料明细（{createItems.length}种物料）</h4>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                size="sm"
+                variant="blue"
                 onClick={handleImportClick}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
               >
-                <Upload className="w-3 h-3" />
+                <Upload className="w-4 h-4" />
                 导入物料
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 onClick={handleAddItem}
-                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700"
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-4 h-4" />
                 添加物料
-              </button>
+              </Button>
             </div>
-            <input
+            <Input
               ref={fileInputRef}
               type="file"
               accept=".xlsx,.xls,.csv"
@@ -369,74 +379,70 @@ export function CreatePlanModal({
                   {createItems.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-2 py-1.5 whitespace-nowrap">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDeleteItem(item.id)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </Button>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.materialCode}
                           onChange={(e) => handleUpdateItem(item.id, 'materialCode', e.target.value)}
                           placeholder="编码"
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-20 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.materialName}
                           onChange={(e) => handleUpdateItem(item.id, 'materialName', e.target.value)}
                           placeholder="名称"
-                          className="w-20 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-20 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.category}
                           onChange={(e) => handleUpdateItem(item.id, 'category', e.target.value)}
                           placeholder="分类"
-                          className="w-24 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-24 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.specification}
                           onChange={(e) => handleUpdateItem(item.id, 'specification', e.target.value)}
                           placeholder="规格"
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-center">
-                        <input
-                          type="text"
+                        <Input
                           value={item.unit}
                           onChange={(e) => handleUpdateItem(item.id, 'unit', e.target.value)}
                           placeholder="单位"
-                          className="w-12 h-6 px-1 border border-gray-200 rounded text-xs text-center"
+                          className="h-6 w-12 p-1 text-xs text-center rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
-                        <input
+                        <Input
                           type="number"
                           value={item.quantity || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'quantity', Number(e.target.value))}
                           placeholder="0"
-                          className="w-14 h-6 px-1 border border-gray-200 rounded text-xs text-right"
+                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
-                        <input
+                        <Input
                           type="number"
                           value={item.estimatedPrice || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'estimatedPrice', Number(e.target.value))}
                           placeholder="0"
-                          className="w-14 h-6 px-1 border border-gray-200 rounded text-xs text-right"
+                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -445,30 +451,27 @@ export function CreatePlanModal({
                         </span>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.supplier}
                           onChange={(e) => handleUpdateItem(item.id, 'supplier', e.target.value)}
                           placeholder="供应商"
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.purpose}
                           onChange={(e) => handleUpdateItem(item.id, 'purpose', e.target.value)}
                           placeholder="用途"
-                          className="w-16 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="text"
+                        <Input
                           value={item.remark}
                           onChange={(e) => handleUpdateItem(item.id, 'remark', e.target.value)}
                           placeholder="备注"
-                          className="w-14 h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 w-14 p-1 text-xs rounded border-gray-200"
                         />
                       </td>
                     </tr>

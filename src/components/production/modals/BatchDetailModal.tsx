@@ -4,6 +4,7 @@ import { CropBatch } from '../../../types';
 import { batchStatusColors, batchStatusLabels, stageProgress } from '../constants';
 import { getProductionPlanRelations, ProductionPlanRelation } from '../../../services/productionPlanService';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface BatchDetailModalProps {
   batch: CropBatch | null;
@@ -119,47 +120,47 @@ export function BatchDetailModal({
           {/* 3列布局，字段内容有浅灰色背景 */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">批次编号</label>
+              <Label className="text-xs text-gray-600">批次编号</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.batchCode}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">种植模式</label>
+              <Label className="text-xs text-gray-600">种植模式</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.plantingMode}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">作物名称</label>
+              <Label className="text-xs text-gray-600">作物名称</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.cropName}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">作物品种</label>
+              <Label className="text-xs text-gray-600">作物品种</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.variety}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">种植区域</label>
+              <Label className="text-xs text-gray-600">种植区域</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.greenhouseName}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">种植面积</label>
+              <Label className="text-xs text-gray-600">种植面积</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.plantingArea} m²</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">开始时间</label>
+              <Label className="text-xs text-gray-600">开始时间</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.startDate}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">预计结束时间</label>
+              <Label className="text-xs text-gray-600">预计结束时间</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.expectedHarvestDate}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">负责人</label>
+              <Label className="text-xs text-gray-600">负责人</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.responsiblePerson}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">目标产量</label>
+              <Label className="text-xs text-gray-600">目标产量</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.targetYield} kg</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">当前状态</label>
+              <Label className="text-xs text-gray-600">当前状态</Label>
               <p className="mt-1">
                 <span className={`inline-block px-3 py-2 rounded-lg text-sm font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
                   {batchStatusLabels[batch.batchStatus || 'draft']}
@@ -167,15 +168,15 @@ export function BatchDetailModal({
               </p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">发布人</label>
+              <Label className="text-xs text-gray-600">发布人</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.publisher || '-'}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">初次发布时间</label>
+              <Label className="text-xs text-gray-600">初次发布时间</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.publishDate || '-'}</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 font-medium mb-1">最后修改时间</label>
+              <Label className="text-xs text-gray-600">最后修改时间</Label>
               <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.lastModifyDate || '-'}</p>
             </div>
           </div>

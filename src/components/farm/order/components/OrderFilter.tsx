@@ -5,6 +5,9 @@
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CropOrderFilters } from '@/types/crop';
 
 interface OrderFilterProps {
@@ -29,80 +32,86 @@ export function OrderFilter({
       <div className="flex items-end gap-4 flex-wrap">
         {/* 订单编号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             订单编号
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={filters.orderCode}
             onChange={(e) => onChange({ ...filters, orderCode: e.target.value })}
             placeholder="请输入订单编号"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="border-gray-200"
           />
         </div>
 
         {/* 订单名称 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             订单名称
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             value={filters.orderName}
             onChange={(e) => onChange({ ...filters, orderName: e.target.value })}
             placeholder="请输入订单名称"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="border-gray-200"
           />
         </div>
 
         {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             作物品种
-          </label>
-          <select
+          </Label>
+          <Select
             value={filters.cropName}
-            onChange={(e) => onChange({ ...filters, cropName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(v) => onChange({ ...filters, cropName: v })}
           >
-            <option value="">请选择</option>
-            {cropNames.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="border-gray-200">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {cropNames.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 订单状态 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             订单状态
-          </label>
-          <select
+          </Label>
+          <Select
             value={filters.status}
-            onChange={(e) => onChange({ ...filters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(v) => onChange({ ...filters, status: v })}
           >
-            <option value="">请选择</option>
-            {orderStatusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="border-gray-200">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {orderStatusOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 订单日期 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             订单日期
-          </label>
-          <input
+          </Label>
+          <Input
             type="date"
             value={filters.orderDate}
             onChange={(e) => onChange({ ...filters, orderDate: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="border-gray-200"
           />
         </div>
 

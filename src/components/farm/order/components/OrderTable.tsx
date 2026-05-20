@@ -5,6 +5,8 @@
 import React from 'react';
 import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface OrderTableProps {
@@ -101,11 +103,10 @@ export function OrderTable({
             <tr>
               {(exportMode || batchEditMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === data.length && data.length > 0}
-                    onChange={onExportSelectAll}
-                    className="w-4 h-4 rounded border-white"
+                    onCheckedChange={() => onExportSelectAll()}
+                    className="border-white rounded"
                   />
                 </th>
               )}
@@ -132,11 +133,10 @@ export function OrderTable({
                 <tr key={record.id} className="hover:bg-emerald-50 transition-colors">
                   {(exportMode || batchEditMode) && (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(record.id)}
-                        onChange={() => handleSelectRow(record.id)}
-                        className="w-4 h-4 rounded border-gray-300"
+                        onCheckedChange={() => handleSelectRow(record.id)}
+                        className="rounded"
                       />
                     </td>
                   )}
@@ -214,15 +214,19 @@ export function OrderTable({
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => onChange({ ...pagination, pageSize: Number(e.target.value), current: 1 })}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          <Select
+            value={String(pagination.pageSize)}
+            onValueChange={(v) => onChange({ ...pagination, pageSize: Number(v), current: 1 })}
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="w-auto px-2 py-1 border-gray-200 rounded text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

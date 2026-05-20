@@ -6,6 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { TextArea } from '@/components/ui/TextArea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVariety } from '@/types/cropVariety';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
@@ -171,18 +175,16 @@ export function AddModal({
     <div className="grid grid-cols-2 gap-4">
       {/* 订单编号 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           订单编号
-        </label>
+        </Label>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={formData.orderCode}
             onChange={(e) => setFormData({ ...formData, orderCode: e.target.value })}
             placeholder="点击生成获取编号"
-            className={`flex-1 h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
-              errors.orderCode ? 'border-red-500' : 'border-gray-200'
-            }`}
+            className={`flex-1 ${errors.orderCode ? 'border-red-500' : 'border-gray-200'}`}
           />
           <Button
             type="button"
@@ -199,57 +201,59 @@ export function AddModal({
 
       {/* 订单名称 */}
       <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           订单名称 <span className="text-red-500">*</span>
-        </label>
-        <input
+        </Label>
+        <Input
           type="text"
           value={formData.orderName}
           onChange={(e) => setFormData({ ...formData, orderName: e.target.value })}
           placeholder="请输入订单名称"
-          className={`w-full h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
-            errors.orderName ? 'border-red-500' : 'border-gray-200'
-          }`}
+          className={`${errors.orderName ? 'border-red-500' : 'border-gray-200'}`}
         />
         {errors.orderName && <p className="text-xs text-red-500 mt-1">{errors.orderName}</p>}
       </div>
 
       {/* 订单类型 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           订单类型
-        </label>
-        <select
+        </Label>
+        <Select
           value={formData.orderType}
-          onChange={(e) => setFormData({ ...formData, orderType: e.target.value as any })}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          onValueChange={(v) => setFormData({ ...formData, orderType: v as any })}
         >
-          {orderTypeOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="border-gray-200">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {orderTypeOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 订单日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           订单日期
-        </label>
-        <input
+        </Label>
+        <Input
           type="date"
           value={formData.orderDate}
           onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="border-gray-200"
         />
       </div>
 
       {/* 作物品种 - 使用统一的 CropCodeSelector（与种源管理一致） */}
       <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           <span className="text-red-500">*</span> 作物选择
-        </label>
+        </Label>
         <CropCodeSelector
           value={cropCode}
           onChange={handleCropChange}
@@ -275,86 +279,88 @@ export function AddModal({
 
       {/* 单位 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           单位
-        </label>
-        <select
+        </Label>
+        <Select
           value={formData.unit}
-          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          onValueChange={(v) => setFormData({ ...formData, unit: v })}
         >
-          <option value="株">株</option>
-          <option value="棵">棵</option>
-          <option value="袋">袋</option>
-          <option value="公斤">公斤</option>
-          <option value="吨">吨</option>
-        </select>
+          <SelectTrigger className="border-gray-200">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="株">株</SelectItem>
+            <SelectItem value="棵">棵</SelectItem>
+            <SelectItem value="袋">袋</SelectItem>
+            <SelectItem value="公斤">公斤</SelectItem>
+            <SelectItem value="吨">吨</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 计划数量 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           计划数量 <span className="text-red-500">*</span>
-        </label>
-        <input
+        </Label>
+        <Input
           type="number"
           value={formData.plannedQuantity || ''}
           onChange={(e) => setFormData({ ...formData, plannedQuantity: Number(e.target.value) })}
           placeholder="请输入计划数量"
-          className={`w-full h-10 px-3 border rounded-lg text-sm focus:outline-none focus:border-emerald-500 ${
-            errors.plannedQuantity ? 'border-red-500' : 'border-gray-200'
-          }`}
+          className={`${errors.plannedQuantity ? 'border-red-500' : 'border-gray-200'}`}
         />
         {errors.plannedQuantity && <p className="text-xs text-red-500 mt-1">{errors.plannedQuantity}</p>}
       </div>
 
       {/* 实际数量 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           实际数量
-        </label>
-        <input
+        </Label>
+        <Input
           type="number"
           value={formData.actualQuantity || ''}
           onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
           placeholder="请输入实际数量"
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="border-gray-200"
         />
       </div>
 
       {/* 供应商 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           供应商
-        </label>
-        <input
+        </Label>
+        <Input
           type="text"
           value={formData.supplierName}
           onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
           placeholder="请输入供应商名称"
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="border-gray-200"
         />
       </div>
 
       {/* 预计采收日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           预计采收日期
-        </label>
-        <input
+        </Label>
+        <Input
           type="date"
           value={formData.expectedHarvestDate}
           onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="border-gray-200"
         />
       </div>
 
       {/* 备注 */}
       <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="text-gray-700">
           备注
-        </label>
-        <textarea
+        </Label>
+        <TextArea
           value={formData.remarks}
           onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
           placeholder="请输入备注信息"

@@ -4,6 +4,9 @@
 import { Search } from 'lucide-react';
 import type { PurchasePlan } from '../../types/purchase';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface PurchasePlanFiltersProps {
   // 筛选状态
@@ -60,93 +63,82 @@ export function PurchasePlanFilters({
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
       <div className="flex flex-wrap gap-4 items-end">
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">关联生产批次</label>
-          <input
-            type="text"
+          <Label className="text-gray-700">关联生产批次</Label>
+          <Input
             value={relatedBatchCode}
             onChange={(e) => onRelatedBatchCodeChange(e.target.value)}
             placeholder="请输入"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div className="min-w-[90px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">申请人</label>
-          <input
-            type="text"
+          <Label className="text-gray-700">申请人</Label>
+          <Input
             value={applicant}
             onChange={(e) => onApplicantChange(e.target.value)}
             placeholder="请输入"
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div className="min-w-[90px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">申请部门</label>
-          <input
-            type="text"
+          <Label className="text-gray-700">申请部门</Label>
+          <Input
             value={applicantDepartment}
             onChange={(e) => onApplicantDepartmentChange(e.target.value)}
             placeholder="请输入"
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div className="min-w-[70px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
-          <select
-            value={priority}
-            onChange={(e) => onPriorityChange(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option>全部</option>
-            <option>紧急</option>
-            <option>高</option>
-            <option>中</option>
-            <option>低</option>
-          </select>
+          <Label className="text-gray-700">优先级</Label>
+          <Select value={priority} onValueChange={(v) => onPriorityChange(v)}>
+            <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部</SelectItem>
+              <SelectItem value="紧急">紧急</SelectItem>
+              <SelectItem value="高">高</SelectItem>
+              <SelectItem value="中">中</SelectItem>
+              <SelectItem value="低">低</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="min-w-[90px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
-            value={status}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option>全部</option>
-            <option>草稿</option>
-            <option>待审批</option>
-            <option>已通过</option>
-            <option>采购中</option>
-            <option>已完成</option>
-            <option>已取消</option>
-          </select>
+          <Label className="text-gray-700">状态</Label>
+          <Select value={status} onValueChange={(v) => onStatusChange(v)}>
+            <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部</SelectItem>
+              <SelectItem value="草稿">草稿</SelectItem>
+              <SelectItem value="待审批">待审批</SelectItem>
+              <SelectItem value="已通过">已通过</SelectItem>
+              <SelectItem value="采购中">采购中</SelectItem>
+              <SelectItem value="已完成">已完成</SelectItem>
+              <SelectItem value="已取消">已取消</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="min-w-[100px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">预警状态</label>
-          <select
-            value={alertFilter}
-            onChange={(e) => onAlertFilterChange(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option>全部</option>
-            <option>已逾期</option>
-            <option>即将到期</option>
-          </select>
+          <Label className="text-gray-700">预警状态</Label>
+          <Select value={alertFilter} onValueChange={(v) => onAlertFilterChange(v)}>
+            <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部</SelectItem>
+              <SelectItem value="已逾期">已逾期</SelectItem>
+              <SelectItem value="即将到期">即将到期</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="min-w-[110px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">需求开始日期</label>
-          <input
+          <Label className="text-gray-700">需求开始日期</Label>
+          <Input
             type="date"
             value={requiredStartDate}
             onChange={(e) => onRequiredStartDateChange(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div className="min-w-[110px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">需求结束日期</label>
-          <input
+          <Label className="text-gray-700">需求结束日期</Label>
+          <Input
             type="date"
             value={requiredEndDate}
             onChange={(e) => onRequiredEndDateChange(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div className="flex gap-2 items-end ml-auto">
