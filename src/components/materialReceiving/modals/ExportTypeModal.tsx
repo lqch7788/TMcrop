@@ -76,4 +76,3 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
 };
 
 export default ExportTypeModal;
-console.log('组件创建成功: ExportTypeModal');

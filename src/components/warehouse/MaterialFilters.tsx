@@ -37,12 +37,18 @@ export interface MaterialFiltersState {
   showLowStock: boolean;
 }
 
+/** 物料分类配置树形结构 */
+interface SubCategoryConfig { code: string; name: string; prefix?: string }
+interface MidCategoryConfig { name: string; subCategories: Record<string, SubCategoryConfig> }
+interface BigCategoryConfig { name: string; categories: Record<string, MidCategoryConfig> }
+type CategoryConfig = Record<string, BigCategoryConfig>;
+
 interface MaterialFiltersProps {
   filters: MaterialFiltersState;
   onFiltersChange: (filters: MaterialFiltersState) => void;
   lowStockCount: number;
   onLowStockClick: () => void;
-  categoryConfig: Record<string, any>;
+  categoryConfig: CategoryConfig;
 }
 
 const bigCategories = [
@@ -65,15 +71,15 @@ export function MaterialFilters({
   const getSearchBigCategories = () => {
     return Object.keys(categoryConfig).map(key => ({
       code: key,
-      name: categoryConfig[key as keyof typeof categoryConfig].name,
+      name: categoryConfig[key].name,
     }));
   };
 
   const getSearchMidCategories = () => {
     if (!filters.searchBigCategory) return [];
-    const bigCat = categoryConfig[filters.searchBigCategory as keyof typeof categoryConfig];
+    const bigCat = categoryConfig[filters.searchBigCategory];
     if (!bigCat) return [];
-    return Object.entries(bigCat.categories).map(([code, data]: [string, any]) => ({
+    return Object.entries(bigCat.categories).map(([code, data]) => ({
       code,
       name: data.name,
     }));
@@ -81,17 +87,17 @@ export function MaterialFilters({
 
   const getSearchSubCategories = () => {
     if (!filters.searchBigCategory || !filters.searchMidCategory) return [];
-    const bigCat = categoryConfig[filters.searchBigCategory as keyof typeof categoryConfig];
+    const bigCat = categoryConfig[filters.searchBigCategory];
     if (!bigCat) return [];
-    const midCat = bigCat.categories[filters.searchMidCategory as keyof typeof bigCat.categories];
+    const midCat = bigCat.categories[filters.searchMidCategory];
     if (!midCat) return [];
-    return Object.entries(midCat.subCategories).map(([code, data]: [string, any]) => ({
+    return Object.entries(midCat.subCategories).map(([code, data]) => ({
       code,
       name: data.name,
     }));
   };
 
-  const handleChange = (field: keyof MaterialFiltersState, value: any) => {
+  const handleChange = (field: keyof MaterialFiltersState, value: string | boolean) => {
     if (field === 'searchBigCategory') {
       onFiltersChange({ ...filters, searchBigCategory: value, searchMidCategory: '', searchSubCategory: '' });
     } else if (field === 'searchMidCategory') {

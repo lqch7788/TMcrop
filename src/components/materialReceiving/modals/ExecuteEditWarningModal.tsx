@@ -54,4 +54,3 @@ export const ExecuteEditWarningModal: React.FC<ExecuteEditWarningModalProps> = (
 };
 
 export default ExecuteEditWarningModal;
-console.log('组件创建成功: ExecuteEditWarningModal');

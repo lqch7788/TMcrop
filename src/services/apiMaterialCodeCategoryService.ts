@@ -48,9 +48,9 @@ export async function fetchCategories(): Promise<MaterialCodeCategory[]> {
 // 新增分类
 // enhancedApiClient 已解包 response.data，返回 { id, code, name, ... }
 export async function createCategory(payload: CreateCategoryPayload): Promise<MaterialCodeCategory> {
-  const data = await enhancedApiClient.post('/material-code-categories', payload) as any;
+  const data = await enhancedApiClient.post<MaterialCodeCategory>('/material-code-categories', payload);
   if (data && data.id) {
-    return data as MaterialCodeCategory;
+    return data;
   }
   throw new Error(data?.error || '创建分类失败');
 }
@@ -58,7 +58,7 @@ export async function createCategory(payload: CreateCategoryPayload): Promise<Ma
 // 更新分类名称
 // PUT 无 .data 字段，直接返回 { success, message }
 export async function updateCategory(code: string, payload: UpdateCategoryPayload): Promise<void> {
-  const result = await enhancedApiClient.put(`/material-code-categories/${code}`, payload) as any;
+  const result = await enhancedApiClient.put<{ success: boolean; error?: string }>(`/material-code-categories/${code}`, payload);
   if (!result || !result.success) {
     throw new Error(result?.error || '更新分类失败');
   }
@@ -67,7 +67,7 @@ export async function updateCategory(code: string, payload: UpdateCategoryPayloa
 // 删除分类（软删除，级联删除子分类）
 // DELETE 无 .data 字段，直接返回 { success, message }
 export async function deleteCategory(code: string): Promise<void> {
-  const result = await enhancedApiClient.delete(`/material-code-categories/${code}`) as any;
+  const result = await enhancedApiClient.delete<{ success: boolean; error?: string }>(`/material-code-categories/${code}`);
   if (!result || !result.success) {
     throw new Error(result?.error || '删除分类失败');
   }

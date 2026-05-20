@@ -57,4 +57,3 @@ export const EditWarningModal: React.FC<EditWarningModalProps> = ({
 };
 
 export default EditWarningModal;
-console.log('组件创建成功: EditWarningModal');

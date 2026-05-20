@@ -167,4 +167,3 @@ export const StatDetailModal: React.FC<StatDetailModalProps> = ({
 };
 
 export default StatDetailModal;
-console.log('组件创建成功: StatDetailModal');

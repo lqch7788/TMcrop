@@ -334,4 +334,3 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
 };
 
 export default StatMonthlyTable;
-console.log('组件创建成功: StatMonthlyTable');

@@ -65,4 +65,3 @@ export const ExecuteBatchDeleteConfirmModal: React.FC<ExecuteBatchDeleteConfirmM
 };
 
 export default ExecuteBatchDeleteConfirmModal;
-console.log('组件创建成功: ExecuteBatchDeleteConfirmModal');

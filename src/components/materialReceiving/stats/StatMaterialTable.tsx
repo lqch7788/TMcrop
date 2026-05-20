@@ -114,4 +114,3 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
 };
 
 export default StatMaterialTable;
-console.log('组件创建成功: StatMaterialTable');

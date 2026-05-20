@@ -54,4 +54,3 @@ export const ExecuteDeleteWarningModal: React.FC<ExecuteDeleteWarningModalProps>
 };
 
 export default ExecuteDeleteWarningModal;
-console.log('组件创建成功: ExecuteDeleteWarningModal');

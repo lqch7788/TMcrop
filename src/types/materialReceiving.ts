@@ -301,6 +301,52 @@ export interface CostCategorySummary {
   monthOverMonth: number;
 }
 
+// ============================================
+// 表单状态类型（消除组件 props 中的 any）
+// ============================================
+
+/** 领料申请新增/编辑表单状态 */
+export interface MaterialRequestFormState {
+  code: string;
+  date: string;
+  applicant: string;
+  department: string;
+  warehouseLocation: string;
+  plantArea: string;
+  reviewer: string;
+  productionBatchCode: string;
+  expectedDate: string;
+  remarks: string;
+  materials: MaterialItem[];
+}
+
+/** 领料出库新增表单状态 */
+export interface ExecuteAddFormState {
+  code: string;
+  date: string;
+  applicant: string;
+  warehouseLocation: string;
+  reviewer: string;
+  operator: string;
+  productionBatchCode: string;
+  sourceApplicationCodes: string[];
+  remarks: string;
+  materials: ExecuteMaterialItem[];
+}
+
+/** 领料出库编辑表单状态 */
+export interface ExecuteEditFormState {
+  code: string;
+  date: string;
+  applicant: string;
+  warehouseLocation: string;
+  reviewer: string;
+  operator: string;
+  productionBatchCode: string;
+  remarks: string;
+  materials: ExecuteMaterialItem[];
+}
+
 // 月度成本趋势
 export interface MonthlyCostTrend {
   month: string;

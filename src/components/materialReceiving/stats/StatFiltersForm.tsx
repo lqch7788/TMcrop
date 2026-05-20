@@ -104,4 +104,3 @@ export const StatFiltersForm: React.FC<StatFiltersFormProps> = ({
 };
 
 export default StatFiltersForm;
-console.log('组件创建成功: StatFiltersForm');

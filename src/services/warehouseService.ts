@@ -57,7 +57,7 @@ export function initWarehouses(): Warehouse[] {
  */
 export async function getWarehouses(): Promise<Warehouse[]> {
   try {
-    const data = await apiClient.get<Warehouse[]>('/basic-data/warehouses');
+    const data = await enhancedApiClient.get<Warehouse[]>('/basic-data/warehouses');
     saveWarehousesToStorage(data);
     return data;
   } catch (error) {
@@ -87,7 +87,7 @@ export async function getWarehouseName(id: string): Promise<string> {
  */
 export async function saveWarehouses(warehouses: Warehouse[]): Promise<void> {
   // API模式下通过后端保存
-  await apiClient.post('/basic-data/warehouses', warehouses);
+  await enhancedApiClient.post('/basic-data/warehouses', warehouses);
   saveWarehousesToStorage(warehouses);
 }
 
