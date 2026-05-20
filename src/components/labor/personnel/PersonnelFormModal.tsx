@@ -3,6 +3,9 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Worker, SKILL_TAGS } from '../../../types';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface PersonnelFormModalProps {
   worker?: Worker | null;
@@ -85,7 +88,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           <h3 className="text-lg font-semibold text-gray-900 mb-4">基本信息</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">姓名 *</label>
+              <Label className="block text-xs text-gray-500 mb-1">姓名 *</Label>
               <input
                 type="text"
                 required
@@ -95,7 +98,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">性别 *</label>
+              <Label className="block text-xs text-gray-500 mb-1">性别 *</Label>
               <select
                 value={formData.gender}
                 onChange={e => handleChange('gender', e.target.value)}
@@ -106,25 +109,24 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">年龄</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">年龄</Label>
+              <NumberInput
                 value={formData.age}
-                onChange={e => handleChange('age', Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleChange('age', val === '' ? 0 : Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">出生日期</label>
-              <input
-                type="date"
-                value={formData.birthDate}
-                onChange={e => handleChange('birthDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">出生日期</Label>
+              <DatePicker
+                selected={formData.birthDate ? new Date(formData.birthDate) : undefined}
+                onChange={(date) => handleChange('birthDate', date.toISOString().split('T')[0])}
+                className="w-full"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">身份证号</label>
+              <Label className="block text-xs text-gray-500 mb-1">身份证号</Label>
               <input
                 type="text"
                 value={formData.idCard}
@@ -133,7 +135,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">联系电话 *</label>
+              <Label className="block text-xs text-gray-500 mb-1">联系电话 *</Label>
               <input
                 type="tel"
                 required
@@ -143,7 +145,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">电子邮箱</label>
+              <Label className="block text-xs text-gray-500 mb-1">电子邮箱</Label>
               <input
                 type="email"
                 value={formData.email}
@@ -152,7 +154,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">微信</label>
+              <Label className="block text-xs text-gray-500 mb-1">微信</Label>
               <input
                 type="text"
                 value={formData.wechat}
@@ -161,7 +163,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">户籍地址</label>
+              <Label className="block text-xs text-gray-500 mb-1">户籍地址</Label>
               <input
                 type="text"
                 value={formData.address}
@@ -170,7 +172,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">现居住地址</label>
+              <Label className="block text-xs text-gray-500 mb-1">现居住地址</Label>
               <input
                 type="text"
                 value={formData.residenceAddress}
@@ -186,7 +188,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           <h3 className="text-lg font-semibold text-gray-900 mb-4">紧急联系人</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">姓名</label>
+              <Label className="block text-xs text-gray-500 mb-1">姓名</Label>
               <input
                 type="text"
                 value={formData.emergencyContact}
@@ -195,7 +197,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">关系</label>
+              <Label className="block text-xs text-gray-500 mb-1">关系</Label>
               <input
                 type="text"
                 value={formData.emergencyRelation}
@@ -204,7 +206,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">联系电话</label>
+              <Label className="block text-xs text-gray-500 mb-1">联系电话</Label>
               <input
                 type="tel"
                 value={formData.emergencyPhone}
@@ -220,7 +222,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           <h3 className="text-lg font-semibold text-gray-900 mb-4">工作信息</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">部门 *</label>
+              <Label className="block text-xs text-gray-500 mb-1">部门 *</Label>
               <select
                 required
                 value={formData.department}
@@ -235,7 +237,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">班组</label>
+              <Label className="block text-xs text-gray-500 mb-1">班组</Label>
               <input
                 type="text"
                 value={formData.team}
@@ -244,7 +246,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">岗位 *</label>
+              <Label className="block text-xs text-gray-500 mb-1">岗位 *</Label>
               <input
                 type="text"
                 required
@@ -254,7 +256,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">作业区域</label>
+              <Label className="block text-xs text-gray-500 mb-1">作业区域</Label>
               <input
                 type="text"
                 value={formData.workArea}
@@ -263,7 +265,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">技能等级</label>
+              <Label className="block text-xs text-gray-500 mb-1">技能等级</Label>
               <select
                 value={formData.skillLevel}
                 onChange={e => handleChange('skillLevel', e.target.value)}
@@ -276,16 +278,16 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">工作年限</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">工作年限</Label>
+              <NumberInput
                 value={formData.workYears}
-                onChange={e => handleChange('workYears', Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleChange('workYears', val === '' ? 0 : Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">工资类型</label>
+              <Label className="block text-xs text-gray-500 mb-1">工资类型</Label>
               <select
                 value={formData.wagesType}
                 onChange={e => handleChange('wagesType', e.target.value)}
@@ -297,17 +299,16 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">入职日期</label>
-              <input
-                type="date"
-                value={formData.hireDate}
-                onChange={e => handleChange('hireDate', e.target.value)}
+              <Label className="block text-xs text-gray-500 mb-1">入职日期</Label>
+              <DatePicker
+                selected={formData.hireDate ? new Date(formData.hireDate) : undefined}
+                onChange={(date) => handleChange('hireDate', date.toISOString().split('T')[0])}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
           <div className="mt-4">
-            <label className="block text-xs text-gray-500 mb-2">技能标签</label>
+            <Label className="block text-xs text-gray-500 mb-2">技能标签</Label>
             <div className="flex flex-wrap gap-2">
               {SKILL_TAGS.map((tag) => (
                 <Button
@@ -329,7 +330,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           <h3 className="text-lg font-semibold text-gray-900 mb-4">合同信息</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">合同编号</label>
+              <Label className="block text-xs text-gray-500 mb-1">合同编号</Label>
               <input
                 type="text"
                 value={formData.contractNo}
@@ -338,7 +339,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">合同类型</label>
+              <Label className="block text-xs text-gray-500 mb-1">合同类型</Label>
               <select
                 value={formData.contractType}
                 onChange={e => handleChange('contractType', e.target.value)}
@@ -350,7 +351,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">合同状态</label>
+              <Label className="block text-xs text-gray-500 mb-1">合同状态</Label>
               <select
                 value={formData.contractStatus}
                 onChange={e => handleChange('contractStatus', e.target.value)}
@@ -363,12 +364,11 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">合同到期日期</label>
-              <input
-                type="date"
-                value={formData.contractExpireDate}
-                onChange={e => handleChange('contractExpireDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">合同到期日期</Label>
+              <DatePicker
+                selected={formData.contractExpireDate ? new Date(formData.contractExpireDate) : undefined}
+                onChange={(date) => handleChange('contractExpireDate', date.toISOString().split('T')[0])}
+                className="w-full"
               />
             </div>
           </div>
@@ -379,7 +379,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           <h3 className="text-lg font-semibold text-gray-900 mb-4">教育信息</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">学历</label>
+              <Label className="block text-xs text-gray-500 mb-1">学历</Label>
               <select
                 value={formData.education}
                 onChange={e => handleChange('education', e.target.value)}
@@ -395,7 +395,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">专业</label>
+              <Label className="block text-xs text-gray-500 mb-1">专业</Label>
               <input
                 type="text"
                 value={formData.major}

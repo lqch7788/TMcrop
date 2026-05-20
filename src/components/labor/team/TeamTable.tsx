@@ -5,6 +5,8 @@ import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import type { Team } from './types';
 import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
 
 interface TeamTableProps {
   onBack?: () => void;
@@ -277,68 +279,62 @@ export function TeamTable({
       />
 
       {/* 新建/编辑班组弹窗 */}
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">{editingTeam ? '编辑班组' : '新建班组'}</h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsFormOpen(false)}>
-                ✕
-              </Button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">班组名称</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="请输入班组名称"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">负责人</label>
-                <input
-                  type="text"
-                  value={formData.leaderName}
-                  onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="请输入负责人姓名"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">作业区域</label>
-                <input
-                  type="text"
-                  value={formData.workZone}
-                  onChange={(e) => setFormData({ ...formData, workZone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="请输入作业区域"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                  placeholder="请输入描述"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="secondary" onClick={() => setIsFormOpen(false)}>
-                  取消
-                </Button>
-                <Button onClick={handleSubmit}>
-                  保存
-                </Button>
-              </div>
-            </div>
+      <UnifiedModal
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title={editingTeam ? '编辑班组' : '新建班组'}
+        size="md"
+        showFooter={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => setIsFormOpen(false)}>取消</Button>
+            <Button onClick={handleSubmit}>保存</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">班组名称</Label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="请输入班组名称"
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">负责人</Label>
+            <input
+              type="text"
+              value={formData.leaderName}
+              onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="请输入负责人姓名"
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">作业区域</Label>
+            <input
+              type="text"
+              value={formData.workZone}
+              onChange={(e) => setFormData({ ...formData, workZone: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="请输入作业区域"
+            />
+          </div>
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">描述</Label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              rows={3}
+              placeholder="请输入描述"
+            />
           </div>
         </div>
-      )}
+      </UnifiedModal>
     </div>
   );
 }

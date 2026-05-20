@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Checkbox } from '@/components/ui/checkbox';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
+import { Label } from '@/components/ui/label';
 
 interface TempTaskFormModalProps {
   isOpen: boolean;
@@ -307,28 +311,18 @@ export function TempTaskFormModal({
           <FormField label="执行人" required error={errors.assigneeId as any}>
             {/* 派发模式切换 */}
             <div className="flex gap-4 mb-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="dispatchMode"
-                  value="manual"
-                  checked={dispatchMode === 'manual'}
-                  onChange={() => handleDispatchModeChange('manual')}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
+              <Label className="flex items-center gap-2 cursor-pointer" onClick={() => handleDispatchModeChange('manual')}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'manual' ? 'border-emerald-600' : 'border-gray-300'}`}>
+                  {dispatchMode === 'manual' && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+                </div>
                 <span className="text-sm text-gray-700">👤 手动选择</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="dispatchMode"
-                  value="ai_assisted"
-                  checked={dispatchMode === 'ai_assisted'}
-                  onChange={() => handleDispatchModeChange('ai_assisted')}
-                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                />
+              </Label>
+              <Label className="flex items-center gap-2 cursor-pointer" onClick={() => handleDispatchModeChange('ai_assisted')}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'ai_assisted' ? 'border-emerald-600' : 'border-gray-300'}`}>
+                  {dispatchMode === 'ai_assisted' && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+                </div>
                 <span className="text-sm text-gray-700">🤖 待智能推荐</span>
-              </label>
+              </Label>
             </div>
 
             {dispatchMode === 'manual' ? (
@@ -390,20 +384,18 @@ export function TempTaskFormModal({
         {/* 第四行：计划开始时间、截止时间、优先级 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField label="计划开始时间">
-            <Input
-              type="datetime-local"
-              step="3600"
-              value={formData.planStart}
-              onChange={(e) => onChange('planStart', e.target.value)}
+            <DatePicker
+              selected={formData.planStart ? new Date(formData.planStart) : undefined}
+              onChange={(date) => onChange('planStart', date.toISOString().split('T')[0])}
+              className="w-full"
             />
           </FormField>
 
           <FormField label="截止时间" required error={errors.dueDate}>
-            <Input
-              type="datetime-local"
-              step="3600"
-              value={formData.dueDate}
-              onChange={(e) => onChange('dueDate', e.target.value)}
+            <DatePicker
+              selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
+              onChange={(date) => onChange('dueDate', date.toISOString().split('T')[0])}
+              className="w-full"
             />
           </FormField>
 
@@ -423,32 +415,32 @@ export function TempTaskFormModal({
         {/* 第五行：预计天数、预计小时、人工数量、总工时 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <FormField label="预计天数（8小时/天）" error={errors.estimatedDays}>
-            <Input
-              type="number"
+            <NumberInput
               value={formData.estimatedDays}
-              onChange={(e) => onChange('estimatedDays', parseInt(e.target.value) || 0)}
+              onChange={(value) => onChange('estimatedDays', parseInt(value) || 0)}
               min={0}
               placeholder="0"
+              className="w-full"
             />
           </FormField>
 
           <FormField label="预计小时" error={errors.estimatedHours}>
-            <Input
-              type="number"
+            <NumberInput
               value={formData.estimatedHours}
-              onChange={(e) => onChange('estimatedHours', parseInt(e.target.value) || 0)}
+              onChange={(value) => onChange('estimatedHours', parseInt(value) || 0)}
               min={0}
               placeholder="0"
+              className="w-full"
             />
           </FormField>
 
           <FormField label="人工数量" error={errors.workerCount as any}>
-            <Input
-              type="number"
+            <NumberInput
               value={formData.workerCount}
-              onChange={(e) => onChange('workerCount', parseInt(e.target.value) || 1)}
+              onChange={(value) => onChange('workerCount', parseInt(value) || 1)}
               min={1}
               placeholder="1"
+              className="w-full"
             />
           </FormField>
 
@@ -485,9 +477,9 @@ export function TempTaskFormModal({
 
         {/* 第八行：必填反馈选项 */}
         <div>
-          <label className="block text-sm font-bold text-red-600 mb-2">
+          <Label className="block text-sm font-bold text-red-600 mb-2">
             必填反馈 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <div className="grid grid-cols-2 gap-3">
             {[
               { key: 'workload_confirm', label: '工作量确认', icon: Clock, iconBg: 'bg-emerald-500', iconColor: 'text-white' },
@@ -500,27 +492,26 @@ export function TempTaskFormModal({
               const isSelected = formData.requiredFeedback.includes(item.key);
               const Icon = item.icon;
               return (
-                <label
+                <Label
                   key={item.key}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-gray-100 border-2 border-emerald-300' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'}`}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={isSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                    onCheckedChange={(checked) => {
+                      if (checked) {
                         onChange('requiredFeedback', [...formData.requiredFeedback, item.key]);
                       } else {
                         onChange('requiredFeedback', formData.requiredFeedback.filter(f => f !== item.key));
                       }
                     }}
-                    className="w-4 h-4 text-emerald-500 rounded focus:ring-emerald-500 sr-only"
+                    className="sr-only"
                   />
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? item.iconBg : 'bg-gray-200'}`}>
                     <Icon className={`w-4 h-4 ${isSelected ? item.iconColor : 'text-gray-400'}`} />
                   </div>
                   <span className={`text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
-                </label>
+                </Label>
               );
             })}
           </div>

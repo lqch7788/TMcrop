@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, X } from 'lucide-react';
 import type { SalaryRecord } from './types';
-import { Button } from '@/components/ui/button';
+import { Label, Button, UnifiedModal } from '@/components/ui';
 
 interface SalaryExportProps {
   record: SalaryRecord | null;
@@ -100,111 +100,102 @@ export function SalaryExport({ record, open, onClose }: SalaryExportProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">导出工资条</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {/* 员工信息 */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-gray-500">姓名:</span>
-                <span className="ml-2 font-medium">{record.staffName}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">工号:</span>
-                <span className="ml-2 font-medium">{record.staffId}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">月份:</span>
-                <span className="ml-2 font-medium">{record.month}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">状态:</span>
-                <span className="ml-2 font-medium">{record.status}</span>
-              </div>
+    <UnifiedModal isOpen={open} onClose={onClose} title="导出工资条" size="md" showFooter={false}>
+      <div className="p-4 space-y-4">
+        {/* 员工信息 */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-gray-500">姓名:</span>
+              <span className="ml-2 font-medium">{record.staffName}</span>
             </div>
-          </div>
-
-          {/* 工资预览 */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="bg-emerald-50 px-4 py-2 border-b">
-              <h3 className="font-medium text-emerald-800">工资明细预览</h3>
+            <div>
+              <span className="text-gray-500">工号:</span>
+              <span className="ml-2 font-medium">{record.staffId}</span>
             </div>
-            <div className="p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">基本工资</span>
-                <span>¥{record.baseSalary.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">加班费</span>
-                <span>¥{record.overtimePay.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">奖金</span>
-                <span>¥{record.bonuses.toFixed(2)}</span>
-              </div>
-              <div className="border-t pt-2 flex justify-between font-medium">
-                <span>应发合计</span>
-                <span className="text-emerald-600">¥{grossSalary.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-red-600">
-                <span>扣款合计</span>
-                <span>-¥{totalDeductions.toFixed(2)}</span>
-              </div>
-              <div className="border-t pt-2 flex justify-between font-semibold text-lg">
-                <span>实发工资</span>
-                <span className="text-emerald-600">¥{netSalary.toFixed(2)}</span>
-              </div>
+            <div>
+              <span className="text-gray-500">月份:</span>
+              <span className="ml-2 font-medium">{record.month}</span>
             </div>
-          </div>
-
-          {/* 导出格式选择 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">选择导出格式</label>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant={exportFormat === 'excel' ? 'default' : 'secondary'}
-                onClick={() => setExportFormat('excel')}
-                className="p-4 h-auto flex-col"
-              >
-                <FileSpreadsheet className={`w-8 h-8 mb-2 ${exportFormat === 'excel' ? 'text-white' : 'text-gray-400'}`} />
-                <p className={`text-sm font-medium ${exportFormat === 'excel' ? 'text-white' : 'text-gray-700'}`}>
-                  Excel
-                </p>
-                <p className={`text-xs ${exportFormat === 'excel' ? 'text-white/80' : 'text-gray-500'}`}>.xlsx 格式</p>
-              </Button>
-              <Button
-                variant={exportFormat === 'pdf' ? 'default' : 'secondary'}
-                onClick={() => setExportFormat('pdf')}
-                className="p-4 h-auto flex-col"
-              >
-                <FileText className={`w-8 h-8 mb-2 ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-400'}`} />
-                <p className={`text-sm font-medium ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-700'}`}>
-                  PDF
-                </p>
-                <p className={`text-xs ${exportFormat === 'pdf' ? 'text-white/80' : 'text-gray-500'}`}>.pdf 格式</p>
-              </Button>
+            <div>
+              <span className="text-gray-500">状态:</span>
+              <span className="ml-2 font-medium">{record.status}</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4 border-t flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>
-            取消
-          </Button>
-          <Button onClick={handleExport} disabled={isExporting}>
-            <Download className="w-4 h-4" />
-            {isExporting ? '导出中...' : '导出'}
-          </Button>
+        {/* 工资预览 */}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="bg-emerald-50 px-4 py-2 border-b">
+            <h3 className="font-medium text-emerald-800">工资明细预览</h3>
+          </div>
+          <div className="p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">基本工资</span>
+              <span>¥{record.baseSalary.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">加班费</span>
+              <span>¥{record.overtimePay.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">奖金</span>
+              <span>¥{record.bonuses.toFixed(2)}</span>
+            </div>
+            <div className="border-t pt-2 flex justify-between font-medium">
+              <span>应发合计</span>
+              <span className="text-emerald-600">¥{grossSalary.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>扣款合计</span>
+              <span>-¥{totalDeductions.toFixed(2)}</span>
+            </div>
+            <div className="border-t pt-2 flex justify-between font-semibold text-lg">
+              <span>实发工资</span>
+              <span className="text-emerald-600">¥{netSalary.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 导出格式选择 */}
+        <div>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择导出格式</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant={exportFormat === 'excel' ? 'default' : 'secondary'}
+              onClick={() => setExportFormat('excel')}
+              className="p-4 h-auto flex-col"
+            >
+              <FileSpreadsheet className={`w-8 h-8 mb-2 ${exportFormat === 'excel' ? 'text-white' : 'text-gray-400'}`} />
+              <p className={`text-sm font-medium ${exportFormat === 'excel' ? 'text-white' : 'text-gray-700'}`}>
+                Excel
+              </p>
+              <p className={`text-xs ${exportFormat === 'excel' ? 'text-white/80' : 'text-gray-500'}`}>.xlsx 格式</p>
+            </Button>
+            <Button
+              variant={exportFormat === 'pdf' ? 'default' : 'secondary'}
+              onClick={() => setExportFormat('pdf')}
+              className="p-4 h-auto flex-col"
+            >
+              <FileText className={`w-8 h-8 mb-2 ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-400'}`} />
+              <p className={`text-sm font-medium ${exportFormat === 'pdf' ? 'text-white' : 'text-gray-700'}`}>
+                PDF
+              </p>
+              <p className={`text-xs ${exportFormat === 'pdf' ? 'text-white/80' : 'text-gray-500'}`}>.pdf 格式</p>
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+        <Button variant="secondary" onClick={onClose}>
+          取消
+        </Button>
+        <Button onClick={handleExport} disabled={isExporting}>
+          <Download className="w-4 h-4" />
+          {isExporting ? '导出中...' : '导出'}
+        </Button>
+      </div>
+    </UnifiedModal>
   );
 }

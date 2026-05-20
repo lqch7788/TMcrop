@@ -49,7 +49,7 @@ export function RecruitmentFilters({
           placeholder="搜索招聘编号"
           value={filters.recruitmentCode}
           onChange={(e) => onFilterChange('recruitmentCode', e.target.value)}
-          className="h-9 w-44 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-44 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         />
       </FilterItem>
 
@@ -58,7 +58,7 @@ export function RecruitmentFilters({
         <select
           value={filters.deptId}
           onChange={(e) => onFilterChange('deptId', e.target.value)}
-          className="h-9 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部部门</option>
           {departments.map(dept => (
@@ -72,7 +72,7 @@ export function RecruitmentFilters({
         <select
           value={filters.position}
           onChange={(e) => onFilterChange('position', e.target.value)}
-          className="h-9 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部岗位</option>
           {positions.map(pos => (
@@ -86,7 +86,7 @@ export function RecruitmentFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -99,7 +99,7 @@ export function RecruitmentFilters({
         <select
           value={filters.priority}
           onChange={(e) => onFilterChange('priority', e.target.value)}
-          className="h-9 w-20 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-20 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部</option>
           {PRIORITY_OPTIONS.map(opt => (

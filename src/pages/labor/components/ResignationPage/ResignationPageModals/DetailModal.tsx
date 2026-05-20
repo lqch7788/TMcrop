@@ -2,6 +2,7 @@
  * 离职申请页面详情弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
 import { ResignationRecord } from '../../../types/resignationPage.types';
@@ -34,31 +35,31 @@ export function ResignationPageDetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">离职编号</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">离职编号</Label>
             <div className="text-sm text-gray-900">{record.resignationCode}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请人</Label>
             <div className="text-sm text-gray-900">{record.workerName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">离职类型</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">离职类型</Label>
             <div className="text-sm text-gray-900">{record.resignationType}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">离职原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">离职原因</Label>
             <div className="text-sm text-gray-900">{record.reason}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">预计最后工作日</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">预计最后工作日</Label>
             <div className="text-sm text-gray-900">{record.expectedLastDay}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">工作交接人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">工作交接人</Label>
             <div className="text-sm text-gray-900">{record.handoverUserName || '未指定'}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -71,11 +72,11 @@ export function ResignationPageDetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请时间</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请时间</Label>
             <div className="text-sm text-gray-900">{record.createTime}</div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">交接说明</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">交接说明</Label>
             <div className="text-sm text-gray-900">{record.handoverNote || '无'}</div>
           </div>
         </div>

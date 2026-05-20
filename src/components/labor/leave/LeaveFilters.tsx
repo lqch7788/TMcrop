@@ -1,6 +1,8 @@
 import { Search, Plus } from 'lucide-react';
 import type { LeaveFiltersProps, LeaveType, LeaveStatus } from './types';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Label } from '@/components/ui/label';
 
 /**
  * 请假管理筛选栏组件
@@ -14,7 +16,7 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: Leav
       <div className="flex flex-wrap gap-4 items-end">
         {/* 员工姓名 */}
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">员工姓名</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">员工姓名</Label>
           <input
             type="text"
             value={filters.staffName}
@@ -26,7 +28,7 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: Leav
 
         {/* 请假类型 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">请假类型</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">请假类型</Label>
           <select
             value={filters.leaveType}
             onChange={(e) => onFiltersChange({ ...filters, leaveType: e.target.value as LeaveType | '' })}
@@ -41,7 +43,7 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: Leav
 
         {/* 状态 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
           <select
             value={filters.status}
             onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as LeaveStatus | '' })}
@@ -56,23 +58,21 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch, onAdd }: Leav
 
         {/* 开始日期 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFiltersChange({ ...filters, startDate: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">开始日期</Label>
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFiltersChange({ ...filters, startDate: date.toISOString().slice(0, 10) })}
+            placeholder="选择开始日期"
           />
         </div>
 
         {/* 结束日期 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFiltersChange({ ...filters, endDate: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">结束日期</Label>
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFiltersChange({ ...filters, endDate: date.toISOString().slice(0, 10) })}
+            placeholder="选择结束日期"
           />
         </div>
 

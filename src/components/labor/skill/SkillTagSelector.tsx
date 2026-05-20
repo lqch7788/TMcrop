@@ -3,6 +3,7 @@ import { X, Check } from 'lucide-react';
 import { SkillTag, SkillLevel, SKILL_TAGS, SKILL_LEVELS, SkillItem } from './types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface SkillTagSelectorProps {
   selectedSkills: SkillItem[];
@@ -92,12 +93,11 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
                     <option key={level} value={level}>{level}</option>
                   ))}
                 </select>
-                <input
-                  type="date"
-                  value={skill.certifiedDate || ''}
-                  onChange={(e) => handleDateChange(skill.tag, 'certifiedDate', e.target.value)}
+                <DatePicker
+                  selected={skill.certifiedDate ? new Date(skill.certifiedDate) : undefined}
+                  onChange={(date) => handleDateChange(skill.tag, 'certifiedDate', date.toISOString().split('T')[0])}
                   placeholder="颁证日期"
-                  className="text-xs w-28 border-none bg-transparent text-gray-500 focus:outline-none"
+                  className="w-28 text-xs"
                 />
                 <Button
                   variant="ghost"

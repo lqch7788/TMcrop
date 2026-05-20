@@ -3,6 +3,7 @@
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui';
 import type { AttendanceRepairRecord } from '../types/attendanceRepairPage.types';
 
@@ -34,31 +35,31 @@ export function AttendanceRepairPageDetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</Label>
             <div className="text-sm text-gray-900">{record.employeeName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">部门</Label>
             <div className="text-sm text-gray-900">{record.department}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">补录日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">补录日期</Label>
             <div className="text-sm text-gray-900">{record.repairDate}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">补录原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">补录原因</Label>
             <div className="text-sm text-gray-900">{record.reason}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">上班时间</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">上班时间</Label>
             <div className="text-sm text-gray-900">{record.checkInTime}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">下班时间</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">下班时间</Label>
             <div className="text-sm text-gray-900">{record.checkOutTime}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -71,12 +72,12 @@ export function AttendanceRepairPageDetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">审批人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">审批人</Label>
             <div className="text-sm text-gray-900">{record.approver || '未审批'}</div>
           </div>
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

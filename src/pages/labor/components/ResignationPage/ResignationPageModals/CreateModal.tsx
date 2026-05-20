@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { ResignationFormData, RESIGNATION_TYPE_OPTIONS, VOLUNTARY_REASONS, INVOLUNTARY_REASONS, ResignationType } from '../../../types/resignationPage.types';
+import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui';
 import { useWorkerStore } from '../../../../../stores';
 
 interface ResignationPageCreateModalProps {
@@ -48,9 +50,9 @@ export function ResignationPageCreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.workerId}
             onChange={(e) => onWorkerChange(e.target.value)}
@@ -65,9 +67,9 @@ export function ResignationPageCreateModal({
 
         {/* 离职类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             离职类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.resignationType}
             onChange={(e) => onResignationTypeChange(e.target.value as ResignationType)}
@@ -81,9 +83,9 @@ export function ResignationPageCreateModal({
 
         {/* 离职原因 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             离职原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.reason}
             onChange={(e) => onFormDataChange({ reason: e.target.value })}
@@ -101,23 +103,23 @@ export function ResignationPageCreateModal({
 
         {/* 预计最后工作日 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             预计最后工作日 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.expectedLastDay}
-            onChange={(e) => onFormDataChange({ expectedLastDay: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.expectedLastDay ? new Date(formData.expectedLastDay) : undefined}
+            onChange={(date: Date) => onFormDataChange({ expectedLastDay: date.toISOString().slice(0, 10) })}
+            placeholder="选择日期"
+            className="w-full"
           />
           <p className="text-xs text-gray-500 mt-1">注：需提前30天通知</p>
         </div>
 
         {/* 工作交接人 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             工作交接人
-          </label>
+          </Label>
           <select
             value={formData.handoverUserId}
             onChange={(e) => onHandoverUserChange(e.target.value)}
@@ -132,9 +134,9 @@ export function ResignationPageCreateModal({
 
         {/* 交接说明 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             交接说明
-          </label>
+          </Label>
           <textarea
             value={formData.handoverNote}
             onChange={(e) => onFormDataChange({ handoverNote: e.target.value })}

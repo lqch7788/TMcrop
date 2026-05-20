@@ -5,6 +5,8 @@ import {
   StaffStatus,
 } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
  * 获取状态对应的样式
@@ -193,86 +195,83 @@ export function TempWorkerTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={onSelectAll as (checked: boolean) => void}
+                    className="border-gray-300"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 工号
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 姓名
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 类型
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 合同类型
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 技能数
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 状态
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                 入职日期
-              </th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">
                 操作
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {data.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={9} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               data.map((record) => (
-                <tr
+                <TableRow
                   key={record.id}
                   className="hover:bg-blue-100 transition-colors"
                 >
                   {(exportMode || batchEditMode || batchDeleteMode) && (
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
+                    <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <Checkbox
                         checked={selectedRows.includes(record.id)}
-                        onChange={() => onSelectRow?.(record.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow?.(record.id)}
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
                     {record.employeeCode}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                     {record.name}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {record.workerType}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {record.contractType}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">
                       {record.skillTags.length} 项
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(
                         record.status
@@ -280,11 +279,11 @@ export function TempWorkerTable({
                     >
                       {record.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {record.joinDate}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
@@ -311,12 +310,12 @@ export function TempWorkerTable({
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

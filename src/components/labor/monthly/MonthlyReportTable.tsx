@@ -4,7 +4,7 @@
 
 import { Eye, Download, ChevronLeft, ChevronRight, Edit2, Trash2, Plus, CheckSquare, Square, X } from 'lucide-react';
 import { MonthlyReport } from './types';
-import { Button } from '@/components/ui/button';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 interface MonthlyReportTableProps {
   reports: MonthlyReport[];
@@ -140,57 +140,57 @@ export function MonthlyReportTable({
 
       {/* 表格内容 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <Button variant="ghost" size="icon" onClick={onSelectAll} className="text-white hover:text-blue-200">
                     {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                   </Button>
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">报表编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工日数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工时</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">平均人数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成任务</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">待办任务</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总产量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">质量率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人工成本</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料成本</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              {!showCheckbox && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">报表编号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工日数</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工时</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">平均人数</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成任务</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">待办任务</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总产量</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">质量率</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人工成本</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料成本</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤率</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              {!showCheckbox && <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedReports.map((report) => (
-              <tr key={report.id} className={`hover:bg-gray-50 ${selectedRows.includes(report.id.toString()) ? 'bg-emerald-50' : ''}`}>
+              <TableRow key={report.id} className={`hover:bg-gray-50 ${selectedRows.includes(report.id.toString()) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <Button variant="ghost" size="icon" onClick={() => onSelectRow(report.id.toString())} className="text-gray-500 hover:text-emerald-600">
                       {selectedRows.includes(report.id.toString()) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                     </Button>
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{report.code}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.month}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.dept}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkdays}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkhours}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.avgDailyWorkers}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.completedTasks}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.pendingTasks}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalHarvest}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.qualityRate}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.laborCost}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.materialCost}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.attendanceRate}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{report.code}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.month}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.dept}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkdays}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalWorkhours}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.avgDailyWorkers}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.completedTasks}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.pendingTasks}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.totalHarvest}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.qualityRate}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.laborCost}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.materialCost}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{report.attendanceRate}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       report.statusClass === 'normal'
@@ -200,9 +200,9 @@ export function MonthlyReportTable({
                   >
                     {report.status}
                   </span>
-                </td>
+                </TableCell>
                 {!showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       {onViewDetail && (
                         <Button
@@ -235,12 +235,12 @@ export function MonthlyReportTable({
                         </Button>
                       )}
                     </div>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {/* 导出模式下的选中信息 */}
         {showCheckbox && (

@@ -4,11 +4,13 @@
 
 import { FileText } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { TaskMaterial, TaskWithExtras } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
 import { TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../config/taskConfig';
+import { Label } from '@/components/ui/label';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -76,19 +78,19 @@ export function TaskDetailModal({
           <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs text-gray-500">任务区域</label>
+              <Label className="text-xs text-gray-500">任务区域</Label>
               <p className="font-semibold text-gray-900">{task.field || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">作物</label>
+              <Label className="text-xs text-gray-500">作物</Label>
               <p className="font-semibold text-gray-900">{task.crop || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">负责人</label>
+              <Label className="text-xs text-gray-500">负责人</Label>
               <p className="font-semibold text-gray-900">陆启闯</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">优先级</label>
+              <Label className="text-xs text-gray-500">优先级</Label>
               <p className={`font-semibold ${PRIORITY_MAP[task.priority]?.color || ''}`}>
                 {PRIORITY_MAP[task.priority]?.label || task.priority}
               </p>
@@ -156,24 +158,24 @@ export function TaskDetailModal({
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
             <div className="bg-gray-50 rounded-lg p-3">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-500 border-b border-gray-200">
-                    <th className="text-left pb-2">物资名称</th>
-                    <th className="text-right pb-2">数量</th>
-                    <th className="text-right pb-2">单位</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="text-xs text-gray-500 border-b border-gray-200">
+                    <TableHead className="text-left pb-2">物资名称</TableHead>
+                    <TableHead className="text-right pb-2">数量</TableHead>
+                    <TableHead className="text-right pb-2">单位</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {task.materials.map((m: TaskMaterial, i: number) => (
-                    <tr key={i} className="border-b border-gray-100 last:border-0">
-                      <td className="py-2 text-gray-900">{m.name}</td>
-                      <td className="py-2 text-gray-900 text-right">{m.qty}</td>
-                      <td className="py-2 text-gray-500 text-right">{m.unit}</td>
-                    </tr>
+                    <TableRow key={i} className="border-b border-gray-100 last:border-0">
+                      <TableCell className="py-2 text-gray-900">{m.name}</TableCell>
+                      <TableCell className="py-2 text-gray-900 text-right">{m.qty}</TableCell>
+                      <TableCell className="py-2 text-gray-500 text-right">{m.unit}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
@@ -183,15 +185,15 @@ export function TaskDetailModal({
           <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs text-gray-500">计划开始</label>
+              <Label className="text-xs text-gray-500">计划开始</Label>
               <p className="font-semibold text-gray-900">{task.planStart || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">计划结束</label>
+              <Label className="text-xs text-gray-500">计划结束</Label>
               <p className="font-semibold text-gray-900">{task.planEnd || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">状态</label>
+              <Label className="text-xs text-gray-500">状态</Label>
               <p>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_MAP[task.status]?.bg || ''} ${STATUS_MAP[task.status]?.color || ''}`}>
                   {STATUS_MAP[task.status]?.label || task.status}
@@ -199,7 +201,7 @@ export function TaskDetailModal({
               </p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">预计时长</label>
+              <Label className="text-xs text-gray-500">预计时长</Label>
               <p className="font-semibold text-gray-900">
                 {task.estimatedDays > 0 ? `${task.estimatedDays}天` : ''}
                 {task.estimatedHours > 0 ? `${task.estimatedHours}小时` : ''}
@@ -215,19 +217,19 @@ export function TaskDetailModal({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="text-xs text-green-600">实际工日</label>
+                  <Label className="text-xs text-green-600">实际工日</Label>
                   <p className="font-bold text-green-700 text-lg">
                     {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs text-green-600">实际工时</label>
+                  <Label className="text-xs text-green-600">实际工时</Label>
                   <p className="font-bold text-green-700 text-lg">
                     {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs text-green-600">作业人数</label>
+                  <Label className="text-xs text-green-600">作业人数</Label>
                   <p className="font-bold text-green-700 text-lg">
                     {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
                   </p>

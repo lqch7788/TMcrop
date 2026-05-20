@@ -3,6 +3,7 @@
  */
 import { Search, RotateCcw, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import type { PerformanceFilters as PerformanceFiltersType } from './types';
 import { DEPT_OPTIONS, getMonthOptions } from './types';
 
@@ -24,10 +25,10 @@ export function PerformanceFilters({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 月份筛选 */}
         <div className="min-w-[180px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             <Calendar className="w-4 h-4 inline mr-1" />
             月份
-          </label>
+          </Label>
           <select
             value={filters.month}
             onChange={(e) => onFilterChange({ month: e.target.value })}
@@ -44,9 +45,9 @@ export function PerformanceFilters({
 
         {/* 部门筛选 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             部门
-          </label>
+          </Label>
           <select
             value={filters.department}
             onChange={(e) => onFilterChange({ department: e.target.value })}
@@ -62,10 +63,10 @@ export function PerformanceFilters({
 
         {/* 关键词搜索 */}
         <div className="min-w-[200px] flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             <Search className="w-4 h-4 inline mr-1" />
             姓名/工号
-          </label>
+          </Label>
           <input
             type="text"
             value={filters.keyword}

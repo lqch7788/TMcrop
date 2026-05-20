@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Eye, Download, Plus, Edit2, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { EfficiencyMetrics } from './types';
 
 interface EfficiencyTableProps {
@@ -166,11 +167,11 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
 
       {/* 表格内容 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -179,27 +180,27 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
                     >
                       {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                     </Button>
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总人数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总产出</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人均产出</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总工时</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工时效率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务达成率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人工成本率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能覆盖率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">月份</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">部门</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">总人数</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">总产出</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">人均产出</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">总工时</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">工时效率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">任务达成率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">出勤率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">人工成本率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">技能覆盖率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {paginatedData.map((row) => (
-              <tr key={row.id} className={`hover:bg-blue-50 transition-colors ${selectedRows.includes(row.id) ? 'bg-emerald-50' : ''}`}>
+              <TableRow key={row.id} className={`hover:bg-blue-50 transition-colors ${selectedRows.includes(row.id) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -208,22 +209,22 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
                     >
                       {selectedRows.includes(row.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                     </Button>
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{row.date}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.department}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalWorkers}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalOutput.toLocaleString()}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.avgOutputPerWorker, 'number')}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalHours}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{row.date}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.department}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalWorkers}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalOutput.toLocaleString()}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.avgOutputPerWorker, 'number')}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{row.totalHours}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     row.avgEfficiency >= 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {formatValue(row.avgEfficiency, 'percent')}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     row.taskCompletionRate >= 0.95 ? 'bg-emerald-100 text-emerald-700' :
                     row.taskCompletionRate >= 0.90 ? 'bg-blue-100 text-blue-700' :
@@ -231,11 +232,11 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
                   }`}>
                     {formatValue(row.taskCompletionRate, 'percent')}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.attendanceRate, 'percent')}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.laborCostRate, 'percent')}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.skillCoverage, 'percent')}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.attendanceRate, 'percent')}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.laborCostRate, 'percent')}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{formatValue(row.skillCoverage, 'percent')}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
@@ -269,11 +270,11 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
                       </>
                     )}
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {/* 分页 */}
         <div className="flex items-center justify-between mt-4 px-4 pb-4">

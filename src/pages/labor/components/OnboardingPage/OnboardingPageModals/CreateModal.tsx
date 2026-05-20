@@ -3,6 +3,8 @@
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui';
 import { OnboardingFormData } from '../../../types/onboardingPage.types';
 
 interface OnboardingPageCreateModalProps {
@@ -33,9 +35,9 @@ export function OnboardingPageCreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工姓名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.employeeName}
@@ -47,9 +49,9 @@ export function OnboardingPageCreateModal({
 
         {/* 部门 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             部门 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.department}
             onChange={(e) => onFormDataChange({ department: e.target.value })}
@@ -64,9 +66,9 @@ export function OnboardingPageCreateModal({
 
         {/* 岗位 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             岗位 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.position}
@@ -78,20 +80,20 @@ export function OnboardingPageCreateModal({
 
         {/* 预计入职日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             预计入职日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.expectedStartDate}
-            onChange={(e) => onFormDataChange({ expectedStartDate: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.expectedStartDate ? new Date(formData.expectedStartDate) : undefined}
+            onChange={(date: Date) => onFormDataChange({ expectedStartDate: date.toISOString().slice(0, 10) })}
+            placeholder="选择日期"
+            className="w-full"
           />
         </div>
 
         {/* 学历 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">学历</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">学历</Label>
           <select
             value={formData.education}
             onChange={(e) => onFormDataChange({ education: e.target.value })}
@@ -110,7 +112,7 @@ export function OnboardingPageCreateModal({
 
         {/* 专业 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">专业</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">专业</Label>
           <input
             type="text"
             value={formData.major}
@@ -122,7 +124,7 @@ export function OnboardingPageCreateModal({
 
         {/* 联系电话 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">联系电话</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">联系电话</Label>
           <input
             type="text"
             value={formData.contactPhone}
@@ -134,7 +136,7 @@ export function OnboardingPageCreateModal({
 
         {/* 紧急联系人 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">紧急联系人</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">紧急联系人</Label>
           <input
             type="text"
             value={formData.emergencyContact}
@@ -146,7 +148,7 @@ export function OnboardingPageCreateModal({
 
         {/* 身份证号 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">身份证号</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">身份证号</Label>
           <input
             type="text"
             value={formData.idCard}
@@ -159,7 +161,7 @@ export function OnboardingPageCreateModal({
 
         {/* 银行卡号 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">银行卡号</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">银行卡号</Label>
           <input
             type="text"
             value={formData.bankCard}
@@ -172,7 +174,7 @@ export function OnboardingPageCreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange({ remarks: e.target.value })}

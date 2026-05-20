@@ -41,7 +41,7 @@ export function SalaryBudgetFilters({
         <select
           value={filters.deptId}
           onChange={(e) => onFilterChange('deptId', e.target.value)}
-          className="h-9 w-36 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-36 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部部门</option>
           {departments.map(dept => (
@@ -55,7 +55,7 @@ export function SalaryBudgetFilters({
         <select
           value={filters.budgetMonth}
           onChange={(e) => onFilterChange('budgetMonth', e.target.value)}
-          className="h-9 w-36 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-36 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部月份</option>
           {monthOptions.map(opt => (
@@ -69,7 +69,7 @@ export function SalaryBudgetFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { WorkLog } from './types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
 import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
 
 interface WorkLogBatchEditModalProps {
   isOpen: boolean;
@@ -59,182 +61,165 @@ export function WorkLogBatchEditModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-white">批量编辑工作日志</h3>
-            <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded">
-              已选择 {selectedRows.length} 条
-            </span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
-            ×
-          </Button>
-        </div>
-
-        {/* Info Banner */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-          <div className="bg-blue-50 rounded-lg p-3 mb-3">
-            <p className="text-sm text-blue-800">
-              已选择 <strong>{selectedRows.length}</strong> 个工作日志进行批量编辑，
-              已编辑 <strong>{Object.keys(editedLogs).length}</strong> 个
-            </p>
-          </div>
-
-          {/* Log Selector */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">选择日志编号</label>
-              <SearchableSelect
-                value={selectedLogCode}
-                options={selectedLogList.map(log => ({
-                  value: log.code,
-                  label: `${log.code} - ${log.worker}${editedLogs[log.code] ? ' ✅ 已编辑' : ''}`
-                }))}
-                onChange={setSelectedLogCode}
-                placeholder="请选择日志编号"
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-hidden p-4 flex flex-col">
-          {selectedLogCode && currentLog && (
-            <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-              {/* 日志编号 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">日志编号</div>
-                <div className="text-sm font-medium text-gray-900">{currentLog.code}</div>
-              </div>
-
-              {/* 日期 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">日期</div>
-                <div className="text-sm text-gray-700">{currentLog.date}</div>
-              </div>
-
-              {/* 工人姓名 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">工人姓名</div>
-                <input
-                  type="text"
-                  value={editedData.worker ?? currentLog.worker}
-                  onChange={(e) => handleFieldChange('worker', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 天气 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">天气</div>
-                <input
-                  type="text"
-                  value={editedData.weather ?? currentLog.weather}
-                  onChange={(e) => handleFieldChange('weather', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 温度 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">温度</div>
-                <input
-                  type="text"
-                  value={editedData.temperature ?? currentLog.temperature}
-                  onChange={(e) => handleFieldChange('temperature', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 作物 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">作物</div>
-                <input
-                  type="text"
-                  value={editedData.crop ?? currentLog.crop}
-                  onChange={(e) => handleFieldChange('crop', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 大棚 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">大棚</div>
-                <input
-                  type="text"
-                  value={editedData.greenhouse ?? currentLog.greenhouse}
-                  onChange={(e) => handleFieldChange('greenhouse', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 生长状况 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">生长状况</div>
-                <select
-                  value={editedData.growthStatus ?? currentLog.growthStatus}
-                  onChange={(e) => handleFieldChange('growthStatus', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="良好">良好</option>
-                  <option value="一般">一般</option>
-                </select>
-              </div>
-
-              {/* 工作内容 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-                <div className="text-xs text-gray-500 mb-1">工作内容</div>
-                <input
-                  type="text"
-                  value={editedData.tasks ?? currentLog.tasks}
-                  onChange={(e) => handleFieldChange('tasks', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 问题描述 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-                <div className="text-xs text-gray-500 mb-1">问题描述</div>
-                <input
-                  type="text"
-                  value={editedData.problems ?? currentLog.problems}
-                  onChange={(e) => handleFieldChange('problems', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 处理措施 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-                <div className="text-xs text-gray-500 mb-1">处理措施</div>
-                <input
-                  type="text"
-                  value={editedData.solutions ?? currentLog.solutions}
-                  onChange={(e) => handleFieldChange('solutions', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
-          <div className="flex gap-3">
-            <Button variant="blue" onClick={handleConfirmNext}>
-              确认（下一个）
-            </Button>
-            <Button onClick={handlePublish}>
-              发布
-            </Button>
-          </div>
-        </div>
+  const content = (
+    <div>
+      <div className="bg-blue-50 rounded-lg p-3 mb-3">
+        <p className="text-sm text-blue-800">
+          已选择 <strong>{selectedRows.length}</strong> 个工作日志进行批量编辑，
+          已编辑 <strong>{Object.keys(editedLogs).length}</strong> 个
+        </p>
       </div>
+
+      {/* Log Selector */}
+      <div className="mb-3">
+        <Label className="block text-xs font-medium text-gray-600 mb-1">选择日志编号</Label>
+        <SearchableSelect
+          value={selectedLogCode}
+          options={selectedLogList.map(log => ({
+            value: log.code,
+            label: `${log.code} - ${log.worker}${editedLogs[log.code] ? ' ✅ 已编辑' : ''}`
+          }))}
+          onChange={setSelectedLogCode}
+          placeholder="请选择日志编号"
+          className="w-full"
+        />
+      </div>
+
+      {/* Content */}
+      {selectedLogCode && currentLog && (
+        <div className="grid grid-cols-4 gap-3">
+          {/* 日志编号 - 不可编辑 */}
+          <div className="bg-gray-100 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">日志编号</div>
+            <div className="text-sm font-medium text-gray-900">{currentLog.code}</div>
+          </div>
+
+          {/* 日期 - 不可编辑 */}
+          <div className="bg-gray-100 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">日期</div>
+            <div className="text-sm text-gray-700">{currentLog.date}</div>
+          </div>
+
+          {/* 工人姓名 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">工人姓名</div>
+            <input
+              type="text"
+              value={editedData.worker ?? currentLog.worker}
+              onChange={(e) => handleFieldChange('worker', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 天气 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">天气</div>
+            <input
+              type="text"
+              value={editedData.weather ?? currentLog.weather}
+              onChange={(e) => handleFieldChange('weather', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 温度 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">温度</div>
+            <input
+              type="text"
+              value={editedData.temperature ?? currentLog.temperature}
+              onChange={(e) => handleFieldChange('temperature', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 作物 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">作物</div>
+            <input
+              type="text"
+              value={editedData.crop ?? currentLog.crop}
+              onChange={(e) => handleFieldChange('crop', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 大棚 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">大棚</div>
+            <input
+              type="text"
+              value={editedData.greenhouse ?? currentLog.greenhouse}
+              onChange={(e) => handleFieldChange('greenhouse', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 生长状况 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">生长状况</div>
+            <select
+              value={editedData.growthStatus ?? currentLog.growthStatus}
+              onChange={(e) => handleFieldChange('growthStatus', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            >
+              <option value="良好">良好</option>
+              <option value="一般">一般</option>
+            </select>
+          </div>
+
+          {/* 工作内容 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+            <div className="text-xs text-gray-500 mb-1">工作内容</div>
+            <input
+              type="text"
+              value={editedData.tasks ?? currentLog.tasks}
+              onChange={(e) => handleFieldChange('tasks', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 问题描述 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+            <div className="text-xs text-gray-500 mb-1">问题描述</div>
+            <input
+              type="text"
+              value={editedData.problems ?? currentLog.problems}
+              onChange={(e) => handleFieldChange('problems', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          {/* 处理措施 - 可编辑 */}
+          <div className="bg-gray-50 rounded-lg p-2 col-span-2">
+            <div className="text-xs text-gray-500 mb-1">处理措施</div>
+            <input
+              type="text"
+              value={editedData.solutions ?? currentLog.solutions}
+              onChange={(e) => handleFieldChange('solutions', e.target.value)}
+              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+
+  const footer = (
+    <>
+      <Button variant="blue" onClick={handleConfirmNext}>
+        确认（下一个）
+      </Button>
+      <Button onClick={handlePublish}>
+        发布
+      </Button>
+    </>
+  );
+
+  return (
+    <UnifiedModal isOpen={isOpen} onClose={handleClose} title="批量编辑工作日志" size="xxl" showFooter={true} footer={footer} showMaximize={true}>
+      {content}
+    </UnifiedModal>
   );
 }
 

@@ -4,6 +4,8 @@
 
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Label } from '@/components/ui/label';
 import { RiskAlert, AlertType, AlertLevel } from './types';
 import { AlertTypeNames, AlertLevelNames } from './types';
 
@@ -72,7 +74,7 @@ export function RiskFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 预警类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">预警类型</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">预警类型</Label>
             <select
               value={formData.alertType}
               onChange={(e) => handleAlertTypeChange(e.target.value as AlertType)}
@@ -89,7 +91,7 @@ export function RiskFormModal({
 
           {/* 预警等级 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">预警等级</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">预警等级</Label>
             <select
               value={formData.level}
               onChange={(e) => setFormData({ ...formData, level: e.target.value as AlertLevel })}
@@ -103,7 +105,7 @@ export function RiskFormModal({
 
           {/* 部门 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
             <input
               type="text"
               value={formData.department}
@@ -115,7 +117,7 @@ export function RiskFormModal({
 
           {/* 员工工号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">员工工号</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">员工工号</Label>
             <input
               type="text"
               value={formData.staffId}
@@ -127,7 +129,7 @@ export function RiskFormModal({
 
           {/* 员工姓名 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">员工姓名</Label>
             <input
               type="text"
               value={formData.staffName}
@@ -139,7 +141,7 @@ export function RiskFormModal({
 
           {/* 状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'handled' })}
@@ -152,7 +154,7 @@ export function RiskFormModal({
 
           {/* 处理人 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">处理人</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">处理人</Label>
             <input
               type="text"
               value={formData.handler}
@@ -164,19 +166,18 @@ export function RiskFormModal({
 
           {/* 处理时间 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">处理时间</label>
-            <input
-              type="date"
-              value={formData.handleTime}
-              onChange={(e) => setFormData({ ...formData, handleTime: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">处理时间</Label>
+            <DatePicker
+              selected={formData.handleTime ? new Date(formData.handleTime) : undefined}
+              onChange={(date) => setFormData({ ...formData, handleTime: date.toISOString().slice(0, 10) })}
+              className="w-full h-10"
             />
           </div>
         </div>
 
         {/* 预警标题 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">预警标题</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">预警标题</Label>
           <input
             type="text"
             value={formData.title}
@@ -188,7 +189,7 @@ export function RiskFormModal({
 
         {/* 预警内容 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">预警内容</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">预警内容</Label>
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -200,7 +201,7 @@ export function RiskFormModal({
 
         {/* 处理备注 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">处理备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">处理备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

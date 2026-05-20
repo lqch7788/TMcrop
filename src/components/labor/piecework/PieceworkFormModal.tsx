@@ -5,6 +5,9 @@ import type { PieceRate, PieceworkFormData } from './types';
 import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 import { taskOptions } from './hooks/usePiecework';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 
 // 单位选项（共享常量）
 const unitOptions = ['斤', '箱', '个', 'kg', '筐'];
@@ -87,9 +90,9 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
     <div className="space-y-4">
       {/* 员工选择 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           员工姓名 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <select
           value={formData.workerId}
           onChange={(e) => setFormData({ ...formData, workerId: e.target.value })}
@@ -108,9 +111,9 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
 
       {/* 任务选择 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           任务名称 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <select
           value={formData.taskId}
           onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
@@ -128,9 +131,9 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
       {/* 单位和数量 */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             单位 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.unit}
             onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
@@ -144,59 +147,51 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             数量 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            value={formData.quantity || ''}
-            onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          </Label>
+          <NumberInput
+            value={formData.quantity || 0}
+            onChange={(value) => setFormData({ ...formData, quantity: parseFloat(value) || 0 })}
             placeholder="0"
-            min="0"
+            min={0}
+            className="w-full"
           />
         </div>
       </div>
 
       {/* 单价 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           单价(元) <span className="text-red-500">*</span>
-        </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <Coins className="w-4 h-4" />
-          </span>
-          <input
-            type="number"
-            value={formData.unitPrice || ''}
-            onChange={(e) => setFormData({ ...formData, unitPrice: parseFloat(e.target.value) || 0 })}
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-          />
-        </div>
+        </Label>
+        <NumberInput
+          value={formData.unitPrice || 0}
+          onChange={(value) => setFormData({ ...formData, unitPrice: parseFloat(value) || 0 })}
+          placeholder="0.00"
+          decimals={2}
+          min={0}
+          className="w-full"
+        />
       </div>
 
       {/* 工作日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           工作日期 <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          value={formData.workDate}
-          onChange={(e) => setFormData({ ...formData, workDate: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        </Label>
+        <DatePicker
+          selected={formData.workDate ? new Date(formData.workDate) : undefined}
+          onChange={(date) => setFormData({ ...formData, workDate: date.toISOString().split('T')[0] })}
+          className="w-full"
         />
       </div>
 
       {/* 备注 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           备注
-        </label>
+        </Label>
         <textarea
           value={formData.remarks || ''}
           onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

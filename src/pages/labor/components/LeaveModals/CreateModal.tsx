@@ -3,7 +3,9 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '../../../../components/ui/DatePicker';
 import { LeaveType, LeaveQuota } from '../../../../components/labor/leave/types';
+import { Label } from '@/components/ui/label';
 import { LEAVE_TYPE_OPTIONS } from '../../hooks/useLeave';
 
 export interface CreateModalProps {
@@ -72,9 +74,9 @@ export function CreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.staffId}
             onChange={(e) => {
@@ -94,9 +96,9 @@ export function CreateModal({
 
         {/* 请假类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             请假类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.leaveType}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, leaveType: e.target.value as LeaveType }))}
@@ -110,33 +112,31 @@ export function CreateModal({
 
         {/* 开始日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             开始日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => onDateChange('startDate', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.startDate ? new Date(formData.startDate) : undefined}
+            onChange={(date: Date) => onDateChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="选择开始日期"
           />
         </div>
 
         {/* 结束日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             结束日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.endDate}
-            onChange={(e) => onDateChange('endDate', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.endDate ? new Date(formData.endDate) : undefined}
+            onChange={(date: Date) => onDateChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="选择结束日期"
           />
         </div>
 
         {/* 请假天数 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">请假天数</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">请假天数</Label>
           <input
             type="text"
             value={formData.days ? `${formData.days} 天` : ''}
@@ -148,7 +148,7 @@ export function CreateModal({
 
         {/* 余额显示 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">可用余额</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">可用余额</Label>
           <div className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 flex items-center">
             {currentQuota ? (
               <span className="text-emerald-600">
@@ -175,9 +175,9 @@ export function CreateModal({
 
         {/* 请假原因 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             请假原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <textarea
             value={formData.reason}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, reason: e.target.value }))}
@@ -189,7 +189,7 @@ export function CreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, remarks: e.target.value }))}

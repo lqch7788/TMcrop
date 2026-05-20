@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal, NumberInput, Label } from '@/components/ui';
 import type { MonthlyBudget } from '../types';
 
 interface BudgetFormModalProps {
@@ -65,7 +65,7 @@ export function BudgetFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 月份 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月份</Label>
             <input
               type="month"
               value={formData.month}
@@ -76,79 +76,73 @@ export function BudgetFormModal({
 
           {/* 用工人数 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">用工人数</label>
-            <input
-              type="number"
-              value={formData.headcount || ''}
-              onChange={(e) => setFormData({ ...formData, headcount: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">用工人数</Label>
+            <NumberInput
+              value={formData.headcount}
+              onChange={(val) => setFormData({ ...formData, headcount: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 预计采收量(斤) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">预计采收量(斤)</label>
-            <input
-              type="number"
-              value={formData.yieldPrediction || ''}
-              onChange={(e) => setFormData({ ...formData, yieldPrediction: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">预计采收量(斤)</Label>
+            <NumberInput
+              value={formData.yieldPrediction}
+              onChange={(val) => setFormData({ ...formData, yieldPrediction: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 正式工成本 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">正式工成本(元)</label>
-            <input
-              type="number"
-              value={formData.formalWorkerCost || ''}
-              onChange={(e) => setFormData({ ...formData, formalWorkerCost: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">正式工成本(元)</Label>
+            <NumberInput
+              value={formData.formalWorkerCost}
+              onChange={(val) => setFormData({ ...formData, formalWorkerCost: Number(val) })}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 临时工成本 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">临时工成本(元)</label>
-            <input
-              type="number"
-              value={formData.tempWorkerCost || ''}
-              onChange={(e) => setFormData({ ...formData, tempWorkerCost: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">临时工成本(元)</Label>
+            <NumberInput
+              value={formData.tempWorkerCost}
+              onChange={(val) => setFormData({ ...formData, tempWorkerCost: Number(val) })}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 社保 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">社保(元)</label>
-            <input
-              type="number"
-              value={formData.socialSecurity || ''}
-              onChange={(e) => setFormData({ ...formData, socialSecurity: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">社保(元)</Label>
+            <NumberInput
+              value={formData.socialSecurity}
+              onChange={(val) => setFormData({ ...formData, socialSecurity: Number(val) })}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 福利 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">福利(元)</label>
-            <input
-              type="number"
-              value={formData.benefits || ''}
-              onChange={(e) => setFormData({ ...formData, benefits: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">福利(元)</Label>
+            <NumberInput
+              value={formData.benefits}
+              onChange={(val) => setFormData({ ...formData, benefits: Number(val) })}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 总成本（计算得出） */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总成本(元)</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总成本(元)</Label>
             <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               ¥{(formData.formalWorkerCost + formData.tempWorkerCost + formData.socialSecurity + formData.benefits).toLocaleString()}
             </div>

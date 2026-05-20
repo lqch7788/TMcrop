@@ -1,6 +1,8 @@
 import { Eye, Edit, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Edit2, Pencil, Download } from 'lucide-react';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface RecruitmentTableProps {
   recruitments: RecruitmentRequest[];
@@ -193,84 +195,80 @@ export function RecruitmentTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1200px]">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full min-w-[1200px]">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={onSelectAll}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘岗位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">需求部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人数</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">期望到岗</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘编号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">招聘岗位</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">需求部门</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">人数</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">期望到岗</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={11} className="px-4 py-12 text-center text-gray-500">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedData.map((rec) => (
-                <tr key={rec.id} className="hover:bg-blue-100 transition-colors">
+                <TableRow key={rec.id} className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode || batchDeleteMode) && (
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
+                    <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <Checkbox
                         checked={selectedRows.includes(rec.id)}
-                        onChange={() => onSelectRow?.(rec.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow?.(rec.id)}
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm font-medium text-gray-900">{rec.requestCode}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-900">{rec.position}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.department}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.quantity}人</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-700">{rec.source}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-600">{rec.expectedDate}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={rec.status} />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
                         {rec.applicantName.charAt(0)}
                       </div>
                       <span className="text-sm text-gray-700">{rec.applicantName}</span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-600">{rec.applyDate}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
@@ -329,12 +327,12 @@ export function RecruitmentTable({
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

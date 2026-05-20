@@ -3,12 +3,12 @@ import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
 import { ContractBatchEditModal } from './ContractBatchEditModal';
-import { Modal } from '@/components/ui/Modal';
+import { Label, Modal, UnifiedModal, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-// 导出格式弹窗
+// 导出格式弹窗 - 使用 UnifiedModal 包装
 interface ExportFormatModalProps {
   isOpen: boolean;
   exportFormat: string;
@@ -19,8 +19,6 @@ interface ExportFormatModalProps {
 }
 
 function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange, onClose, onConfirm }: ExportFormatModalProps) {
-  if (!isOpen) return null;
-
   const exportFormats = [
     { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
     { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
@@ -28,51 +26,36 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
   ];
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
-          </div>
-          <div className="p-6">
-            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
-            <div className="space-y-3">
-              {exportFormats.map((format) => (
-                <label
-                  key={format.value}
-                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                    exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={format.value}
-                    checked={exportFormat === format.value}
-                    onChange={(e) => onFormatChange(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                    <p className="text-xs text-gray-500">{format.desc}</p>
-                  </div>
-                </label>
-              ))}
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="选择导出格式" size="md" showFooter={false}>
+      <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
+      <div className="space-y-3">
+        {exportFormats.map((format) => (
+          <Label
+            key={format.value}
+            onClick={() => onFormatChange(format.value)}
+            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+              {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
             </div>
-          </div>
-          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button onClick={onConfirm}>导出</Button>
-          </div>
-        </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">{format.label}</p>
+              <p className="text-xs text-gray-500">{format.desc}</p>
+            </div>
+          </Label>
+        ))}
       </div>
-    </div>
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+        <Button variant="secondary" onClick={onClose}>取消</Button>
+        <Button onClick={onConfirm}>导出</Button>
+      </div>
+    </UnifiedModal>
   );
 }
 
-// 删除确认弹窗
+// 删除确认弹窗 - 使用 UnifiedModal 包装
 interface DeleteWarningModalProps {
   isOpen: boolean;
   selectedCount: number;
@@ -81,31 +64,25 @@ interface DeleteWarningModalProps {
 }
 
 function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Trash2 className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">删除合同警告</h3>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600 space-y-3 mb-6">
-            <p>确定要删除选中的 <strong>{selectedCount}</strong> 个合同吗？</p>
-            <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
-          </div>
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="删除合同警告" size="sm" showFooter={false}>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+          <Trash2 className="w-6 h-6 text-red-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">删除合同警告</h3>
         </div>
       </div>
-    </div>
+      <div className="text-sm text-gray-600 space-y-3 mb-6">
+        <p>确定要删除选中的 <strong>{selectedCount}</strong> 个合同吗？</p>
+        <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
+      </div>
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={onClose}>取消</Button>
+        <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      </div>
+    </UnifiedModal>
   );
 }
 
@@ -556,65 +533,61 @@ export function ContractTable() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+          <Table>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => handleSelectAll()}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同期限</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同编号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同类型</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同期限</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {contracts.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-8 text-center text-gray-500">
                   暂无合同数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               contracts.map((contract) => {
                 const computedStatus = getComputedStatus(contract);
                 return (
-                  <tr key={contract.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={contract.id} className="hover:bg-blue-100 transition-colors">
                     {(exportMode || batchEditMode || batchDeleteMode) && (
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
+                      <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <Checkbox
                           checked={selectedRows.includes(contract.id)}
-                          onChange={() => handleSelectRow(contract.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onCheckedChange={() => handleSelectRow(contract.id)}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{contract.contractCode}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{contract.contractCode}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <p className="text-gray-900">{contract.staffName}</p>
                       <p className="text-sm text-gray-500">{contract.idCard}</p>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{contract.contractType}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-gray-600">{contract.contractType}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <p className="text-gray-900">{contract.startDate}</p>
                       <p className="text-sm text-gray-500">至 {contract.endDate}</p>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusConfig[computedStatus].bgColor} ${statusConfig[computedStatus].color}`}>
                         {computedStatus}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -640,13 +613,13 @@ export function ContractTable() {
                           删除
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-          </table>
+          </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}

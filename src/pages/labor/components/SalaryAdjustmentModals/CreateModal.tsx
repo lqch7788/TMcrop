@@ -3,7 +3,9 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryAdjustmentFormData, ADJUSTMENT_TYPE_OPTIONS } from '../../types/salaryAdjustment.types';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { DatePicker, NumberInput } from '@/components/ui';
 
 export interface CreateModalProps {
   isOpen: boolean;
@@ -58,9 +60,9 @@ export function CreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.employeeId}
             onChange={(e) => handleWorkerChange(e.target.value)}
@@ -75,7 +77,7 @@ export function CreateModal({
 
         {/* 部门 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
           <input
             type="text"
             value={formData.department}
@@ -87,7 +89,7 @@ export function CreateModal({
 
         {/* 岗位 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">岗位</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">岗位</Label>
           <input
             type="text"
             value={formData.position}
@@ -99,7 +101,7 @@ export function CreateModal({
 
         {/* 当前薪资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">当前薪资</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">当前薪资</Label>
           <input
             type="text"
             value={formData.currentSalary ? `¥${formData.currentSalary.toLocaleString()}` : ''}
@@ -111,23 +113,23 @@ export function CreateModal({
 
         {/* 申请薪资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             申请薪资 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            value={formData.proposedSalary || ''}
-            onChange={(e) => handleProposedSalaryInput(e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <NumberInput
+            value={formData.proposedSalary ?? 0}
+            onChange={(val: string) => handleProposedSalaryInput(val)}
+            decimals={2}
             placeholder="请输入申请薪资"
+            className="w-full"
           />
         </div>
 
         {/* 调整类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             调整类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.adjustmentType}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, adjustmentType: e.target.value }))}
@@ -159,14 +161,14 @@ export function CreateModal({
 
         {/* 生效日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             生效日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.effectiveDate}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, effectiveDate: e.target.value }))}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.effectiveDate ? new Date(formData.effectiveDate) : undefined}
+            onChange={(date: Date) => onFormDataChange(prev => ({ ...prev, effectiveDate: date.toISOString().slice(0, 10) }))}
+            placeholder="选择日期"
+            className="w-full"
           />
         </div>
 
@@ -174,9 +176,9 @@ export function CreateModal({
 
         {/* 调薪原因 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             调薪原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <textarea
             value={formData.reason}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, reason: e.target.value }))}
@@ -188,7 +190,7 @@ export function CreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, remarks: e.target.value }))}

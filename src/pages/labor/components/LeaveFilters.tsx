@@ -2,6 +2,7 @@
  * 请假申请筛选器组件
  */
 import { Button } from '../../../components/ui/button';
+import { DatePicker } from '../../../components/ui/DatePicker';
 import { FilterBar, FilterItem } from '../../../components/ui/FilterBar';
 import type { LeaveFilters as LeaveFiltersType, LeaveType } from '../../../components/labor/leave/types';
 import { LEAVE_TYPE_OPTIONS, STATUS_OPTIONS } from '../hooks/useLeave';
@@ -45,7 +46,7 @@ export function LeaveFilters({
           placeholder="搜索员工姓名"
           value={filters.staffName}
           onChange={(e) => onFilterChange('staffName', e.target.value)}
-          className="h-9 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         />
       </FilterItem>
 
@@ -54,7 +55,7 @@ export function LeaveFilters({
         <select
           value={filters.leaveType}
           onChange={(e) => onFilterChange('leaveType', e.target.value)}
-          className="h-9 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部类型</option>
           {LEAVE_TYPE_OPTIONS.map(opt => (
@@ -68,7 +69,7 @@ export function LeaveFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -79,18 +80,16 @@ export function LeaveFilters({
       {/* 日期筛选 */}
       <FilterItem label="日期范围">
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFilterChange('startDate', e.target.value)}
-            className="h-9 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFilterChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="开始日期"
           />
           <span className="text-gray-400">至</span>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFilterChange('endDate', e.target.value)}
-            className="h-9 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFilterChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="结束日期"
           />
         </div>
       </FilterItem>

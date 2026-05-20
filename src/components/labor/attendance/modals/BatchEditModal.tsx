@@ -1,5 +1,7 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { AttendanceRecord } from '../types';
 
 interface BatchEditModalProps {
@@ -124,10 +126,10 @@ export function BatchEditModal({
             </FormField>
 
             <FormField label="日期">
-              <Input
-                type="date"
-                value={editedData.date ?? currentRecord.date}
-                onChange={(e) => handleFieldChange('date', e.target.value)}
+              <DatePicker
+                selected={(editedData.date ?? currentRecord.date) ? new Date((editedData.date ?? currentRecord.date) as string) : undefined}
+                onChange={(date: Date) => handleFieldChange('date', date.toISOString().slice(0, 10))}
+                placeholder="选择日期"
               />
             </FormField>
 
@@ -148,11 +150,10 @@ export function BatchEditModal({
             </FormField>
 
             <FormField label="工时">
-              <Input
-                type="number"
-                step="1"
-                value={Math.round(editedData.hours ?? currentRecord.hours ?? 0)}
-                onChange={(e) => handleFieldChange('hours', Math.round(parseFloat(e.target.value) || 0))}
+              <NumberInput
+                value={Math.round(Number(editedData.hours ?? currentRecord.hours ?? 0))}
+                onChange={(val: string) => handleFieldChange('hours', Math.round(parseFloat(val) || 0))}
+                decimals={0}
               />
             </FormField>
 

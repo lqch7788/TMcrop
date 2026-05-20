@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Eye, Edit2, Check, Coins, Trash2, Download, Plus } from 'lucide-react';
 import type { PieceRate } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PieceworkTableProps {
   data: PieceRate[];
@@ -169,76 +171,73 @@ export const PieceworkTable: React.FC<PieceworkTableProps> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll?.()}
+                    className="border-white data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-600"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单价</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合计</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">员工姓名</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">任务名称</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单价</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">合计</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">工作日期</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
               {!showCheckbox && (
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                <TableHead className="px-4 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
                   暂无计件工资记录
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedData.map((record) => (
-                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                <TableRow key={record.id} className="hover:bg-blue-100 transition-colors">
                   {showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox
                         checked={selectedRows.includes(record.id)}
-                        onChange={() => onSelectRow?.(record.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow?.(record.id)}
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{record.workerName}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-700">{record.taskName}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-700">{record.unit}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-700">{record.quantity.toLocaleString()}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-700">
+                  <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{record.workerName}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-gray-700">{record.taskName}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-gray-700">{record.unit}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-gray-700">{record.quantity.toLocaleString()}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-gray-700">
                     <span className="inline-flex items-center gap-0.5">
                       <Coins className="w-3 h-3" />
                       {record.unitPrice.toFixed(2)}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap font-semibold text-emerald-600">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap font-semibold text-emerald-600">
                     <span className="inline-flex items-center gap-0.5">
                       <Coins className="w-3 h-3" />
                       {record.total.toFixed(2)}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-700">{record.workDate}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-gray-700">{record.workDate}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[record.status]}`}>
                       {record.status}
                     </span>
-                  </td>
+                  </TableCell>
                   {!showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="ghost"
@@ -277,13 +276,13 @@ export const PieceworkTable: React.FC<PieceworkTableProps> = ({
                           </Button>
                         )}
                       </div>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 选择栏 */}

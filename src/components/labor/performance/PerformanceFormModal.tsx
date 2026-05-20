@@ -4,6 +4,8 @@
 
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 import { PerformanceRecord } from './types';
 
 interface PerformanceFormModalProps {
@@ -83,7 +85,7 @@ export function PerformanceFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 工号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">工号</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">工号</Label>
             <input
               type="text"
               value={formData.staffId}
@@ -95,7 +97,7 @@ export function PerformanceFormModal({
 
           {/* 姓名 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">姓名</Label>
             <input
               type="text"
               value={formData.staffName}
@@ -107,7 +109,7 @@ export function PerformanceFormModal({
 
           {/* 部门 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
@@ -123,7 +125,7 @@ export function PerformanceFormModal({
 
           {/* 月份 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月份</Label>
             <input
               type="month"
               value={formData.month}
@@ -134,77 +136,67 @@ export function PerformanceFormModal({
 
           {/* 任务完成率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">任务完成率(%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">任务完成率(%)</Label>
+            <NumberInput
               value={formData.taskCompletionRate || ''}
-              onChange={(e) => setFormData({ ...formData, taskCompletionRate: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, taskCompletionRate: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 出勤率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">出勤率(%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">出勤率(%)</Label>
+            <NumberInput
               value={formData.attendanceRate || ''}
-              onChange={(e) => setFormData({ ...formData, attendanceRate: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, attendanceRate: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 工作质量 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">工作质量(%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">工作质量(%)</Label>
+            <NumberInput
               value={formData.workQuality || ''}
-              onChange={(e) => setFormData({ ...formData, workQuality: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, workQuality: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 安全规范 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">安全规范(%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">安全规范(%)</Label>
+            <NumberInput
               value={formData.safetyCompliance || ''}
-              onChange={(e) => setFormData({ ...formData, safetyCompliance: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, safetyCompliance: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 协作态度 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">协作态度(%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">协作态度(%)</Label>
+            <NumberInput
               value={formData.teamworkAttitude || ''}
-              onChange={(e) => setFormData({ ...formData, teamworkAttitude: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, teamworkAttitude: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as '待评估' | '已评估' })}
@@ -217,7 +209,7 @@ export function PerformanceFormModal({
 
           {/* 综合得分（计算） */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">综合得分（计算）</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">综合得分（计算）</Label>
             <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateScore()}
             </div>

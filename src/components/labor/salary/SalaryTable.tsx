@@ -1,6 +1,6 @@
 import { Eye, Calculator, Download, ChevronLeft, ChevronRight, Edit, Trash2, Plus } from 'lucide-react';
 import type { SalaryTableProps } from './types';
-import { Button } from '@/components/ui/button';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
 
 /**
  * 工资状态徽章
@@ -165,76 +165,72 @@ export function SalaryTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={onSelectAll}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计算方式</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">加班费</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">奖金</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">扣款合计</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实发工资</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计算方式</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">加班费</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">奖金</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">扣款合计</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实发工资</TableHead>
+              <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</TableHead>
               {!showCheckbox && (
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {data.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={10} className="px-4 py-12 text-center text-gray-500">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               data.map((record) => (
-                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                <TableRow key={record.id} className="hover:bg-blue-100 transition-colors">
                   {showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox
                         checked={selectedRows.includes(record.id)}
-                        onChange={() => onSelectRow?.(record.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow?.(record.id)}
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffName}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.calcType}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffName}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.calcType}</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.baseSalary.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.overtimePay.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     ¥{record.bonuses.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 text-right">
                     -¥{(record.deductions + record.lateDeductions + record.absenceDeductions + record.socialSecurity + record.housingFund + record.personalTax).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600 text-right">
                     ¥{record.netSalary.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-center">
                     <StatusBadge status={record.status} />
-                  </td>
+                  </TableCell>
                   {!showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         <Button
                           variant="ghost"
@@ -265,13 +261,13 @@ export function SalaryTable({
                           </Button>
                         )}
                       </div>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         </div>
 
         {/* 选择栏 */}

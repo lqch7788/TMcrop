@@ -5,6 +5,7 @@ import { StaffSkill, TrainingRecord } from './types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 interface SkillDetailModalProps {
   skill: StaffSkill | null;
@@ -69,19 +70,19 @@ export function SkillDetailModal({ skill, trainingRecords, onClose }: SkillDetai
         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">基本信息</h4>
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3 bg-gray-50 rounded-lg">
-            <label className="text-xs text-gray-500">部门</label>
+            <Label className="text-xs text-gray-500">部门</Label>
             <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.department}</p>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
-            <label className="text-xs text-gray-500">技能总数</label>
+            <Label className="text-xs text-gray-500">技能总数</Label>
             <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.totalSkills} 项</p>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
-            <label className="text-xs text-gray-500">证书数量</label>
+            <Label className="text-xs text-gray-500">证书数量</Label>
             <p className="text-sm font-medium text-gray-900 mt-0.5">{skill.certificationCount} 个</p>
           </div>
           <div className="p-3 bg-gray-50 rounded-lg">
-            <label className="text-xs text-gray-500">认证状态</label>
+            <Label className="text-xs text-gray-500">认证状态</Label>
             <div className="mt-0.5">
               <Badge variant="outline" className={cn('font-medium', getStatusBadgeClass(skill.status))}>
                 {skill.status}

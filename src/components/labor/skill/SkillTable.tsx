@@ -3,6 +3,8 @@ import { LaborTable, Column } from '@/components/common/labor/LaborTable';
 import { StaffSkill } from './types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 interface SkillTableProps {
@@ -88,11 +90,9 @@ export function SkillTable({
       title: '',
       width: '50px' as string,
       render: (row: StaffSkill) => (
-        <input
-          type="checkbox"
+        <Checkbox
           checked={selectedRows.includes(row.id)}
-          onChange={() => onSelectRow?.(row.id)}
-          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+          onCheckedChange={() => onSelectRow?.(row.id)}
         />
       ),
     }] : []),
@@ -310,53 +310,50 @@ export function SkillTable({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {showCheckbox && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
+                  <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap w-12">
+                    <Checkbox
                       checked={allSelected}
-                      onChange={onSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={onSelectAll as (checked: boolean) => void}
+                      className="border-gray-300"
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能标签</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">证书数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-300">
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">工号</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">姓名</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">部门</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">技能标签</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">技能数</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">证书数</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white divide-y divide-gray-300">
               {paginatedData.length === 0 ? (
-                <tr>
-                  <td colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-500">
                     暂无员工技能档案
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedData.map((skill) => (
-                  <tr key={skill.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={skill.id} className="hover:bg-blue-100 transition-colors">
                     {showCheckbox && (
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
+                      <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <Checkbox
                           checked={selectedRows.includes(skill.id)}
-                          onChange={() => onSelectRow?.(skill.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onCheckedChange={() => onSelectRow?.(skill.id)}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{skill.staffId}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-900">{skill.staffName}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{skill.department}</td>
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{skill.staffId}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-gray-900">{skill.staffName}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-gray-600">{skill.department}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {skill.skills.slice(0, 3).map((s, idx) => (
                           <span
@@ -375,18 +372,18 @@ export function SkillTable({
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{skill.totalSkills}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{skill.certificationCount}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{skill.totalSkills}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-gray-600">{skill.certificationCount}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Badge
                         variant="outline"
                         className={cn('font-medium', getStatusBadgeClass(skill.status))}
                       >
                         {skill.status}
                       </Badge>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -412,12 +409,12 @@ export function SkillTable({
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput, Label } from '@/components/ui';
 import type { MonthlyBudget } from '../types';
 
 interface BudgetBatchEditModalProps {
@@ -91,7 +92,7 @@ export function BudgetBatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的月份</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的月份</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
@@ -119,25 +120,24 @@ export function BudgetBatchEditModal({
             {/* 用工人数 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">用工人数</div>
-              <input
-                type="number"
-                value={editedData.headcount ?? currentRecord.headcount ?? ''}
-                onChange={(e) => handleFieldChange('headcount', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              <NumberInput
+                value={editedData.headcount ?? currentRecord.headcount}
+                onChange={(val) => handleFieldChange('headcount', Number(val))}
+                placeholder="0"
+                decimals={0}
               />
             </div>
 
             {/* 预计采收量 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">预计采收量(万斤)</div>
-              <input
-                type="number"
+              <NumberInput
                 value={editedData.yieldPrediction !== undefined
                   ? (editedData.yieldPrediction / 10000)
                   : (currentRecord.yieldPrediction / 10000)}
-                onChange={(e) => handleFieldChange('yieldPrediction', Number(e.target.value) * 10000)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                step="0.01"
+                onChange={(val) => handleFieldChange('yieldPrediction', Number(val) * 10000)}
+                placeholder="0"
+                decimals={2}
               />
             </div>
 

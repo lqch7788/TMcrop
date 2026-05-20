@@ -7,6 +7,7 @@ import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { FeedbackFormData } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeLabel } from './constants';
+import { Label } from '@/components/ui/label';
 
 interface TaskFeedbackModalProps {
   isOpen: boolean;
@@ -90,19 +91,19 @@ export function TaskFeedbackModal({
           <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs text-gray-500">任务区域</label>
+              <Label className="text-xs text-gray-500">任务区域</Label>
               <p className="font-semibold text-gray-900">{task.field || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">作物</label>
+              <Label className="text-xs text-gray-500">作物</Label>
               <p className="font-semibold text-gray-900">{task.crop || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">负责人</label>
+              <Label className="text-xs text-gray-500">负责人</Label>
               <p className="font-semibold text-gray-900">陆启闯</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">优先级</label>
+              <Label className="text-xs text-gray-500">优先级</Label>
               <p className={`font-semibold ${PRIORITY_MAP[task.priority]?.color || ''}`}>
                 {PRIORITY_MAP[task.priority]?.label || task.priority}
               </p>
@@ -115,15 +116,15 @@ export function TaskFeedbackModal({
           <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs text-gray-500">计划开始</label>
+              <Label className="text-xs text-gray-500">计划开始</Label>
               <p className="font-semibold text-gray-900">{task.planStart || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">计划结束</label>
+              <Label className="text-xs text-gray-500">计划结束</Label>
               <p className="font-semibold text-gray-900">{task.planEnd || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">状态</label>
+              <Label className="text-xs text-gray-500">状态</Label>
               <p>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_MAP[task.status]?.bg || ''} ${STATUS_MAP[task.status]?.color || ''}`}>
                   {STATUS_MAP[task.status]?.label || task.status}
@@ -131,7 +132,7 @@ export function TaskFeedbackModal({
               </p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">任务类型</label>
+              <Label className="text-xs text-gray-500">任务类型</Label>
               <p className="font-semibold text-gray-900">{getTypeLabel(task.types?.[0] || '')}</p>
             </div>
           </div>
@@ -172,9 +173,9 @@ export function TaskFeedbackModal({
 
         {/* 处理结果/进展情况（进度条下方 - 统一使用下拉选择） */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Label className="block text-sm font-medium text-gray-700 mb-2">
             处理结果 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={feedbackForm.resultStatus}
             onChange={(e) => {
@@ -201,9 +202,9 @@ export function TaskFeedbackModal({
         {/* 备注输入框 - 仅当选择"其他"或"无法继续"时显示 */}
         {(feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
               备注说明 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <textarea
               value={feedbackForm.resultText}
               onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
@@ -217,9 +218,9 @@ export function TaskFeedbackModal({
         {/* 无法继续原因输入区域（当 cannotContinue 为 true 时显示） */}
         {feedbackForm.cannotContinue && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <label className="block text-sm font-medium text-red-700 mb-2">
+            <Label className="block text-sm font-medium text-red-700 mb-2">
               请说明无法继续的原因 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <textarea
               value={feedbackForm.cannotContinueReason}
               onChange={(e) => setFeedbackForm(prev => ({ ...prev, cannotContinueReason: e.target.value }))}
@@ -236,9 +237,9 @@ export function TaskFeedbackModal({
         {/* 必填反馈输入区域（无法继续模式下不显示） */}
         {!feedbackForm.cannotContinue && task.requiredFeedback && task.requiredFeedback.length > 0 && (
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
+            <Label className="block text-sm font-medium text-gray-700">
               必填反馈项
-            </label>
+            </Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {task.requiredFeedback.includes('workload_confirm') && (
                 <FeedbackInput

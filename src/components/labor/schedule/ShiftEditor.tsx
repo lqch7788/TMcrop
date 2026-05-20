@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Clock, MapPin, Check } from 'lucide-react';
+import { Clock, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ShiftConfig, ShiftType } from './types';
+import { Label } from '@/components/ui/label';
 
 interface ShiftEditorProps {
   shiftConfigs: ShiftConfig[];
@@ -49,19 +50,7 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full">
-      {/* 头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-medium text-gray-800">班次设置</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </Button>
-      </div>
-
+    <div>
       {/* 班次列表 */}
       <div className="space-y-4">
         {shiftConfigs.map(config => (
@@ -101,9 +90,9 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                 {/* 时间设置 */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <Label className="block text-sm font-medium text-gray-600 mb-1">
                       开始时间
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -115,9 +104,9 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                    <Label className="block text-sm font-medium text-gray-600 mb-1">
                       结束时间
-                    </label>
+                    </Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -132,9 +121,9 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
 
                 {/* 颜色设置 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
+                  <Label className="block text-sm font-medium text-gray-600 mb-2">
                     颜色
-                  </label>
+                  </Label>
                   <div className="flex gap-2">
                     {SHIFT_COLORS.map(color => (
                       <Button

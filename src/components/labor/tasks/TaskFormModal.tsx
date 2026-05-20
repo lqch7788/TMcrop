@@ -1,5 +1,7 @@
 import { Modal, FormField } from '@/components/ui/Modal';
 import { Task, Greenhouse, CropBatch, User } from '../../../types';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -158,23 +160,20 @@ export function TaskFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 截止时间 */}
           <FormField label="截止时间" required error={errors.dueDate}>
-            <input
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => onFormChange('dueDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <DatePicker
+              selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
+              onChange={(date) => onFormChange('dueDate', date.toISOString().split('T')[0])}
+              className="w-full"
             />
           </FormField>
 
           {/* 预计工时 */}
           <FormField label="预计工时(小时)" required error={errors.workDuration}>
-            <input
-              type="number"
-              min="0.5"
-              step="0.5"
+            <NumberInput
               value={formData.workDuration}
-              onChange={(e) => onFormChange('workDuration', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onChange={(value) => onFormChange('workDuration', parseFloat(value) || 0)}
+              decimals={1}
+              className="w-full"
             />
           </FormField>
         </div>

@@ -3,6 +3,8 @@ import { Modal, FormField } from '@/components/ui/Modal';
 import { RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
 import { usePositionStore, getPositionsByDepartment } from '@/stores/usePositionStore';
 import { useDepartmentStore } from '@/stores/useDepartmentStore';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface RecruitmentFormModalProps {
   isOpen: boolean;
@@ -140,13 +142,12 @@ export function RecruitmentFormModal({
         <div className="grid grid-cols-3 gap-4">
           {/* 招聘人数 */}
           <FormField label="招聘人数" required error={errors.quantity}>
-            <input
-              type="number"
-              min="1"
+            <NumberInput
               value={formData.quantity}
-              onChange={(e) => onFormChange('quantity', parseInt(e.target.value) || 0)}
+              onChange={(val) => onFormChange('quantity', val === '' ? 0 : Number(val))}
+              decimals={0}
               placeholder="请输入人数"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full"
             />
           </FormField>
 
@@ -181,25 +182,23 @@ export function RecruitmentFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 最低薪资 */}
           <FormField label="最低薪资 (元/月)">
-            <input
-              type="number"
-              min="0"
-              value={formData.salaryMin || ''}
-              onChange={(e) => onFormChange('salaryMin', parseInt(e.target.value) || 0)}
+            <NumberInput
+              value={formData.salaryMin}
+              onChange={(val) => onFormChange('salaryMin', val === '' ? 0 : Number(val))}
+              decimals={0}
               placeholder="请输入"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full"
             />
           </FormField>
 
           {/* 最高薪资 */}
           <FormField label="最高薪资 (元/月)" error={errors.salaryMax}>
-            <input
-              type="number"
-              min="0"
-              value={formData.salaryMax || ''}
-              onChange={(e) => onFormChange('salaryMax', parseInt(e.target.value) || 0)}
+            <NumberInput
+              value={formData.salaryMax}
+              onChange={(val) => onFormChange('salaryMax', val === '' ? 0 : Number(val))}
+              decimals={0}
               placeholder="请输入"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.salaryMax ? 'border-red-500' : 'border-gray-200'}`}
+              className={`w-full ${errors.salaryMax ? 'border-red-500' : ''}`}
             />
           </FormField>
         </div>
@@ -221,11 +220,10 @@ export function RecruitmentFormModal({
 
           {/* 期望到岗日期 */}
           <FormField label="期望到岗日期" required error={errors.expectedDate}>
-            <input
-              type="date"
-              value={formData.expectedDate}
-              onChange={(e) => onFormChange('expectedDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <DatePicker
+              selected={formData.expectedDate ? new Date(formData.expectedDate) : undefined}
+              onChange={(date) => onFormChange('expectedDate', date.toISOString().split('T')[0])}
+              className="w-full"
             />
           </FormField>
         </div>

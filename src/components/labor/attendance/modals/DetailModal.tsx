@@ -3,6 +3,7 @@
  */
 import { Modal } from '../../../ui/Modal';
 import { AttendanceRecord } from '../types';
+import { Label } from '@/components/ui/label';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -39,19 +40,19 @@ export function DetailModal({ isOpen, record, onClose }: DetailModalProps) {
         <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">基本信息</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-gray-500">工号</label>
+            <Label className="text-xs text-gray-500">工号</Label>
             <p className="text-sm font-medium text-gray-900">{record.workerId}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">姓名</label>
+            <Label className="text-xs text-gray-500">姓名</Label>
             <p className="text-sm font-medium text-gray-900">{record.name}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">部门</label>
+            <Label className="text-xs text-gray-500">部门</Label>
             <p className="text-sm font-medium text-gray-900">{record.dept}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">日期</label>
+            <Label className="text-xs text-gray-500">日期</Label>
             <p className="text-sm font-medium text-gray-900">{record.date}</p>
           </div>
         </div>
@@ -60,19 +61,19 @@ export function DetailModal({ isOpen, record, onClose }: DetailModalProps) {
         <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">考勤信息</h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-gray-500">签到时间</label>
+            <Label className="text-xs text-gray-500">签到时间</Label>
             <p className="text-sm font-medium text-gray-900">{record.checkIn || '-'}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">签退时间</label>
+            <Label className="text-xs text-gray-500">签退时间</Label>
             <p className="text-sm font-medium text-gray-900">{record.checkOut || '-'}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">工作时长</label>
+            <Label className="text-xs text-gray-500">工作时长</Label>
             <p className="text-sm font-medium text-gray-900">{Math.round(record.hours)} 小时</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">考勤状态</label>
+            <Label className="text-xs text-gray-500">考勤状态</Label>
             <div className="mt-1">{statusLabel(record.status, record.statusClass)}</div>
           </div>
         </div>
@@ -84,13 +85,13 @@ export function DetailModal({ isOpen, record, onClose }: DetailModalProps) {
             <div className="grid grid-cols-2 gap-4">
               {record.taskId && (
                 <div>
-                  <label className="text-xs text-gray-500">关联任务ID</label>
+                  <Label className="text-xs text-gray-500">关联任务ID</Label>
                   <p className="text-sm font-medium text-gray-900">{record.taskId}</p>
                 </div>
               )}
               {record.batchId && (
                 <div>
-                  <label className="text-xs text-gray-500">关联批次ID</label>
+                  <Label className="text-xs text-gray-500">关联批次ID</Label>
                   <p className="text-sm font-medium text-gray-900">{record.batchId}</p>
                 </div>
               )}

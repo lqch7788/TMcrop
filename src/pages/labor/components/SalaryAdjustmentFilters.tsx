@@ -4,6 +4,7 @@
 import { Search, RefreshCw } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { FilterBar, FilterItem } from '../../../components/ui/FilterBar';
+import { DatePicker } from '@/components/ui';
 import type { SalaryAdjustmentFilters as SalaryAdjustmentFiltersType } from '../types/salaryAdjustment.types';
 import { ADJUSTMENT_TYPE_OPTIONS, STATUS_OPTIONS } from '../types/salaryAdjustment.types';
 
@@ -48,7 +49,7 @@ export function SalaryAdjustmentFilters({
           placeholder="搜索员工姓名"
           value={filters.employeeName}
           onChange={(e) => onFilterChange('employeeName', e.target.value)}
-          className="h-9 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         />
       </FilterItem>
 
@@ -57,7 +58,7 @@ export function SalaryAdjustmentFilters({
         <select
           value={filters.department}
           onChange={(e) => onFilterChange('department', e.target.value)}
-          className="h-9 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {departmentOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -70,7 +71,7 @@ export function SalaryAdjustmentFilters({
         <select
           value={filters.adjustmentType}
           onChange={(e) => onFilterChange('adjustmentType', e.target.value)}
-          className="h-9 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-28 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部类型</option>
           {ADJUSTMENT_TYPE_OPTIONS.map(opt => (
@@ -84,7 +85,7 @@ export function SalaryAdjustmentFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-24 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -95,18 +96,18 @@ export function SalaryAdjustmentFilters({
       {/* 日期范围 */}
       <FilterItem label="生效日期">
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFilterChange('startDate', e.target.value)}
-            className="h-9 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFilterChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="开始日期"
+            className="w-32"
           />
           <span className="text-gray-400">至</span>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFilterChange('endDate', e.target.value)}
-            className="h-9 w-32 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFilterChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="结束日期"
+            className="w-32"
           />
         </div>
       </FilterItem>

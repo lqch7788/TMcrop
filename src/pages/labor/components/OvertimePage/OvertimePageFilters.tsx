@@ -3,6 +3,7 @@
  */
 import { Search, RefreshCw, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { OvertimeFilters, BatchMode } from './types/overtimePage.types';
 import { OVERTIME_TYPE_OPTIONS, STATUS_OPTIONS } from './types/overtimePage.types';
 
@@ -45,7 +46,7 @@ export function OvertimePageFilters({
             placeholder="搜索员工姓名"
             value={filters.staffName}
             onChange={(e) => onFilterChange('staffName', e.target.value)}
-            className="h-9 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="h-10 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
@@ -53,7 +54,7 @@ export function OvertimePageFilters({
         <select
           value={filters.overtimeType}
           onChange={(e) => onFilterChange('overtimeType', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部类型</option>
           {OVERTIME_TYPE_OPTIONS.map(opt => (
@@ -65,7 +66,7 @@ export function OvertimePageFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -74,18 +75,16 @@ export function OvertimePageFilters({
 
         {/* 日期筛选 */}
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFilterChange('startDate', e.target.value)}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFilterChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="开始日期"
           />
           <span className="text-gray-400">至</span>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFilterChange('endDate', e.target.value)}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFilterChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="结束日期"
           />
         </div>
 

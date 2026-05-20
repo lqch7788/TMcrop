@@ -1,6 +1,8 @@
 import { Eye, Check, X, Plus, Edit, Trash2, Download } from 'lucide-react';
 import type { OvertimeTableProps, OvertimeRecord, OvertimeType } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
  * 加班记录表格组件
@@ -191,63 +193,59 @@ export function OvertimeTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll?.()}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时长(小时)</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班费(元)</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">原因</th>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">员工姓名</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班类型</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时长(小时)</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">加班费(元)</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">原因</TableHead>
               {!showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {data.map((record) => (
-              <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+              <TableRow key={record.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode || batchDeleteMode) && (
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <input
-                      type="checkbox"
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <Checkbox
                       checked={selectedRows.includes(record.id)}
-                      onChange={() => onSelectRow?.(record.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={() => onSelectRow?.(record.id)}
                     />
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.staffName}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.staffName}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{record.date}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeBadgeClass(record.type)}`}>
                     {record.type}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.hours}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{record.hours}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
                   {record.totalPay ? `¥${record.totalPay.toFixed(2)}` : '-'}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(record.status)}`}>
                     {record.status}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{record.reason}</td>
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">{record.reason}</TableCell>
                 {!showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <TableCell className="px-4 py-3 whitespace-nowrap text-sm">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
@@ -278,19 +276,19 @@ export function OvertimeTable({
                         </>
                       )}
                     </div>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
             {data.length === 0 && (
-              <tr>
-                <td colSpan={showCheckbox ? 9 : 8} className="px-4 py-12 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 9 : 8} className="px-4 py-12 text-center text-gray-400">
                   暂无加班记录
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         </div>
 
       {/* 选择栏 */}

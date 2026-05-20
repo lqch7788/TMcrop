@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, Edit2, Trash2, Download, Plus } from 'lucide-react';
 import type { MonthlyBudget } from './types';
-import { Button } from '@/components/ui/button';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
 
 interface BudgetTableProps {
   data: MonthlyBudget[];
@@ -160,76 +160,72 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={onSelectAll}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总成本(万元)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">正式工(万元)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">临时工(万元)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">社保(万元)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">福利(万元)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人数</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">采收量(万斤)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">单位成本</th>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总成本(万元)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">正式工(万元)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">临时工(万元)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">社保(万元)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">福利(万元)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人数</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">采收量(万斤)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">单位成本</TableHead>
               {!showCheckbox && (
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 11 : 10} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 11 : 10} className="px-4 py-8 text-center text-gray-500">
                   暂无月度预算数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedData.map((record) => (
-                <tr key={record.month} className="hover:bg-blue-100 transition-colors">
+                <TableRow key={record.month} className="hover:bg-blue-100 transition-colors">
                   {showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox
                         checked={selectedRows.includes(record.month)}
-                        onChange={() => onSelectRow?.(record.month)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow?.(record.month)}
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{record.month}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium text-emerald-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{record.month}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right font-medium text-emerald-600 whitespace-nowrap">
                     {(record.laborCost / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(record.formalWorkerCost / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(record.tempWorkerCost / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(record.socialSecurity / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(record.benefits / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{record.headcount}</td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">{record.headcount}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">
                     {(record.yieldPrediction / 10000).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right whitespace-nowrap">¥{record.costPerUnit.toFixed(2)}</td>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">¥{record.costPerUnit.toFixed(2)}</TableCell>
                   {!showCheckbox && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         {onViewDetail && (
                           <Button
@@ -262,13 +258,13 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
                           </Button>
                         )}
                       </div>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 选择栏 */}

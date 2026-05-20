@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { useDepartmentStore } from '../../../../stores';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 interface Position {
   id: number;
@@ -78,9 +80,9 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
     <div className="grid grid-cols-2 gap-4">
       {/* 职务名称 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           职务名称 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <input
           type="text"
           value={formData.name || ''}
@@ -92,9 +94,9 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
       {/* 所属部门 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           所属部门 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <select
           value={formData.dept || ''}
           onChange={(e) => handleChange('dept', e.target.value)}
@@ -108,9 +110,9 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
       {/* 职务级别 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           职务级别 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <select
           value={formData.level || ''}
           onChange={(e) => handleChange('level', e.target.value)}
@@ -124,21 +126,20 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
       {/* 基本工资 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           基本工资(元) <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
+        </Label>
+        <NumberInput
           value={formData.salary || 0}
-          onChange={(e) => handleChange('salary', Number(e.target.value))}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          onChange={(val) => handleChange('salary', Number(val))}
+          decimals={0}
           placeholder="请输入基本工资"
         />
       </div>
 
       {/* 状态 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
         <select
           value={formData.status || '启用'}
           onChange={(e) => handleChange('status', e.target.value)}
@@ -152,7 +153,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
       {/* 职责描述 */}
       <div className="col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">职责描述</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">职责描述</Label>
         <textarea
           value={formData.description || ''}
           onChange={(e) => handleChange('description', e.target.value)}

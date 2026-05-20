@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { NumberInput, Label } from '../../../ui';
 import { Pencil } from 'lucide-react';
 import { SalaryRecord } from '../types';
 
@@ -75,7 +76,7 @@ export function BatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
@@ -94,43 +95,43 @@ export function BatchEditModal({
         {selectedRecordId && localEditedRecords[selectedRecordId] && (
           <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">基本工资</label>
-              <input
-                type="number"
-                value={localEditedRecords[selectedRecordId].baseSalary ?? ''}
-                onChange={(e) => handleFieldChange('baseSalary', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">基本工资</Label>
+              <NumberInput
+                value={localEditedRecords[selectedRecordId].baseSalary}
+                onChange={(val) => handleFieldChange('baseSalary', Number(val))}
+                placeholder="0"
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">加班费</label>
-              <input
-                type="number"
-                value={localEditedRecords[selectedRecordId].overtimePay ?? ''}
-                onChange={(e) => handleFieldChange('overtimePay', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">加班费</Label>
+              <NumberInput
+                value={localEditedRecords[selectedRecordId].overtimePay}
+                onChange={(val) => handleFieldChange('overtimePay', Number(val))}
+                placeholder="0"
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">奖金</label>
-              <input
-                type="number"
-                value={localEditedRecords[selectedRecordId].bonuses ?? ''}
-                onChange={(e) => handleFieldChange('bonuses', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">奖金</Label>
+              <NumberInput
+                value={localEditedRecords[selectedRecordId].bonuses}
+                onChange={(val) => handleFieldChange('bonuses', Number(val))}
+                placeholder="0"
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">扣款</label>
-              <input
-                type="number"
-                value={localEditedRecords[selectedRecordId].deductions ?? ''}
-                onChange={(e) => handleFieldChange('deductions', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="block text-xs text-gray-500 mb-1">扣款</Label>
+              <NumberInput
+                value={localEditedRecords[selectedRecordId].deductions}
+                onChange={(val) => handleFieldChange('deductions', Number(val))}
+                placeholder="0"
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">状态</label>
+              <Label className="block text-xs text-gray-500 mb-1">状态</Label>
               <select
                 value={localEditedRecords[selectedRecordId].status ?? ''}
                 onChange={(e) => handleFieldChange('status', e.target.value)}

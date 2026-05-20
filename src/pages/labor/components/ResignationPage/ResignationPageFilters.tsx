@@ -3,6 +3,7 @@
  */
 import { Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui';
 import type { ResignationFilters as ResignationFiltersType } from '../../types/resignationPage.types';
 import { RESIGNATION_TYPE_OPTIONS, RESIGNATION_STATUS_OPTIONS } from '../../types/resignationPage.types';
 
@@ -28,7 +29,7 @@ export function ResignationPageFilters({
           placeholder="搜索员工姓名"
           value={filters.workerName}
           onChange={(e) => onFilterChange('workerName', e.target.value)}
-          className="h-9 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         />
       </div>
 
@@ -36,7 +37,7 @@ export function ResignationPageFilters({
       <select
         value={filters.resignationType}
         onChange={(e) => onFilterChange('resignationType', e.target.value)}
-        className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
       >
         {RESIGNATION_TYPE_OPTIONS.map(opt => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -47,7 +48,7 @@ export function ResignationPageFilters({
       <select
         value={filters.status}
         onChange={(e) => onFilterChange('status', e.target.value)}
-        className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
       >
         {RESIGNATION_STATUS_OPTIONS.map(opt => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -56,18 +57,16 @@ export function ResignationPageFilters({
 
       {/* 日期筛选 */}
       <div className="flex items-center gap-2">
-        <input
-          type="date"
-          value={filters.startDate}
-          onChange={(e) => onFilterChange('startDate', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        <DatePicker
+          selected={filters.startDate ? new Date(filters.startDate) : undefined}
+          onChange={(date: Date) => onFilterChange('startDate', date.toISOString().slice(0, 10))}
+          placeholder="开始日期"
         />
         <span className="text-gray-400">至</span>
-        <input
-          type="date"
-          value={filters.endDate}
-          onChange={(e) => onFilterChange('endDate', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+        <DatePicker
+          selected={filters.endDate ? new Date(filters.endDate) : undefined}
+          onChange={(date: Date) => onFilterChange('endDate', date.toISOString().slice(0, 10))}
+          placeholder="结束日期"
         />
       </div>
 

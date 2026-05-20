@@ -1,4 +1,5 @@
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { Modal, FormField, Select } from '../../../ui/Modal';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { ShiftType } from '../types';
 
 interface ScheduleAddModalProps {
@@ -63,10 +64,10 @@ export function ScheduleAddModal({
         </FormField>
 
         <FormField label="排班日期" required>
-          <Input
-            type="date"
-            value={formData.date}
-            onChange={(e) => onFormChange('date', e.target.value)}
+          <DatePicker
+            selected={formData.date ? new Date(formData.date) : undefined}
+            onChange={(date) => onFormChange('date', date.toISOString().split('T')[0])}
+            className="w-full"
           />
         </FormField>
       </div>

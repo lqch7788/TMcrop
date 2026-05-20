@@ -4,8 +4,10 @@
 import { useEffect } from 'react';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui';
+import { DatePicker } from '../../../../../components/ui/DatePicker';
 import type { AttendanceRepairFormData } from '../types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS } from '../types/attendanceRepairPage.types';
+import { Label } from '@/components/ui/label';
 import { useWorkerStore } from '../../../../../stores';
 
 interface CreateModalProps {
@@ -45,9 +47,9 @@ export function AttendanceRepairPageCreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.employeeId}
             onChange={(e) => onStaffChange(e.target.value)}
@@ -62,7 +64,7 @@ export function AttendanceRepairPageCreateModal({
 
         {/* 部门 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
           <input
             type="text"
             value={formData.department}
@@ -74,22 +76,21 @@ export function AttendanceRepairPageCreateModal({
 
         {/* 补录日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             补录日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.repairDate}
-            onChange={(e) => onFormDataChange({ ...formData, repairDate: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.repairDate ? new Date(formData.repairDate) : undefined}
+            onChange={(date: Date) => onFormDataChange({ ...formData, repairDate: date.toISOString().slice(0, 10) })}
+            placeholder="选择补录日期"
           />
         </div>
 
         {/* 补录原因 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             补录原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.reason}
             onChange={(e) => onFormDataChange({ ...formData, reason: e.target.value })}
@@ -104,9 +105,9 @@ export function AttendanceRepairPageCreateModal({
         {/* 自定义原因（当选择"其他"时显示） */}
         {formData.reason === '其他' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               具体原因 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <input
               type="text"
               value={formData.customReason}
@@ -119,9 +120,9 @@ export function AttendanceRepairPageCreateModal({
 
         {/* 上班时间 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             上班时间 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="time"
             value={formData.checkInTime}
@@ -132,9 +133,9 @@ export function AttendanceRepairPageCreateModal({
 
         {/* 下班时间 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             下班时间 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="time"
             value={formData.checkOutTime}
@@ -145,7 +146,7 @@ export function AttendanceRepairPageCreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange({ ...formData, remarks: e.target.value })}

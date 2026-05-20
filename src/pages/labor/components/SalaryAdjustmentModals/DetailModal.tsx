@@ -4,6 +4,7 @@
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { SalaryAdjustmentRecord } from '../../types/salaryAdjustment.types';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 export interface DetailModalProps {
@@ -37,47 +38,47 @@ export function DetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</Label>
             <div className="text-sm text-gray-900">{record.employeeName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">部门</Label>
             <div className="text-sm text-gray-900">{record.department}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">岗位</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">岗位</Label>
             <div className="text-sm text-gray-900">{record.position}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">调整类型</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">调整类型</Label>
             <div className="text-sm text-gray-900">{record.adjustmentType}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">当前薪资</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">当前薪资</Label>
             <div className="text-sm text-gray-900">¥{record.currentSalary.toLocaleString()}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请薪资</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请薪资</Label>
             <div className="text-sm text-emerald-600 font-medium">¥{record.proposedSalary.toLocaleString()}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">调整金额</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">调整金额</Label>
             <div className={`text-sm font-medium ${record.adjustmentAmount > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {record.adjustmentAmount > 0 ? '+' : ''}¥{record.adjustmentAmount.toLocaleString()}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">调整比例</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">调整比例</Label>
             <div className={`text-sm font-medium ${record.adjustmentRatio > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {record.adjustmentRatio > 0 ? '+' : ''}{record.adjustmentRatio.toFixed(1)}%
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">生效日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">生效日期</Label>
             <div className="text-sm text-gray-900">{record.effectiveDate}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -90,16 +91,16 @@ export function DetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">审批人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">审批人</Label>
             <div className="text-sm text-gray-900">{record.approver || '未审批'}</div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">调薪原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">调薪原因</Label>
             <div className="text-sm text-gray-900">{record.reason}</div>
           </div>
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

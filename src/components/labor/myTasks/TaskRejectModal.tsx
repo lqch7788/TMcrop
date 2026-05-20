@@ -3,6 +3,7 @@
  */
 
 import { Modal } from '@/components/ui/Modal';
+import { Label } from '@/components/ui/label';
 
 interface TaskRejectModalProps {
   isOpen: boolean;
@@ -57,9 +58,9 @@ export function TaskRejectModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Label className="block text-sm font-medium text-gray-700 mb-2">
             拒绝原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}

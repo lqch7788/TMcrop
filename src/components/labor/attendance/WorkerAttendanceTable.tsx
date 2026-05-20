@@ -5,6 +5,8 @@ import { useRef } from 'react';
 import { Eye, ChevronLeft, ChevronRight, Edit, Trash2, Download, Plus, Upload } from 'lucide-react';
 import { AttendanceRecord, PAGE_SIZE_OPTIONS } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface WorkerAttendanceTableProps {
   data: AttendanceRecord[];
@@ -199,55 +201,51 @@ export function WorkerAttendanceTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <tr>
+        <Table className="w-full">
+        <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <TableRow>
             {/* 选择列 */}
             {showCheckbox && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                <input
-                  type="checkbox"
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <Checkbox
                   checked={allSelected}
-                  onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  onCheckedChange={() => onSelectAll()}
                 />
-              </th>
+              </TableHead>
             )}
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">上班时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">下班时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作时长</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤状态</th>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">上班时间</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">下班时间</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作时长</TableHead>
+            <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">考勤状态</TableHead>
             {!exportMode && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
             )}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-300">
+          </TableRow>
+        </TableHeader>
+        <TableBody className="bg-white divide-y divide-gray-300">
           {data.map((att) => (
-            <tr key={att.id} className="hover:bg-blue-100 transition-colors">
+            <TableRow key={att.id} className="hover:bg-blue-100 transition-colors">
               {/* 选择列 */}
               {showCheckbox && (
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <input
-                    type="checkbox"
+                <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <Checkbox
                     checked={selectedRows.includes(att.id)}
-                    onChange={() => onSelectRow(att.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectRow(att.id)}
                   />
-                </td>
+                </TableCell>
               )}
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.workerId}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.name}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.dept}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.date}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkIn}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkOut}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{Math.round(att.hours)} 小时</td>
-              <td className="px-4 py-3 whitespace-nowrap">
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.workerId}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.name}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.dept}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.date}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkIn}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{att.checkOut}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{Math.round(att.hours)} 小时</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap">
                 <span
                   className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     att.statusClass === 'normal'
@@ -259,9 +257,9 @@ export function WorkerAttendanceTable({
                 >
                   {att.status}
                 </span>
-              </td>
+              </TableCell>
               {!showCheckbox && (
-                <td className="px-4 py-3 whitespace-nowrap">
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -270,12 +268,12 @@ export function WorkerAttendanceTable({
                   >
                     <Eye className="w-4 h-4" />
                   </Button>
-                </td>
+                </TableCell>
               )}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       </div>
 
       {/* 选择栏 */}
