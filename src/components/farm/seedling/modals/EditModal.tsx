@@ -11,6 +11,7 @@ import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '../../../ui/input';
+import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -211,7 +212,7 @@ export function EditModal({
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">关联种源</label>
+          <Label className="text-gray-900">关联种源</Label>
           <div className="relative">
             <Input
               type="text"
@@ -286,7 +287,7 @@ export function EditModal({
 
         {/* 作物品种选择 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <Label className="text-gray-900">作物品种</Label>
           <CropCodeSelector
             value={formData.selectedCropCode}
             onChange={handleCropCodeChange}
@@ -297,7 +298,7 @@ export function EditModal({
 
         {/* 育苗方式 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">育苗方式</label>
+          <Label className="text-gray-900">育苗方式</Label>
           <Select
             value={formData.seedlingType}
             onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
@@ -315,7 +316,7 @@ export function EditModal({
 
         {/* 温室场地 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">温室场地</label>
+          <Label className="text-gray-900">温室场地</Label>
           <Select
             value={formData.siteId}
             onValueChange={(val) => {
@@ -336,7 +337,7 @@ export function EditModal({
 
         {/* 开始日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">开始日期</label>
+          <Label className="text-gray-900">开始日期</Label>
           <Input
             type="date"
             value={formData.startDate}
@@ -347,7 +348,7 @@ export function EditModal({
 
         {/* 预计结束日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">预计结束日期</label>
+          <Label className="text-gray-900">预计结束日期</Label>
           <Input
             type="date"
             value={formData.expectedEndDate}
@@ -358,7 +359,7 @@ export function EditModal({
 
         {/* 初始数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">初始数量</label>
+          <Label className="text-gray-900">初始数量</Label>
           <Input
             type="number"
             value={formData.initialCount || ''}
@@ -369,7 +370,7 @@ export function EditModal({
 
         {/* 成活数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">成活数量</label>
+          <Label className="text-gray-900">成活数量</Label>
           <Input
             type="number"
             value={formData.survivalCount || ''}
@@ -380,7 +381,7 @@ export function EditModal({
 
         {/* 已定植数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">已定植数量</label>
+          <Label className="text-gray-900">已定植数量</Label>
           <Input
             type="number"
             value={formData.plantedCount || ''}
@@ -391,7 +392,7 @@ export function EditModal({
 
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+          <Label className="text-gray-900">备注</Label>
           <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
@@ -403,7 +404,7 @@ export function EditModal({
 
         {/* 负责人 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">负责人</label>
+          <Label className="text-gray-900">负责人</Label>
           <Input
             type="text"
             value={formData.chargePerson}
@@ -415,7 +416,7 @@ export function EditModal({
 
         {/* 目标成活数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">目标成活数量</label>
+          <Label className="text-gray-900">目标成活数量</Label>
           <Input
             type="number"
             value={formData.targetSurvivalCount || ''}
@@ -427,7 +428,7 @@ export function EditModal({
 
         {/* 方案2.6: 育苗工时 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">工时（小时）</label>
+          <Label className="text-gray-900">工时（小时）</Label>
           <Input
             type="number"
             value={formData.workHours || ''}
@@ -441,7 +442,7 @@ export function EditModal({
 
         {/* 品质等级 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品质等级</label>
+          <Label className="text-gray-900">品质等级</Label>
           <Input
             type="text"
             value={formData.qualityGrade}
@@ -453,7 +454,7 @@ export function EditModal({
 
         {/* 是否结束 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">是否结束</label>
+          <Label className="text-gray-900">是否结束</Label>
           <DictSelect
             category="yes_no"
             value={formData.isFinished ? 'yes' : 'no'}

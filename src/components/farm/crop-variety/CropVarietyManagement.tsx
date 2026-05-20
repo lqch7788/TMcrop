@@ -16,6 +16,7 @@ import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
@@ -532,7 +533,7 @@ export default function CropVarietyManagement() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {/* 类别 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
+                <Label className="text-gray-700">类别</Label>
                 <Select
                   value={codeGenCategory}
                   onValueChange={(val) => setCodeGenCategory(val)}
@@ -550,7 +551,7 @@ export default function CropVarietyManagement() {
 
               {/* 类型 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
+                <Label className="text-gray-700">类型</Label>
                 <Select
                   value={codeGenType}
                   onValueChange={(val) => setCodeGenType(val)}
@@ -569,7 +570,7 @@ export default function CropVarietyManagement() {
 
               {/* 品种 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
+                <Label className="text-gray-700">品种</Label>
                 <Select
                   value={codeGenVariety}
                   onValueChange={(val) => setCodeGenVariety(val)}
@@ -588,7 +589,7 @@ export default function CropVarietyManagement() {
 
               {/* 子品种（3位码） */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">子品种</label>
+                <Label className="text-gray-700">子品种</Label>
                 <Select
                   value={codeGenSubVariety1}
                   onValueChange={(val) => setCodeGenSubVariety1(val)}
@@ -607,7 +608,7 @@ export default function CropVarietyManagement() {
 
               {/* 详细品种名称（用户手工输入） */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">详细品种名称</label>
+                <Label className="text-gray-700">详细品种名称</Label>
                 <Input
                   type="text"
                   value={detailVarietyName}
@@ -619,7 +620,7 @@ export default function CropVarietyManagement() {
 
               {/* 详细品种序号（自动生成）和生成结果 */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">详细品种序号</label>
+                <Label className="text-gray-700">详细品种序号</Label>
                 <div className="flex gap-2">
                   <Input
                     type="text"

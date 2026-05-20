@@ -8,6 +8,7 @@ import { Search, X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { TextArea } from '../../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { DictSelect } from '../../common/settings/DictSelect';
@@ -172,14 +173,14 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
+                <Label className="text-gray-900">施肥编号</Label>
                 <FertilizerCodeGenerator
                   value={form.fertilizerCode}
                   onChange={(code) => updateField('fertilizerCode', code)}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
+                <Label className="text-gray-900">数据来源</Label>
                 <Select
                   value={form.dataSource}
                   onValueChange={(val) => updateField('dataSource', val)}
@@ -196,7 +197,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div ref={planSearchRef} className="relative">
-                <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+                <Label className="text-gray-900">关联生产计划</Label>
                 {/* 已选中计划（包括"不关联"选项） */}
                 {selectedPlanLabel ? (
                   <div className={`p-2 border rounded-lg ${
@@ -304,7 +305,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
+                <Label className="text-gray-900">关联种植记录</Label>
                 <Input
                   type="text"
                   value={form.plantingCode || ''}
@@ -323,7 +324,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
+                <Label className="text-gray-900">肥料类型</Label>
                 <DictSelect
                   category="fertilizer_type"
                   value={form.fertilizerType}
@@ -332,9 +333,9 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
+                <Label className="text-gray-900">
                   肥料名称 <span className="text-red-500">*</span>
-                </label>
+                </Label>
                 <Input
                   type="text"
                   value={form.fertilizerName}
@@ -346,7 +347,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
+                <Label className="text-gray-900">稀释比例</Label>
                 <Input
                   type="text"
                   value={form.dilutionRatio}
@@ -356,7 +357,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
+                <Label className="text-gray-900">施肥量 (kg)</Label>
                 <Input
                   type="number"
                   value={form.quantity || ''}
@@ -368,7 +369,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
+                <Label className="text-gray-900">单价 (元/kg)</Label>
                 <Input
                   type="number"
                   value={form.unitPrice || ''}
@@ -381,7 +382,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+              <Label className="text-gray-900">总成本（自动计算）</Label>
               <Input
                 type="text"
                 value={`${form.totalCost.toFixed(2)} 元`}
@@ -398,7 +399,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
+                <Label className="text-gray-900">温室位置</Label>
                 <Input
                   type="text"
                   value={form.greenhouseName}
@@ -408,7 +409,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+                <Label className="text-gray-900">作物品种</Label>
                 <CropCodeSelector
                   value={cropCode}
                   onChange={handleCropCodeChange}
@@ -427,7 +428,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
+              <Label className="text-gray-900">施肥时间</Label>
               <Input
                 type="datetime-local"
                 value={form.fertilizeTime}
@@ -443,7 +444,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           <SectionTitle title="操作与备注" icon="📝" />
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+              <Label className="text-gray-900">操作员</Label>
               <Input
                 type="text"
                 value={form.operatorName}
@@ -453,7 +454,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+              <Label className="text-gray-900">备注</Label>
               <TextArea
                 value={form.description}
                 onChange={(e) => updateField('description', e.target.value)}

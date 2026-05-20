@@ -11,6 +11,7 @@ import { ChevronRight, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-rea
 import { SeedSource, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 
 // 统一繁殖阶段流转顺序
 const STAGE_ORDER: PropagationStatus[] = [
@@ -243,7 +244,7 @@ export function PropagationStageModal({
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">入库数量</label>
+                    <Label className="text-gray-600 text-xs">入库数量</Label>
                     <Input
                       type="number"
                       value={harvestQuantity || ''}

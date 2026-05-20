@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { Search, Plus, Sprout } from 'lucide-react';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
@@ -174,9 +175,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
         <div className="grid grid-cols-3 gap-4">
           {/* 类别 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Label className="text-gray-700">
               <span className="text-red-500">*</span> 类别
-            </label>
+            </Label>
             <Select
               value={selectedCategory}
               onValueChange={(val) => setSelectedCategory(val)}
@@ -194,9 +195,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
 
           {/* 类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Label className="text-gray-700">
               <span className="text-red-500">*</span> 类型
-            </label>
+            </Label>
             <Select
               value={selectedType}
               onValueChange={(val) => setSelectedType(val)}
@@ -215,9 +216,9 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
 
           {/* 品种 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Label className="text-gray-700">
               <span className="text-red-500">*</span> 品种
-            </label>
+            </Label>
             <Select
               value={selectedVariety}
               onValueChange={(val) => setSelectedVariety(val)}
@@ -256,7 +257,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
           <div className="grid grid-cols-2 gap-4">
             {/* 别名 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">别名</label>
+              <Label className="text-gray-700">别名</Label>
               <Input
                 type="text"
                 value={alias}
@@ -269,7 +270,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
 
             {/* 生长周期 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">生长周期（天）</label>
+              <Label className="text-gray-700">生长周期（天）</Label>
               <Input
                 type="number"
                 value={growthCycle || ''}
@@ -281,7 +282,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
 
             {/* 目标产量 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">目标产量（kg/亩）</label>
+              <Label className="text-gray-700">目标产量（kg/亩）</Label>
               <Input
                 type="number"
                 value={targetYield || ''}
@@ -293,7 +294,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
 
             {/* 备注 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <Label className="text-gray-700">备注</Label>
               <Input
                 type="text"
                 value={remarks}

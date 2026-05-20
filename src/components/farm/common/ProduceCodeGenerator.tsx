@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import {
   produceCategories,
@@ -71,7 +72,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
       <div className="grid grid-cols-6 gap-4">
         {/* 大类选择 */}
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
+          <Label className="text-gray-700">大类</Label>
           <Select
             value={codeGen.bigCategory}
             onValueChange={(val) => setCodeGen(prev => ({
@@ -97,7 +98,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
 
         {/* 类型选择 */}
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
+          <Label className="text-gray-700">类型</Label>
           <Select
             value={codeGen.type}
             onValueChange={(val) => setCodeGen(prev => ({
@@ -123,7 +124,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
 
         {/* 品种选择 */}
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
+          <Label className="text-gray-700">品种</Label>
           <Select
             value={codeGen.subCategory}
             onValueChange={(val) => setCodeGen(prev => ({
@@ -148,7 +149,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
 
         {/* 生成编码 */}
         <div className="col-span-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700">
             生成编码
             {codeGenSuccess && !codeGenError && (
               <span className="ml-2 text-sm text-green-600 font-normal">{codeGenSuccess}</span>
@@ -156,7 +157,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
             {codeGenError && (
               <span className="ml-2 text-sm text-red-600 font-normal">{codeGenError}</span>
             )}
-          </label>
+          </Label>
           <div className="flex gap-2">
             <Input
               type="text"

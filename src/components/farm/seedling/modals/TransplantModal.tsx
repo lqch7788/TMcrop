@@ -8,6 +8,7 @@ import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { Input } from '../../../ui/input';
+import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -152,7 +153,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
           <h4 className="text-sm font-semibold text-gray-900 mb-3">定植信息</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">定植数量</label>
+              <Label className="text-gray-700">定植数量</Label>
               <Input
                 type="number"
                 value={formData.transplantCount || ''}
@@ -163,7 +164,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               <p className="text-xs text-gray-500 mt-1">最多可定植 {availableCount.toLocaleString()} 株</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">定植区域</label>
+              <Label className="text-gray-700">定植区域</Label>
               <Select
                 value={formData.areaId}
                 onValueChange={(val) => handleAreaChange(val)}
@@ -179,7 +180,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">土壤PH值</label>
+              <Label className="text-gray-700">土壤PH值</Label>
               <Input
                 type="number"
                 step="0.1"
@@ -189,7 +190,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">土壤EC值</label>
+              <Label className="text-gray-700">土壤EC值</Label>
               <Input
                 type="number"
                 step="0.1"
@@ -199,7 +200,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
+              <Label className="text-gray-700">定植日期</Label>
               <Input
                 type="date"
                 value={formData.transplantDate}
@@ -208,7 +209,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <Label className="text-gray-700">备注</Label>
               <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

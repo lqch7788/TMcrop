@@ -6,6 +6,7 @@
 import React from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
+import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { Input } from '../ui/input';
 import { ProduceInventory } from '../../types/inventory';
@@ -108,7 +109,7 @@ export function ProduceInventoryBatchEditModal({
 
       {/* 选择产品下拉框 */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">选择产品</label>
+        <Label className="text-gray-700">选择产品</Label>
         <Select value={currentItemId || ''} onValueChange={(val) => {
           const idx = selectedRows.indexOf(val);
           onItemSelect(idx >= 0 ? idx : 0);
@@ -172,7 +173,7 @@ export function ProduceInventoryBatchEditModal({
         {/* 库存信息 */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">库存数量</label>
+            <Label className="text-xs text-gray-700">库存数量</Label>
             <Input
               type="number"
               min="0"
@@ -182,7 +183,7 @@ export function ProduceInventoryBatchEditModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">最低库存预警</label>
+            <Label className="text-xs text-gray-700">最低库存预警</Label>
             <Input
               type="number"
               min="0"
@@ -192,7 +193,7 @@ export function ProduceInventoryBatchEditModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">最高库存预警</label>
+            <Label className="text-xs text-gray-700">最高库存预警</Label>
             <Input
               type="number"
               min="0"
@@ -205,7 +206,7 @@ export function ProduceInventoryBatchEditModal({
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">存放位置</label>
+            <Label className="text-xs text-gray-700">存放位置</Label>
             <Input
               type="text"
               value={currentEditedData.storageLocation || ''}
@@ -215,7 +216,7 @@ export function ProduceInventoryBatchEditModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">保质期天数</label>
+            <Label className="text-xs text-gray-700">保质期天数</Label>
             <Input
               type="number"
               min="0"

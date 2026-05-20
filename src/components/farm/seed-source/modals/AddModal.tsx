@@ -26,6 +26,7 @@ import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -441,7 +442,7 @@ export function AddModal({
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           {/* 入库方式选择（占两列） */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-900 mb-2">入库方式</label>
+            <Label className="text-gray-900">入库方式</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
                 { value: PropagationType.EXTERNAL, label: '外购入库', desc: '从供应商采购入库', Icon: ShoppingCart },
@@ -479,7 +480,7 @@ export function AddModal({
 
           {/* 种源批号 - 可点击生成 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">种源批号</label>
+            <Label className="text-gray-900">种源批号</Label>
             <div className="flex gap-2">
               <Input
                 type="text"
@@ -502,9 +503,9 @@ export function AddModal({
 
           {/* 作物选择 - 使用统一的 CropCodeSelector */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="text-gray-900">
               <span className="text-red-500">*</span> 作物选择
-            </label>
+            </Label>
             <CropCodeSelector
               value={cropCode}
               onChange={handleCropCodeChange}
@@ -525,7 +526,7 @@ export function AddModal({
 
           {/* 种源类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">种源类型</label>
+            <Label className="text-gray-900">种源类型</Label>
             <DictSelect
               category="source_type"
               value={formData.sourceType}
@@ -549,7 +550,7 @@ export function AddModal({
 
           {/* 来源途径 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">来源途径</label>
+            <Label className="text-gray-900">来源途径</Label>
             <DictSelect
               category="source_origin"
               value={formData.sourceOrigin}
@@ -565,7 +566,7 @@ export function AddModal({
           {formData.propagationType === PropagationType.BREEDING && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">育种方法</label>
+                <Label className="text-gray-900">育种方法</Label>
                 <Select
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
@@ -585,7 +586,7 @@ export function AddModal({
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">父本编号</label>
+                <Label className="text-gray-900">父本编号</Label>
                 <Input
                   type="text"
                   value={formData.parentMaleCode}
@@ -595,7 +596,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">母本编号</label>
+                <Label className="text-gray-900">母本编号</Label>
                 <Input
                   type="text"
                   value={formData.parentFemaleCode}
@@ -605,7 +606,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">世代</label>
+                <Label className="text-gray-900">世代</Label>
                 <Select
                   value={formData.generation}
                   onValueChange={(val) => setFormData({ ...formData, generation: val })}
@@ -623,7 +624,7 @@ export function AddModal({
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">育种地点</label>
+                <Label className="text-gray-900">育种地点</Label>
                 <Input
                   type="text"
                   value={formData.breedingLocation}
@@ -633,7 +634,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">目标性状</label>
+                <Label className="text-gray-900">目标性状</Label>
                 <Input
                   type="text"
                   value={formData.targetTraits}
@@ -643,7 +644,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">预计采收日期</label>
+                <Label className="text-gray-900">预计采收日期</Label>
                 <Input
                   type="date"
                   value={formData.expectedHarvestDate}
@@ -658,7 +659,7 @@ export function AddModal({
           {formData.propagationType === PropagationType.SEED_SAVING && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
+                <Label className="text-gray-900">关联种植记录</Label>
                 <Input
                   type="text"
                   value={formData.linkedPlantingCode}
@@ -668,7 +669,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">留种株标识</label>
+                <Label className="text-gray-900">留种株标识</Label>
                 <Input
                   type="text"
                   value={formData.linkedPlantingId}
@@ -678,7 +679,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">预计采收日期</label>
+                <Label className="text-gray-900">预计采收日期</Label>
                 <Input
                   type="date"
                   value={formData.expectedHarvestDate}
@@ -693,7 +694,7 @@ export function AddModal({
           {formData.propagationType === PropagationType.ASEXUAL && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">繁殖方式</label>
+                <Label className="text-gray-900">繁殖方式</Label>
                 <Select
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
@@ -712,7 +713,7 @@ export function AddModal({
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">母株编号</label>
+                <Label className="text-gray-900">母株编号</Label>
                 <Input
                   type="text"
                   value={formData.motherPlantCode}
@@ -722,7 +723,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">母株ID</label>
+                <Label className="text-gray-900">母株ID</Label>
                 <Input
                   type="text"
                   value={formData.motherPlantId}
@@ -732,7 +733,7 @@ export function AddModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">预计产出种苗数</label>
+                <Label className="text-gray-900">预计产出种苗数</Label>
                 <Input
                   type="number"
                   value={formData.quantity || ''}
@@ -746,9 +747,9 @@ export function AddModal({
           {/* 供应商 - 外部采购时必填，其他来源可选（搜索模式） */}
           {formData.propagationType === PropagationType.EXTERNAL ? (
             <div ref={supplierSearchRef} className="relative">
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <Label className="text-gray-900">
                 <span className="text-red-500">*</span> 供应商
-              </label>
+              </Label>
               {selectedSupplier ? (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
                   <div className="flex items-center justify-between">
@@ -838,7 +839,7 @@ export function AddModal({
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">供应商（可选）</label>
+              <Label className="text-gray-900">供应商（可选）</Label>
               <Input
                 type="text"
                 value={formData.supplierName}
@@ -852,7 +853,7 @@ export function AddModal({
 
           {/* V3.0 生产计划关联 - 只显示育种计划类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+            <Label className="text-gray-900">关联生产计划</Label>
             <Select
               value={formData.productionPlanId || '__none__'}
               onValueChange={(val) => {
@@ -887,9 +888,9 @@ export function AddModal({
 
           {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="text-gray-900">
               {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
-            </label>
+            </Label>
             <Input
               type="date"
               value={formData.purchaseDate}
@@ -900,7 +901,7 @@ export function AddModal({
 
           {/* 登记数量 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">登记数量</label>
+            <Label className="text-gray-900">登记数量</Label>
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -919,7 +920,7 @@ export function AddModal({
 
           {/* 单价 */}
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">单价（元）</label>
+            <Label className="text-gray-900">单价（元）</Label>
             <Input
               type="number"
               value={formData.unitPrice || ''}
@@ -930,7 +931,7 @@ export function AddModal({
 
           {/* 图片上传 - 占两列 */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
+            <Label className="text-gray-900">图片上传</Label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               {formData.pictures.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -956,7 +957,7 @@ export function AddModal({
                   ))}
                 </div>
               )}
-              <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
+              <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
                 <span className="text-sm text-gray-500">点击上传图片</span>
                 <Input
@@ -982,13 +983,13 @@ export function AddModal({
                     e.target.value = '';
                   }}
                 />
-              </label>
+              </Label>
             </div>
           </div>
 
           {/* 备注 - 占两列 */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+            <Label className="text-gray-900">备注</Label>
             <TextArea
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
@@ -1000,7 +1001,7 @@ export function AddModal({
 
           {/* V3.1 补录字段 - 占两列 */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
+            <Label className="text-gray-900">是否补录</Label>
             <DictSelect
               category="is_supplementary"
               value={formData.isSupplementary ? 'yes' : 'no'}
@@ -1013,9 +1014,9 @@ export function AddModal({
           {/* V3.1 补录原因 */}
           {formData.isSupplementary && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <Label className="text-gray-900">
                 补录原因 <span className="text-red-500">*</span>
-              </label>
+              </Label>
               <TextArea
                 value={formData.supplementaryReason}
                 onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}

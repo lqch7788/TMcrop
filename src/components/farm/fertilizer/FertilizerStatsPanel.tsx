@@ -11,6 +11,8 @@ import {
 import { useFertilizerStore } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface FertilizerStatsPanelProps {
@@ -104,25 +106,21 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
         {/* 筛选行 */}
         <div className="flex items-center gap-4 mt-3 flex-wrap">
           <div>
-            <label className="text-xs text-gray-500 mr-2">开始日期</label>
-            <Input
-              type="date"
-              value={timeRange.start}
-              onChange={(e) => setTimeRange((p) => ({ ...p, start: e.target.value }))}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="text-xs text-gray-500 mr-2">开始日期</Label>
+            <DatePicker
+              selected={timeRange.start ? new Date(timeRange.start) : undefined}
+              onChange={(date) => setTimeRange((p) => ({ ...p, start: date.toISOString().split('T')[0] }))}
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mr-2">结束日期</label>
-            <Input
-              type="date"
-              value={timeRange.end}
-              onChange={(e) => setTimeRange((p) => ({ ...p, end: e.target.value }))}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="text-xs text-gray-500 mr-2">结束日期</Label>
+            <DatePicker
+              selected={timeRange.end ? new Date(timeRange.end) : undefined}
+              onChange={(date) => setTimeRange((p) => ({ ...p, end: date.toISOString().split('T')[0] }))}
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mr-2">分组维度</label>
+            <Label className="text-xs text-gray-500 mr-2">分组维度</Label>
             <Select
               value={groupBy}
               onValueChange={(val) => setGroupBy(val as any)}

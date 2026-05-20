@@ -10,6 +10,7 @@ import { Plus, Clock, Thermometer, Droplets, AlertTriangle } from 'lucide-react'
 import { SeedSource, PropagationType, PropagationStatus, PropagationRecord } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -152,7 +153,7 @@ export function PropagationRecordModal({
           <div className="grid grid-cols-2 gap-4">
             {/* 记录日期 */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">记录日期</label>
+              <Label className="text-gray-600 text-xs">记录日期</Label>
               <Input
                 type="datetime-local"
                 value={formData.recordDate || ''}
@@ -163,7 +164,7 @@ export function PropagationRecordModal({
 
             {/* 阶段 */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">当前阶段</label>
+              <Label className="text-gray-600 text-xs">当前阶段</Label>
               <Select
                 value={formData.stage}
                 onValueChange={(val) => setFormData({ ...formData, stage: val as PropagationStatus })}
@@ -181,9 +182,9 @@ export function PropagationRecordModal({
 
             {/* 温度 */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+              <Label className="text-gray-600 text-xs flex items-center gap-1">
                 <Thermometer className="w-3 h-3 text-orange-500" /> 温度（℃）
-              </label>
+              </Label>
               <Input
                 type="number"
                 step="0.1"
@@ -196,9 +197,9 @@ export function PropagationRecordModal({
 
             {/* 湿度 */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+              <Label className="text-gray-600 text-xs flex items-center gap-1">
                 <Droplets className="w-3 h-3 text-blue-500" /> 湿度（%）
-              </label>
+              </Label>
               <Input
                 type="number"
                 step="0.1"
@@ -211,7 +212,7 @@ export function PropagationRecordModal({
 
             {/* 操作人 */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">操作人</label>
+              <Label className="text-gray-600 text-xs">操作人</Label>
               <Input
                 type="text"
                 value={formData.operator || ''}
@@ -225,7 +226,7 @@ export function PropagationRecordModal({
             {isBreeding && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">授粉类型</label>
+                  <Label className="text-gray-600 text-xs">授粉类型</Label>
                   <Select
                     value={formData.pollinationType || '__none__'}
                     onValueChange={(val) => setFormData({ ...formData, pollinationType: val === '__none__' ? undefined : val as any })}
@@ -242,7 +243,7 @@ export function PropagationRecordModal({
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">授粉作物</label>
+                  <Label className="text-gray-600 text-xs">授粉作物</Label>
                   <Input
                     type="text"
                     value={formData.pollinatorCrop || ''}
@@ -252,7 +253,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">授粉花朵数</label>
+                  <Label className="text-gray-600 text-xs">授粉花朵数</Label>
                   <Input
                     type="number"
                     value={formData.flowerCount || ''}
@@ -261,7 +262,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">坐果数</label>
+                  <Label className="text-gray-600 text-xs">坐果数</Label>
                   <Input
                     type="number"
                     value={formData.fruitSetCount || ''}
@@ -276,7 +277,7 @@ export function PropagationRecordModal({
             {(isBreeding || isSeedSaving) && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">采收种子数</label>
+                  <Label className="text-gray-600 text-xs">采收种子数</Label>
                   <Input
                     type="number"
                     value={formData.harvestSeedCount || ''}
@@ -285,7 +286,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">种子重量(g)</label>
+                  <Label className="text-gray-600 text-xs">种子重量(g)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -301,7 +302,7 @@ export function PropagationRecordModal({
             {isAsexual && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">采收苗数</label>
+                  <Label className="text-gray-600 text-xs">采收苗数</Label>
                   <Input
                     type="number"
                     value={formData.harvestPlantCount || ''}
@@ -316,7 +317,7 @@ export function PropagationRecordModal({
             {isBreeding || isSeedSaving ? (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">发芽率(%)</label>
+                  <Label className="text-gray-600 text-xs">发芽率(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -326,7 +327,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">净度(%)</label>
+                  <Label className="text-gray-600 text-xs">净度(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -336,7 +337,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">水分(%)</label>
+                  <Label className="text-gray-600 text-xs">水分(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -349,7 +350,7 @@ export function PropagationRecordModal({
             ) : isAsexual ? (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">成活率(%)</label>
+                  <Label className="text-gray-600 text-xs">成活率(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -359,7 +360,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">生根率(%)</label>
+                  <Label className="text-gray-600 text-xs">生根率(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -369,7 +370,7 @@ export function PropagationRecordModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">嫁接成活率(%)</label>
+                  <Label className="text-gray-600 text-xs">嫁接成活率(%)</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -383,9 +384,9 @@ export function PropagationRecordModal({
 
             {/* 异常描述 - 占两列 */}
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+              <Label className="text-gray-600 text-xs flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-amber-500" /> 异常描述
-              </label>
+              </Label>
               <Input
                 type="text"
                 value={formData.abnormality || ''}
@@ -397,7 +398,7 @@ export function PropagationRecordModal({
 
             {/* 备注 - 占两列 */}
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">备注</label>
+              <Label className="text-gray-600 text-xs">备注</Label>
               <TextArea
                 value={formData.remarks || ''}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

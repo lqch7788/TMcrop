@@ -5,6 +5,7 @@
 import React from 'react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Button } from '../../ui/button';
+import { Label } from '../../ui/label';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 
@@ -83,7 +84,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
           if (field.full) {
             return (
               <div key={idx} className="col-span-2">
-                <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
+                <Label className="text-xs text-gray-500">{field.label}</Label>
                 <div className="text-sm text-gray-900 bg-gray-50 rounded-lg p-3 min-h-[40px]">
                   {field.value}
                 </div>
@@ -93,7 +94,7 @@ export function FertilizerDetailModal({ isOpen, record, onClose }: FertilizerDet
 
           return (
             <div key={idx}>
-              <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
+              <Label className="text-xs text-gray-500">{field.label}</Label>
               <div className={`text-sm ${field.highlight || 'text-gray-900'}`}>
                 {field.mono ? (
                   <span className="font-mono">{field.value}</span>

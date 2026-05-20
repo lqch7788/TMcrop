@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { X, Upload, Camera } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 
 // 图片上传组件属性接口
 export interface ImageUploaderProps {
@@ -123,7 +124,7 @@ export function ImageUploader({
 
       {/* 上传按钮 */}
       {canUpload && !disabled && (
-        <label
+        <Label
           className={`flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg border-2 border-dashed transition-colors ${
             useCameraIcon ? 'border-gray-300 hover:border-red-500 hover:bg-red-50' : 'border-gray-400'
           }`}
@@ -147,7 +148,7 @@ export function ImageUploader({
             onChange={handleFileChange}
             className="hidden"
           />
-        </label>
+        </Label>
       )}
 
       {/* 数量提示 */}
@@ -213,7 +214,7 @@ export function SingleImageUploader({
         </div>
       )}
       {!image && (
-        <label
+        <Label
           className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg border-2 border-dashed border-gray-400 transition-colors"
           style={{ width: imageSize, height: imageSize }}
         >
@@ -225,7 +226,7 @@ export function SingleImageUploader({
             onChange={handleFileChange}
             className="hidden"
           />
-        </label>
+        </Label>
       )}
     </div>
   );
