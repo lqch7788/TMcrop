@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
 import { Modal } from '@/components/ui/Modal';
@@ -207,11 +208,11 @@ export function OnboardingPage() {
   };
 
   // 更新办理进度
-  const handleProgress = (record: OnboardingRecord, newStatus: OnboardingStatus) => {
+  const handleProgress = async (record: OnboardingRecord, newStatus: OnboardingStatus) => {
     if (newStatus === '办理中' && record.status === '待入职') {
       updateStatus(record.id, '办理中', currentUser.id, currentUser.name);
     } else if (newStatus === '已入职') {
-      if (window.confirm('确定要完成入职办理吗？这将创建员工档案。')) {
+      if (await showConfirm('确定要完成入职办理吗？这将创建员工档案。')) {
         updateStatus(record.id, '已入职', currentUser.id, currentUser.name);
       }
     }
@@ -266,7 +267,7 @@ export function OnboardingPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

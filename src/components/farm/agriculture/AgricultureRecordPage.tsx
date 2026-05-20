@@ -12,6 +12,7 @@ import {
   Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
   X, Pencil, Trash2, Sprout, Droplets, AlertTriangle
 } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type FarmOperationRecordChild } from '../../../hooks/useOperationRecords';
 import { useTasks } from '../../../hooks/useTasks';
 import { useTempTasks } from '../../../hooks/useTempTasks';
@@ -211,7 +212,7 @@ export default function AgricultureRecordPage() {
   // 验收通过记录
   const handleAcceptRecord = (record: FarmOperationRecord) => {
     if (!record.sourceId || !record.sourceType) {
-      alert('该记录无法验收：缺少来源信息');
+      showAlert('该记录无法验收：缺少来源信息');
       return;
     }
 
@@ -220,7 +221,7 @@ export default function AgricultureRecordPage() {
     } else if (record.sourceType === 'tempTask') {
       acceptCompletion(record.sourceId);
     } else {
-      alert('该类型记录不支持快速验收');
+      showAlert('该类型记录不支持快速验收');
       return;
     }
 
@@ -231,7 +232,7 @@ export default function AgricultureRecordPage() {
   // 驳回记录
   const handleRejectRecord = (record: FarmOperationRecord) => {
     if (!record.sourceId || !record.sourceType) {
-      alert('该记录无法驳回：缺少来源信息');
+      showAlert('该记录无法驳回：缺少来源信息');
       return;
     }
 
@@ -240,7 +241,7 @@ export default function AgricultureRecordPage() {
 
     if (record.sourceType === 'task') {
       // useTasks 暂未实现驳回方法，可后续扩展
-      alert('任务驳回功能暂未实现，请在任务中心处理');
+      showAlert('任务驳回功能暂未实现，请在任务中心处理');
     } else if (record.sourceType === 'tempTask') {
       // 使用 hook 返回的 rejectCompletion
       rejectCompletion(record.sourceId, reason);

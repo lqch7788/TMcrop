@@ -15,6 +15,7 @@ import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -166,7 +167,7 @@ export function EditModal({
       });
     } catch (error) {
       console.error('更新育苗记录失败:', error);
-      alert('更新失败，请重试');
+      await showAlert('更新失败，请重试');
       return;
     }
 

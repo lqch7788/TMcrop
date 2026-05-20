@@ -5,6 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { MapPin, Camera, Package, Mic, CheckCircle, X, Play, Square, RotateCcw, Clock } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 
 // 反馈选项配置
 export const FEEDBACK_OPTIONS = [
@@ -525,7 +526,7 @@ function VoiceInput({ value, onChange }: { value: string; onChange: (v: string) 
       setRecording(true);
     } catch (err) {
       console.error('Failed to start recording:', err);
-      alert('无法访问麦克风，请检查权限设置');
+      await showAlert('无法访问麦克风，请检查权限设置');
     }
   };
 

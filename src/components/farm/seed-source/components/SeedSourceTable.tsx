@@ -13,6 +13,7 @@ import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
+import { showAlert } from '@/lib/dialogService';
 
 // 繁殖途径标签颜色
 const PROPAGATION_TYPE_LABELS: Record<string, string> = {
@@ -162,7 +163,7 @@ export function SeedSourceTable({
   const executeOperation = (op: SeedSourceOperationMode) => {
     const record = getFirstSelectedRecord();
     if (!record) {
-      alert('请先在表格中选择一条记录');
+      showAlert('请先在表格中选择一条记录');
       return;
     }
     switch (op) {
@@ -193,7 +194,7 @@ export function SeedSourceTable({
   // 确认打印
   const confirmPrint = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     const selectedRecords = data.filter(item => selectedRows.includes(item.id));

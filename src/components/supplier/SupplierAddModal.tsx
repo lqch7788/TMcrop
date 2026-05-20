@@ -19,6 +19,7 @@ import {
   validateCode,
   runValidations,
 } from '../../lib/validators';
+import { showAlert } from '@/lib/dialogService';
 
 interface SupplierAddModalProps {
   isOpen: boolean;
@@ -195,7 +196,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
       { field: 'code', valid: validateCode(form.code), message: '标识码只能包含字母、数字、下划线和连字符' },
     ]);
     if (errors.length > 0) {
-      alert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
+      showAlert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
       return;
     }
 

@@ -15,6 +15,7 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export function EditModal({
     if (record && isOpen) {
       // 如果订单已完成，禁止编辑
       if (record.status === CropOrderStatus.COMPLETED) {
-        alert('该订单已完成，无法编辑');
+        showAlert('该订单已完成，无法编辑');
         onClose();
         return;
       }
@@ -137,14 +138,14 @@ export function EditModal({
   const handleSubmit = async () => {
     // 如果订单已完成，禁止编辑
     if (record && record.status === CropOrderStatus.COMPLETED) {
-      alert('该订单已完成，无法编辑');
+      await showAlert('该订单已完成，无法编辑');
       onClose();
       return;
     }
 
     // 如果选择"是"完成订单，弹出确认警告
     if (formData.isCompleted) {
-      const confirmed = window.confirm(
+      const confirmed = await showConfirm(
         '⚠️ 重要提示：\n\n' +
         '确认将订单标记为完成吗？\n\n' +
         '完成后该订单将进入保存档案状态：\n' +
@@ -200,7 +201,7 @@ export function EditModal({
       console.log('[EditModal] 更新订单成功:', result);
     } catch (error) {
       console.error('更新订单失败:', error);
-      alert('更新订单失败，请重试');
+      await showAlert('更新订单失败，请重试');
       return;
     }
     onSuccess();

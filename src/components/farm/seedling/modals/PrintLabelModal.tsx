@@ -15,6 +15,7 @@ import { useUserStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -82,11 +83,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       let labelsToPrint: string[] = [];
 
       if (printMode === 'single') {
-        if (!previewLabel) { alert('请选择要打印的标签'); return; }
+        if (!previewLabel) { await showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [previewLabel];
         await apiService.printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
       } else if (printMode === 'multi') {
-        if (selectedLabels.length === 0) { alert('请选择要打印的标签'); return; }
+        if (selectedLabels.length === 0) { await showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [...selectedLabels];
         await apiService.printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
       } else {
@@ -143,7 +144,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         }
       }
 
-      if (labelsToExport.length === 0) { alert('没有可导出的标签'); return; }
+      if (labelsToExport.length === 0) { await showAlert('没有可导出的标签'); return; }
 
       // 构建标签URL（扫描功能码 = URL链接，人工可在线生成QR码）
       const baseUrl = 'https://tm-crop.com/ResumeTimeline';

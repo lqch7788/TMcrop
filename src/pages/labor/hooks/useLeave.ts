@@ -7,6 +7,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLeaveStore } from '@/stores/leaveStore';
 import type { LeaveRecord as StoreLeaveRecord, LeaveType as StoreLeaveType, LeaveStatus as StoreLeaveStatus, LeaveFilters as StoreLeaveFilters } from '@/stores/leaveStore';
+import { showAlert } from '@/lib/dialogService';
 import type { LeaveType, LeaveStatus, LeaveFilters } from '../../../components/labor/leave/types';
 
 // ==================== 类型定义 ====================
@@ -316,7 +317,7 @@ export function useLeave(
   // ========== 提交请假申请 ==========
   const handleSubmit = useCallback(async () => {
     if (!formData.staffId || !formData.startDate || !formData.endDate || !formData.reason) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -338,10 +339,10 @@ export function useLeave(
       setIsFormModalOpen(false);
       // 重新拉取确保数据同步
       fetchItems();
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } catch (error) {
       console.error('提交请假申请失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, createItem, fetchItems]);
 
@@ -352,7 +353,7 @@ export function useLeave(
       fetchItems();
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('审批失败，请重试');
+      await showAlert('审批失败，请重试');
     }
   }, [approveLeave, fetchItems]);
 
@@ -363,7 +364,7 @@ export function useLeave(
       fetchItems();
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [rejectLeave, fetchItems]);
 
@@ -385,10 +386,10 @@ export function useLeave(
       setIsWithdrawModalOpen(false);
       setWithdrawRecord(null);
       fetchItems();
-      alert('请假申请已撤回');
+      await showAlert('请假申请已撤回');
     } catch (error) {
       console.error('撤回申请失败:', error);
-      alert('撤回失败，请重试');
+      await showAlert('撤回失败，请重试');
       setIsWithdrawModalOpen(false);
       setWithdrawRecord(null);
     }

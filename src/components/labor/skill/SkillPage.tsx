@@ -10,6 +10,7 @@ import { SkillDetailModal } from './SkillDetailModal';
 import { SkillBatchEditModal } from './SkillBatchEditModal';
 import { SkillFormData, StaffSkill } from './types';
 import { Label } from '@/components/ui/label';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -154,8 +155,8 @@ export function SkillPage() {
   };
 
   // 删除技能档案
-  const handleDelete = (skill: StaffSkill) => {
-    if (window.confirm(`确定要删除技能档案 "${skill.staffName}" 吗？`)) {
+  const handleDelete = async (skill: StaffSkill) => {
+    if (await showConfirm(`确定要删除技能档案 "${skill.staffName}" 吗？`)) {
       deleteStaffSkill(skill.id);
     }
   };
@@ -222,7 +223,7 @@ export function SkillPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

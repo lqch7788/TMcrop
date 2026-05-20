@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useWorkerStore } from '@/stores';
 import { useAttendanceRepairStore } from '@/stores/useAttendanceRepairStore';
+import { showAlert } from '@/lib/dialogService';
 import type {
   AttendanceRepairRecord,
   CreateAttendanceRepairParams,
@@ -214,12 +215,12 @@ export function useAttendanceRepairPage() {
   /** 提交考勤补录申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.repairDate || !formData.checkInTime || !formData.checkOutTime) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
     if (formData.reason === '其他' && !formData.customReason.trim()) {
-      alert('请填写具体的补录原因');
+      await showAlert('请填写具体的补录原因');
       return;
     }
 
@@ -239,10 +240,10 @@ export function useAttendanceRepairPage() {
 
       await storeCreateItem(createParams);
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } catch (error) {
       console.error('提交考勤补录失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, storeCreateItem]);
 
@@ -252,7 +253,7 @@ export function useAttendanceRepairPage() {
       await storeUpdateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('审批失败，请重试');
+      await showAlert('审批失败，请重试');
     }
   }, [storeUpdateItem]);
 
@@ -262,7 +263,7 @@ export function useAttendanceRepairPage() {
       await storeUpdateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [storeUpdateItem]);
 

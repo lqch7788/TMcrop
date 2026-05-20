@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Search, Download, Clock, CheckCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../ui/button';
+import { showAlert } from '@/lib/dialogService';
 
 const attendanceData = [
   { id: 1, workerId: 'A001', name: '张伟民', dept: '生产部', date: '2024-03-15', checkIn: '08:05', checkOut: '17:30', status: '正常', statusClass: 'normal', hours: 9.4 },
@@ -46,7 +47,7 @@ export function HrAttendancePage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     handleDoExport();

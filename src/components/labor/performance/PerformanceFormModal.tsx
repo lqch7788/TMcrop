@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import { showAlert } from '@/lib/dialogService';
 import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Label } from '@/components/ui/label';
@@ -38,15 +39,15 @@ export function PerformanceFormModal({
 
   const handleSubmit = () => {
     if (!formData.staffId) {
-      alert('请输入工号');
+      showAlert('请输入工号');
       return;
     }
     if (!formData.staffName) {
-      alert('请输入姓名');
+      showAlert('请输入姓名');
       return;
     }
     if (!formData.month) {
-      alert('请选择月份');
+      showAlert('请选择月份');
       return;
     }
     onConfirm(formData);

@@ -18,6 +18,7 @@ import {
 } from './components/ExecuteTab';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import type { MaterialReceivingRecord } from '@/types/materialReceiving';
+import { showAlert } from '@/lib/dialogService';
 
 // Props接口定义
 interface ExecuteTabProps {
@@ -521,7 +522,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
           setExecuteShowBatchDeleteConfirm(false);
           setExecuteSelectedRows([]);
           setExecuteBatchEditMode(null);
-          alert(`已删除 ${executeSelectedRows.length} 项领料出库记录`);
+          showAlert(`已删除 ${executeSelectedRows.length} 项领料出库记录`);
         }}
       />
 
@@ -539,7 +540,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
           setExecuteShowBatchEditModal(false);
           setExecuteBatchEditMode(null);
           setExecuteSelectedRows([]);
-          alert(`批量编辑成功，已保存 ${Object.keys(editedRecords).length} 条记录`);
+          showAlert(`批量编辑成功，已保存 ${Object.keys(editedRecords).length} 条记录`);
         }}
       />
     </>

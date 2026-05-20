@@ -30,6 +30,7 @@ import { Label } from '../../../ui/label';
 import { DatePicker } from '../../../ui/DatePicker';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */
 const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
@@ -230,16 +231,16 @@ export function AddModal({
   const handleSubmit = async () => {
     // 验证必填项
     if (!seedCode) {
-      alert('请先生成种源批号');
+      await showAlert('请先生成种源批号');
       return;
     }
     if (!selectedCrop) {
-      alert('请选择作物');
+      await showAlert('请选择作物');
       return;
     }
     // 外部采购时供应商必填
     if (formData.sourceOrigin === 'external_purchase' && !formData.supplierId) {
-      alert('请选择供应商');
+      await showAlert('请选择供应商');
       return;
     }
 
@@ -316,7 +317,7 @@ export function AddModal({
       newSeedSource = await useSeedSourceStore.getState().addItem(baseData);
     } catch (error) {
       console.error('创建种源失败:', error);
-      alert('创建失败，请重试');
+      await showAlert('创建失败，请重试');
       return;
     }
 

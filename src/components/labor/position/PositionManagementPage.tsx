@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ClipboardCheck } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { PositionTable } from './PositionTable';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from './modals';
 import { Button } from '@/components/ui/button';
@@ -113,7 +114,7 @@ export function PositionManagementPage() {
   const handleBatchEditClick = () => {
     if (batchEditMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要编辑的记录');
+        showAlert('请先选择要编辑的记录');
         return;
       }
       setSelectedRecordId(selectedRows[0]);
@@ -138,7 +139,7 @@ export function PositionManagementPage() {
   const handleBatchDeleteClick = () => {
     if (batchDeleteMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要删除的记录');
+        showAlert('请先选择要删除的记录');
         return;
       }
       setShowDeleteWarning(true);
@@ -157,7 +158,7 @@ export function PositionManagementPage() {
   const handleBatchExportClick = () => {
     if (exportMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要导出的数据');
+        showAlert('请先选择要导出的数据');
         return;
       }
       setShowExportModal(true);

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, FolderPlus } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -108,7 +109,7 @@ export function VarietyTree({
     if (!name || !name.trim()) return;
     extensionService.addCategoryExtension(code.trim().toUpperCase(), name.trim())
       .then(() => onRefresh?.())
-      .catch((err: Error) => alert('新增类别失败: ' + err.message));
+      .catch((err: Error) => showAlert('新增类别失败: ' + err.message));
   };
 
   return (

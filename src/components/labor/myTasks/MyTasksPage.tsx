@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { showAlert } from '@/lib/dialogService';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
@@ -525,14 +526,14 @@ export function MyTasksPage() {
           setRefreshKey(prev => prev + 1);
         }
         setFeedbackModal({ isOpen: false, task: null });
-        alert('已提交无法继续反馈，任务将重新分派');
+        showAlert('已提交无法继续反馈，任务将重新分派');
         return;
       }
 
       // 校验必填反馈
       const validation = validateRequiredFeedback();
       if (!validation.valid) {
-        alert(validation.message);
+        showAlert(validation.message);
         return;
       }
 
@@ -622,10 +623,10 @@ export function MyTasksPage() {
       }
 
       setFeedbackModal({ isOpen: false, task: null });
-      alert('提交成功！');
+      showAlert('提交成功！');
     } catch (error) {
       console.error('[提交反馈] 提交失败', error);
-      alert('提交失败：' + (error instanceof Error ? error.message : String(error)));
+      showAlert('提交失败：' + (error instanceof Error ? error.message : String(error)));
     }
   };
 

@@ -10,6 +10,7 @@ import {
   ContractType,
   SkillTag,
 } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 /**
  * 技能标签分组
@@ -114,23 +115,23 @@ export function TempWorkerFormModal({
   const handleSubmit = () => {
     // 验证必填项
     if (!formData.name?.trim()) {
-      alert('请输入员工姓名');
+      showAlert('请输入员工姓名');
       return;
     }
     if (!formData.idCard?.trim()) {
-      alert('请输入身份证号');
+      showAlert('请输入身份证号');
       return;
     }
     if (!formData.phone?.trim()) {
-      alert('请输入联系电话');
+      showAlert('请输入联系电话');
       return;
     }
     if ((formData.skillTags || []).length === 0) {
-      alert('请选择至少一项技能标签');
+      showAlert('请选择至少一项技能标签');
       return;
     }
     if ((formData.workZones || []).length === 0) {
-      alert('请选择至少一个作业区域');
+      showAlert('请选择至少一个作业区域');
       return;
     }
     onSave(formData);

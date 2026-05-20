@@ -7,6 +7,7 @@ import React from 'react';
 import { Edit2, Trash2, Send, Eye } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
+import { showConfirm } from '@/lib/dialogService';
 
 /**
  * 优先级样式配置
@@ -192,8 +193,8 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                       <Send className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (window.confirm('确定要删除吗？')) {
+                      onClick={async () => {
+                        if (await showConfirm('确定要删除吗？')) {
                           onDelete(task.id);
                         }
                       }}

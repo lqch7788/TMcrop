@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Clock } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { useOvertime } from './hooks/useOvertime';
 import { OvertimeFilters } from './OvertimeFilters';
 import { OvertimeTable } from './OvertimeTable';
@@ -113,7 +114,7 @@ export function OvertimePage() {
     if (batchEditMode) {
       // 已经在批量编辑模式，打开批量编辑弹窗
       if (selectedRows.length === 0) {
-        alert('请先选择要编辑的记录');
+        showAlert('请先选择要编辑的记录');
         return;
       }
       setSelectedRecordId(selectedRows[0]);
@@ -303,7 +304,7 @@ export function OvertimePage() {
           if (batchDeleteMode) {
             // 在批量删除模式下，显示确认删除弹窗
             if (selectedRows.length === 0) {
-              alert('请先选择要删除的记录');
+              showAlert('请先选择要删除的记录');
               return;
             }
             setShowDeleteWarning(true);
@@ -316,7 +317,7 @@ export function OvertimePage() {
           if (exportMode) {
             // 在导出模式下，显示导出格式选择弹窗
             if (selectedRows.length === 0) {
-              alert('请先选择要导出的数据');
+              showAlert('请先选择要导出的数据');
               return;
             }
             setShowExportModal(true);

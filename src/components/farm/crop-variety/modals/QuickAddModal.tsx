@@ -9,6 +9,7 @@ import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { Search, Plus, Sprout } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import {
   getTypeOptionsByCategory as getExtendedTypeOptions,
@@ -106,7 +107,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
   // 提交新增
   const handleSubmit = () => {
     if (!selectedCategory || !selectedType || !selectedVariety) {
-      alert('请完成所有分类选择');
+      showAlert('请完成所有分类选择');
       return;
     }
 

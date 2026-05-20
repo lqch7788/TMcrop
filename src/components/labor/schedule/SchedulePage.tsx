@@ -18,6 +18,7 @@ import { ShiftEditor } from './ShiftEditor';
 import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
 import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ShiftType } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 export function SchedulePage() {
   const {
@@ -79,7 +80,7 @@ export function SchedulePage() {
   // 处理添加排班
   const handleAddSchedule = () => {
     if (!newSchedule.staffId || !newSchedule.date) {
-      alert('请选择员工和日期');
+      showAlert('请选择员工和日期');
       return;
     }
     const staff = staffList.find(s => s.id === newSchedule.staffId);
@@ -448,7 +449,7 @@ export function SchedulePage() {
                   if (exportMode) {
                     // 在导出模式下，显示导出格式选择弹窗
                     if (selectedRows.length === 0) {
-                      alert('请先选择要导出的数据');
+                      showAlert('请先选择要导出的数据');
                       return;
                     }
                     setShowExportModal(true);

@@ -5,6 +5,7 @@
 
 import { useState, useReducer, useEffect, useCallback } from 'react';
 import { Plus, AlertTriangle, Edit, Trash2, Download } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
 import { TempTaskFilters } from '../../../labor/tempTask/TempTaskFilters';
@@ -1146,7 +1147,7 @@ export const TempTaskTab: React.FC = () => {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

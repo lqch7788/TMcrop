@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -165,7 +166,7 @@ export function PersonnelManagementPage() {
       }
     } catch (error) {
       console.error('保存职位失败:', error);
-      alert('保存失败，请重试');
+      await showAlert('保存失败，请重试');
     }
     setShowFormModal(false);
   };
@@ -174,7 +175,7 @@ export function PersonnelManagementPage() {
   const handleBatchEditClick = () => {
     if (batchEditMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要编辑的记录');
+        showAlert('请先选择要编辑的记录');
         return;
       }
       setSelectedRecordId(selectedRows[0]);
@@ -202,7 +203,7 @@ export function PersonnelManagementPage() {
       }
     } catch (error) {
       console.error('批量更新职位失败:', error);
-      alert('批量更新失败，请重试');
+      await showAlert('批量更新失败，请重试');
     }
     setShowBatchEditModal(false);
     handleCancelBatch();
@@ -212,7 +213,7 @@ export function PersonnelManagementPage() {
   const handleBatchDeleteClick = () => {
     if (batchDeleteMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要删除的记录');
+        showAlert('请先选择要删除的记录');
         return;
       }
       setShowDeleteWarning(true);
@@ -228,7 +229,7 @@ export function PersonnelManagementPage() {
       }
     } catch (error) {
       console.error('批量删除职位失败:', error);
-      alert('批量删除失败，请重试');
+      await showAlert('批量删除失败，请重试');
     }
     setShowDeleteWarning(false);
     handleCancelBatch();
@@ -238,7 +239,7 @@ export function PersonnelManagementPage() {
   const handleBatchExportClick = () => {
     if (exportMode) {
       if (selectedRows.length === 0) {
-        alert('请先选择要导出的数据');
+        showAlert('请先选择要导出的数据');
         return;
       }
       setShowExportModal(true);

@@ -14,6 +14,7 @@ import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -259,8 +260,8 @@ export function TasksPage() {
   };
 
   // 删除任务
-  const handleDeleteTask = (task: Task) => {
-    if (window.confirm(`确定要删除任务 "${task.title}" 吗？`)) {
+  const handleDeleteTask = async (task: Task) => {
+    if (await showConfirm(`确定要删除任务 "${task.title}" 吗？`)) {
       deleteTask(task.id);
     }
   };
@@ -337,7 +338,7 @@ export function TasksPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

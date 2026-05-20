@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Modal, NumberInput, DatePicker, Label } from '@/components/ui';
 import { MonthlyReport } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 interface MonthlyReportFormModalProps {
   isOpen: boolean;
@@ -45,11 +46,11 @@ export function MonthlyReportFormModal({
 
   const handleSubmit = () => {
     if (!formData.month) {
-      alert('请选择月份');
+      showAlert('请选择月份');
       return;
     }
     if (!formData.dept) {
-      alert('请选择部门');
+      showAlert('请选择部门');
       return;
     }
     onConfirm(formData);

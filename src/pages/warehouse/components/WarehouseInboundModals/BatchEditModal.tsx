@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { NumberInput } from '@/components/ui/NumberInput';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { showAlert } from '@/lib/dialogService';
 
 interface InboundBatchEditModalProps {
   records: InboundRecord[];
@@ -471,7 +472,7 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
               取消
             </Button>
             <Button variant="warning" onClick={() => {
-              alert('作废申请已提交');
+              showAlert('作废申请已提交');
               setShowVoidModal(false);
             }}>
               确认作废

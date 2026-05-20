@@ -19,6 +19,7 @@ import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 import * as cropVarietyService from '@/services/cropVarietyService';
 import type { CropVariety } from '@/types/cropVariety';
+import { showAlert } from '@/lib/dialogService';
 
 interface FertilizerAddModalProps {
   isOpen: boolean;
@@ -131,7 +132,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     if (!form.fertilizerName.trim()) return; // 基本校验
     // 方案5.1: 施肥日期不能大于当前时间
     if (form.fertilizeTime && !validateDateNotFuture(form.fertilizeTime)) {
-      alert('施肥日期不能大于当前时间');
+      await showAlert('施肥日期不能大于当前时间');
       return;
     }
     setSubmitting(true);

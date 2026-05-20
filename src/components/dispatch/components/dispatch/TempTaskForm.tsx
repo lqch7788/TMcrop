@@ -8,6 +8,7 @@ import { X, Save } from 'lucide-react';
 import { useTasks } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { DispatchMode } from '../../types/dispatch';
+import { showAlert } from '@/lib/dialogService';
 
 // 紧急程度选项
 const PRIORITY_OPTIONS = [
@@ -75,12 +76,12 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('请输入任务标题');
+      showAlert('请输入任务标题');
       return;
     }
 
     if (!assigneeId) {
-      alert('请选择执行人');
+      showAlert('请选择执行人');
       return;
     }
 

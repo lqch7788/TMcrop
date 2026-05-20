@@ -23,6 +23,7 @@ import type {
   MonthSummary,
 } from '../types/statisticsTab.types';
 import type { MonthDetailRow } from '@/stores/useStatisticsStore';
+import { showAlert } from '@/lib/dialogService';
 
 // 默认日期范围常量
 const DEFAULT_DATE_RANGE: DateRange = { start: '2026-01-01', end: '2026-12-31' };
@@ -318,7 +319,7 @@ export function useStatisticsTab() {
 
   const handleStatExportConfirm = () => {
     if (statSelectedRows.length === 0) {
-      alert('请选择要导出的数据');
+      showAlert('请选择要导出的数据');
       return;
     }
     setStatExportTarget('monthly');
@@ -327,7 +328,7 @@ export function useStatisticsTab() {
 
   const handleMaterialStatExportConfirm = () => {
     if (statSelectedRows.length === 0) {
-      alert('请选择要导出的数据');
+      showAlert('请选择要导出的数据');
       return;
     }
     setStatExportTarget('material');

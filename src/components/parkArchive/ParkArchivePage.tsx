@@ -6,6 +6,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
+import { showAlert } from '@/lib/dialogService';
 
 // localStorage key - 与 BaseSettings 保持一致
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -523,7 +524,7 @@ export function ParkArchivePage() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setExportMode(false)}>取消</Button>
-                <Button variant="blue" size="sm" onClick={() => alert('导出功能') && setExportMode(false)}>确认导出</Button>
+                <Button variant="blue" size="sm" onClick={() => { showAlert('导出功能'); setExportMode(false); }}>确认导出</Button>
               </div>
             </div>
           )}

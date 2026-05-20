@@ -10,6 +10,7 @@ import { useBlockStore } from '../../stores/useBlockStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
 import type { Zone, Block } from '../../services/apiBasicDataService';
+import { showAlert } from '@/lib/dialogService';
 
 const PAGE_SIZE = 10;
 
@@ -57,14 +58,14 @@ export default function BlockTab() {
   const handleSave = async () => {
     try {
       if (activeLayer === 'zone') {
-        if (!formData.zoneName) { alert('请填写区块名称'); return; }
+        if (!formData.zoneName) { await showAlert('请填写区块名称'); return; }
         if (editingItem && 'zoneCode' in editingItem) {
           await editZone((editingItem as Zone).id, formData);
         } else {
           await addZone(formData);
         }
       } else {
-        if (!formData.blockName) { alert('请填写地块名称'); return; }
+        if (!formData.blockName) { await showAlert('请填写地块名称'); return; }
         if (editingItem && 'blockCode' in editingItem) {
           await editBlock((editingItem as Block).id, formData);
         } else {
@@ -74,7 +75,7 @@ export default function BlockTab() {
       setShowModal(false);
       setEditingItem(null);
     } catch (err) {
-      alert('保存失败');
+      await showAlert('保存失败');
     }
   };
 
@@ -88,7 +89,7 @@ export default function BlockTab() {
       }
       setShowDeleteConfirm(null);
     } catch (err) {
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 

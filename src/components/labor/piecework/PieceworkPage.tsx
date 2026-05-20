@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Download, Filter, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload } from 'lucide-react';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
 import { PieceworkFormModal } from './PieceworkFormModal';
@@ -153,8 +154,8 @@ export const PieceworkPage: React.FC = () => {
   };
 
   // 删除记录
-  const handleDelete = (record: PieceRate) => {
-    if (window.confirm(`确定要删除计件记录 "${record.workerName} - ${record.taskName}" 吗？`)) {
+  const handleDelete = async (record: PieceRate) => {
+    if (await showConfirm(`确定要删除计件记录 "${record.workerName} - ${record.taskName}" 吗？`)) {
       // 删除逻辑
     }
   };
@@ -240,7 +241,7 @@ export const PieceworkPage: React.FC = () => {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

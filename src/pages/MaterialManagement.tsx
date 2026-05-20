@@ -10,6 +10,7 @@ import { Button } from '../components/ui/button';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useMaterialTypeStore } from '../stores';
 import type { MaterialType } from '../services/apiBasicDataService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const CATEGORY_OPTIONS = ['肥料', '农药', '农膜', '工具', '种子', '其他'];
 
@@ -67,12 +68,12 @@ export default function MaterialManagement() {
         await addType(formData);
       }
       handleCloseModal();
-    } catch (err) { alert('保存失败'); }
+    } catch (err) { await showAlert('保存失败'); }
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('确定删除该物料类型吗？')) {
-      try { await removeType(id); } catch (err) { alert('删除失败'); }
+    if (await showConfirm('确定删除该物料类型吗？')) {
+      try { await removeType(id); } catch (err) { await showAlert('删除失败'); }
     }
   };
 

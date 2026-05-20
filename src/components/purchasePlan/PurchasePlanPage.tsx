@@ -11,6 +11,7 @@ import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
 import { useUserStore, usePurchasePlanStore } from '../../stores';
+import { showAlert } from '@/lib/dialogService';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -283,19 +284,19 @@ export function PurchasePlanPage() {
         console.log('【创建采购计划】审批提交结果:', approvalResult);
 
         if (!approvalResult.success) {
-          alert('审批提交失败: ' + approvalResult.message);
+          await showAlert('审批提交失败: ' + approvalResult.message);
           return;
         }
 
         if (approvalResult.autoApprove) {
-          alert('采购计划已创建，金额在免审批阈值内，已自动通过');
+          await showAlert('采购计划已创建，金额在免审批阈值内，已自动通过');
         } else {
-          alert('采购计划已创建并提交审批');
+          await showAlert('采购计划已创建并提交审批');
         }
       }
     } catch (error) {
       console.error('创建采购计划失败:', error);
-      alert('创建采购计划失败，请重试');
+      await showAlert('创建采购计划失败，请重试');
     } finally {
       setShowCreateModal(false);
     }
@@ -347,7 +348,7 @@ export function PurchasePlanPage() {
   // 确认导出
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -448,7 +449,7 @@ export function PurchasePlanPage() {
   // 删除点击（批量删除模式下确认删除）
   const handleDeleteClick = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要删除的数据');
+      showAlert('请先选择要删除的数据');
       return;
     }
     setShowDeleteModal(true);
@@ -463,7 +464,7 @@ export function PurchasePlanPage() {
         .filter(p => p.status === 'draft' || p.status === 'pending' || p.approvalStatus === 'rejected');
 
       if (deletablePlans.length === 0) {
-        alert('没有可删除的采购计划（只能删除草稿、待审批和审批被拒绝状态）');
+        await showAlert('没有可删除的采购计划（只能删除草稿、待审批和审批被拒绝状态）');
         return;
       }
 
@@ -474,10 +475,10 @@ export function PurchasePlanPage() {
       setShowDeleteModal(false);
       setBatchDeleteMode(false);
       setSelectedRows([]);
-      alert(`已删除 ${selectedIds.length} 个采购计划`);
+      await showAlert(`已删除 ${selectedIds.length} 个采购计划`);
     } catch (error) {
       console.error('删除采购计划失败:', error);
-      alert('删除失败，请重试');
+      await showAlert('删除失败，请重试');
     }
   };
 
@@ -491,7 +492,7 @@ export function PurchasePlanPage() {
   const handleSingleEdit = (plan: PurchasePlan) => {
     // 已完成或采购中状态不可编辑
     if (plan.status === 'completed' || plan.status === 'purchasing') {
-      alert('该采购计划已归档，无法编辑');
+      showAlert('该采购计划已归档，无法编辑');
       return;
     }
     // 设置选中的plan并打开批量编辑弹窗（复用它）
@@ -515,22 +516,22 @@ export function PurchasePlanPage() {
     console.log('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
     // 草稿、待审批或审批被拒绝的计划可以删除
     if (plan.status !== 'draft' && plan.status !== 'pending' && plan.approvalStatus !== 'rejected') {
-      alert('只有草稿、待审批和审批被拒绝的采购计划才能删除');
+      await showAlert('只有草稿、待审批和审批被拒绝的采购计划才能删除');
       return;
     }
     try {
       await deletePlan(plan.id);
-      alert('删除成功');
+      await showAlert('删除成功');
     } catch (error) {
       console.error('删除采购计划失败:', error);
-      alert('删除失败: ' + (error as Error).message);
+      await showAlert('删除失败: ' + (error as Error).message);
     }
   };
 
   // 批量编辑确认
   const handleBatchEditConfirm = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要编辑的数据');
+      showAlert('请先选择要编辑的数据');
       return;
     }
     const selectedPlansData = purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode));
@@ -577,7 +578,7 @@ export function PurchasePlanPage() {
   // 批量编辑保存
   const handleBatchEditSave = async () => {
     if (!currentEditingPlan) {
-      alert('请先选择一个采购计划');
+      await showAlert('请先选择一个采购计划');
       return;
     }
     try {
@@ -613,10 +614,10 @@ export function PurchasePlanPage() {
       setBatchEditMode(false);
       setSelectedRows([]);
       setBatchEditItems([]);
-      alert('保存成功');
+      await showAlert('保存成功');
     } catch (error) {
       console.error('保存失败:', error);
-      alert(`保存失败: ${error instanceof Error ? error.message : '请重试'}`);
+      await showAlert(`保存失败: ${error instanceof Error ? error.message : '请重试'}`);
     }
   };
 

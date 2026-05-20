@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, UserPlus, Briefcase, Edit, Trash2, Download, Eye } from 'lucide-react';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useNavigate } from 'react-router-dom';
 import { useRecruitment } from './hooks/useRecruitment';
 import { RecruitmentFilters } from './RecruitmentFilters';
@@ -341,13 +342,13 @@ export function RecruitmentPage() {
       addApproval(approval);
 
       closeFormModal();
-      alert('提交成功！');
+      showAlert('提交成功！');
     }
   };
 
   // 审批通过
-  const handleApprove = (recruitment: RecruitmentRequest) => {
-    if (window.confirm(`确定审批通过招聘申请 "${recruitment.requestCode}" 吗？`)) {
+  const handleApprove = async (recruitment: RecruitmentRequest) => {
+    if (await showConfirm(`确定审批通过招聘申请 "${recruitment.requestCode}" 吗？`)) {
       // 调用审批中心的审批通过
       approve(recruitment.id, '同意招聘');
       // 更新本地状态
@@ -367,8 +368,8 @@ export function RecruitmentPage() {
   };
 
   // 完成招聘
-  const handleComplete = (recruitment: RecruitmentRequest) => {
-    if (window.confirm(`确定将 "${recruitment.requestCode}" 标记为已完成吗？`)) {
+  const handleComplete = async (recruitment: RecruitmentRequest) => {
+    if (await showConfirm(`确定将 "${recruitment.requestCode}" 标记为已完成吗？`)) {
       completeRecruitment(recruitment.id, currentUser.id, currentUser.name);
     }
   };
@@ -382,8 +383,8 @@ export function RecruitmentPage() {
   };
 
   // 删除
-  const handleDelete = (recruitment: RecruitmentRequest) => {
-    if (window.confirm(`确定要删除招聘申请 "${recruitment.requestCode}" 吗？`)) {
+  const handleDelete = async (recruitment: RecruitmentRequest) => {
+    if (await showConfirm(`确定要删除招聘申请 "${recruitment.requestCode}" 吗？`)) {
       deleteRecruitment(recruitment.id);
     }
   };
@@ -430,7 +431,7 @@ export function RecruitmentPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { useDepartmentStore } from '../../../../stores';
@@ -70,7 +71,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
 
   const handleSubmit = () => {
     if (!formData.name) {
-      alert('请输入职务名称');
+      showAlert('请输入职务名称');
       return;
     }
     onSave(formData);

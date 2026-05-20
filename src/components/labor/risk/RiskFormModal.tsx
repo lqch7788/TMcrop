@@ -8,6 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { RiskAlert, AlertType, AlertLevel } from './types';
 import { AlertTypeNames, AlertLevelNames } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 interface RiskFormModalProps {
   isOpen: boolean;
@@ -49,11 +50,11 @@ export function RiskFormModal({
 
   const handleSubmit = () => {
     if (!formData.title) {
-      alert('请输入预警标题');
+      showAlert('请输入预警标题');
       return;
     }
     if (!formData.content) {
-      alert('请输入预警内容');
+      showAlert('请输入预警内容');
       return;
     }
     onConfirm(formData);

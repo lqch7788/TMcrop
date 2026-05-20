@@ -6,6 +6,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { X, Tag, CheckSquare, Square } from 'lucide-react';
 import { Button, Tree, Checkbox } from '../../../ui';
 import type { TreeNode } from '../../../ui/Tree';
+import { showAlert } from '@/lib/dialogService';
 
 // ========== 数据接口 ==========
 export interface PlantMark {
@@ -142,8 +143,8 @@ export default function PlantingMarkModal({
   const handleSubmit = async () => {
     const markId = Number(selectedMarkKey);
     if (!markId || checkedLabelIds.size === 0) {
-      if (!markId) alert('请先选择一个标记');
-      else alert('请至少选择一个标签');
+      if (!markId) await showAlert('请先选择一个标记');
+      else await showAlert('请至少选择一个标签');
       return;
     }
     await onSubmit(markId, Array.from(checkedLabelIds));

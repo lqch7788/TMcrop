@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { showAlert } from '@/lib/dialogService';
 
 export type ExportFormat = 'excel' | 'csv' | 'word';
 
@@ -36,7 +37,7 @@ export function useExportModal({ defaultFormat = 'excel', fileNamePrefix }: UseE
     getRowData: (record: Record<string, unknown>) => (string | number | null | undefined)[]
   ) => {
     if (data.length === 0) {
-      alert('没有可导出的数据');
+      await showAlert('没有可导出的数据');
       return;
     }
 

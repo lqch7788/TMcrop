@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ExportFormat } from './types';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { showAlert } from '@/lib/dialogService';
 
 // 附件数据类型
 export interface AttachmentItem {
@@ -51,7 +52,7 @@ export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

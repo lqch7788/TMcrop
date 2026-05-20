@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Award, TrendingUp, Users, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePerformance } from './hooks/usePerformance';
 import { PerformanceTable } from './PerformanceTable';
 import { PerformanceDetailModal } from './PerformanceDetailModal';
@@ -94,7 +95,7 @@ export function PerformancePage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -355,8 +356,8 @@ export function PerformancePage() {
         onPageSizeChange={(size) => setPagination({ pageSize: size })}
         onViewDetail={handleViewDetail}
         onEdit={handleEdit}
-        onDelete={(record) => {
-          if (window.confirm(`确定要删除 ${record.staffName} - ${record.month} 的考核记录吗？`)) {
+        onDelete={async (record) => {
+          if (await showConfirm(`确定要删除 ${record.staffName} - ${record.month} 的考核记录吗？`)) {
             // 删除逻辑
           }
         }}

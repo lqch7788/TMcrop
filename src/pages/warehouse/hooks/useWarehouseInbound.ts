@@ -27,6 +27,7 @@ import {
   handleCancelSelection,
 } from '../utils/warehouseInbound.utils';
 import { useInboundStore } from '../../../stores';
+import { showAlert } from '@/lib/dialogService';
 
 /**
  * 仓库入库 Hook
@@ -281,7 +282,7 @@ export function useWarehouseInbound() {
   // 确认编辑
   const onConfirmEdit = useCallback(() => {
     if (selectedRows.length === 0) {
-      alert('请先选择要编辑的记录');
+      showAlert('请先选择要编辑的记录');
       return;
     }
     setShowBatchEditModal(true);

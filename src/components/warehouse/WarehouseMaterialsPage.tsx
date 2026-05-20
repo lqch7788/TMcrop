@@ -19,6 +19,7 @@ import TabSwitch from './TabSwitch';
 import ActionToolbar from './ActionToolbar';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { apiClient, USE_API } from '../../services/apiClient';
+import { showAlert } from '@/lib/dialogService';
 import { categoryConfig, bigCategoriesList } from '../../types/warehouseInbound.types';
 
 // 仓库物料模块权限代码
@@ -399,7 +400,7 @@ export default function WarehouseMaterialsPage() {
       link.download = `物料导出_${new Date().toLocaleDateString()}.csv`;
       link.click();
     } else {
-      alert(`已选择导出为 ${exportFormat.toUpperCase()} 格式，共 ${selectedData.length} 条数据`);
+      await showAlert(`已选择导出为 ${exportFormat.toUpperCase()} 格式，共 ${selectedData.length} 条数据`);
     }
 
     setShowExportModal(false);
@@ -521,7 +522,7 @@ export default function WarehouseMaterialsPage() {
       setShowInboundAddModal(false);
     } catch (error) {
       console.error('保存入库记录失败:', error);
-      alert('保存入库记录失败，请重试');
+      await showAlert('保存入库记录失败，请重试');
     }
   };
 

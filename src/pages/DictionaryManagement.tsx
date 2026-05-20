@@ -37,6 +37,7 @@ import {
   DICTIONARY_MODULES,
   getCategoriesByModule,
 } from '../services/dictionaryService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 模块图标映射
 const MODULE_ICONS: Record<string, React.ReactNode> = {
@@ -170,11 +171,11 @@ export default function DictionaryManagement() {
   const handleSave = async () => {
     if (!editingItem) return;
     if (!editingItem.name?.trim()) {
-      alert('请输入字典名称');
+      await showAlert('请输入字典名称');
       return;
     }
     if (!editingItem.code?.trim()) {
-      alert('请输入字典编码');
+      await showAlert('请输入字典编码');
       return;
     }
     try {
@@ -190,7 +191,7 @@ export default function DictionaryManagement() {
       // 触发全局刷新事件，通知其他使用字典的组件更新数据
       window.dispatchEvent(new CustomEvent('settings:refresh'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : '保存失败');
+      await showAlert(err instanceof Error ? err.message : '保存失败');
     } finally {
       setLoading(false);
     }
@@ -198,7 +199,7 @@ export default function DictionaryManagement() {
 
   // 删除字典项
   const handleDelete = async (item: Dictionary) => {
-    if (!confirm(`确定要删除字典项"${item.name}"吗？`)) return;
+    if (!await showConfirm(`确定要删除字典项"${item.name}"吗？`)) return;
     try {
       setLoading(true);
       await saveDictionaries({
@@ -210,7 +211,7 @@ export default function DictionaryManagement() {
       // 触发全局刷新事件，通知其他使用字典的组件更新数据
       window.dispatchEvent(new CustomEvent('settings:refresh'));
     } catch (err) {
-      alert(err instanceof Error ? err.message : '删除失败');
+      await showAlert(err instanceof Error ? err.message : '删除失败');
     } finally {
       setLoading(false);
     }
@@ -219,7 +220,7 @@ export default function DictionaryManagement() {
   // 保存新分类
   const handleSaveNewCategory = () => {
     if (!newCategoryCode.trim() || !newCategoryName.trim()) {
-      alert('请填写完整的分类信息');
+      showAlert('请填写完整的分类信息');
       return;
     }
     setEditingItem({

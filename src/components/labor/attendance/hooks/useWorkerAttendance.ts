@@ -12,6 +12,7 @@ import {
   EXPORT_FORMAT_OPTIONS,
 } from '../types';
 import { useAttendanceStore } from '../../../../stores';
+import { showAlert } from '@/lib/dialogService';
 
 // File System Access API 类型声明
 declare global {
@@ -165,7 +166,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   // 确认导出
   const handleConfirmExport = useCallback(() => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     handleDoExport();

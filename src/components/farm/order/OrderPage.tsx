@@ -19,6 +19,7 @@ import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import * as cropVarietyService from '@/services/apiCropVarietyService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function OrderPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -141,13 +142,13 @@ export default function OrderPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
-    if (confirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
+    if (await showConfirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
       try {
         await deleteOrders(ids);
         setSelectedRows([]);
       } catch (error) {
         console.error('删除订单失败:', error);
-        alert('删除失败，请稍后重试');
+        showAlert('删除失败，请稍后重试');
       }
     }
   };
@@ -190,7 +191,7 @@ export default function OrderPage() {
 
   const handleExportClickConfirm = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

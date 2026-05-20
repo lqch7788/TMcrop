@@ -12,6 +12,7 @@ import { SeedSource, PropagationType, PropagationStatus } from '../../../../type
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
+import { showAlert } from '@/lib/dialogService';
 
 // 统一繁殖阶段流转顺序
 const STAGE_ORDER: PropagationStatus[] = [
@@ -116,7 +117,7 @@ export function PropagationStageModal({
   // 完成入库
   const handleComplete = async () => {
     if (harvestQuantity <= 0) {
-      alert('请输入入库数量');
+      await showAlert('请输入入库数量');
       return;
     }
     setConfirming(true);

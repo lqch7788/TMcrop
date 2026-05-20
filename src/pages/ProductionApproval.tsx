@@ -15,6 +15,7 @@ import {
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
+import { showConfirm } from '@/lib/dialogService';
 import BatchActionBar from '../components/approval/BatchActionBar';
 import { Button } from '../components/ui/button';
 import { UnifiedModal } from '../components/ui/UnifiedModal';
@@ -178,17 +179,17 @@ export default function ProductionApproval() {
     setSelectedIds(newSelected);
   };
 
-  const handleBatchApprove = () => {
+  const handleBatchApprove = async () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
+    if (await showConfirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
       selectedIds.forEach(id => approve(id));
       setSelectedIds(new Set());
     }
   };
 
-  const handleBatchReject = () => {
+  const handleBatchReject = async () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
+    if (await showConfirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
       selectedIds.forEach(id => reject(id, '批量拒绝'));
       setSelectedIds(new Set());
     }

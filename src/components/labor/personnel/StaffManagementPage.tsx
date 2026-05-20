@@ -4,6 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Users, Plus, Download, Pencil, Trash2 } from 'lucide-react';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
 import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
@@ -78,8 +79,8 @@ export function StaffManagementPage() {
     setShowFormModal(true);
   };
 
-  const handleDeleteWorker = (worker: Worker) => {
-    if (window.confirm(`确认删除员工 ${worker.name} (${worker.workerId}) 吗？`)) {
+  const handleDeleteWorker = async (worker: Worker) => {
+    if (await showConfirm(`确认删除员工 ${worker.name} (${worker.workerId}) 吗？`)) {
       setWorkerList(prev => prev.filter(w => w.id !== worker.id));
     }
   };
@@ -162,7 +163,7 @@ export function StaffManagementPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     handleDoExport();

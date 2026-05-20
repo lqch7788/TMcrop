@@ -13,6 +13,7 @@ import { validateDateNotFuture } from '../../../../lib/validators';
 import { Input } from '../../../ui/input';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 interface HarvestModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
 
     // 验证日期不能超过今天
     if (formData.harvestDate && !validateDateNotFuture(formData.harvestDate)) {
-      alert('采收日期不能超过今天');
+      await showAlert('采收日期不能超过今天');
       return;
     }
 
@@ -61,7 +62,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
       await usePlantingStore.getState().harvestPlanting(String(record.id), formData.harvestDate, harvestCount);
     } catch (error) {
       console.error('采收登记失败:', error);
-      alert('采收登记失败，请重试');
+      showAlert('采收登记失败，请重试');
       return;
     }
 

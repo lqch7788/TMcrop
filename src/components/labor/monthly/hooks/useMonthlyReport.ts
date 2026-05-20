@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useMonthlyReportStore } from '@/stores';
 import { MonthlyReport, EXPORT_FORMATS } from '../types';
+import { showAlert } from '@/lib/dialogService';
 
 export interface UseMonthlyReportReturn {
   // 数据
@@ -97,7 +98,7 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
   // 确认导出
   const handleConfirmExport = useCallback(() => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     handleDoExport();

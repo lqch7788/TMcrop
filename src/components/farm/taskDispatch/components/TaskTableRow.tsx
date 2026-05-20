@@ -9,6 +9,7 @@ import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../cons
 import { OvertimeBadge } from './OvertimeBadge';
 import { Input } from '../../../ui/input';
 import { TableRow, TableCell } from '../../../ui/table';
+import { showAlert } from '@/lib/dialogService';
 
 interface TaskTableRowProps {
   task: any;
@@ -265,7 +266,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                     '管理员'
                   );
                 } else {
-                  alert(remindCheck.reason || '暂时无法催办');
+                  showAlert(remindCheck.reason || '暂时无法催办');
                 }
               }}
               disabled={!remindProps?.allowed}

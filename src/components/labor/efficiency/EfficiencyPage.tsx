@@ -15,6 +15,7 @@ import { ExportFormatModal } from './ExportFormatModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useEfficiency } from './hooks/useEfficiency';
 import { EfficiencyMetrics } from './types';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export const EfficiencyPage: React.FC = () => {
   const {
@@ -83,8 +84,8 @@ export const EfficiencyPage: React.FC = () => {
   };
 
   // 删除记录
-  const handleDelete = (record: EfficiencyMetrics) => {
-    if (window.confirm(`确定要删除 ${record.date} - ${record.department} 的记录吗？`)) {
+  const handleDelete = async (record: EfficiencyMetrics) => {
+    if (await showConfirm(`确定要删除 ${record.date} - ${record.department} 的记录吗？`)) {
       // 删除逻辑
     }
   };
@@ -132,7 +133,7 @@ export const EfficiencyPage: React.FC = () => {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

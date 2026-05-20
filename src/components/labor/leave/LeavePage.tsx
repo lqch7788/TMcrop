@@ -9,6 +9,7 @@ import { LeaveQuotaCard, getMockLeaveQuota } from './LeaveQuota';
 import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } from './modals';
 import { Button } from '@/components/ui/button';
 import { useLeaveStore } from '@/stores/leaveStore';
+import { showAlert } from '@/lib/dialogService';
 
 /**
  * 请假管理页面主容器组件
@@ -114,7 +115,7 @@ export function LeavePage() {
     if (batchEditMode) {
       // 已经在批量编辑模式，打开批量编辑弹窗
       if (selectedRows.length === 0) {
-        alert('请先选择要编辑的记录');
+        showAlert('请先选择要编辑的记录');
         return;
       }
       setSelectedRecordId(selectedRows[0]);
@@ -275,7 +276,7 @@ export function LeavePage() {
           if (batchDeleteMode) {
             // 在批量删除模式下，显示确认删除弹窗
             if (selectedRows.length === 0) {
-              alert('请先选择要删除的记录');
+              showAlert('请先选择要删除的记录');
               return;
             }
             setShowDeleteWarning(true);
@@ -288,7 +289,7 @@ export function LeavePage() {
           if (exportMode) {
             // 在导出模式下，显示导出格式选择弹窗
             if (selectedRows.length === 0) {
-              alert('请先选择要导出的数据');
+              showAlert('请先选择要导出的数据');
               return;
             }
             setShowExportModal(true);

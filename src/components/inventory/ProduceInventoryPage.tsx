@@ -21,6 +21,7 @@ import { ProduceInventoryAddModal } from './ProduceInventoryAddModal';
 import { getAllVarieties } from '../../services/cropVarietyService';
 import * as inventoryService from '../../services/apiInventoryService';
 import { StockType } from '../../types/inventory';
+import { showAlert } from '@/lib/dialogService';
 
 /**
  * 根据作物名称和品种生成11位作物编码
@@ -863,7 +864,7 @@ export default function ProduceInventoryPage() {
         }
       } catch (error: any) {
         console.error(`保存库存 ${itemId} 失败:`, error);
-        alert(`保存库存 ${itemId} 失败: ${error.message || error}`);
+        await showAlert(`保存库存 ${itemId} 失败: ${error.message || error}`);
       }
     });
     await Promise.all(savePromises);
@@ -893,7 +894,7 @@ export default function ProduceInventoryPage() {
       console.log(`删除 ${selectedRows.length} 条库存记录成功`);
     } catch (error) {
       console.error('删除库存记录失败:', error);
-      alert(`删除失败: ${error instanceof Error ? error.message : error}`);
+      await showAlert(`删除失败: ${error instanceof Error ? error.message : error}`);
     }
     setSelectedRows([]);
   };
@@ -1295,7 +1296,7 @@ export default function ProduceInventoryPage() {
           };
           // 实际应用中这里会调用API，现在只做模拟
           console.log('新增库存记录:', newRecord);
-          alert('新增成功！');
+          showAlert('新增成功！');
           setShowAddModal(false);
         }}
       />

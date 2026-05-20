@@ -23,6 +23,7 @@ import {
   getWarehouses,
   saveWarehouses,
 } from '../../services/dictionaryService';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function WarehouseManagement() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -108,7 +109,7 @@ export default function WarehouseManagement() {
 
   // 删除
   const handleDelete = async (warehouse: Warehouse) => {
-    if (!confirm(`确定要删除仓库"${warehouse.warehouseName}"吗？`)) return;
+    if (!await showConfirm(`确定要删除仓库"${warehouse.warehouseName}"吗？`)) return;
     try {
       setLoading(true);
       await saveWarehouses({

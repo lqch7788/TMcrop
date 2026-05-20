@@ -14,6 +14,7 @@ import {
   ExportFormat,
 } from '../components/summary';
 import { useProductionReports } from '../hooks';
+import { showAlert } from '@/lib/dialogService';
 
 const REPORT_TABS = [
   { value: 'yield', label: '产量统计' },
@@ -55,7 +56,7 @@ export default function Reports() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的报表');
+      showAlert('请先选择要导出的报表');
       return;
     }
     setShowExportModal(true);
@@ -113,7 +114,7 @@ export default function Reports() {
     }
 
     if (!exportData) {
-      alert('没有可导出的数据');
+      await showAlert('没有可导出的数据');
       setExportMode(false);
       setSelectedRows([]);
       setShowExportModal(false);

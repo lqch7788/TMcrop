@@ -29,6 +29,7 @@ import { useUserStore } from '../../../stores/useUserStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import * as XLSX from 'xlsx';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -252,7 +253,7 @@ export default function SeedSourcePage() {
       try {
         const res = await enhancedApiClient.get<{ deletable: boolean; refCount: number }>(`/seed-sources/${id}/check-deletable`);
         if (!res?.deletable) {
-          alert(`该种源已被 ${res?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
+          await showAlert(`该种源已被 ${res?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
           return;
         }
       } catch { /* 降级策略：检查失败时允许继续删除 */ }
@@ -276,20 +277,20 @@ export default function SeedSourcePage() {
   const handleEnd = async (record: SeedSource, endType: 'normal' | 'abnormal') => {
     // 获取关联的生产计划批次号
     if (!record.productionPlanCode) {
-      alert('该种源没有关联的生产计划，无法结束');
+      await showAlert('该种源没有关联的生产计划，无法结束');
       return;
     }
 
     // 查找对应的生产计划
     const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
     if (!batch) {
-      alert('未找到关联的生产计划');
+      await showAlert('未找到关联的生产计划');
       return;
     }
 
     // 检查是否已完成
     if (batch.batchStatus === 'completed') {
-      alert('该生产计划已完成结束，不能重复结束');
+      await showAlert('该生产计划已完成结束，不能重复结束');
       return;
     }
 
@@ -302,18 +303,18 @@ export default function SeedSourcePage() {
       ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
       : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
 
-    if (!confirm(confirmMsg)) {
+    if (!await showConfirm(confirmMsg)) {
       return;
     }
 
     // 执行结束
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
-      alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       // 刷新页面数据
       window.location.reload();
     } else {
-      alert('结束失败');
+      await showAlert('结束失败');
     }
   };
 
@@ -340,7 +341,7 @@ export default function SeedSourcePage() {
 
   const handleExportClickConfirm = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -349,7 +350,7 @@ export default function SeedSourcePage() {
   // 确认打印
   const handlePrintConfirm = (records: SeedSource[]) => {
     if (records.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     setPrintRecords(records);

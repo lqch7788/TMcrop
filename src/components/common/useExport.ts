@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { showAlert } from '@/lib/dialogService';
 
 export interface UseExportOptions {
   /** 导出文件名前缀 */
@@ -55,7 +56,7 @@ export function useExport({
   // 确认导出（打开格式选择弹窗）
   const onConfirmExport = useCallback(() => {
     if (selectedCount === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -90,7 +91,7 @@ export function useExport({
     getRowData: (record: Record<string, unknown>) => (string | number | null | undefined)[]
   ) => {
     if (data.length === 0) {
-      alert('没有可导出的数据');
+      await showAlert('没有可导出的数据');
       return;
     }
 

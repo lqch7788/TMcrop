@@ -10,6 +10,7 @@ import { Grid3X3, Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, MapPin
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useGreenhouseStore, useZoneStore } from '../stores';
 import type { Zone } from '../services/apiBasicDataService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const ZONE_TYPES = [
   { value: 'greenhouse', label: '温室大棚' },
@@ -141,17 +142,17 @@ export default function BlockManagement() {
       handleCloseModal();
     } catch (err) {
       console.error('保存区域失败:', err);
-      alert('保存区域失败');
+      await showAlert('保存区域失败');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除该区域吗？')) return;
+    if (!await showConfirm('确定要删除该区域吗？')) return;
     try {
       await removeZone(id);
     } catch (err) {
       console.error('删除区域失败:', err);
-      alert('删除区域失败');
+      await showAlert('删除区域失败');
     }
   };
 

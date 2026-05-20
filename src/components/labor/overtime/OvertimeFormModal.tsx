@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { NumberInput } from '@/components/ui/NumberInput';
@@ -72,7 +73,7 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
   // 提交表单
   const handleSubmit = () => {
     if (!formData.staffId || !formData.date || formData.hours <= 0) {
-      alert('请填写完整信息');
+      showAlert('请填写完整信息');
       return;
     }
     onSave(formData);

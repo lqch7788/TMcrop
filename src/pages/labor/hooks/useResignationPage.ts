@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useWorkerStore } from '../../../stores/useWorkerStore';
 import { useResignationStore } from '@/stores';
 import type { ResignationData } from '@/stores';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import type {
   ResignationRecord,
   ResignationFilters,
@@ -191,7 +192,7 @@ export function useResignationPage() {
   /** 提交离职申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.workerId || !formData.expectedLastDay || !formData.reason) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -201,10 +202,10 @@ export function useResignationPage() {
     const daysDiff = Math.ceil((lastDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     if (daysDiff < 30 && daysDiff >= 0) {
-      const confirmSubmit = window.confirm(`温馨提示：您选择的预计离职日期距离今天不足30天，是否确认提交？`);
+      const confirmSubmit = await showConfirm(`温馨提示：您选择的预计离职日期距离今天不足30天，是否确认提交？`);
       if (!confirmSubmit) return;
     } else if (daysDiff < 0) {
-      alert('预计离职日期不能早于今天，请重新选择');
+      await showAlert('预计离职日期不能早于今天，请重新选择');
       return;
     }
 
@@ -222,13 +223,13 @@ export function useResignationPage() {
 
       if (result) {
         setIsFormModalOpen(false);
-        alert('提交成功！');
+        await showAlert('提交成功！');
       } else {
-        alert('提交失败，请重试');
+        await showAlert('提交失败，请重试');
       }
     } catch (error) {
       console.error('提交离职申请失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
 
@@ -238,7 +239,7 @@ export function useResignationPage() {
       await updateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('审批失败，请重试');
+      await showAlert('审批失败，请重试');
     }
   }, [updateItem]);
 
@@ -248,7 +249,7 @@ export function useResignationPage() {
       await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [updateItem]);
 

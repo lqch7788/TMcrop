@@ -23,6 +23,7 @@ import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 // Tab 类型
 type TabType = 'list' | 'outbound';
@@ -101,7 +102,7 @@ export default function InventoryV3Page() {
   const handleOpenOutbound = (stock: InventoryStock) => {
     // 只允许对库存中的物品出库
     if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
-      alert('只有库存中或低库存状态的物品可以出库');
+      showAlert('只有库存中或低库存状态的物品可以出库');
       return;
     }
     setSelectedOutboundStock(stock);

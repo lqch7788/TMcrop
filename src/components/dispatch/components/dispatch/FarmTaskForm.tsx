@@ -8,6 +8,7 @@ import { X, Save, Plus, Trash2 } from 'lucide-react';
 import { useTasks } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { TASK_CODE_PREFIX, DispatchMode } from '../../types/dispatch';
+import { showAlert } from '@/lib/dialogService';
 
 // 农事类型选项（从mockData导入）
 const TASK_TYPES = [
@@ -153,22 +154,22 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('请输入任务标题');
+      showAlert('请输入任务标题');
       return;
     }
 
     if (!greenhouseId) {
-      alert('请选择温室');
+      showAlert('请选择温室');
       return;
     }
 
     if (!taskType) {
-      alert('请选择农事类型');
+      showAlert('请选择农事类型');
       return;
     }
 
     if (!assigneeId) {
-      alert('请选择执行人');
+      showAlert('请选择执行人');
       return;
     }
 

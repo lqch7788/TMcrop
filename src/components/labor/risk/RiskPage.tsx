@@ -15,6 +15,7 @@ import { RiskBatchEditModal } from './RiskBatchEditModal';
 import { ExportFormatModal } from './ExportFormatModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import type { RiskAlert } from './types';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export function RiskPage() {
   const { alerts, stats, filters, updateFilters, clearFilters, handleAlert, getAlertById } =
@@ -84,8 +85,8 @@ export function RiskPage() {
   };
 
   // 删除记录
-  const handleDelete = (alert: RiskAlert) => {
-    if (window.confirm(`确定要删除 "${alert.title}" 吗？`)) {
+  const handleDelete = async (alert: RiskAlert) => {
+    if (await showConfirm(`确定要删除 "${alert.title}" 吗？`)) {
       // 删除逻辑
     }
   };
@@ -131,7 +132,7 @@ export function RiskPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

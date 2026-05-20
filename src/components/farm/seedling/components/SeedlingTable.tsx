@@ -13,6 +13,7 @@ import * as cropVarietyService from '../../../../services/apiCropVarietyService'
 import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
+import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -235,7 +236,7 @@ export function SeedlingTable({
   const executeOperation = (op: SeedlingOperationMode) => {
     const record = getFirstSelectedRecord();
     if (!record) {
-      alert('请先在表格中选择一条记录');
+      showAlert('请先在表格中选择一条记录');
       return;
     }
     switch (op) {
@@ -266,7 +267,7 @@ export function SeedlingTable({
   // 确认打印
   const confirmPrint = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     const selectedRecords = data.filter(item => selectedRows.includes(item.id));

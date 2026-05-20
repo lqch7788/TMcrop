@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import { Role } from '../types/authority';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function RoleManagement() {
   const roles = useOrganizationStore((s) => s.roles);
@@ -91,7 +92,7 @@ export default function RoleManagement() {
 
   // 删除
   const handleDelete = async (oid: string) => {
-    if (!confirm('确定要删除该角色吗？')) return;
+    if (!await showConfirm('确定要删除该角色吗？')) return;
     try {
       await deleteRole(oid);
     } catch (err) {

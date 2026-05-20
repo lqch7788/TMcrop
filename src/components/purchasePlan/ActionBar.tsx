@@ -4,6 +4,7 @@
 import React from 'react';
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
 import { Button } from '../ui/button';
+import { showAlert } from '@/lib/dialogService';
 
 interface ActionBarProps {
   // 模式状态
@@ -69,7 +70,7 @@ export function ActionBar({
                 variant="blue"
                 onClick={() => {
                   if (selectedRows.length === 0) {
-                    alert('请先选择要编辑的数据');
+                    showAlert('请先选择要编辑的数据');
                     return;
                   }
                   onBatchEditConfirm();
@@ -91,7 +92,7 @@ export function ActionBar({
                 variant="destructive"
                 onClick={() => {
                   if (selectedRows.length === 0) {
-                    alert('请先选择要删除的数据');
+                    showAlert('请先选择要删除的数据');
                     return;
                   }
                   onBatchDeleteConfirm();

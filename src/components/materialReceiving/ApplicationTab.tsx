@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialReceivingRecord, MaterialItem, MaterialRequestFormState } from '../../types/materialReceiving';
+import { showAlert } from '@/lib/dialogService';
 
 interface ApplicationTabProps {
   // 状态
@@ -319,7 +320,7 @@ export default function ApplicationTab({
                 <div className="flex gap-2">
                   <Button onClick={() => {
                       if (selectedRows.length === 0) {
-                        alert('请先选择要编辑的记录');
+                        showAlert('请先选择要编辑的记录');
                         setBatchEditMode(false);
                       } else {
                         setShowBatchEditModal(true);

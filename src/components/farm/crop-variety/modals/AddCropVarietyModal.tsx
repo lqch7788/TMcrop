@@ -24,6 +24,7 @@ import {
   getSubVariety1Options as getSubVariety1OptionsFromExtension
 } from '../../../../services/cropVarietyExtensionService';
 import { Search, Check, X, RefreshCw } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 
 interface AddCropVarietyModalProps {
   isOpen: boolean;
@@ -239,7 +240,7 @@ export function AddCropVarietyModal({
   // 生成编码
   const handleGenerateCode = () => {
     if (!formData.categoryCode || !formData.typeCode || !formData.varietyCode) {
-      alert('请先选择完整的类别、类型和品种');
+      showAlert('请先选择完整的类别、类型和品种');
       return;
     }
 
@@ -323,15 +324,15 @@ export function AddCropVarietyModal({
     try {
       // 验证
       if (!formData.categoryCode || !formData.typeCode || !formData.varietyName) {
-        alert('请选择完整的类别、类型和品种');
+        await showAlert('请选择完整的类别、类型和品种');
         return;
       }
       if (!cropCode) {
-        alert('请先生成作物编码');
+        await showAlert('请先生成作物编码');
         return;
       }
       if (duplicateCheckResult?.hasDuplicate) {
-        alert('存在重复的品种，请修改后重试');
+        await showAlert('存在重复的品种，请修改后重试');
         return;
       }
 
@@ -377,7 +378,7 @@ export function AddCropVarietyModal({
       onClose();
     } catch (error) {
       console.error('保存品种失败:', error);
-      alert('保存失败，请重试');
+      await showAlert('保存失败，请重试');
     } finally {
       // 重置表单
       setFormData({

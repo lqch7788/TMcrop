@@ -10,6 +10,7 @@ import { BudgetBatchEditModal } from './BudgetBatchEditModal';
 import { ExportFormatModal } from './ExportFormatModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import type { BudgetWarning, MonthlyBudget } from './types';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export const BudgetPage: React.FC = () => {
   const {
@@ -69,8 +70,8 @@ export const BudgetPage: React.FC = () => {
   };
 
   // 删除记录
-  const handleDelete = (record: MonthlyBudget) => {
-    if (window.confirm(`确定要删除 ${record.month} 的预算记录吗？`)) {
+  const handleDelete = async (record: MonthlyBudget) => {
+    if (await showConfirm(`确定要删除 ${record.month} 的预算记录吗？`)) {
       // 删除逻辑
     }
   };
@@ -118,7 +119,7 @@ export const BudgetPage: React.FC = () => {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

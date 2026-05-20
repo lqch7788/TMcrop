@@ -15,6 +15,7 @@ import { Supplier, SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
 import { useSupplierStore } from '../../stores';
+import { showAlert } from '@/lib/dialogService';
 
 export default function SupplierManagementPage() {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export default function SupplierManagementPage() {
 
   const handleBatchEdit = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要编辑的供应商');
+      showAlert('请先选择要编辑的供应商');
       return;
     }
     setBatchEditMode(true);
@@ -108,7 +109,7 @@ export default function SupplierManagementPage() {
 
   const handleDelete = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要删除的供应商');
+      showAlert('请先选择要删除的供应商');
       return;
     }
     setBatchEditMode(false);
@@ -145,7 +146,7 @@ export default function SupplierManagementPage() {
   const handleSaveAllBatch = async () => {
     const entries = Object.entries(batchEditedSuppliers);
     if (entries.length === 0) {
-      alert('没有需要保存的修改');
+      await showAlert('没有需要保存的修改');
       return;
     }
     let successCount = 0;
@@ -161,7 +162,7 @@ export default function SupplierManagementPage() {
     setBatchEditMode(false);
     setShowBatchEditModal(false);
     if (successCount < entries.length) {
-      alert(`批量编辑完成：成功 ${successCount}/${entries.length} 项`);
+      await showAlert(`批量编辑完成：成功 ${successCount}/${entries.length} 项`);
     }
   };
 
@@ -227,7 +228,7 @@ export default function SupplierManagementPage() {
       await loadItems();
       setShowEditModal(false);
     } else {
-      alert('编辑失败，请重试');
+      await showAlert('编辑失败，请重试');
     }
   };
 
@@ -237,7 +238,7 @@ export default function SupplierManagementPage() {
       await loadItems();
       setShowAddModal(false);
     } else {
-      alert('添加失败，请检查网络连接或联系管理员');
+      await showAlert('添加失败，请检查网络连接或联系管理员');
     }
   };
 
@@ -247,7 +248,7 @@ export default function SupplierManagementPage() {
       if (result) {
         await loadItems();
       } else {
-        alert('删除失败，请重试');
+        await showAlert('删除失败，请重试');
       }
       setSelectedSupplier(null);
     }
@@ -260,7 +261,7 @@ export default function SupplierManagementPage() {
       await loadItems();
       setSelectedRows([]);
     } else {
-      alert('批量删除部分失败，请检查网络连接');
+      await showAlert('批量删除部分失败，请检查网络连接');
       await loadItems();
       setSelectedRows([]);
     }

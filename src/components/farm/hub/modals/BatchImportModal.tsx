@@ -7,6 +7,7 @@ import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Input } from '../../../ui/input';
+import { showAlert } from '@/lib/dialogService';
 
 // 导入行类型
 export interface ImportRow {
@@ -94,7 +95,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
 
     const fileExt = file.name.split('.').pop()?.toLowerCase();
     if (fileExt !== 'csv' && fileExt !== 'xlsx') {
-      alert('请上传 CSV 或 XLSX 格式的文件');
+      showAlert('请上传 CSV 或 XLSX 格式的文件');
       return;
     }
 
@@ -105,7 +106,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
       setImportData(data);
       setImportPreview(data.slice(0, 5));
     } catch (error) {
-      alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
+      showAlert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
       setImportFile(null);
       setImportPreview([]);
       setImportData([]);
@@ -120,7 +121,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
 
     const fileExt = file.name.split('.').pop()?.toLowerCase();
     if (fileExt !== 'csv' && fileExt !== 'xlsx') {
-      alert('请上传 CSV 或 XLSX 格式的文件');
+      showAlert('请上传 CSV 或 XLSX 格式的文件');
       return;
     }
 
@@ -131,7 +132,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
       setImportData(data);
       setImportPreview(data.slice(0, 5));
     } catch (error) {
-      alert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
+      showAlert('文件解析失败：请确保CSV格式正确，包含正确的表头和数据');
       setImportFile(null);
       setImportPreview([]);
       setImportData([]);
@@ -149,7 +150,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
   // 确认导入
   const handleConfirm = () => {
     if (importData.length === 0) {
-      alert('没有可导入的数据');
+      showAlert('没有可导入的数据');
       return;
     }
     onImport(importData);
