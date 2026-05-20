@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Save, RotateCcw, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Save, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '@/stores/useSystemConfigStore';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -129,14 +129,29 @@ export default function CropGrowthConfigPanel() {
   // 保存状态
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // 编辑模式开关
+  const [isEditing, setIsEditing] = useState(false);
 
-  // 初始化编辑数据
+  // 初始化编辑数据（必须在 enterEditMode/cancelEdit 之前定义）
   const initData = useCallback(() => {
     setEditingConfigs(JSON.parse(JSON.stringify(cropConfigs)));
     setEditingRules(JSON.parse(JSON.stringify(pestRules)));
     setEditingStageDays({ ...stageDays });
     setDirty(false);
   }, [cropConfigs, pestRules, stageDays]);
+
+  // 进入编辑模式
+  const enterEditMode = useCallback(() => {
+    setIsEditing(true);
+    initData();
+  }, [initData]);
+
+  // 取消编辑 — 恢复原始数据并退出
+  const cancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setDirty(false);
+    initData();
+  }, [initData]);
 
   // 首次加载
   if (editingConfigs.length === 0 && cropConfigs.length > 0) {
@@ -165,6 +180,7 @@ export default function CropGrowthConfigPanel() {
         });
       }
       setDirty(false);
+      setIsEditing(false);
       // 触发 Store 重新加载 + CustomEvent 通知
       setTimeout(() => loadConfigs(), 500);
     } catch (err) {
@@ -319,15 +335,28 @@ export default function CropGrowthConfigPanel() {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          {dirty && <span className="text-sm text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> 有未保存的修改</span>}
-          <Button size="sm" variant="secondary" onClick={initData} disabled={!dirty}>
-            <RotateCcw className="w-3.5 h-3.5" />
-            重置
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
-            <Save className="w-3.5 h-3.5" />
-            {saving ? '保存中...' : '保存'}
-          </Button>
+          {isEditing ? (
+            <>
+              {dirty && <span className="text-sm text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> 有未保存的修改</span>}
+              <Button size="sm" variant="secondary" onClick={initData} disabled={!dirty}>
+                <RotateCcw className="w-3.5 h-3.5" />
+                重置
+              </Button>
+              <Button size="sm" variant="secondary" onClick={cancelEdit}>
+                <X className="w-3.5 h-3.5" />
+                取消
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
+                <Save className="w-3.5 h-3.5" />
+                {saving ? '保存中...' : '保存'}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={enterEditMode}>
+              <Pencil className="w-3.5 h-3.5" />
+              编辑
+            </Button>
+          )}
         </div>
       </div>
 
@@ -344,16 +373,18 @@ export default function CropGrowthConfigPanel() {
                 >
                   {crop.name}
                 </button>
-                {editingConfigs.length > 1 && (
+                {isEditing && editingConfigs.length > 1 && (
                   <button onClick={() => removeCrop(idx)} className="p-0.5 text-red-400 hover:text-red-600">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 )}
               </div>
             ))}
+            {isEditing && (
             <button onClick={addCrop} className="px-2 py-1.5 rounded-lg text-sm text-emerald-600 hover:bg-emerald-50 font-medium whitespace-nowrap">
               <Plus className="w-4 h-4 inline" /> 添加作物
             </button>
+            )}
           </div>
 
           {/* 阶段列表 */}
@@ -374,6 +405,7 @@ export default function CropGrowthConfigPanel() {
                       onClick={e => e.stopPropagation()}
                       className="w-20 px-2 py-1 text-sm border border-gray-400 rounded text-center"
                       min={1}
+                      disabled={!isEditing}
                     />
                     <span className="text-sm text-gray-400">~</span>
                     <input
@@ -383,6 +415,7 @@ export default function CropGrowthConfigPanel() {
                       onClick={e => e.stopPropagation()}
                       className="w-20 px-2 py-1 text-sm border border-gray-400 rounded text-center"
                       min={1}
+                      disabled={!isEditing}
                     />
                     <span className="text-sm text-gray-400">天</span>
                     <span className="text-sm text-gray-400 ml-auto">{stage.tasks.length} 个任务</span>
@@ -412,6 +445,7 @@ export default function CropGrowthConfigPanel() {
                                   value={task.type}
                                   onChange={e => updateTask(activeCropIdx, stageIdx, taskIdx, 'type', e.target.value)}
                                   className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm"
+                                  disabled={!isEditing}
                                 >
                                   <option value="">选择...</option>
                                   {TASK_TYPE_OPTIONS.map(opt => (
@@ -425,6 +459,7 @@ export default function CropGrowthConfigPanel() {
                                   onChange={e => updateTask(activeCropIdx, stageIdx, taskIdx, 'typeName', e.target.value)}
                                   className="w-full px-2 py-1 border border-gray-400 rounded text-sm"
                                   placeholder="如灌溉"
+                                  disabled={!isEditing}
                                 />
                               </td>
                               <td className="py-1.5 pr-2">
@@ -434,6 +469,7 @@ export default function CropGrowthConfigPanel() {
                                   onChange={e => updateTask(activeCropIdx, stageIdx, taskIdx, 'frequency', Number(e.target.value))}
                                   className="w-full px-2 py-1 border border-gray-400 rounded text-sm text-center"
                                   min={1}
+                                  disabled={!isEditing}
                                 />
                               </td>
                               <td className="py-1.5 pr-2">
@@ -444,6 +480,7 @@ export default function CropGrowthConfigPanel() {
                                   className="w-full px-2 py-1 border border-gray-400 rounded text-sm text-center"
                                   min={0.5}
                                   step={0.5}
+                                  disabled={!isEditing}
                                 />
                               </td>
                               <td className="py-1.5 pr-2">
@@ -451,6 +488,7 @@ export default function CropGrowthConfigPanel() {
                                   value={task.priority}
                                   onChange={e => updateTask(activeCropIdx, stageIdx, taskIdx, 'priority', e.target.value)}
                                   className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm"
+                                  disabled={!isEditing}
                                 >
                                   <option value="high">高</option>
                                   <option value="medium">中</option>
@@ -464,6 +502,7 @@ export default function CropGrowthConfigPanel() {
                                   className="w-full px-2 py-1 border border-gray-400 rounded text-sm min-w-[210px]"
                                   placeholder="用逗号分隔"
                                   title={task.skillRequired.join(', ')}
+                                  disabled={!isEditing}
                                 />
                               </td>
                               <td className="py-1.5 pr-2">
@@ -472,20 +511,25 @@ export default function CropGrowthConfigPanel() {
                                   onChange={e => updateTask(activeCropIdx, stageIdx, taskIdx, 'description', e.target.value)}
                                   className="w-full px-2 py-1 border border-gray-400 rounded text-sm"
                                   placeholder="任务说明"
+                                  disabled={!isEditing}
                                 />
                               </td>
                               <td className="py-1.5">
+                                {isEditing && (
                                 <button onClick={() => removeTask(activeCropIdx, stageIdx, taskIdx)} className="text-red-400 hover:text-red-600">
                                   <Trash2 className="w-3 h-3" />
                                 </button>
+                                )}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                      {isEditing && (
                       <button onClick={() => addTask(activeCropIdx, stageIdx)} className="mt-2 text-sm text-emerald-600 hover:text-emerald-800 font-medium">
                         <Plus className="w-3.5 h-3.5 inline" /> 添加任务
                       </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -516,36 +560,38 @@ export default function CropGrowthConfigPanel() {
                 {editingRules.map((rule, idx) => (
                   <tr key={rule.id || idx} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-1.5 px-3">
-                      <input value={rule.id} onChange={e => updateRule(idx, 'id', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono" />
+                      <input value={rule.id} onChange={e => updateRule(idx, 'id', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono" disabled={!isEditing} />
                     </td>
                     <td className="py-1.5 px-3">
-                      <input value={rule.name} onChange={e => updateRule(idx, 'name', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" />
+                      <input value={rule.name} onChange={e => updateRule(idx, 'name', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" disabled={!isEditing} />
                     </td>
                     <td className="py-1.5 px-3">
-                      <input value={rule.symptom.join(', ')} onChange={e => updateRule(idx, 'symptom', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" placeholder="逗号分隔" />
+                      <input value={rule.symptom.join(', ')} onChange={e => updateRule(idx, 'symptom', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" placeholder="逗号分隔" disabled={!isEditing} />
                     </td>
                     <td className="py-1.5 px-3">
-                      <input value={rule.cropType.join(', ')} onChange={e => updateRule(idx, 'cropType', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" placeholder="逗号分隔" />
+                      <input value={rule.cropType.join(', ')} onChange={e => updateRule(idx, 'cropType', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" placeholder="逗号分隔" disabled={!isEditing} />
                     </td>
                     <td className="py-1.5 px-3">
-                      <select value={rule.severity} onChange={e => updateRule(idx, 'severity', e.target.value)} className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm">
+                      <select value={rule.severity} onChange={e => updateRule(idx, 'severity', e.target.value)} className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm" disabled={!isEditing}>
                         <option value="high">高</option>
                         <option value="medium">中</option>
                         <option value="low">低</option>
                       </select>
                     </td>
                     <td className="py-1.5 px-3">
-                      <select value={rule.priority} onChange={e => updateRule(idx, 'priority', e.target.value)} className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm">
+                      <select value={rule.priority} onChange={e => updateRule(idx, 'priority', e.target.value)} className="w-full px-1.5 py-1 border border-gray-400 rounded text-sm" disabled={!isEditing}>
                         <option value="high">高</option>
                         <option value="medium">中</option>
                         <option value="low">低</option>
                       </select>
                     </td>
                     <td className="py-1.5 px-3">
-                      <input value={rule.suggestion} onChange={e => updateRule(idx, 'suggestion', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" />
+                      <input value={rule.suggestion} onChange={e => updateRule(idx, 'suggestion', e.target.value)} className="w-full px-2 py-1 border border-gray-400 rounded text-sm" disabled={!isEditing} />
                     </td>
                     <td className="py-1.5 px-3">
+                      {isEditing && (
                       <button onClick={() => removeRule(idx)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -553,9 +599,11 @@ export default function CropGrowthConfigPanel() {
             </table>
           </div>
           <div className="px-4 py-2 border-t bg-gray-50">
+            {isEditing && (
             <button onClick={addRule} className="text-sm text-emerald-600 hover:text-emerald-800 font-medium">
               <Plus className="w-3.5 h-3.5 inline" /> 添加虫害规则
             </button>
+            )}
           </div>
         </div>
       )}
@@ -584,6 +632,7 @@ export default function CropGrowthConfigPanel() {
                       onChange={e => updateStageDay(key, Number(e.target.value))}
                       className="w-20 px-3 py-2 text-base border border-gray-400 rounded-lg text-center"
                       min={1}
+                      disabled={!isEditing}
                     />
                     <span className="text-sm text-gray-400">天</span>
                   </div>
