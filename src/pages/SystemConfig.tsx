@@ -1,24 +1,25 @@
 /**
  * 系统参数配置页面 — V2.1 架构标准
- * 功能：系统配置的增删改查、分类筛选、导出
+ * 功能：系统配置的增删改查、分类筛选、折叠树状表格、导出
  * 数据流：组件 → useSystemConfigStore → enhancedApiClient → 后端 API
  */
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2,
-  AlertTriangle, Download,
+  AlertTriangle, Download, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '../stores';
 import type { SystemConfig } from '../stores';
 
 // ==================== TAB 分类配置 ====================
-// 与后端 DB system_configs.category 字段对齐
 const CATEGORY_TABS = [
   { value: 'all', label: '全部' },
   { value: 'system', label: '系统设置' },
+  { value: 'ui', label: '界面设置' },
+  { value: 'feature', label: '功能设置' },
+  { value: 'demo', label: '演示设置' },
   { value: 'task', label: '农事任务' },
   { value: 'approval', label: '审批流程' },
   { value: 'business', label: '业务参数' },
@@ -48,10 +49,13 @@ function TypeBadge({ type }: { type: string }) {
 /** 分类标签徽章 */
 function CategoryBadge({ category }: { category: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    system: { bg: 'bg-blue-100', text: 'text-blue-800', label: '系统设置' },
-    task: { bg: 'bg-orange-100', text: 'text-orange-800', label: '农事任务' },
-    approval: { bg: 'bg-violet-100', text: 'text-violet-800', label: '审批流程' },
-    business: { bg: 'bg-green-100', text: 'text-green-800', label: '业务参数' },
+    system: { bg: 'bg-slate-100', text: 'text-slate-700', label: '系统设置' },
+    ui: { bg: 'bg-sky-100', text: 'text-sky-700', label: '界面设置' },
+    feature: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: '功能设置' },
+    demo: { bg: 'bg-amber-100', text: 'text-amber-700', label: '演示设置' },
+    task: { bg: 'bg-orange-100', text: 'text-orange-700', label: '农事任务' },
+    approval: { bg: 'bg-violet-100', text: 'text-violet-700', label: '审批流程' },
+    business: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '业务参数' },
   };
   const s = map[category];
   if (!s) return null;
@@ -79,6 +83,8 @@ export default function SystemConfig() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const PAGE_SIZE = 10;
 
   // 新增弹窗
   const [showAddModal, setShowAddModal] = useState(false);
@@ -92,11 +98,24 @@ export default function SystemConfig() {
   const [resizeDir, setResizeDir] = useState('');
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0, left: 0, top: 0 });
 
-  // ========== 4. 筛选（纯前端 useMemo）==========
+  // ========== 4. 筛选 + 分组 ==========
   const filteredConfigs = useMemo(() => {
     if (activeCategory === 'all') return configs;
     return configs.filter((c) => c.category === activeCategory);
   }, [configs, activeCategory]);
+
+  // 按分类分组（保持 TAB 顺序）
+  const groupedConfigs = useMemo(() => {
+    const tabOrder = CATEGORY_TABS.filter(t => t.value !== 'all').map(t => t.value);
+    const groups: { category: string; items: SystemConfig[] }[] = [];
+    for (const cat of tabOrder) {
+      const items = filteredConfigs.filter(c => c.category === cat);
+      if (items.length > 0) {
+        groups.push({ category: cat, items });
+      }
+    }
+    return groups;
+  }, [filteredConfigs]);
 
   // 计算每个分类的配置数量
   const categoryCounts = useMemo(() => {
@@ -107,6 +126,22 @@ export default function SystemConfig() {
     }
     return counts;
   }, [configs]);
+
+  // 获取分类的中文标签
+  const getCategoryLabel = (cat: string) => {
+    const tab = CATEGORY_TABS.find(t => t.value === cat);
+    return tab?.label || cat;
+  };
+
+  // 切换折叠
+  const toggleGroup = (category: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
 
   // ========== 5. CRUD 操作回调 ==========
 
@@ -298,6 +333,51 @@ export default function SystemConfig() {
 
   // ========== 8. 渲染 ==========
 
+  /** 渲染单个配置行（全部/单个TAB共用） */
+  const singleConfigRow = (config: SystemConfig, indented = false) => (
+    <div key={config.id} className={`px-4 py-3 hover:bg-green-50/50 transition-colors ${indented ? 'pl-14' : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-gray-900 text-sm truncate">
+              {config.description || config.configKey}
+            </span>
+            <TypeBadge type={config.configType} />
+            {activeCategory === 'all' && <CategoryBadge category={config.category} />}
+          </div>
+          <p className="text-xs text-gray-400 mt-0.5 font-mono truncate">{config.configKey}</p>
+        </div>
+        <div className="flex items-center gap-4 ml-4 shrink-0">
+          <div className="min-w-[100px] flex justify-end">
+            {renderValue(config)}
+          </div>
+          <div className="flex items-center gap-1">
+            {editingId === config.id ? (
+              <>
+                <button onClick={() => handleSaveEdit(config.id)} className="p-1 text-green-600 hover:text-green-800" title="保存">
+                  <Save className="w-4 h-4" />
+                </button>
+                <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:text-gray-800" title="取消">
+                  <X className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => handleStartEdit(config)} className="p-1 text-blue-500 hover:text-blue-700" title="编辑">
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDeleteConfig(config.id)} className="p-1 text-red-500 hover:text-red-700" title="删除">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /** 渲染单个配置行的值区域 */
   const renderValue = (config: SystemConfig) => {
     if (editingId === config.id) {
       if (config.configType === 'boolean') {
@@ -381,13 +461,13 @@ export default function SystemConfig() {
         </div>
       </div>
 
-      {/* Category Tabs — 与数据库 category 字段对齐 */}
-      <div className="flex items-center gap-2 border-b border-gray-200">
+      {/* Category Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200 overflow-x-auto">
         {CATEGORY_TABS.map((cat) => (
           <button
             key={cat.value}
             onClick={() => setActiveCategory(cat.value)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeCategory === cat.value
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -399,56 +479,58 @@ export default function SystemConfig() {
         ))}
       </div>
 
-      {/* 配置列表或空态 */}
-      {filteredConfigs.length === 0 ? (
+      {/* 配置内容 */}
+      {groupedConfigs.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center max-w-2xl">
           <Settings className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">
-            {activeCategory === 'all' ? '暂无配置数据，点击"新增配置"添加' : `"${CATEGORY_TABS.find(t => t.value === activeCategory)?.label}"分类下暂无配置`}
+            {activeCategory === 'all'
+              ? '暂无配置数据，点击"新增配置"添加'
+              : `"${CATEGORY_TABS.find(t => t.value === activeCategory)?.label}"分类下暂无配置`}
           </p>
         </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow divide-y divide-gray-300 max-w-2xl">
-          {filteredConfigs.map((config) => (
-            <div key={config.id} className="p-4 hover:bg-green-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-gray-900">{config.description || config.configKey}</span>
-                    <TypeBadge type={config.configType} />
-                    <CategoryBadge category={config.category} />
+      ) : activeCategory === 'all' ? (
+        /* ===== 全部 TAB：折叠树状表格 ===== */
+        <div className="bg-white rounded-lg shadow max-w-2xl">
+          {groupedConfigs.map((group) => {
+            const isCollapsed = collapsedGroups.has(group.category);
+            return (
+              <div key={group.category}>
+                <button
+                  onClick={() => toggleGroup(group.category)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200 text-left"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  )}
+                  <CategoryBadge category={group.category} />
+                  <span className="text-sm font-medium text-gray-700">
+                    {getCategoryLabel(group.category)}
+                  </span>
+                  <span className="text-xs text-gray-400">({group.items.length})</span>
+                </button>
+                {!isCollapsed && (
+                  <div className="divide-y divide-gray-100">
+                    {group.items.map((config) => singleConfigRow(config, true))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1 font-mono">{config.configKey}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="min-w-[120px]">
-                    {renderValue(config)}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {editingId === config.id ? (
-                      <>
-                        <button onClick={() => handleSaveEdit(config.id)} className="p-1 text-green-600 hover:text-green-800">
-                          <Save className="w-4 h-4" />
-                        </button>
-                        <button onClick={handleCancelEdit} className="p-1 text-gray-600 hover:text-gray-800">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => handleStartEdit(config)} className="p-1 text-blue-500 hover:text-blue-700">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDeleteConfig(config.id)} className="p-1 text-red-500 hover:text-red-700">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ===== 单个分类 TAB：平铺列表 + 滑块滚动（默认显示10条） ===== */
+        <div className="bg-white rounded-lg shadow max-w-2xl">
+          <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
+            {groupedConfigs[0].items.map((config) => singleConfigRow(config))}
+          </div>
+          {groupedConfigs[0].items.length > PAGE_SIZE && (
+            <div className="px-4 py-2 text-center text-xs text-gray-400 border-t border-gray-100 bg-gray-50 rounded-b-lg">
+              共 {groupedConfigs[0].items.length} 条，滚动查看更多
             </div>
-          ))}
+          )}
         </div>
       )}
 
