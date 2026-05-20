@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, GitCompare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type TabKey = 'overview' | 'comparison';
 
@@ -24,8 +25,10 @@ export const CostTabSwitcher: React.FC<CostTabSwitcherProps> = ({ activeTab, onT
     <div className="border-b border-gray-200">
       <div className="flex gap-1">
         {tabs.map((tab) => (
-          <button
+          <Button
             key={tab.key}
+            variant="ghost"
+            size="sm"
             onClick={() => onTabChange(tab.key)}
             className={`flex items-center gap-2 px-4 py-3 text-sm font-bold transition-colors relative ${
               activeTab === tab.key
@@ -38,7 +41,7 @@ export const CostTabSwitcher: React.FC<CostTabSwitcherProps> = ({ activeTab, onT
             {activeTab === tab.key && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
             )}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

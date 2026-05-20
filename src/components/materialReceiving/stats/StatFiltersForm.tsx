@@ -1,5 +1,8 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface StatFiltersFormProps {
   dateRange: { start: string; end: string };
@@ -21,74 +24,80 @@ export const StatFiltersForm: React.FC<StatFiltersFormProps> = ({
       <div className="flex items-center gap-4 flex-wrap">
         {/* 时间范围 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">时间:</label>
-          <input
+          <Label className="text-sm font-medium text-gray-700">时间:</Label>
+          <Input
             type="date"
             value={dateRange.start}
             onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="h-9"
           />
           <span className="text-gray-400">至</span>
-          <input
+          <Input
             type="date"
             value={dateRange.end}
             onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="h-9"
           />
         </div>
 
         {/* 快捷筛选按钮 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onQuickFilter('currentWeek')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              quickFilterPeriod === 'currentWeek'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:shadow-sm'
+            className={`${quickFilterPeriod === 'currentWeek'
+                ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-500'
+                : 'text-gray-700 hover:shadow-sm'
             }`}
           >
             本周
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onQuickFilter('currentMonth')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              quickFilterPeriod === 'currentMonth'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:shadow-sm'
+            className={`${quickFilterPeriod === 'currentMonth'
+                ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-500'
+                : 'text-gray-700 hover:shadow-sm'
             }`}
           >
             本月
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onQuickFilter('currentQuarter')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              quickFilterPeriod === 'currentQuarter'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:shadow-sm'
+            className={`${quickFilterPeriod === 'currentQuarter'
+                ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-500'
+                : 'text-gray-700 hover:shadow-sm'
             }`}
           >
             本季
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onQuickFilter('currentYear')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-              quickFilterPeriod === 'currentYear'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:shadow-sm'
+            className={`${quickFilterPeriod === 'currentYear'
+                ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-500'
+                : 'text-gray-700 hover:shadow-sm'
             }`}
           >
             本年
-          </button>
+          </Button>
         </div>
 
         {/* 重置按钮 */}
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onReset}
-          className="h-9 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center gap-1"
+          className="h-9"
         >
           <RefreshCw className="w-4 h-4" />
           重置
-        </button>
+        </Button>
       </div>
     </div>
   );

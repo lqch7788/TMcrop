@@ -6,6 +6,8 @@ import {
   Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ExecuteTabTableProps {
   // 数据
@@ -151,11 +153,9 @@ export function ExecuteTabTable({
             <tr>
               {(exportMode || batchEditMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === paginatedData.length && paginatedData.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -177,11 +177,9 @@ export function ExecuteTabTable({
                 <tr className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode) && (
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(item.id)}
-                        onChange={() => onSelectRow(item.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => onSelectRow(item.id)}
                       />
                     </td>
                   )}
@@ -337,15 +335,19 @@ export function ExecuteTabTable({
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { onPageSizeChange(Number(e.target.value)); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => { onPageSizeChange(Number(v)); }}
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto inline-flex">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

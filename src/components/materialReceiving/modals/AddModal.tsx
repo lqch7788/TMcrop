@@ -1,6 +1,10 @@
 import React from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import type { MaterialItem } from '../../../types/materialReceiving';
 import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
 import { UserSelect } from '../../common/settings/UserSelect';
@@ -83,45 +87,45 @@ export const AddModal: React.FC<AddModalProps> = ({
     >
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">领料单号</label>
+          <Label className="block text-sm font-medium text-gray-900 mb-1">领料单号</Label>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={addForm.code}
               readOnly
               placeholder="点击生成获取单号"
-              className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50 font-mono"
+              className="flex-1 bg-gray-50 font-mono"
             />
-            <button
+            <Button
+              size="sm"
               onClick={onGenerateCode}
-              className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1 shrink-0"
+              className="shrink-0"
               title="生成领料单号"
             >
               <RefreshCw className="w-4 h-4" />
               生成
-            </button>
+            </Button>
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">申请日期</label>
-          <input
+          <Label className="block text-sm font-medium text-gray-900 mb-1">申请日期</Label>
+          <Input
             type="date"
             value={addForm.date}
             onChange={(e) => onChange('date', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
-          <input
+          <Label className="block text-sm font-medium text-gray-900 mb-1">操作员</Label>
+          <Input
             type="text"
             value={currentOperator}
             readOnly
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 font-medium"
+            className="bg-gray-100 font-medium"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">申请人</label>
+          <Label className="block text-sm font-medium text-gray-900 mb-1">申请人</Label>
           <UserSelect
             value={addForm.applicant}
             onChange={(value) => onChange('applicant', value)}
@@ -129,46 +133,53 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">部门</label>
-          <select
-            value={addForm.department}
-            onChange={(e) => onChange('department', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <Label className="block text-sm font-medium text-gray-900 mb-1">部门</Label>
+          <Select
+            value={addForm.department || 'none'}
+            onValueChange={(v) => onChange('department', v === 'none' ? '' : v)}
           >
-            <option value="">请选择部门</option>
-            <option value="生产部">生产部</option>
-            <option value="后勤部">后勤部</option>
-            <option value="设备部">设备部</option>
-            <option value="技术部">技术部</option>
-            <option value="采后处理部">采后处理部</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择部门" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">请选择部门</SelectItem>
+              <SelectItem value="生产部">生产部</SelectItem>
+              <SelectItem value="后勤部">后勤部</SelectItem>
+              <SelectItem value="设备部">设备部</SelectItem>
+              <SelectItem value="技术部">技术部</SelectItem>
+              <SelectItem value="采后处理部">采后处理部</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">库存地点</label>
-          <select
+          <Label className="block text-sm font-medium text-gray-900 mb-1">库存地点</Label>
+          <Select
             value={addForm.warehouseLocation}
-            onChange={(e) => onChange('warehouseLocation', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(v) => onChange('warehouseLocation', v)}
           >
-            <option value="仓库A区">仓库A区</option>
-            <option value="仓库B区">仓库B区</option>
-            <option value="仓库C区">仓库C区</option>
-            <option value="仓库D区">仓库D区</option>
-            <option value="仓库E区">仓库E区</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="仓库A区">仓库A区</SelectItem>
+              <SelectItem value="仓库B区">仓库B区</SelectItem>
+              <SelectItem value="仓库C区">仓库C区</SelectItem>
+              <SelectItem value="仓库D区">仓库D区</SelectItem>
+              <SelectItem value="仓库E区">仓库E区</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植区域/用途</label>
-          <input
+          <Label className="block text-sm font-medium text-gray-900 mb-1">种植区域/用途</Label>
+          <Input
             type="text"
             value={addForm.plantArea}
             onChange={(e) => onChange('plantArea', e.target.value)}
             placeholder="如：1号棚-叶菜区"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">审核人</label>
+          <Label className="block text-sm font-medium text-gray-900 mb-1">审核人</Label>
           <UserSelect
             value={addForm.reviewer}
             onChange={(value) => onChange('reviewer', value)}
@@ -176,28 +187,31 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
-          <select
-            value={addForm.productionBatchCode}
-            onChange={(e) => onChange('productionBatchCode', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <Label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</Label>
+          <Select
+            value={addForm.productionBatchCode || 'none'}
+            onValueChange={(v) => onChange('productionBatchCode', v === 'none' ? '' : v)}
           >
-            <option value="">请选择生产批次</option>
-            {PRODUCTION_BATCH_CODES.map(code => (
-              <option key={code} value={code}>{code}</option>
-            ))}
-            <option value="其他">其他</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择生产批次" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">请选择生产批次</SelectItem>
+              {PRODUCTION_BATCH_CODES.map(code => (
+                <SelectItem key={code} value={code}>{code}</SelectItem>
+              ))}
+              <SelectItem value="其他">其他</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {isOtherBatch && (
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-900 mb-1">其他批次备注</label>
-            <input
+            <Label className="block text-sm font-medium text-gray-900 mb-1">其他批次备注</Label>
+            <Input
               type="text"
               value={addForm.batchRemark || ''}
               onChange={(e) => onChange('batchRemark', e.target.value)}
               placeholder="请输入其他批次的具体说明"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         )}
@@ -206,14 +220,14 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 物料明细 */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-bold text-gray-700">物料明细</label>
-          <button
+          <Label className="text-sm font-bold text-gray-700">物料明细</Label>
+          <Button
+            size="sm"
             onClick={onAddMaterial}
-            className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             添加物料
-          </button>
+          </Button>
         </div>
         {addForm.materials.length > 0 ? (
           <table className="w-full border border-gray-400 rounded-lg overflow-hidden">
@@ -239,87 +253,89 @@ export const AddModal: React.FC<AddModalProps> = ({
                 return (
                   <tr key={idx}>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.materialCode}
                         onChange={(e) => handleMaterialCodeChange(idx, e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs font-mono"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.materialName}
                         onChange={(e) => handleMaterialNameChange(idx, e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.spec}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.unit}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.requestedQuantity}
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                        className={`w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
+                        className={`h-8 px-2 text-xs ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.stockQuantity || ''}
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.unitPrice || ''}
                         onChange={(e) => onMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50 whitespace-nowrap">
                       {subtotal.toFixed(2)}
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.remark}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onRemoveMaterial(idx)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        className="text-red-500 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -335,18 +351,12 @@ export const AddModal: React.FC<AddModalProps> = ({
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
+        <Button variant="secondary" onClick={onClose}>
           取消
-        </button>
-        <button
-          onClick={onSave}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-        >
+        </Button>
+        <Button onClick={onSave}>
           保存
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

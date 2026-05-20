@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface BatchCostDetail {
   batchCode: string;
@@ -51,7 +52,9 @@ export const CostBatchTable: React.FC<CostBatchTableProps> = ({ data }) => {
               <React.Fragment key={item.batchCode}>
                 <tr className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => toggleExpand(item.batchCode)}
                       className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-emerald-600"
                     >
@@ -60,7 +63,7 @@ export const CostBatchTable: React.FC<CostBatchTableProps> = ({ data }) => {
                       ) : (
                         <ChevronRight className="w-4 h-4" />
                       )}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-4 py-3 text-sm font-mono text-emerald-600">{item.batchCode}</td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.cropName}</td>

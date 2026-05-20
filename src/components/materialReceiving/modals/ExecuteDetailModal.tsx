@@ -1,5 +1,7 @@
 import React from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteDetailModalProps {
@@ -25,39 +27,39 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
     >
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm text-gray-500">出库单号</label>
+          <Label className="text-sm text-gray-500">出库单号</Label>
           <p className="font-mono font-semibold text-gray-900">{record.code}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">关联领料单号</label>
+          <Label className="text-sm text-gray-500">关联领料单号</Label>
           <p className="font-mono font-semibold text-gray-900">{record.sourceApplicationCodes?.join(', ')}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">申请日期</label>
+          <Label className="text-sm text-gray-500">申请日期</Label>
           <p className="font-semibold text-gray-900">{record.date}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">申请人</label>
+          <Label className="text-sm text-gray-500">申请人</Label>
           <p className="font-semibold text-gray-900">{record.applicant}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">库存地点</label>
+          <Label className="text-sm text-gray-500">库存地点</Label>
           <p className="font-semibold text-gray-900">{record.warehouseLocation}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">审核人</label>
+          <Label className="text-sm text-gray-500">审核人</Label>
           <p className="font-semibold text-gray-900">{record.reviewer}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">操作人</label>
+          <Label className="text-sm text-gray-500">操作人</Label>
           <p className="font-semibold text-gray-900">{record.operator}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">生产计划批次号</label>
+          <Label className="text-sm text-gray-500">生产计划批次号</Label>
           <p className="font-semibold text-gray-900">{record.productionBatchCode}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">执行状态</label>
+          <Label className="text-sm text-gray-500">执行状态</Label>
           <p className="font-semibold">
             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
               record.executeStatusClass === 'completed' ? 'bg-green-100 text-green-700' :
@@ -73,7 +75,7 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
       </div>
       {record.materials.length > 0 && (
         <div className="mt-6">
-          <label className="text-sm text-gray-500 block mb-2">物料明细</label>
+          <Label className="text-sm text-gray-500 block mb-2">物料明细</Label>
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
             <thead className="bg-emerald-100">
               <tr>
@@ -133,12 +135,12 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end">
-        <button
+        <Button
+          variant="secondary"
           onClick={onClose}
-          className="px-4 py-2 bg-gray-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           关闭
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

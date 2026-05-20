@@ -1,5 +1,6 @@
 import React from 'react';
 import { ClipboardList } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MaterialReceivingHeaderProps {
   activeTab: string;
@@ -35,10 +36,11 @@ export const MaterialReceivingHeader: React.FC<MaterialReceivingHeaderProps> = (
       <div className="mt-6">
         <div className="flex gap-8 border-b border-gray-200">
           {TABS.map((tab) => (
-            <button
+            <Button
               key={tab.key}
+              variant="ghost"
               onClick={() => onTabChange(tab.key)}
-              className={`flex items-center gap-2 pb-3 text-base font-semibold transition-all relative ${
+              className={`flex items-center gap-2 pb-3 text-base font-semibold transition-all relative rounded-none ${
                 activeTab === tab.key
                   ? 'text-emerald-600'
                   : 'text-gray-500 hover:text-gray-700'
@@ -48,7 +50,7 @@ export const MaterialReceivingHeader: React.FC<MaterialReceivingHeaderProps> = (
               {activeTab === tab.key && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

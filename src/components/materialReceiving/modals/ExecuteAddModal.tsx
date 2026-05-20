@@ -1,5 +1,10 @@
 import React from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteAddModalProps {
@@ -62,72 +67,78 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
     >
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-100 rounded-lg p-3">
-          <label className="block text-xs font-medium text-gray-500 mb-1">出库单号</label>
+          <Label className="block text-xs font-medium text-gray-500 mb-1">出库单号</Label>
           <div className="text-sm font-medium text-gray-900">{addForm.code || '系统自动生成'}</div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">关联领料单号</label>
-          <select
-            value={selectedApplicationCode}
-            onChange={(e) => {
-              onSelectedApplicationCodeChange(e.target.value);
+          <Label className="block text-sm font-medium text-blue-700 mb-1">关联领料单号</Label>
+          <Select
+            value={selectedApplicationCode || 'none'}
+            onValueChange={(v) => {
+              const code = v === 'none' ? '' : v;
+              onSelectedApplicationCodeChange(code);
               onSelectedMaterialIndicesChange(new Set());
               onMaterialActualQuantitiesChange({});
             }}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">请选择领料单</option>
-            {materialReceivingDetails
-              .filter(app => app.status === '已审批' && app.materials.length > 0)
-              .map(app => (
-                <option key={app.id} value={app.code}>
-                  {app.code} - {app.applicant}
-                </option>
-              ))
-            }
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择领料单" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">请选择领料单</SelectItem>
+              {materialReceivingDetails
+                .filter(app => app.status === '已审批' && app.materials.length > 0)
+                .map(app => (
+                  <SelectItem key={app.id} value={app.code}>
+                    {app.code} - {app.applicant}
+                  </SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">申请日期</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">申请日期</Label>
+          <Input
             type="date"
             value={addForm.date}
             onChange={(e) => onAddFormChange('date', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">库存地点</label>
-          <select
+          <Label className="block text-sm font-medium text-blue-700 mb-1">库存地点</Label>
+          <Select
             value={addForm.warehouseLocation}
-            onChange={(e) => onAddFormChange('warehouseLocation', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(v) => onAddFormChange('warehouseLocation', v)}
           >
-            <option value="仓库A区">仓库A区</option>
-            <option value="仓库B区">仓库B区</option>
-            <option value="仓库C区">仓库C区</option>
-            <option value="仓库D区">仓库D区</option>
-            <option value="仓库E区">仓库E区</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="仓库A区">仓库A区</SelectItem>
+              <SelectItem value="仓库B区">仓库B区</SelectItem>
+              <SelectItem value="仓库C区">仓库C区</SelectItem>
+              <SelectItem value="仓库D区">仓库D区</SelectItem>
+              <SelectItem value="仓库E区">仓库E区</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">审核人</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">审核人</Label>
+          <Input
             type="text"
             value={addForm.reviewer}
             onChange={(e) => onAddFormChange('reviewer', e.target.value)}
             placeholder="请输入审核人"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">操作人</Label>
+          <Input
             type="text"
             value={addForm.operator}
             onChange={(e) => onAddFormChange('operator', e.target.value)}
             placeholder="请输入操作人"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
       </div>
@@ -135,14 +146,14 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
       {selectedApplicationCode && selectedApp && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">选择物料（勾选要出库的物料并填写实发数量）</label>
-            <button
+            <Label className="text-sm font-medium text-gray-700">选择物料（勾选要出库的物料并填写实发数量）</Label>
+            <Button
+              size="sm"
               onClick={onAddToMaterialPool}
               disabled={selectedMaterialIndices.size === 0}
-              className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               添加到物料池 ({selectedMaterialIndices.size})
-            </button>
+            </Button>
           </div>
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
             <thead className="bg-gray-50">
@@ -163,12 +174,11 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
               {selectedApp.materials.map((material, idx) => (
                 <tr key={idx} className={selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
                   <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedMaterialIndices.has(idx)}
-                      onChange={(e) => {
+                      onCheckedChange={(checked) => {
                         const newSelected = new Set(selectedMaterialIndices);
-                        if (e.target.checked) {
+                        if (checked) {
                           newSelected.add(idx);
                           onMaterialActualQuantitiesChange({
                             ...materialActualQuantities,
@@ -182,7 +192,6 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                         }
                         onSelectedMaterialIndicesChange(newSelected);
                       }}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
@@ -194,7 +203,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                   <td className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</td>
                   <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
                   <td className="px-3 py-2">
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       max={material.requestedQuantity}
@@ -206,7 +215,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                         });
                       }}
                       disabled={!selectedMaterialIndices.has(idx)}
-                      className="w-20 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                      className="w-20 h-8 text-sm"
                     />
                   </td>
                 </tr>
@@ -218,7 +227,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
 
       {materialPool.length > 0 && (
         <div className="mt-6">
-          <label className="text-sm font-medium text-gray-700 mb-2">物料池（可修改实发数量或移除）</label>
+          <Label className="text-sm font-medium text-gray-700 mb-2">物料池（可修改实发数量或移除）</Label>
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
             <thead className="bg-emerald-50">
               <tr>
@@ -242,12 +251,14 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                 return (
                   <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
                     <td className="px-3 py-2">
-                      <button
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => onRemoveFromMaterialPool(idx)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="text-red-600 hover:text-red-800"
                       >
                         移除
-                      </button>
+                      </Button>
                     </td>
                     <td className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</td>
                     <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
@@ -259,13 +270,13 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                     <td className="px-3 py-2 text-sm text-gray-600">{subtotal.toFixed(2)}</td>
                     <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         min="0"
                         max={material.requestedQuantity}
                         value={material.actualQuantity}
                         onChange={(e) => onUpdateMaterialPoolQuantity(idx, Number(e.target.value))}
-                        className={`w-20 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
+                        className={`w-20 h-8 text-sm ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
                       />
                     </td>
                   </tr>
@@ -278,19 +289,15 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
+        <Button variant="secondary" onClick={onCancel}>
           取消
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onSave}
           disabled={materialPool.length === 0}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           保存
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

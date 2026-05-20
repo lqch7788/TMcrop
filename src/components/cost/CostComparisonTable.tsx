@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CategoryAgg {
   category: string;
@@ -115,12 +116,14 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
           <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">¥{item.totalAmount.toLocaleString()}</td>
           <td className="px-4 py-3 text-sm text-center text-gray-600">{item.percentage.toFixed(1)}%</td>
           <td className="px-4 py-3 text-center">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onViewDetail('category', item.category)}
               className="text-emerald-600 hover:text-emerald-700 text-sm"
             >
               查看明细
-            </button>
+            </Button>
           </td>
         </tr>
       ));
@@ -133,12 +136,14 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
           <td className="px-4 py-3 text-sm text-right font-semibold text-emerald-600">¥{item.totalAmount.toLocaleString()}</td>
           <td className="px-4 py-3 text-sm text-center text-gray-600">{item.percentage.toFixed(1)}%</td>
           <td className="px-4 py-3 text-center">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => onViewDetail('department', item.department)}
               className="text-emerald-600 hover:text-emerald-700 text-sm"
             >
               查看明细
-            </button>
+            </Button>
           </td>
         </tr>
       ));
@@ -147,7 +152,9 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
         <React.Fragment key={item.batchCode}>
           <tr className="hover:bg-gray-50">
             <td className="px-4 py-3">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => toggleExpand(item.batchCode)}
                 className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-emerald-600"
               >
@@ -156,7 +163,7 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
                 ) : (
                   <ChevronRight className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </td>
             <td className="px-4 py-3 text-sm font-mono text-emerald-600">{item.batchCode}</td>
             <td className="px-4 py-3 text-sm text-gray-900">{item.cropName}</td>
@@ -233,36 +240,42 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-600">对比维度：</span>
         <div className="flex gap-1">
-          <button
+          <Button
+            size="sm"
+            variant={dimension === 'category' ? 'default' : 'ghost'}
             onClick={() => setDimension('category')}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               dimension === 'category'
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             按物料分类
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant={dimension === 'department' ? 'default' : 'ghost'}
             onClick={() => setDimension('department')}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               dimension === 'department'
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             按部门
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant={dimension === 'batch' ? 'default' : 'ghost'}
             onClick={() => setDimension('batch')}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               dimension === 'batch'
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             按批次
-          </button>
+          </Button>
         </div>
       </div>
 

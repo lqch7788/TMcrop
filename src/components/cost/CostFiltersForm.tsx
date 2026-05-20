@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, X, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
 
 export interface CostFilters {
@@ -52,7 +54,9 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:border-gray-300 transition-colors ${
           selected.length > 0 ? activeBg + ' text-white border-transparent' : 'bg-white text-gray-600'
@@ -61,15 +65,17 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
         <span>{label}</span>
         {selected.length > 0 && <span className="text-xs">({selected.length})</span>}
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
           {options.map(option => (
-            <button
+            <Button
               key={option}
+              variant="ghost"
+              size="sm"
               onClick={() => onChange(option)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 justify-start"
             >
               <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                 selected.includes(option)
@@ -79,7 +85,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
                 {selected.includes(option) && <Check className="w-3 h-3 text-white" />}
               </div>
               <span>{option}</span>
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -180,21 +186,23 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
         </div>
         <div className="flex gap-1">
           {quickPeriods.map(period => (
-            <button
+            <Button
               key={period.value}
+              size="sm"
+              variant={filters.quickPeriod === period.value ? 'default' : 'ghost'}
               onClick={() => handleQuickPeriod(period.value)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                 filters.quickPeriod === period.value
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {period.label}
-            </button>
+            </Button>
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <input
+          <Input
             id="cost-start-date"
             type="date"
             value={filters.dateRange.start}
@@ -202,7 +210,7 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
             className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
           />
           <span className="text-gray-400">至</span>
-          <input
+          <Input
             id="cost-end-date"
             type="date"
             value={filters.dateRange.end}
@@ -230,13 +238,15 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
         />
 
         {/* 重置按钮 */}
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleReset}
           className="ml-auto px-4 py-1.5 text-sm text-white bg-gray-400 hover:bg-gray-500 rounded-lg flex items-center gap-1 transition-colors"
         >
           <X className="w-4 h-4" />
           重置
-        </button>
+        </Button>
       </div>
     </div>
   );

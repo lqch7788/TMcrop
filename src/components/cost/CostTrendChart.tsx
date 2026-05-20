@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { BarChart3, LineChart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CostTrendChartProps {
   data: Array<{
@@ -24,7 +25,9 @@ export const CostTrendChart: React.FC<CostTrendChartProps> = ({ data }) => {
       <div className="flex items-center justify-between mb-4">
         <h5 className="font-semibold text-gray-700">成本趋势（12个月）</h5>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setChartType('bar')}
             className={`p-1.5 rounded-md transition-colors ${
               chartType === 'bar'
@@ -34,8 +37,10 @@ export const CostTrendChart: React.FC<CostTrendChartProps> = ({ data }) => {
             title="柱状图"
           >
             <BarChart3 className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setChartType('line')}
             className={`p-1.5 rounded-md transition-colors ${
               chartType === 'line'
@@ -45,7 +50,7 @@ export const CostTrendChart: React.FC<CostTrendChartProps> = ({ data }) => {
             title="折线图"
           >
             <LineChart className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

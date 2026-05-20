@@ -1,7 +1,10 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronDown } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // 类型定义
 interface MaterialItem {
@@ -88,33 +91,31 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       {/* 领料单选择下拉 + 领料单号 */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</label>
+          <Label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</Label>
           <div className="relative">
-            <select
-              value={currentRecordId || ''}
-              onChange={(e) => {
-                const idx = selectedRows.indexOf(Number(e.target.value));
+            <Select
+              value={String(currentRecordId || '')}
+              onValueChange={(v) => {
+                const idx = selectedRows.indexOf(Number(v));
                 onRecordChange(idx >= 0 ? idx : 0);
               }}
-              className="w-full h-10 px-3 pr-8 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 appearance-none bg-white"
             >
-              {recordsList.map((record) => (
-                <option key={record.id} value={record.id}>
-                  {record.code} ({record.applicant}){batchEditedRecords[record.id] ? ' ✅已编辑' : ''}
-                </option>
-              ))}
-            </select>
-            {/* 右侧下拉箭头 */}
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {recordsList.map((record) => (
+                  <SelectItem key={record.id} value={String(record.id)}>
+                    {record.code} ({record.applicant}){batchEditedRecords[record.id] ? ' ✅已编辑' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {/* 领料单号 - 只读 */}
         <div className="bg-gray-50 rounded-lg p-2">
-          <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
+          <Label className="block text-xs font-medium text-gray-500 mb-1">领料单号</Label>
           <div className="text-sm font-medium text-gray-900">{currentEditedData.code}</div>
         </div>
       </div>
@@ -123,70 +124,78 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       <div className="grid grid-cols-3 gap-4">
         {/* 日期 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">日期</label>
-          <input
+          <Label className="block text-xs font-medium text-gray-900 mb-1">日期</Label>
+          <Input
             type="date"
             value={currentEditedData.date || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'date', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="h-9"
           />
         </div>
         {/* 申领人 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">申领人</label>
-          <input
+          <Label className="block text-xs font-medium text-gray-900 mb-1">申领人</Label>
+          <Input
             type="text"
             value={currentEditedData.applicant || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="h-9"
           />
         </div>
         {/* 仓库地点 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</label>
-          <select
-            value={currentEditedData.warehouseLocation || ''}
-            onChange={(e) => onFieldChange(currentRecordId, 'warehouseLocation', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          <Label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</Label>
+          <Select
+            value={currentEditedData.warehouseLocation || 'none'}
+            onValueChange={(v) => onFieldChange(currentRecordId, 'warehouseLocation', v === 'none' ? '' : v)}
           >
-            <option value="">请选择</option>
-            {warehouseOptions.map(w => (
-              <option key={w} value={w}>{w}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">请选择</SelectItem>
+              {warehouseOptions.map(w => (
+                <SelectItem key={w} value={w}>{w}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {/* 生产批次号 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</label>
-          <input
+          <Label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</Label>
+          <Input
             type="text"
             value={currentEditedData.productionBatchCode || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="h-9"
           />
         </div>
         {/* 状态 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">状态</label>
-          <select
-            value={currentEditedData.status || ''}
-            onChange={(e) => onFieldChange(currentRecordId, 'status', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          <Label className="block text-xs font-medium text-gray-900 mb-1">状态</Label>
+          <Select
+            value={currentEditedData.status || 'none'}
+            onValueChange={(v) => onFieldChange(currentRecordId, 'status', v === 'none' ? '' : v)}
           >
-            <option value="">请选择</option>
-            {statusOptions.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">请选择</SelectItem>
+              {statusOptions.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {/* 审核人 */}
         <div>
-          <label className="block text-xs font-medium text-gray-900 mb-1">审核人</label>
-          <input
+          <Label className="block text-xs font-medium text-gray-900 mb-1">审核人</Label>
+          <Input
             type="text"
             value={currentEditedData.reviewer || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'reviewer', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="h-9"
           />
         </div>
       </div>
@@ -260,57 +269,57 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                       </Button>
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.materialCode || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.materialName || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.spec || ''}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                        className="w-20 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-20 h-8 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.unit || ''}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                        className="w-16 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-16 h-8 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         min="0"
                         value={mat.requestedQuantity || 0}
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                        className={`w-16 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500 ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
+                        className={`w-16 h-8 text-right text-xs ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         min="0"
                         value={mat.stockQuantity || 0}
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                        className="w-16 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500"
+                        className="w-16 h-8 text-right text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         step="0.01"
                         min="0"
@@ -320,26 +329,26 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                           const rounded = Math.round(val * 100) / 100;
                           onMaterialChange(idx, 'unitPrice', rounded);
                         }}
-                        className="w-20 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500"
+                        className="w-20 h-8 text-right text-xs"
                       />
                     </td>
                     <td className="px-3 py-2 text-right text-xs text-blue-700 bg-gray-50">
                       {subtotal.toFixed(2)}
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={mat.remark || ''}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 text-xs"
                       />
                     </td>
                   </tr>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ExecuteEditWarningModalProps {
   show: boolean;
@@ -32,18 +33,20 @@ export const ExecuteEditWarningModal: React.FC<ExecuteEditWarningModalProps> = (
           </ul>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="secondary"
             onClick={onCancel}
-            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+            className="flex-1"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="blue"
             onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="flex-1"
           >
             确认
-          </button>
+          </Button>
         </div>
       </div>
     </div>

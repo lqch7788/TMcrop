@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Search, RefreshCw, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 // 搜索栏组件接口
 export interface StatSearchBarProps {
@@ -81,7 +83,7 @@ const SearchSelect: React.FC<SearchSelectProps> = ({ value, options, onChange, l
 
   return (
     <div className="relative">
-      <input
+      <Input
         type="text"
         value={inputValue}
         onChange={handleChange}
@@ -90,13 +92,15 @@ const SearchSelect: React.FC<SearchSelectProps> = ({ value, options, onChange, l
         className="h-8 px-2 pr-7 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 w-36"
       />
       {allowClear && inputValue && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={handleClear}
           className="absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600"
         >
           <X className="w-2.5 h-2.5" />
-        </button>
+        </Button>
       )}
       <datalist id={`datalist-${label}`}>
         {filteredOptions.map((opt) => (
@@ -150,7 +154,7 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
         {/* 物料编码/名称搜索 */}
         <div className="flex items-center gap-1.5">
           <Search className="w-3.5 h-3.5 text-gray-400" />
-          <input
+          <Input
             type="text"
             value={materialSearch}
             onChange={(e) => onMaterialSearchChange(e.target.value)}
@@ -173,14 +177,14 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
         {/* 时间范围 */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-gray-500">时间</span>
-          <input
+          <Input
             type="date"
             value={dateRange.start}
             onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
             className="h-8 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
           <span className="text-gray-300">-</span>
-          <input
+          <Input
             type="date"
             value={dateRange.end}
             onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
@@ -191,31 +195,37 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
         {/* 快捷筛选按钮 */}
         <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5">
           {quickFilterOptions.map((option) => (
-            <button
+            <Button
               key={option.value}
+              size="sm"
+              variant={quickFilterPeriod === option.value ? 'default' : 'ghost'}
               onClick={() => onQuickFilterChange(option.value)}
               className={`px-2 py-1 text-xs font-medium rounded transition-all ${
                 quickFilterPeriod === option.value
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                   : 'text-gray-600 hover:bg-white'
               }`}
             >
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* 重置按钮 */}
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onReset}
           className="h-8 px-3 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-1"
         >
           <RefreshCw className="w-3 h-3" />
           重置
-        </button>
+        </Button>
 
         {/* 高级筛选切换 */}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="h-8 px-3 text-xs font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all flex items-center gap-1"
         >
@@ -230,7 +240,7 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
               高级筛选
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* 高级筛选展开区域 */}

@@ -1,6 +1,10 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteEditModalProps {
@@ -49,93 +53,96 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
     >
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-100 rounded-lg p-3">
-          <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
+          <Label className="block text-xs font-medium text-gray-500 mb-1">领料单号</Label>
           <div className="text-sm font-medium text-gray-900">{record.code}</div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">申请日期</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">申请日期</Label>
+          <Input
             type="date"
             value={editForm.date}
             onChange={(e) => onEditFormChange('date', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">申请人</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">申请人</Label>
+          <Input
             type="text"
             value={editForm.applicant}
             onChange={(e) => onEditFormChange('applicant', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">库存地点</label>
-          <select
+          <Label className="block text-sm font-medium text-blue-700 mb-1">库存地点</Label>
+          <Select
             value={editForm.warehouseLocation}
-            onChange={(e) => onEditFormChange('warehouseLocation', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(v) => onEditFormChange('warehouseLocation', v)}
           >
-            <option value="仓库A区">仓库A区</option>
-            <option value="仓库B区">仓库B区</option>
-            <option value="仓库C区">仓库C区</option>
-            <option value="仓库D区">仓库D区</option>
-            <option value="仓库E区">仓库E区</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="仓库A区">仓库A区</SelectItem>
+              <SelectItem value="仓库B区">仓库B区</SelectItem>
+              <SelectItem value="仓库C区">仓库C区</SelectItem>
+              <SelectItem value="仓库D区">仓库D区</SelectItem>
+              <SelectItem value="仓库E区">仓库E区</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">审核人</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">审核人</Label>
+          <Input
             type="text"
             value={editForm.reviewer}
             onChange={(e) => onEditFormChange('reviewer', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">操作人</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">操作人</Label>
+          <Input
             type="text"
             value={editForm.operator}
             onChange={(e) => onEditFormChange('operator', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">生产计划批次号</label>
-          <input
+          <Label className="block text-sm font-medium text-blue-700 mb-1">生产计划批次号</Label>
+          <Input
             type="text"
             value={editForm.productionBatchCode}
             onChange={(e) => onEditFormChange('productionBatchCode', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-blue-700 mb-1">执行状态</label>
-          <select
+          <Label className="block text-sm font-medium text-blue-700 mb-1">执行状态</Label>
+          <Select
             value={editForm.executeStatus}
-            onChange={(e) => onEditFormChange('executeStatus', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(v) => onEditFormChange('executeStatus', v)}
           >
-            <option value="待出库">待出库</option>
-            <option value="部分出库">部分出库</option>
-            <option value="已出库">已出库</option>
-            <option value="已取消">已取消</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="待出库">待出库</SelectItem>
+              <SelectItem value="部分出库">部分出库</SelectItem>
+              <SelectItem value="已出库">已出库</SelectItem>
+              <SelectItem value="已取消">已取消</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">物料明细</label>
-          <button
+          <Label className="text-sm font-medium text-gray-700">物料明细</Label>
+          <Button
+            size="sm"
             onClick={onAddMaterial}
-            className="px-3 py-1 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             添加物料
-          </button>
+          </Button>
         </div>
         {editForm.materials.length > 0 && (
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
@@ -163,104 +170,106 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
                 return (
                   <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.applicationCode || ''}
                         onChange={(e) => onMaterialChange(idx, 'applicationCode', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm font-mono bg-gray-50"
+                        className="h-8 px-2 text-xs font-mono bg-gray-50"
                         readOnly
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.materialCode}
                         onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.materialName}
                         onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.spec}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.unit}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.requestedQuantity}
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.stockQuantity}
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.actualQuantity}
                         onChange={(e) => onMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
-                        className={`w-full px-2 py-1 border border-gray-200 rounded text-sm ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
+                        className={`h-8 px-2 text-xs ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="number"
                         value={material.unitPrice || ''}
                         onChange={(e) => onMaterialChange(idx, 'unitPrice', Number(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2 text-sm text-blue-700 bg-gray-50">
                       {subtotal.toFixed(2)}
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <input
+                      <Input
                         type="text"
                         value={material.remark}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        className="h-8 px-2 text-xs"
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => onRemoveMaterial(idx)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -272,18 +281,12 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
 
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-        >
+        <Button variant="secondary" onClick={onCancel}>
           取消
-        </button>
-        <button
-          onClick={onSave}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-        >
+        </Button>
+        <Button onClick={onSave}>
           保存
-        </button>
+        </Button>
       </div>
     </UnifiedModal>
   );

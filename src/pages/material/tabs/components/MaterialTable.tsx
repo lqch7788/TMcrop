@@ -2,6 +2,7 @@
 // 显示领料统计表的完整数据
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { MaterialStatItem } from '../types/statisticsTab.types';
 
 interface MaterialTableProps {
@@ -77,11 +78,9 @@ export function MaterialTable({
             <tr>
               {exportMode && (
                 <th className="px-3 py-3 text-left text-sm font-semibold w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === data.length && data.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-white text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -117,11 +116,9 @@ export function MaterialTable({
                 <tr key={idx} className="hover:bg-blue-100 transition-colors">
                   {exportMode && (
                     <td className="px-3 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(globalIdx)}
-                        onChange={(e) => onRowSelectChange(globalIdx, e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={(checked) => onRowSelectChange(globalIdx, checked === true)}
                       />
                     </td>
                   )}
