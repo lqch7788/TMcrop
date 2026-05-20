@@ -1,16 +1,18 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from './lib/queryClient';
+import { queryClient, configureQueryClient } from './lib/queryClient';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import GlobalDialog from './components/common/GlobalDialog';
 import { autoInitializeData } from './utils/dataInitializer';
 import { syncManager } from './services/syncManager';
-import { useAuthStore } from './stores';
+import { useAuthStore, useSystemConfigStore } from './stores';
+import { useThemeConfig } from './hooks/useThemeConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -423,6 +425,18 @@ function App() {
     }
   }, []);
 
+  // ★ V3.0 Phase 1: 应用启动时预加载系统配置（供全局消费）
+  useEffect(() => {
+    const store = useSystemConfigStore.getState();
+    store.loadConfigs().then(() => {
+      // ★ V3.0 Phase 5: Store就绪后动态更新QueryClient默认选项
+      configureQueryClient();
+    });
+  }, []);
+
+  // ★ V3.0 Phase 4: 动态主题 — 同步 theme.* 配置到 CSS 变量
+  useThemeConfig();
+
   // 启动同步管理器（SYNC模式）
   useEffect(() => {
     syncManager.start();
@@ -438,6 +452,7 @@ function App() {
               <ToastProvider>
                 <ApprovalProvider>
                   <AppContent />
+                  <GlobalDialog />
                 </ApprovalProvider>
               </ToastProvider>
             </SettingsProvider>

@@ -7,15 +7,16 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2,
-  AlertTriangle, Download, ChevronDown, ChevronRight,
+  AlertTriangle, Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '../stores';
 import type { SystemConfig } from '../stores';
+import CropGrowthConfigPanel from '../components/farm/crop-growth/CropGrowthConfigPanel';
+import { showAlert, showConfirm } from '../lib/dialogService';
 
 // ==================== TAB 分类配置 ====================
 const CATEGORY_TABS = [
-  { value: 'all', label: '全部' },
   { value: 'system', label: '系统设置' },
   { value: 'ui', label: '界面设置' },
   { value: 'feature', label: '功能设置' },
@@ -23,6 +24,7 @@ const CATEGORY_TABS = [
   { value: 'task', label: '农事任务' },
   { value: 'approval', label: '审批流程' },
   { value: 'business', label: '业务参数' },
+  { value: 'crop', label: '生长引擎' },
 ] as const;
 
 // 弹窗最小尺寸
@@ -37,6 +39,7 @@ function TypeBadge({ type }: { type: string }) {
     string: { bg: 'bg-blue-100', text: 'text-blue-700', label: '文本' },
     number: { bg: 'bg-green-100', text: 'text-green-700', label: '数字' },
     boolean: { bg: 'bg-purple-100', text: 'text-purple-700', label: '布尔' },
+    json: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'JSON' },
   };
   const s = map[type] || map.string;
   return (
@@ -56,6 +59,7 @@ function CategoryBadge({ category }: { category: string }) {
     task: { bg: 'bg-orange-100', text: 'text-orange-700', label: '农事任务' },
     approval: { bg: 'bg-violet-100', text: 'text-violet-700', label: '审批流程' },
     business: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '业务参数' },
+    crop: { bg: 'bg-teal-100', text: 'text-teal-700', label: '生长引擎' },
   };
   const s = map[category];
   if (!s) return null;
@@ -80,10 +84,9 @@ export default function SystemConfig() {
   useEffect(() => { loadConfigs(); }, [loadConfigs]);
 
   // ========== 3. 本地 UI 状态 ==========
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string>('system');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 10;
 
   // 新增弹窗
@@ -100,13 +103,12 @@ export default function SystemConfig() {
 
   // ========== 4. 筛选 + 分组 ==========
   const filteredConfigs = useMemo(() => {
-    if (activeCategory === 'all') return configs;
     return configs.filter((c) => c.category === activeCategory);
   }, [configs, activeCategory]);
 
-  // 按分类分组（保持 TAB 顺序）
+  // 按分类分组
   const groupedConfigs = useMemo(() => {
-    const tabOrder = CATEGORY_TABS.filter(t => t.value !== 'all').map(t => t.value);
+    const tabOrder = CATEGORY_TABS.map(t => t.value);
     const groups: { category: string; items: SystemConfig[] }[] = [];
     for (const cat of tabOrder) {
       const items = filteredConfigs.filter(c => c.category === cat);
@@ -116,32 +118,6 @@ export default function SystemConfig() {
     }
     return groups;
   }, [filteredConfigs]);
-
-  // 计算每个分类的配置数量
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: configs.length };
-    for (const tab of CATEGORY_TABS) {
-      if (tab.value === 'all') continue;
-      counts[tab.value] = configs.filter((c) => c.category === tab.value).length;
-    }
-    return counts;
-  }, [configs]);
-
-  // 获取分类的中文标签
-  const getCategoryLabel = (cat: string) => {
-    const tab = CATEGORY_TABS.find(t => t.value === cat);
-    return tab?.label || cat;
-  };
-
-  // 切换折叠
-  const toggleGroup = (category: string) => {
-    setCollapsedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(category)) next.delete(category);
-      else next.add(category);
-      return next;
-    });
-  };
 
   // ========== 5. CRUD 操作回调 ==========
 
@@ -157,7 +133,7 @@ export default function SystemConfig() {
       setEditValue('');
     } catch (err) {
       console.error('更新配置失败:', err);
-      alert('更新配置失败');
+      showAlert('更新配置失败');
     }
   }, [updateConfig, editValue]);
 
@@ -167,18 +143,19 @@ export default function SystemConfig() {
   }, []);
 
   const handleDeleteConfig = useCallback(async (id: string) => {
-    if (!confirm('确定要删除这个配置项吗？')) return;
+    const ok = await showConfirm('确定要删除这个配置项吗？');
+    if (!ok) return;
     try {
       await removeConfig(id);
     } catch (err) {
       console.error('删除配置失败:', err);
-      alert('删除配置失败');
+      showAlert('删除配置失败');
     }
   }, [removeConfig]);
 
   const handleAddConfig = useCallback(async () => {
     if (!newConfig.configKey) {
-      alert('请填写配置键');
+      showAlert('请填写配置键');
       return;
     }
     try {
@@ -195,7 +172,7 @@ export default function SystemConfig() {
       }
     } catch (err) {
       console.error('创建配置失败:', err);
-      alert('创建配置失败');
+      showAlert('创建配置失败');
     }
   }, [newConfig, addConfig]);
 
@@ -392,6 +369,17 @@ export default function SystemConfig() {
           </select>
         );
       }
+      // ★ JSON类型用 textarea 编辑（大文本）
+      if (config.configType === 'json') {
+        return (
+          <textarea
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            rows={6}
+            className="w-full min-w-[300px] px-3 py-1.5 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+          />
+        );
+      }
       return (
         <input
           type={config.configType === 'number' ? 'number' : 'text'}
@@ -407,6 +395,26 @@ export default function SystemConfig() {
         <span className={`text-sm font-medium ${config.configValue === 'true' ? 'text-green-600' : 'text-gray-500'}`}>
           {config.configValue === 'true' ? '是' : '否'}
         </span>
+      );
+    }
+
+    // ★ JSON类型：截断预览 + 点击展开
+    if (config.configType === 'json') {
+      const maxLen = 150;
+      const preview = config.configValue.length > maxLen
+        ? config.configValue.substring(0, maxLen) + '…'
+        : config.configValue;
+      return (
+        <code
+          className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded max-w-[350px] truncate block cursor-pointer hover:bg-blue-50 hover:text-blue-700 border border-gray-200"
+          title="点击展开查看/编辑完整JSON"
+          onClick={() => {
+            setEditValue(config.configValue);
+            setEditingId(config.id);
+          }}
+        >
+          {preview}
+        </code>
       );
     }
 
@@ -462,66 +470,35 @@ export default function SystemConfig() {
       </div>
 
       {/* Category Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
         {CATEGORY_TABS.map((cat) => (
           <button
             key={cat.value}
             onClick={() => setActiveCategory(cat.value)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`px-4 py-2 rounded-t-lg text-base font-bold transition-colors whitespace-nowrap ${
               activeCategory === cat.value
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'bg-green-600 text-white'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
             }`}
           >
             {cat.label}
-            <span className="ml-1.5 text-xs text-gray-400">({categoryCounts[cat.value] ?? 0})</span>
           </button>
         ))}
       </div>
 
       {/* 配置内容 */}
-      {groupedConfigs.length === 0 ? (
+      {activeCategory === 'crop' ? (
+        /* ===== 生长引擎 TAB：可视化编辑器 ===== */
+        <CropGrowthConfigPanel />
+      ) : groupedConfigs.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center max-w-2xl">
           <Settings className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">
-            {activeCategory === 'all'
-              ? '暂无配置数据，点击"新增配置"添加'
-              : `"${CATEGORY_TABS.find(t => t.value === activeCategory)?.label}"分类下暂无配置`}
+            "{CATEGORY_TABS.find(t => t.value === activeCategory)?.label}"分类下暂无配置
           </p>
         </div>
-      ) : activeCategory === 'all' ? (
-        /* ===== 全部 TAB：折叠树状表格 ===== */
-        <div className="bg-white rounded-lg shadow max-w-2xl">
-          {groupedConfigs.map((group) => {
-            const isCollapsed = collapsedGroups.has(group.category);
-            return (
-              <div key={group.category}>
-                <button
-                  onClick={() => toggleGroup(group.category)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-200 text-left"
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                  )}
-                  <CategoryBadge category={group.category} />
-                  <span className="text-sm font-medium text-gray-700">
-                    {getCategoryLabel(group.category)}
-                  </span>
-                  <span className="text-xs text-gray-400">({group.items.length})</span>
-                </button>
-                {!isCollapsed && (
-                  <div className="divide-y divide-gray-100">
-                    {group.items.map((config) => singleConfigRow(config, true))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
       ) : (
-        /* ===== 单个分类 TAB：平铺列表 + 滑块滚动（默认显示10条） ===== */
+        /* ===== 单个分类 TAB：平铺列表 + 滑块滚动 ===== */
         <div className="bg-white rounded-lg shadow max-w-2xl">
           <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
             {groupedConfigs[0].items.map((config) => singleConfigRow(config))}
@@ -587,13 +564,23 @@ export default function SystemConfig() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">配置值 <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    value={newConfig.configValue || ''}
-                    onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="配置值"
-                  />
+                  {newConfig.configType === 'json' ? (
+                    <textarea
+                      value={newConfig.configValue || ''}
+                      onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
+                      rows={5}
+                      className="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder='JSON格式，如：{"key": "value"}'
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={newConfig.configValue || ''}
+                      onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="配置值"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
@@ -605,6 +592,7 @@ export default function SystemConfig() {
                     <option value="string">文本</option>
                     <option value="number">数字</option>
                     <option value="boolean">布尔</option>
+                    <option value="json">JSON</option>
                   </select>
                 </div>
                 <div>

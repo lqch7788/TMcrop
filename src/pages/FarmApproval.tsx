@@ -16,8 +16,9 @@ import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import BatchActionBar from '../components/approval/BatchActionBar';
 import { ApprovalDetail } from '../components/approval/ApprovalDetail';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
 import { Button } from '../components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
 
 export default function FarmApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -205,25 +206,25 @@ export default function FarmApproval() {
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
+              <Input
                 placeholder="搜索审批单号、标题、申请人..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                className="pl-10"
               />
             </div>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-          >
-            <option value="全部">全部状态</option>
-            <option value="待审批">待审批</option>
-            <option value="已通过">已通过</option>
-            <option value="已拒绝">已拒绝</option>
-          </select>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部状态</SelectItem>
+              <SelectItem value="待审批">待审批</SelectItem>
+              <SelectItem value="已通过">已通过</SelectItem>
+              <SelectItem value="已拒绝">已拒绝</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -239,10 +240,10 @@ export default function FarmApproval() {
           onBatchReject={handleBatchReject}
           onExport={handleExport}
         />
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -255,24 +256,24 @@ export default function FarmApproval() {
                     <Square className="w-4 h-4 text-gray-400" />
                   )}
                 </Button>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">审批单号</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">标题</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请人</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">部门</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请时间</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+              </TableHead>
+              <TableHead>审批单号</TableHead>
+              <TableHead>标题</TableHead>
+              <TableHead>申请人</TableHead>
+              <TableHead>部门</TableHead>
+              <TableHead>申请时间</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead>操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">暂无数据</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-8 text-center text-gray-500">暂无数据</TableCell>
+              </TableRow>
             ) : paginatedData.map(approval => (
-              <tr key={approval.id} className={`hover:bg-gray-50 ${selectedIds.has(approval.id) ? 'bg-emerald-50' : ''}`}>
-                <td className="px-4 py-3">
+              <TableRow key={approval.id} className={selectedIds.has(approval.id) ? 'bg-emerald-50' : ''}>
+                <TableCell>
                   {approval.status === ApprovalStatus.PENDING ? (
                     <Button
                       variant="ghost"
@@ -289,14 +290,14 @@ export default function FarmApproval() {
                   ) : (
                     <span className="w-4 h-4 block" />
                   )}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900">{approval.code}</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{approval.title}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{approval.applicantName}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{approval.applicantDepartment}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{approval.applyDate}</td>
-                <td className="px-4 py-3">{getStatusBadge(approval.status)}</td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="text-gray-900">{approval.code}</TableCell>
+                <TableCell className="text-gray-900">{approval.title}</TableCell>
+                <TableCell className="text-gray-500">{approval.applicantName}</TableCell>
+                <TableCell className="text-gray-500">{approval.applicantDepartment}</TableCell>
+                <TableCell className="text-gray-500">{approval.applyDate}</TableCell>
+                <TableCell>{getStatusBadge(approval.status)}</TableCell>
+                <TableCell>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="icon" onClick={() => setDetailApproval(approval)}>
                       <Eye className="w-4 h-4" />
@@ -320,11 +321,11 @@ export default function FarmApproval() {
                       </>
                     )}
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {/* 分页 */}
         {totalPages > 1 && (

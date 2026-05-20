@@ -1,11 +1,13 @@
 // ============================================================
-// 分级审批配置
+// 分级审批配置 — V3.0 Store化
 // 文件路径：src/config/approvalHierarchy.ts
 // 功能：根据金额和类型自动确定审批级别
+// V3.0改造：getHighValueOrderThreshold() localStorage→getSystemConfigValueNumber()
+// 金额阈值支持Store动态读取（优先），硬编码兜底
 // ============================================================
 
 import { ApprovalType } from '../types/approval';
-import { Dictionary } from '../services/dictionaryService';
+import { getSystemConfigValueNumber } from './systemConfigReader';
 
 // ============================================================
 // 审批级别枚举
@@ -423,36 +425,38 @@ export function getApprovalLevelConfig(level: ApprovalLevel): ApprovalLevelConfi
 }
 
 // ============================================================
-// 从数据字典加载配置
+// ★ V3.0: 从Store读取运行时配置（替代原 localStorage 读取）
 // ============================================================
 
-const DICTIONARY_STORAGE_KEY = 'yuanxingtu_dictionaries';
+/** 高价值订单阈值默认值 */
+const HIGH_VALUE_ORDER_THRESHOLD_DEFAULT = 100000;
 
 /**
- * 获取高价值订单阈值（从数据字典加载）
+ * 获取高价值订单阈值（V3.0: 优先Store，兜底常量）
  */
 export function getHighValueOrderThreshold(): number {
   try {
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (!stored) {
-      console.warn('【审批配置】数据字典未初始化，使用默认高价值阈值 100000');
-      return 100000;
-    }
-
-    const dictionaries = JSON.parse(stored);
-    const highValueItem = dictionaries.find((d: Dictionary) =>
-      d.category === 'approval_rule' && d.code === 'high_value_threshold'
-    );
-
-    if (highValueItem) {
-      return parseInt(highValueItem.name.replace(/[^\d]/g, ''), 10) || 100000;
-    }
-
-    console.warn('【审批配置】未找到高价值订单阈值配置，使用默认 100000');
-    return 100000;
+    return getSystemConfigValueNumber('approval.threshold.high-value', HIGH_VALUE_ORDER_THRESHOLD_DEFAULT);
   } catch (error) {
     console.error('【审批配置】加载高价值订单阈值失败', error);
-    return 100000;
+    return HIGH_VALUE_ORDER_THRESHOLD_DEFAULT;
+  }
+}
+
+/** 从Store动态读取金额阈值（优先），硬编码兜底 */
+export function getAmountThresholds(): AmountThreshold[] {
+  try {
+    const exemptMax = getSystemConfigValueNumber('approval.threshold.exempt-max', 1000);
+    const quickMax = getSystemConfigValueNumber('approval.threshold.quick-max', 10000);
+    const standardMax = getSystemConfigValueNumber('approval.threshold.standard-max', 50000);
+
+    return [
+      { max: exemptMax, level: ApprovalLevel.EXEMPT },
+      { max: quickMax, level: ApprovalLevel.QUICK },
+      { max: standardMax, level: ApprovalLevel.STANDARD },
+    ];
+  } catch {
+    return AMOUNT_THRESHOLDS; // 兜底
   }
 }
 

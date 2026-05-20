@@ -4,15 +4,20 @@
  */
 
 import { OvertimeRecord, OvertimeSummary, OvertimeType } from '../types/labor/overtime';
+import { getSystemConfigValueNumber } from '../config/systemConfigReader';
 
 // LocalStorage存储键名
 const STORAGE_KEY = 'OVERTIME_RECORDS';
 
-// 每月工作天数（用于计算时薪）
-const WORK_DAYS_PER_MONTH = 21.75;
+/** 获取每月计薪天数（从系统配置读取，兜底21.75） */
+function getWorkDaysPerMonth(): number {
+  return getSystemConfigValueNumber('labor.work-days-per-month', 21.75);
+}
 
-// 每天工作小时数
-const HOURS_PER_DAY = 8;
+/** 获取每日标准工时（从系统配置读取，兜底8） */
+function getHoursPerDay(): number {
+  return getSystemConfigValueNumber('labor.work-hours-per-day', 8);
+}
 
 /**
  * 从LocalStorage获取加班记录列表
@@ -73,7 +78,7 @@ export class OvertimeCalculationService {
    */
   calculateHourlyRate(baseSalary: number): number {
     if (baseSalary <= 0) return 0;
-    return baseSalary / WORK_DAYS_PER_MONTH / HOURS_PER_DAY;
+    return baseSalary / getWorkDaysPerMonth() / getHoursPerDay();
   }
 
   /**

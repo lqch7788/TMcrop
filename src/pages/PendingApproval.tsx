@@ -11,7 +11,12 @@ import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { useAuthPermission } from '../hooks/usePermission';
 import { ApprovalStatus, Approval } from '../types/approval';
 import { ApprovalDetail } from '../components/approval/ApprovalDetail';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Label,
+} from '../components/ui';
 import { Button } from '../components/ui/button';
 
 export default function PendingApproval() {
@@ -90,7 +95,7 @@ export default function PendingApproval() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
+            <Label className="text-gray-700">搜索</Label>
             <input
               type="text"
               placeholder="搜索审批单标题、申请人..."
@@ -100,17 +105,18 @@ export default function PendingApproval() {
             />
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批类型</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>领料单</option>
-              <option>采购申请</option>
-              <option>退料单</option>
-            </select>
+            <Label className="text-gray-700">审批类型</Label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full h-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="领料单">领料单</SelectItem>
+                <SelectItem value="采购申请">采购申请</SelectItem>
+                <SelectItem value="退料单">退料单</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
@@ -120,58 +126,56 @@ export default function PendingApproval() {
         <div className="p-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">待审批列表</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedApprovals.map((approval) => (
-                <tr key={approval.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{approval.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{approval.typeName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">{approval.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applicantName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applicantDepartment}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{approval.applyDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{approval.amount || '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                      {approval.status === ApprovalStatus.PENDING ? '待审批' : approval.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      {canApprove && (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => approve(approval.id)} title="通过">
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => reject(approval.id, '审批拒绝')} title="拒绝">
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                      <Button variant="ghost" size="icon" title="查看" onClick={() => setDetailApproval(approval)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">审批单号</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">类型</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">标题</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">申请人</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">部门</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">申请时间</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">金额</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">状态</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedApprovals.map((approval) => (
+              <TableRow key={approval.id}>
+                <TableCell className="px-4 py-3 text-sm font-medium text-gray-900">{approval.code}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{approval.typeName}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">{approval.title}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{approval.applicantName}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{approval.applicantDepartment}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{approval.applyDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{approval.amount || '-'}</TableCell>
+                <TableCell className="px-4 py-3">
+                  <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                    {approval.status === ApprovalStatus.PENDING ? '待审批' : approval.status}
+                  </span>
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <div className="flex items-center gap-1">
+                    {canApprove && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => approve(approval.id)} title="通过">
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => reject(approval.id, '审批拒绝')} title="拒绝">
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="ghost" size="icon" title="查看" onClick={() => setDetailApproval(approval)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         {filteredApprovals.length === 0 && (
           <div className="p-8 text-center text-gray-500">暂无待审批单据</div>
         )}

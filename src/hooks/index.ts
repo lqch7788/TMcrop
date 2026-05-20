@@ -52,6 +52,23 @@ export type {
 export { useAIOptimization } from './useAIOptimization';
 export type { UseAIOptimizationReturn } from './useAIOptimization';
 
+// ★ V3.0 Phase 1: 系统配置消费 Hook
+export {
+  useSystemConfigValue,
+  useSystemConfigValueNumber,
+  useSystemConfigValueBoolean,
+  useSystemConfigValuesByPrefix,
+} from './useSystemConfigValue';
+
+// ★ V3.0 Phase 4: 动态主题 Hook
+export { useThemeConfig } from './useThemeConfig';
+
+// ★ V3.0 Phase 5: 分页大小 Hook
+export { usePageSize } from './usePageSize';
+
+// ★ V3.0 Phase 7: 功能开关 Hook（双轨制）
+export { useFeatureFlag, getFeatureFlag } from './useFeatureFlag';
+
 // 生产计划人工成本统计
 export { useLaborCostCalc, calculateLaborCost } from './useLaborCostCalc';
 export type { LaborCostSummary, LaborCostItem } from './useLaborCostCalc';

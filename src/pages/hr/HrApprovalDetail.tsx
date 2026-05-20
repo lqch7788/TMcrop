@@ -11,7 +11,7 @@ import { Timeline } from '@/components/ui/Timeline';
 import { List } from '@/components/ui/List';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui';
+import { Button, Label } from '@/components/ui';
 import { useHrApprovals } from '../../hooks/useApproval';
 import {
   Approval,
@@ -138,39 +138,39 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
         <CardContent>
         <div className="grid grid-cols-2 gap-4">
           <div className="info-item">
-            <label className="text-sm text-gray-500">审批编号</label>
+            <Label className="text-gray-500">审批编号</Label>
             <p className="font-medium">{approval.code}</p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">审批类型</label>
+            <Label className="text-gray-500">审批类型</Label>
             <p className="font-medium">{getApprovalTypeName(approval.type)}</p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">申请人</label>
+            <Label className="text-gray-500">申请人</Label>
             <p className="font-medium">{approval.applicantName}</p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">所属部门</label>
+            <Label className="text-gray-500">所属部门</Label>
             <p className="font-medium">{approval.applicantDepartment}</p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">申请时间</label>
+            <Label className="text-gray-500">申请时间</Label>
             <p className="font-medium">{approval.applyDate} {approval.applyTime}</p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">当前状态</label>
+            <Label className="text-gray-500">当前状态</Label>
             <p className="font-medium">
               <StatusBadge status={approval.status} />
             </p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">审批进度</label>
+            <Label className="text-gray-500">审批进度</Label>
             <p className="font-medium">
               第 {approval.currentStep} / {approval.totalSteps} 步
             </p>
           </div>
           <div className="info-item">
-            <label className="text-sm text-gray-500">优先级</label>
+            <Label className="text-gray-500">优先级</Label>
             <p className="font-medium">
               <Badge variant={approval.priority === 'urgent' ? 'destructive' : approval.priority === 'high' ? 'warning' : 'default'}>
                 {PRIORITY_NAMES[approval.priority] || approval.priority}
@@ -180,13 +180,13 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
         </div>
         {approval.title && (
           <div className="info-item mt-4">
-            <label className="text-sm text-gray-500">标题</label>
+            <Label className="text-gray-500">标题</Label>
             <p className="font-medium">{approval.title}</p>
           </div>
         )}
         {approval.description && (
           <div className="info-item mt-4">
-            <label className="text-sm text-gray-500">描述</label>
+            <Label className="text-gray-500">描述</Label>
             <p className="text-gray-700">{approval.description}</p>
           </div>
         )}
@@ -211,37 +211,37 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">请假类型</label>
+                <Label className="text-gray-500">请假类型</Label>
                 <p className="font-medium">{LEAVE_TYPE_NAMES[bl.leaveType || ''] || bl.leaveType}</p>
               </div>
               {bl.startDate && (
                 <div>
-                  <label className="text-sm text-gray-500">开始日期</label>
+                  <Label className="text-gray-500">开始日期</Label>
                   <p className="font-medium">{bl.startDate}</p>
                 </div>
               )}
               {bl.endDate && (
                 <div>
-                  <label className="text-sm text-gray-500">结束日期</label>
+                  <Label className="text-gray-500">结束日期</Label>
                   <p className="font-medium">{bl.endDate}</p>
                 </div>
               )}
               {bl.totalDays && (
                 <div>
-                  <label className="text-sm text-gray-500">请假天数</label>
+                  <Label className="text-gray-500">请假天数</Label>
                   <p className="font-medium">{bl.totalDays} 天</p>
                 </div>
               )}
             </div>
             {bl.reason && (
               <div>
-                <label className="text-sm text-gray-500">请假原因</label>
+                <Label className="text-gray-500">请假原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
             {bl.substituteName && (
               <div>
-                <label className="text-sm text-gray-500">替班人员</label>
+                <Label className="text-gray-500">替班人员</Label>
                 <p className="font-medium">{bl.substituteName}</p>
               </div>
             )}
@@ -253,37 +253,37 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-500">加班类型</label>
+                <Label className="text-gray-500">加班类型</Label>
                 <p className="font-medium">{OVERTIME_TYPE_NAMES[bl.overtimeType || ''] || bl.overtimeType}</p>
               </div>
               {bl.date && (
                 <div>
-                  <label className="text-sm text-gray-500">加班日期</label>
+                  <Label className="text-gray-500">加班日期</Label>
                   <p className="font-medium">{bl.date}</p>
                 </div>
               )}
               {bl.startTime && (
                 <div>
-                  <label className="text-sm text-gray-500">开始时间</label>
+                  <Label className="text-gray-500">开始时间</Label>
                   <p className="font-medium">{bl.startTime}</p>
                 </div>
               )}
               {bl.endTime && (
                 <div>
-                  <label className="text-sm text-gray-500">结束时间</label>
+                  <Label className="text-gray-500">结束时间</Label>
                   <p className="font-medium">{bl.endTime}</p>
                 </div>
               )}
               {bl.totalHours && (
                 <div>
-                  <label className="text-sm text-gray-500">总时长</label>
+                  <Label className="text-gray-500">总时长</Label>
                   <p className="font-medium">{bl.totalHours} 小时</p>
                 </div>
               )}
             </div>
             {bl.reason && (
               <div>
-                <label className="text-sm text-gray-500">加班原因</label>
+                <Label className="text-gray-500">加班原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
@@ -296,44 +296,44 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             <div className="grid grid-cols-2 gap-4">
               {bl.employeeName && (
                 <div>
-                  <label className="text-sm text-gray-500">员工姓名</label>
+                  <Label className="text-gray-500">员工姓名</Label>
                   <p className="font-medium">{bl.employeeName}</p>
                 </div>
               )}
               {bl.fromDepartment && (
                 <div>
-                  <label className="text-sm text-gray-500">原部门</label>
+                  <Label className="text-gray-500">原部门</Label>
                   <p className="font-medium">{bl.fromDepartment}</p>
                 </div>
               )}
               {bl.fromPosition && (
                 <div>
-                  <label className="text-sm text-gray-500">原岗位</label>
+                  <Label className="text-gray-500">原岗位</Label>
                   <p className="font-medium">{bl.fromPosition}</p>
                 </div>
               )}
               {bl.toDepartment && (
                 <div>
-                  <label className="text-sm text-gray-500">调入部门</label>
+                  <Label className="text-gray-500">调入部门</Label>
                   <p className="font-medium">{bl.toDepartment}</p>
                 </div>
               )}
               {bl.toPosition && (
                 <div>
-                  <label className="text-sm text-gray-500">调入岗位</label>
+                  <Label className="text-gray-500">调入岗位</Label>
                   <p className="font-medium">{bl.toPosition}</p>
                 </div>
               )}
               {bl.effectiveDate && (
                 <div>
-                  <label className="text-sm text-gray-500">生效日期</label>
+                  <Label className="text-gray-500">生效日期</Label>
                   <p className="font-medium">{bl.effectiveDate}</p>
                 </div>
               )}
             </div>
             {bl.reason && (
               <div>
-                <label className="text-sm text-gray-500">调岗原因</label>
+                <Label className="text-gray-500">调岗原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
@@ -346,44 +346,44 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             <div className="grid grid-cols-2 gap-4">
               {bl.employeeName && (
                 <div>
-                  <label className="text-sm text-gray-500">员工姓名</label>
+                  <Label className="text-gray-500">员工姓名</Label>
                   <p className="font-medium">{bl.employeeName}</p>
                 </div>
               )}
               {bl.department && (
                 <div>
-                  <label className="text-sm text-gray-500">所属部门</label>
+                  <Label className="text-gray-500">所属部门</Label>
                   <p className="font-medium">{bl.department}</p>
                 </div>
               )}
               {bl.position && (
                 <div>
-                  <label className="text-sm text-gray-500">岗位</label>
+                  <Label className="text-gray-500">岗位</Label>
                   <p className="font-medium">{bl.position}</p>
                 </div>
               )}
               {bl.joinDate && (
                 <div>
-                  <label className="text-sm text-gray-500">入职日期</label>
+                  <Label className="text-gray-500">入职日期</Label>
                   <p className="font-medium">{bl.joinDate}</p>
                 </div>
               )}
               {bl.expectedResignDate && (
                 <div>
-                  <label className="text-sm text-gray-500">预计离职日期</label>
+                  <Label className="text-gray-500">预计离职日期</Label>
                   <p className="font-medium">{bl.expectedResignDate}</p>
                 </div>
               )}
             </div>
             {bl.reason && (
               <div>
-                <label className="text-sm text-gray-500">离职原因</label>
+                <Label className="text-gray-500">离职原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
             {bl.handoverNotes && (
               <div>
-                <label className="text-sm text-gray-500">交接说明</label>
+                <Label className="text-gray-500">交接说明</Label>
                 <p className="text-gray-700">{bl.handoverNotes}</p>
               </div>
             )}
@@ -396,37 +396,37 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             <div className="grid grid-cols-2 gap-4">
               {bl.department && (
                 <div>
-                  <label className="text-sm text-gray-500">招聘部门</label>
+                  <Label className="text-gray-500">招聘部门</Label>
                   <p className="font-medium">{bl.department}</p>
                 </div>
               )}
               {bl.position && (
                 <div>
-                  <label className="text-sm text-gray-500">招聘岗位</label>
+                  <Label className="text-gray-500">招聘岗位</Label>
                   <p className="font-medium">{bl.position}</p>
                 </div>
               )}
               {bl.headcount && (
                 <div>
-                  <label className="text-sm text-gray-500">招聘人数</label>
+                  <Label className="text-gray-500">招聘人数</Label>
                   <p className="font-medium">{bl.headcount} 人</p>
                 </div>
               )}
               {bl.employmentType && (
                 <div>
-                  <label className="text-sm text-gray-500">用工类型</label>
+                  <Label className="text-gray-500">用工类型</Label>
                   <p className="font-medium">{bl.employmentType}</p>
                 </div>
               )}
               {bl.salaryMin && bl.salaryMax && (
                 <div>
-                  <label className="text-sm text-gray-500">薪资范围</label>
+                  <Label className="text-gray-500">薪资范围</Label>
                   <p className="font-medium">{bl.salaryMin} - {bl.salaryMax} 元/月</p>
                 </div>
               )}
               {bl.priority && (
                 <div>
-                  <label className="text-sm text-gray-500">优先级</label>
+                  <Label className="text-gray-500">优先级</Label>
                   <p className="font-medium">
                     <Badge variant={bl.priority === 'urgent' ? 'destructive' : bl.priority === 'high' ? 'warning' : 'default'}>
                       {PRIORITY_NAMES[bl.priority]}
@@ -437,7 +437,7 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
             </div>
             {bl.reason && (
               <div>
-                <label className="text-sm text-gray-500">招聘原因</label>
+                <Label className="text-gray-500">招聘原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
@@ -633,12 +633,13 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
         <div className="bg-white rounded-xl p-6 shadow-sm mb-4 no-print">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-6 h-6 text-gray-600" />
-              </button>
+              </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">审批单详情</h1>
                 <p className="text-gray-500">查看审批申请详细信息</p>

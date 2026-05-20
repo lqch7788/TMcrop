@@ -5,7 +5,8 @@
 // ============================================================
 
 import React from 'react';
-import { CheckCircle, XCircle, AlertTriangle, X, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { UnifiedModal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button } from '@/components/ui';
 import type { Approval } from '../../types/approval';
 
 // 批量操作结果项
@@ -49,125 +50,100 @@ export function BatchResultModal({
   const failedItems = result.details.filter(item => !item.success);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
-        {/* 头部 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-          <div className="flex items-center gap-3">
-            {result.failed === 0 ? (
-              <CheckCircle className="w-6 h-6 text-emerald-600" />
-            ) : result.success === 0 ? (
-              <XCircle className="w-6 h-6 text-red-600" />
-            ) : (
-              <AlertTriangle className="w-6 h-6 text-amber-600" />
-            )}
-            <h3 className="text-lg font-semibold text-gray-900">
-              批量{actionText}结果
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* 内容 */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {/* 统计概览 */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-emerald-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-emerald-600">{result.success}</div>
-              <div className="text-sm text-emerald-700 mt-1">成功</div>
-            </div>
-            <div className="bg-red-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-red-600">{result.failed}</div>
-              <div className="text-sm text-red-700 mt-1">失败</div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-gray-600">{result.total}</div>
-              <div className="text-sm text-gray-700 mt-1">总计</div>
-            </div>
-          </div>
-
-          {/* 整体结果提示 */}
-          {result.failed === 0 ? (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-              <p className="text-emerald-800">
-                <CheckCircle className="w-5 h-5 inline mr-2" />
-                所有 {result.total} 项审批已成功{actionText}！
-              </p>
-            </div>
-          ) : result.success === 0 ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <p className="text-red-800">
-                <XCircle className="w-5 h-5 inline mr-2" />
-                批量{actionText}失败，所有 {result.total} 项审批均未成功。
-              </p>
-            </div>
-          ) : (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-              <p className="text-amber-800">
-                <AlertTriangle className="w-5 h-5 inline mr-2" />
-                部分成功：{result.success} 项成功，{result.failed} 项失败。
-              </p>
-            </div>
-          )}
-
-          {/* 失败项列表 */}
-          {failedItems.length > 0 && (
-            <div>
-              <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                失败详情：
-              </div>
-              <div className="border border-red-200 rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-red-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-red-700">单号</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-red-700">类型</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-red-700">失败原因</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-red-100">
-                    {failedItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-2 text-gray-900">{item.code}</td>
-                        <td className="px-3 py-2 text-gray-600">{item.typeName}</td>
-                        <td className="px-3 py-2 text-red-600">{item.error}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 底部按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-between">
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`批量${actionText}结果`}
+      size="xl"
+      footer={
+        <div className="flex justify-between w-full">
           <div>
             {failedItems.length > 0 && onRetry && (
-              <button
+              <Button
                 onClick={() => onRetry(failedItems.map(item => item.id))}
-                className="h-10 px-4 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 flex items-center gap-2"
+                className="bg-amber-600 hover:bg-amber-700 flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 重试失败项
-              </button>
+              </Button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="h-10 px-6 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-          >
+          <Button variant="secondary" onClick={onClose}>
             关闭
-          </button>
+          </Button>
+        </div>
+      }
+    >
+      {/* 统计概览 */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-emerald-50 rounded-lg p-4 text-center">
+          <div className="text-3xl font-bold text-emerald-600">{result.success}</div>
+          <div className="text-sm text-emerald-700 mt-1">成功</div>
+        </div>
+        <div className="bg-red-50 rounded-lg p-4 text-center">
+          <div className="text-3xl font-bold text-red-600">{result.failed}</div>
+          <div className="text-sm text-red-700 mt-1">失败</div>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-4 text-center">
+          <div className="text-3xl font-bold text-gray-600">{result.total}</div>
+          <div className="text-sm text-gray-700 mt-1">总计</div>
         </div>
       </div>
-    </div>
+
+      {/* 整体结果提示 */}
+      {result.failed === 0 ? (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+          <p className="text-emerald-800">
+            <CheckCircle className="w-5 h-5 inline mr-2" />
+            所有 {result.total} 项审批已成功{actionText}！
+          </p>
+        </div>
+      ) : result.success === 0 ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-800">
+            <XCircle className="w-5 h-5 inline mr-2" />
+            批量{actionText}失败，所有 {result.total} 项审批均未成功。
+          </p>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+          <p className="text-amber-800">
+            <AlertTriangle className="w-5 h-5 inline mr-2" />
+            部分成功：{result.success} 项成功，{result.failed} 项失败。
+          </p>
+        </div>
+      )}
+
+      {/* 失败项列表 */}
+      {failedItems.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            失败详情：
+          </div>
+          <div className="border border-red-200 rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader className="bg-red-50">
+                <TableRow>
+                  <TableHead className="text-xs font-medium text-red-700">单号</TableHead>
+                  <TableHead className="text-xs font-medium text-red-700">类型</TableHead>
+                  <TableHead className="text-xs font-medium text-red-700">失败原因</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {failedItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.code}</TableCell>
+                    <TableCell>{item.typeName}</TableCell>
+                    <TableCell className="text-red-600">{item.error}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </UnifiedModal>
   );
 }
 

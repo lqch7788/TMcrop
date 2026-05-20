@@ -10,13 +10,19 @@ import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, X, ShoppingCart
+  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, ShoppingCart
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
 import BatchActionBar from '../components/approval/BatchActionBar';
 import { Button } from '../components/ui/button';
+import { UnifiedModal } from '../components/ui/UnifiedModal';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { TextArea } from '../components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -302,27 +308,27 @@ export default function ProductionApproval() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
-            <input
-              type="text"
+            <Label className="text-gray-700">搜索</Label>
+            <Input
               placeholder="搜索申请人、申请单号..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full"
             />
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value="全部">全部</option>
-              <option value="待审批">待审批</option>
-              <option value="已通过">已通过</option>
-              <option value="已拒绝">已拒绝</option>
-            </select>
+            <Label className="text-gray-700">状态</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="待审批">待审批</SelectItem>
+                <SelectItem value="已通过">已通过</SelectItem>
+                <SelectItem value="已拒绝">已拒绝</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
@@ -350,10 +356,10 @@ export default function ProductionApproval() {
           onExport={handleExport}
         />
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -365,20 +371,20 @@ export default function ProductionApproval() {
                       <Square className="w-4 h-4 text-gray-400" />
                     )}
                   </Button>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请单号</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请人</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">部门</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请标题</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">申请时间</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">状态</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+                </TableHead>
+                <TableHead>申请单号</TableHead>
+                <TableHead>申请人</TableHead>
+                <TableHead>部门</TableHead>
+                <TableHead>申请标题</TableHead>
+                <TableHead>申请时间</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {paginatedData.map((item) => (
-                <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(item.id) ? 'bg-emerald-50' : ''}`}>
-                  <td className="px-4 py-3">
+                <TableRow key={item.id} className={selectedIds.has(item.id) ? 'bg-emerald-50' : ''}>
+                  <TableCell>
                     {item.status === ApprovalStatus.PENDING ? (
                       <Button
                         variant="ghost"
@@ -394,14 +400,14 @@ export default function ProductionApproval() {
                     ) : (
                       <span className="w-4 h-4 block" />
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applicantDepartment}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applyDate}</td>
-                  <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="font-medium text-gray-900">{item.code}</TableCell>
+                  <TableCell className="text-gray-600">{item.applicantName}</TableCell>
+                  <TableCell className="text-gray-600">{item.applicantDepartment}</TableCell>
+                  <TableCell className="text-gray-900">{item.title}</TableCell>
+                  <TableCell className="text-gray-600">{item.applyDate}</TableCell>
+                  <TableCell>{getStatusBadge(item.status)}</TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1">
                       {item.status === ApprovalStatus.PENDING && (
                         <>
@@ -432,11 +438,11 @@ export default function ProductionApproval() {
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {filteredData.length === 0 && (
           <div className="p-12 text-center text-gray-500">
@@ -465,7 +471,7 @@ export default function ProductionApproval() {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === i + 1
                       ? 'bg-emerald-600 text-white'
                       : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -488,351 +494,308 @@ export default function ProductionApproval() {
       </div>
 
       {/* 详情弹窗 */}
-      {detailModal.show && detailModal.approval && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeDetailModal}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* 弹窗头部 - 绿色 */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-emerald-600 to-green-500">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
+      <UnifiedModal
+        isOpen={detailModal.show && !!detailModal.approval}
+        onClose={closeDetailModal}
+        title="审批详情"
+        size="xl"
+        showFooter={true}
+        footer={
+          <Button variant="default" onClick={closeDetailModal}>
+            关闭
+          </Button>
+        }
+      >
+        {detailModal.approval && (
+        <div className="space-y-4">
+          {/* 状态标签 */}
+          <div>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              detailModal.approval.status === ApprovalStatus.PENDING ? 'bg-amber-100 text-amber-700' :
+              detailModal.approval.status === ApprovalStatus.APPROVED ? 'bg-emerald-100 text-emerald-700' :
+              detailModal.approval.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-700' :
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {detailModal.approval.status === ApprovalStatus.PENDING ? '待审批' :
+               detailModal.approval.status === ApprovalStatus.APPROVED ? '已通过' :
+               detailModal.approval.status === ApprovalStatus.REJECTED ? '已拒绝' :
+               detailModal.approval.status}
+            </span>
+          </div>
+
+          {/* 基本信息卡片 */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4" /> 申请信息
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs text-gray-400">申请标题</Label>
+                <p className="text-sm font-medium text-gray-900">{detailModal.approval.title}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-400">申请人</Label>
+                <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantName || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-400">申请部门</Label>
+                <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantDepartment || '-'}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-gray-400">申请时间</Label>
+                <p className="text-sm font-medium text-gray-900">{detailModal.approval.applyDate} {detailModal.approval.applyTime}</p>
+              </div>
+              {detailModal.approval.amount && (
                 <div>
-                  <h3 className="text-lg font-semibold text-white">审批详情</h3>
-                  <p className="text-sm text-white/80">{detailModal.approval.code}</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={closeDetailModal} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-white" />
-              </Button>
-            </div>
-
-            {/* 状态标签 */}
-            <div className="px-6 pt-4">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                detailModal.approval.status === ApprovalStatus.PENDING ? 'bg-amber-100 text-amber-700' :
-                detailModal.approval.status === ApprovalStatus.APPROVED ? 'bg-emerald-100 text-emerald-700' :
-                detailModal.approval.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {detailModal.approval.status === ApprovalStatus.PENDING ? '⏳ 待审批' :
-                 detailModal.approval.status === ApprovalStatus.APPROVED ? '✅ 已通过' :
-                 detailModal.approval.status === ApprovalStatus.REJECTED ? '❌ 已拒绝' :
-                 detailModal.approval.status}
-              </span>
-            </div>
-
-            {/* 弹窗内容 */}
-            <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)] space-y-4">
-              {/* 基本信息卡片 */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h4 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> 申请信息
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-400">申请标题</label>
-                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.title}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400">申请人</label>
-                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantName || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400">申请部门</label>
-                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applicantDepartment || '-'}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400">申请时间</label>
-                    <p className="text-sm font-medium text-gray-900">{detailModal.approval.applyDate} {detailModal.approval.applyTime}</p>
-                  </div>
-                  {detailModal.approval.amount && (
-                    <div>
-                      <label className="text-xs text-gray-400">申请金额</label>
-                      <p className="text-sm font-medium text-emerald-600 text-lg">¥{Number(detailModal.approval.amount).toLocaleString()}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 采购物资明细卡片 */}
-              {detailModal.approval.businessLink?.type === 'purchase' && detailModal.purchasePlanDetail?.items?.length > 0 && (
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
-                    <ShoppingCart className="w-4 h-4" /> 采购物资明细
-                  </h4>
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-100 text-blue-700">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-semibold">物料名称</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold">规格型号</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold">单位</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold">数量</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold">预估单价</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold">小计</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-blue-100">
-                      {detailModal.purchasePlanDetail.items.map((item: any, index: number) => (
-                        <tr key={index}>
-                          <td className="px-3 py-2 text-gray-900">{item.materialName || '-'}</td>
-                          <td className="px-3 py-2 text-gray-600">{item.specification || '-'}</td>
-                          <td className="px-3 py-2 text-gray-600 text-center">{item.unit || '-'}</td>
-                          <td className="px-3 py-2 text-gray-900 text-right font-medium">{item.quantity || 0}</td>
-                          <td className="px-3 py-2 text-gray-600 text-right">¥{(item.estimatedPrice || 0).toFixed(2)}</td>
-                          <td className="px-3 py-2 text-emerald-600 text-right font-medium">¥{(item.estimatedTotalPrice || 0).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-blue-50">
-                      <tr>
-                        <td colSpan={5} className="px-3 py-2 text-right text-sm font-medium text-gray-700">总计金额：</td>
-                        <td className="px-3 py-2 text-right text-lg font-bold text-emerald-600">
-                          ¥{detailModal.purchasePlanDetail.items.reduce((sum: number, item: any) => sum + (item.estimatedTotalPrice || 0), 0).toLocaleString()}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                  <Label className="text-xs text-gray-400">申请金额</Label>
+                  <p className="text-sm font-medium text-emerald-600 text-lg">¥{Number(detailModal.approval.amount).toLocaleString()}</p>
                 </div>
               )}
-
-              {/* 业务关联信息卡片 */}
-              {detailModal.approval.businessLink && (
-                <div className="bg-emerald-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-emerald-600 mb-3 flex items-center gap-2">
-                    <Sprout className="w-4 h-4" /> {(() => {
-                      const typeLabelMap: Record<string, string> = {
-                        'production': '生产计划信息',
-                        'production_batch': '生产批次信息',
-                        'batch_change': '批次变更信息',
-                        'batch_void': '批次作废信息',
-                        'tech_solution': '技术方案信息',
-                        'harvest': '采收申请信息',
-                        'material': '领料申请信息',
-                        'purchase': '采购申请信息',
-                        'leave': '请假申请信息',
-                        'overtime': '加班申请信息',
-                        'transfer': '转岗申请信息',
-                        'resign': '离职申请信息'
-                      };
-                      return typeLabelMap[detailModal.approval.businessLink?.type || ''] || '业务信息';
-                    })()}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(detailModal.approval.businessLink).map(([key, value]) => {
-                      // 字段中文映射
-                      const fieldLabels: Record<string, string> = {
-                        type: '业务类型',
-                        requestId: '请求ID',
-                        requestCode: '计划编号',
-                        batchCode: '批次编号',
-                        cropName: '作物名称',
-                        cropCode: '作物编码',
-                        variety: '品种',
-                        greenhouseName: '温室区域',
-                        greenhouseId: '温室ID',
-                        startDate: '开始日期',
-                        expectedHarvestDate: '预计采收',
-                        responsiblePerson: '负责人',
-                        targetYield: '目标产量',
-                        plantingArea: '种植面积',
-                        plantingMode: '种植方式',
-                        unit: '单位',
-                        quantity: '数量',
-                        // 技术方案相关字段
-                        solutionTitle: '方案标题',
-                        stage: '阶段',
-                        version: '版本号',
-                        // 通用字段
-                        remarks: '备注',
-                        description: '描述'
-                      };
-                      const label = fieldLabels[key] || key;
-                      // 格式化值显示
-                      let displayValue = String(value);
-                      if (key === 'type') {
-                        const typeMap: Record<string, string> = {
-                          'production': '生产计划',
-                          'production_batch': '生产批次',
-                          'batch_change': '批次变更',
-                          'batch_void': '批次作废',
-                          'tech_solution': '技术方案',
-                          'harvest': '采收申请',
-                          'material': '领料申请',
-                          'purchase': '采购申请',
-                          'leave': '请假',
-                          'overtime': '加班',
-                          'transfer': '转岗',
-                          'resign': '离职'
-                        };
-                        displayValue = typeMap[value as string] || value as string;
-                      }
-                      if (key === 'targetYield') displayValue = `${value} kg`;
-                      if (key === 'plantingArea') displayValue = `${value} m²`;
-                      if (key === 'quantity') displayValue = `${value}`;
-                      // 种植方式翻译
-                      if (key === 'plantingMode') {
-                        const modeMap: Record<string, string> = {
-                          'internal_seed': '自育苗',
-                          'external_purchase': '外购苗',
-                          'open_field': '露天栽培',
-                          'greenhouse': '温室栽培',
-                          'hydroponics': '水培',
-                          'aeroponics': '气雾培',
-                          'substrate': '基质培',
-                          'soil': '土培'
-                        };
-                        displayValue = modeMap[value as string] || value as string;
-                      }
-                      // 阶段翻译
-                      if (key === 'stage') {
-                        const stageMap: Record<string, string> = {
-                          'seedling': '苗期',
-                          'vegetative': '营养生长期',
-                          'flowering': '开花期',
-                          'fruiting': '结果期',
-                          'harvest': '采收期',
-                          'entire': '整个生命周期',
-                          'whole_lifecycle': '整个生命周期'
-                        };
-                        displayValue = stageMap[value as string] || value as string;
-                      }
-                      return (
-                        <div key={key} className="flex flex-col">
-                          <span className="text-xs text-gray-500">{label}</span>
-                          <span className="text-sm font-medium text-gray-900">{displayValue}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 申请描述卡片 */}
-              {detailModal.approval.description && (
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
-                    <FileText className="w-4 h-4" /> 申请描述
-                  </h4>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{detailModal.approval.description}</p>
-                </div>
-              )}
-
-              {/* 审批记录卡片 */}
-              {detailModal.approval.records && detailModal.approval.records.length > 0 && (
-                <div className="bg-purple-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-purple-600 mb-3 flex items-center gap-2">
-                    <Clock className="w-4 h-4" /> 审批记录
-                  </h4>
-                  <div className="space-y-3">
-                    {detailModal.approval.records.map((record: any, index: number) => (
-                      <div key={index} className="flex items-start gap-3 p-2 bg-white rounded-lg">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${
-                          record.action === 'approve' ? 'bg-emerald-500' :
-                          record.action === 'reject' ? 'bg-red-500' : 'bg-gray-400'
-                        }`} />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-900">
-                            <span className="font-medium">{record.approverName}</span>
-                            <span className="text-gray-500 mx-1">
-                              {record.action === 'approve' ? '✅ 通过了申请' :
-                               record.action === 'reject' ? '❌ 拒绝了申请' :
-                               record.action === 'partially_approve' ? '🔄 部分通过了' : '📝 操作了'}
-                            </span>
-                          </p>
-                          {record.comment && (
-                            <p className="text-xs text-gray-500 mt-1">备注：{record.comment}</p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-1">{record.actionTime}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 弹窗底部 */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-              <Button
-                variant="default"
-                onClick={closeDetailModal}
-              >
-                关闭
-              </Button>
             </div>
           </div>
+
+          {/* 采购物资明细卡片 */}
+          {detailModal.approval.businessLink?.type === 'purchase' && detailModal.purchasePlanDetail?.items?.length > 0 && (
+            <div className="bg-blue-50 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" /> 采购物资明细
+              </h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>物料名称</TableHead>
+                    <TableHead>规格型号</TableHead>
+                    <TableHead className="text-center">单位</TableHead>
+                    <TableHead className="text-right">数量</TableHead>
+                    <TableHead className="text-right">预估单价</TableHead>
+                    <TableHead className="text-right">小计</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detailModal.purchasePlanDetail.items.map((item: any, index: number) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-gray-900">{item.materialName || '-'}</TableCell>
+                      <TableCell className="text-gray-600">{item.specification || '-'}</TableCell>
+                      <TableCell className="text-gray-600 text-center">{item.unit || '-'}</TableCell>
+                      <TableCell className="text-gray-900 text-right font-medium">{item.quantity || 0}</TableCell>
+                      <TableCell className="text-gray-600 text-right">¥{(item.estimatedPrice || 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-emerald-600 text-right font-medium">¥{(item.estimatedTotalPrice || 0).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex justify-end mt-2">
+                <span className="text-sm font-medium text-gray-700">总计金额：</span>
+                <span className="text-lg font-bold text-emerald-600 ml-2">
+                  ¥{detailModal.purchasePlanDetail.items.reduce((sum: number, item: any) => sum + (item.estimatedTotalPrice || 0), 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* 业务关联信息卡片 */}
+          {detailModal.approval.businessLink && (
+            <div className="bg-emerald-50 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-emerald-600 mb-3 flex items-center gap-2">
+                <Sprout className="w-4 h-4" /> {(() => {
+                  const typeLabelMap: Record<string, string> = {
+                    'production': '生产计划信息',
+                    'production_batch': '生产批次信息',
+                    'batch_change': '批次变更信息',
+                    'batch_void': '批次作废信息',
+                    'tech_solution': '技术方案信息',
+                    'harvest': '采收申请信息',
+                    'material': '领料申请信息',
+                    'purchase': '采购申请信息',
+                    'leave': '请假申请信息',
+                    'overtime': '加班申请信息',
+                    'transfer': '转岗申请信息',
+                    'resign': '离职申请信息'
+                  };
+                  return typeLabelMap[detailModal.approval.businessLink?.type || ''] || '业务信息';
+                })()}
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(detailModal.approval.businessLink).map(([key, value]) => {
+                  // 字段中文映射
+                  const fieldLabels: Record<string, string> = {
+                    type: '业务类型',
+                    requestId: '请求ID',
+                    requestCode: '计划编号',
+                    batchCode: '批次编号',
+                    cropName: '作物名称',
+                    cropCode: '作物编码',
+                    variety: '品种',
+                    greenhouseName: '温室区域',
+                    greenhouseId: '温室ID',
+                    startDate: '开始日期',
+                    expectedHarvestDate: '预计采收',
+                    responsiblePerson: '负责人',
+                    targetYield: '目标产量',
+                    plantingArea: '种植面积',
+                    plantingMode: '种植方式',
+                    unit: '单位',
+                    quantity: '数量',
+                    // 技术方案相关字段
+                    solutionTitle: '方案标题',
+                    stage: '阶段',
+                    version: '版本号',
+                    // 通用字段
+                    remarks: '备注',
+                    description: '描述'
+                  };
+                  const label = fieldLabels[key] || key;
+                  // 格式化值显示
+                  let displayValue = String(value);
+                  if (key === 'type') {
+                    const typeMap: Record<string, string> = {
+                      'production': '生产计划',
+                      'production_batch': '生产批次',
+                      'batch_change': '批次变更',
+                      'batch_void': '批次作废',
+                      'tech_solution': '技术方案',
+                      'harvest': '采收申请',
+                      'material': '领料申请',
+                      'purchase': '采购申请',
+                      'leave': '请假',
+                      'overtime': '加班',
+                      'transfer': '转岗',
+                      'resign': '离职'
+                    };
+                    displayValue = typeMap[value as string] || value as string;
+                  }
+                  if (key === 'targetYield') displayValue = `${value} kg`;
+                  if (key === 'plantingArea') displayValue = `${value} m²`;
+                  if (key === 'quantity') displayValue = `${value}`;
+                  // 种植方式翻译
+                  if (key === 'plantingMode') {
+                    const modeMap: Record<string, string> = {
+                      'internal_seed': '自育苗',
+                      'external_purchase': '外购苗',
+                      'open_field': '露天栽培',
+                      'greenhouse': '温室栽培',
+                      'hydroponics': '水培',
+                      'aeroponics': '气雾培',
+                      'substrate': '基质培',
+                      'soil': '土培'
+                    };
+                    displayValue = modeMap[value as string] || value as string;
+                  }
+                  // 阶段翻译
+                  if (key === 'stage') {
+                    const stageMap: Record<string, string> = {
+                      'seedling': '苗期',
+                      'vegetative': '营养生长期',
+                      'flowering': '开花期',
+                      'fruiting': '结果期',
+                      'harvest': '采收期',
+                      'entire': '整个生命周期',
+                      'whole_lifecycle': '整个生命周期'
+                    };
+                    displayValue = stageMap[value as string] || value as string;
+                  }
+                  return (
+                    <div key={key} className="flex flex-col">
+                      <span className="text-xs text-gray-500">{label}</span>
+                      <span className="text-sm font-medium text-gray-900">{displayValue}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 申请描述卡片 */}
+          {detailModal.approval.description && (
+            <div className="bg-blue-50 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-blue-600 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" /> 申请描述
+              </h4>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{detailModal.approval.description}</p>
+            </div>
+          )}
+
+          {/* 审批记录卡片 */}
+          {detailModal.approval.records && detailModal.approval.records.length > 0 && (
+            <div className="bg-purple-50 rounded-xl p-4">
+              <h4 className="text-sm font-medium text-purple-600 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4" /> 审批记录
+              </h4>
+              <div className="space-y-3">
+                {detailModal.approval.records.map((record: any, index: number) => (
+                  <div key={index} className="flex items-start gap-3 p-2 bg-white rounded-lg">
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      record.action === 'approve' ? 'bg-emerald-500' :
+                      record.action === 'reject' ? 'bg-red-500' : 'bg-gray-400'
+                    }`} />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-medium">{record.approverName}</span>
+                        <span className="text-gray-500 mx-1">
+                          {record.action === 'approve' ? '通过了申请' :
+                           record.action === 'reject' ? '拒绝了申请' :
+                           record.action === 'partially_approve' ? '部分通过了' : '操作了'}
+                        </span>
+                      </p>
+                      {record.comment && (
+                        <p className="text-xs text-gray-500 mt-1">备注：{record.comment}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">{record.actionTime}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+        )}
+      </UnifiedModal>
 
       {/* 审批确认弹窗 */}
-      {approvalModal.show && approvalModal.approval && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelApproval}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* 弹窗头部 */}
-            <div className={`flex items-center justify-between px-6 py-4 ${approvalModal.action === 'approve' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  {approvalModal.action === 'approve' ? (
-                    <CheckCircle className="w-5 h-5 text-white" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
-                  </h3>
-                  <p className="text-sm text-white/80">{approvalModal.approval.code}</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={cancelApproval} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                <X className="w-5 h-5 text-white" />
-              </Button>
-            </div>
+      <UnifiedModal
+        isOpen={approvalModal.show && !!approvalModal.approval}
+        onClose={cancelApproval}
+        title={approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
+        size="sm"
+        showFooter={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={cancelApproval}>
+              取消
+            </Button>
+            <Button
+              variant={approvalModal.action === 'approve' ? 'default' : 'destructive'}
+              onClick={confirmApproval}
+            >
+              {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
+            </Button>
+          </div>
+        }
+      >
+        {approvalModal.approval && (
+        <div>
+          <div className="mb-4">
+            <Label className="text-gray-700">
+              {approvalModal.action === 'approve' ? '通过意见（可选）' : '拒绝原因（可选）'}
+            </Label>
+            <TextArea
+              value={approvalComment}
+              onChange={(e) => setApprovalComment(e.target.value)}
+              placeholder={approvalModal.action === 'approve' ? '请输入通过意见...' : '请输入拒绝原因...'}
+            />
+          </div>
 
-            {/* 弹窗内容 */}
-            <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {approvalModal.action === 'approve' ? '通过意见（可选）' : '拒绝原因（可选）'}
-                </label>
-                <textarea
-                  value={approvalComment}
-                  onChange={(e) => setApprovalComment(e.target.value)}
-                  placeholder={approvalModal.action === 'approve' ? '请输入通过意见...' : '请输入拒绝原因...'}
-                  className="w-full h-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
-                />
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">申请标题：</span>{approvalModal.approval.title}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  <span className="font-medium">申请人：</span>{approvalModal.approval.applicantName}
-                </p>
-              </div>
-            </div>
-
-            {/* 弹窗底部 */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={cancelApproval}
-              >
-                取消
-              </Button>
-              <Button
-                variant={approvalModal.action === 'approve' ? 'default' : 'destructive'}
-                onClick={confirmApproval}
-              >
-                {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
-              </Button>
-            </div>
+          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">申请标题：</span>{approvalModal.approval.title}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              <span className="font-medium">申请人：</span>{approvalModal.approval.applicantName}
+            </p>
           </div>
         </div>
-      )}
+        )}
+      </UnifiedModal>
     </div>
   );
 }

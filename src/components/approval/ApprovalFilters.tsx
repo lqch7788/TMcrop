@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { Search, X, Filter } from 'lucide-react';
+import { DatePicker, Label } from '@/components/ui';
 import type { ApprovalFilters, ApprovalType, ApprovalStatus } from '../../types/approval';
 
 interface ApprovalFiltersProps {
@@ -88,7 +89,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
       {/* 基础搜索 */}
       <div className="flex gap-4 items-end">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">关键词搜索</label>
+          <Label className="text-gray-700 mb-1">关键词搜索</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -135,7 +136,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
         <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
           {/* 审批类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">审批类型</label>
+            <Label className="text-gray-700 mb-2">审批类型</Label>
             <div className="flex flex-wrap gap-2">
               {approvalTypeOptions.map((option) => (
                 <button
@@ -155,7 +156,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
 
           {/* 审批状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">审批状态</label>
+            <Label className="text-gray-700 mb-2">审批状态</Label>
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => (
                 <button
@@ -175,7 +176,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
 
           {/* 类别 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">审批类别</label>
+            <Label className="text-gray-700 mb-2">审批类别</Label>
             <div className="flex flex-wrap gap-2">
               {categoryOptions.map((option) => (
                 <button
@@ -195,7 +196,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
 
           {/* 优先级 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">优先级</label>
+            <Label className="text-gray-700 mb-2">优先级</Label>
             <div className="flex flex-wrap gap-2">
               {priorityOptions.map((option) => (
                 <button
@@ -216,21 +217,19 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
           {/* 日期范围 */}
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-              <input
-                type="date"
-                value={filters.startDate || ''}
-                onChange={(e) => onChange({ startDate: e.target.value || undefined })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="text-gray-700 mb-1">开始日期</Label>
+              <DatePicker
+                selected={filters.startDate ? new Date(filters.startDate) : undefined}
+                onChange={(date) => onChange({ startDate: date.toISOString().slice(0, 10) })}
+                className="w-full"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-              <input
-                type="date"
-                value={filters.endDate || ''}
-                onChange={(e) => onChange({ endDate: e.target.value || undefined })}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              <Label className="text-gray-700 mb-1">结束日期</Label>
+              <DatePicker
+                selected={filters.endDate ? new Date(filters.endDate) : undefined}
+                onChange={(date) => onChange({ endDate: date.toISOString().slice(0, 10) })}
+                className="w-full"
               />
             </div>
           </div>

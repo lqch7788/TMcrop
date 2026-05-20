@@ -4,6 +4,7 @@ import {
   Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw
 } from 'lucide-react';
 import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
+import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
 
 const styles = `
   @keyframes bellRing {
@@ -24,6 +25,9 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isBellRinging, setIsBellRinging] = useState(false);
+
+  // ★ V3.0 Phase 1: 系统名称从DB动态读取（兜底值保持原硬编码名称）
+  const systemName = useSystemConfigValue('system.name', '弘讯智能种植云');
 
   // 从 Zustand Store 获取公告数据
   const announcements = useAnnouncementStore((s) => s.announcements);
@@ -67,7 +71,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <>
       <style>{styles}</style>
-    <header className="sticky top-0 z-30 h-12 bg-[#F2F6FA] border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-30 h-12 bg-[var(--header-bg)] border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between h-full pl-2">
         {/* Left section */}
         <div className="flex items-center">
@@ -79,7 +83,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="h-8 w-auto"
             />
             <div className="flex flex-col leading-tight">
-              <span className="text-base font-semibold text-gray-900">弘讯智能种植云</span>
+              <span className="text-base font-semibold text-gray-900">{systemName}</span>
               <span className="text-[10px] text-gray-500">Techmation Intelligent Crop Cloud</span>
             </div>
             {/* 返回主页图标 */}

@@ -196,6 +196,17 @@ export type { CostCategoryItem, CostBudgetItem } from '../services/apiBasicDataS
 export { useSystemConfigStore } from './useSystemConfigStore';
 export type { SystemConfig } from './useSystemConfigStore';
 
+// ==================== 作物生长配置 Store (V3.0 Phase 6) ====================
+export { useCropGrowthConfigStore } from './useCropGrowthConfigStore';
+export type {
+  GrowthStage,
+  GrowthStageDays,
+  CropTaskItem,
+  CropStageEntry,
+  CropGrowthConfig,
+  PestAlertRule,
+} from './useCropGrowthConfigStore';
+
 // ==================== 审批流程 Store ====================
 export { useApprovalWorkflowStore } from './useApprovalWorkflowStore';
 

@@ -1,6 +1,11 @@
 // MaterialApprovalFilters 组件
 // 物料审批页面的筛选区域组件
 import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { UseMaterialApprovalReturn } from '../../types/materialApproval.types';
 
 interface MaterialApprovalFiltersProps {
@@ -49,105 +54,100 @@ export function MaterialApprovalFilters({
       <div className="grid grid-cols-8 gap-3 items-end">
         {/* 领料单号 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">领料单号</label>
-          <input
-            type="text"
+          <Label className="text-xs text-gray-700">领料单号</Label>
+          <Input
             placeholder="单号..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10"
           />
         </div>
 
         {/* 申领人 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">申领人</label>
-          <input
-            type="text"
+          <Label className="text-xs text-gray-700">申领人</Label>
+          <Input
             placeholder="申请人..."
             value={searchApplicant}
             onChange={(e) => setSearchApplicant(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10"
           />
         </div>
 
         {/* 部门 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">部门</label>
-          <select
-            value={searchDepartment}
-            onChange={(e) => setSearchDepartment(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="全部">全部</option>
-            <option value="生产部">生产部</option>
-            <option value="技术部">技术部</option>
-            <option value="后勤部">后勤部</option>
-            <option value="设备部">设备部</option>
-          </select>
+          <Label className="text-xs text-gray-700">部门</Label>
+          <Select value={searchDepartment} onValueChange={(v) => setSearchDepartment(v)}>
+            <SelectTrigger className="w-full h-10">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部</SelectItem>
+              <SelectItem value="生产部">生产部</SelectItem>
+              <SelectItem value="技术部">技术部</SelectItem>
+              <SelectItem value="后勤部">后勤部</SelectItem>
+              <SelectItem value="设备部">设备部</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 生产批次号 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">生产批次号</label>
-          <input
-            type="text"
+          <Label className="text-xs text-gray-700">生产批次号</Label>
+          <Input
             placeholder="批次号..."
             value={searchBatchCode}
             onChange={(e) => setSearchBatchCode(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10"
           />
         </div>
 
         {/* 开始日期 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">开始日期</label>
-          <input
-            type="date"
-            value={searchDateStart}
-            onChange={(e) => setSearchDateStart(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="text-xs text-gray-700">开始日期</Label>
+          <DatePicker
+            selected={searchDateStart ? new Date(searchDateStart) : undefined}
+            onChange={(date) => setSearchDateStart(date.toISOString().slice(0, 10))}
           />
         </div>
 
         {/* 结束日期 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">结束日期</label>
-          <input
-            type="date"
-            value={searchDateEnd}
-            onChange={(e) => setSearchDateEnd(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="text-xs text-gray-700">结束日期</Label>
+          <DatePicker
+            selected={searchDateEnd ? new Date(searchDateEnd) : undefined}
+            onChange={(date) => setSearchDateEnd(date.toISOString().slice(0, 10))}
           />
         </div>
 
         {/* 状态 */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">状态</label>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="全部">全部</option>
-            <option value="待审批">待审批</option>
-            <option value="已通过">已通过</option>
-            <option value="已拒绝">已拒绝</option>
-          </select>
+          <Label className="text-xs text-gray-700">状态</Label>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+            <SelectTrigger className="w-full h-10">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部</SelectItem>
+              <SelectItem value="待审批">待审批</SelectItem>
+              <SelectItem value="已通过">已通过</SelectItem>
+              <SelectItem value="已拒绝">已拒绝</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 按钮区域 */}
         <div className="flex gap-2">
-          <button className="flex-1 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-1">
-            搜索
-          </button>
-          <button
+          <Button className="flex-1 h-10" size="sm">搜索</Button>
+          <Button
             onClick={onReset}
-            className="flex-1 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-1"
+            className="flex-1 h-10"
+            size="sm"
+            variant="secondary"
           >
             <RefreshCw className="w-4 h-4" />
             重置
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import {
   CheckCircle, XCircle, Eye, ClipboardList
 } from 'lucide-react';
 import { Approval, ApprovalStatus } from '@/types/approval';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
 
 interface MaterialApprovalTableProps {
@@ -64,29 +65,29 @@ export function MaterialApprovalTable({
   // 领料审批表格
   const renderMaterialTable = () => (
     <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-12"></th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">领料单号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">申请日期</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">申请人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">部门</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">库存地点</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">物料种类</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种植区域/用途</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">审核人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">生产计划批次号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-300">
+      <Table>
+        <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <TableRow>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap w-12"></TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">领料单号</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请日期</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">部门</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">库存地点</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">物料种类</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">种植区域/用途</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审核人</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">生产计划批次号</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {paginatedData.map((item) => (
             <React.Fragment key={item.id}>
-              <tr className="hover:bg-blue-50 transition-colors">
-                <td className="px-4 py-3 whitespace-nowrap">
+              <TableRow className="hover:bg-blue-50">
+                <TableCell className="whitespace-nowrap">
                   <button onClick={() => toggleExpandRow(item.id)} className="p-1 hover:bg-gray-100 rounded">
                     {expandedRows.has(item.id) ? (
                       <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -94,17 +95,17 @@ export function MaterialApprovalTable({
                       <ChevronRightIcon className="w-4 h-4 text-gray-500" />
                     )}
                   </button>
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applyDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicantName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicantDepartment || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.businessLink?.warehouseLocation || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.materials?.length > 0 ? `${item.materials.length}种` : '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.businessLink?.plantArea || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.approvers?.[0]?.userName || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.businessLink?.batchCode || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applyDate}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantName}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantDepartment || '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.warehouseLocation || '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.materials?.length > 0 ? `${item.materials.length}种` : '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.plantArea || '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.approvers?.[0]?.userName || '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.batchCode || '-'}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     {getStatusBadge(item.status)}
                     {item.status === ApprovalStatus.REJECTED && item.records && item.records.length > 0 && (
@@ -113,9 +114,9 @@ export function MaterialApprovalTable({
                       </span>
                     )}
                   </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.description || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.description || '-'}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     {item.status === ApprovalStatus.PENDING && canApprove && (
                       <>
@@ -131,50 +132,50 @@ export function MaterialApprovalTable({
                       <Eye className="w-4 h-4" />
                     </button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
               {/* 展开行 - 物料明细 */}
               {expandedRows.has(item.id) && (
-                <tr key={`${item.id}-expanded`}>
-                  <td colSpan={13} className="px-4 py-3">
+                <TableRow key={`${item.id}-expanded`}>
+                  <TableCell colSpan={13}>
                     <div className="text-sm">
                       <div className="font-medium text-blue-800 mb-2">物料明细</div>
                       {item.materials && item.materials.length > 0 ? (
-                        <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                          <thead className="bg-[#F2F6FA]">
-                            <tr>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">当前库存</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-[#F2F6FA]">
+                              <TableHead className="text-blue-800 text-sm font-semibold">物料编码</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">物料名称</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">规格</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">单位</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">申领数量</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">当前库存</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">单价(元)</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">小计(元)</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">仓库货位</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">备注</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {item.materials.map((m: any, idx: number) => {
                               const subtotal = (m.requestedQuantity || 0) * (m.unitPrice || 0);
                               return (
-                                <tr key={idx} className="hover:bg-[#F2F6FA]/50">
-                                  <td className="px-3 py-2 text-sm text-blue-800 font-mono">{m.materialCode}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.materialName}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.spec || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unit || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.requestedQuantity || 0}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.stockQuantity ?? '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unitPrice != null ? m.unitPrice.toFixed(2) : '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unitPrice != null ? subtotal.toFixed(2) : '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.warehousePosition || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.remark || '-'}</td>
-                                </tr>
+                                <TableRow key={idx} className="hover:bg-[#F2F6FA]/50">
+                                  <TableCell className="text-blue-800 font-mono">{m.materialCode}</TableCell>
+                                  <TableCell className="text-blue-800">{m.materialName}</TableCell>
+                                  <TableCell className="text-blue-800">{m.spec || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unit || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.requestedQuantity || 0}</TableCell>
+                                  <TableCell className="text-blue-800">{m.stockQuantity ?? '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unitPrice != null ? m.unitPrice.toFixed(2) : '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unitPrice != null ? subtotal.toFixed(2) : '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.warehousePosition || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.remark || '-'}</TableCell>
+                                </TableRow>
                               );
                             })}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       ) : (
                         <div className="text-blue-800 text-center py-4">暂无物料明细</div>
                       )}
@@ -184,40 +185,40 @@ export function MaterialApprovalTable({
                         </div>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 
   // 退料审批表格
   const renderReturnTable = () => (
     <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-12"></th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">退料单号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">退料日期</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">退料类型</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">申请人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">退料部门</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">仓库位置</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">审批状态</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">审核人</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-300">
+      <Table>
+        <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <TableRow>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap w-12"></TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">退料单号</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">退料日期</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">退料类型</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">退料部门</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">仓库位置</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审批状态</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审核人</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {paginatedData.map((item) => (
             <React.Fragment key={item.id}>
-              <tr className="hover:bg-blue-50 transition-colors">
-                <td className="px-4 py-3 whitespace-nowrap">
+              <TableRow className="hover:bg-blue-50">
+                <TableCell className="whitespace-nowrap">
                   <button onClick={() => toggleExpandRow(item.id)} className="p-1 hover:bg-gray-100 rounded">
                     {expandedRows.has(item.id) ? (
                       <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -225,14 +226,14 @@ export function MaterialApprovalTable({
                       <ChevronRightIcon className="w-4 h-4 text-gray-500" />
                     )}
                   </button>
-                </td>
-                <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applyDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getReturnType(item)}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicantName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.applicantDepartment}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.businessLink?.warehouseLocation || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applyDate}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{getReturnType(item)}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantName}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.applicantDepartment}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.businessLink?.warehouseLocation || '-'}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex flex-col gap-1">
                     {getReturnStatusBadge(item.status)}
                     {item.status === ApprovalStatus.REJECTED && item.records && item.records.length > 0 && (
@@ -241,10 +242,10 @@ export function MaterialApprovalTable({
                       </span>
                     )}
                   </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.approvers?.[0]?.userName || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.description || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.approvers?.[0]?.userName || '-'}</TableCell>
+                <TableCell className="text-gray-600 whitespace-nowrap">{item.description || '-'}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     {item.status === ApprovalStatus.PENDING && canApprove && (
                       <>
@@ -260,52 +261,52 @@ export function MaterialApprovalTable({
                       <Eye className="w-4 h-4" />
                     </button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
               {/* 展开行 - 退料物料明细 */}
               {expandedRows.has(item.id) && (
-                <tr key={`${item.id}-expanded`}>
-                  <td colSpan={12} className="px-4 py-3">
+                <TableRow key={`${item.id}-expanded`}>
+                  <TableCell colSpan={12}>
                     <div className="text-sm">
                       <div className="font-medium text-blue-800 mb-2">退料物料明细</div>
                       {item.materials && item.materials.length > 0 ? (
-                        <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                          <thead className="bg-[#F2F6FA]">
-                            <tr>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">来源领料单号</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料分类</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">退料数量</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
-                              <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">退料原因</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-[#F2F6FA]">
+                              <TableHead className="text-blue-800 text-sm font-semibold">来源领料单号</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">物料编码</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">物料分类</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">物料名称</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">规格</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">单位</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">退料数量</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">单价(元)</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">小计(元)</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">仓库货位</TableHead>
+                              <TableHead className="text-blue-800 text-sm font-semibold">退料原因</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {item.materials.map((m: any, idx: number) => {
                               const subtotal = (m.returnQuantity || 0) * (m.unitPrice || 0);
                               return (
-                                <tr key={idx} className="hover:bg-[#F2F6FA]/50">
-                                  <td className="px-3 py-2 text-sm text-blue-800 font-mono">{m.sourceApplicationCode || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800 font-mono">{m.materialCode}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.category || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.materialName}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.spec || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unit || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.returnQuantity || m.requestedQuantity || 0}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unitPrice != null ? m.unitPrice.toFixed(2) : '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.unitPrice != null ? subtotal.toFixed(2) : '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.warehousePosition || '-'}</td>
-                                  <td className="px-3 py-2 text-sm text-blue-800">{m.reason || '-'}</td>
-                                </tr>
+                                <TableRow key={idx} className="hover:bg-[#F2F6FA]/50">
+                                  <TableCell className="text-blue-800 font-mono">{m.sourceApplicationCode || '-'}</TableCell>
+                                  <TableCell className="text-blue-800 font-mono">{m.materialCode}</TableCell>
+                                  <TableCell className="text-blue-800">{m.category || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.materialName}</TableCell>
+                                  <TableCell className="text-blue-800">{m.spec || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unit || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.returnQuantity || m.requestedQuantity || 0}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unitPrice != null ? m.unitPrice.toFixed(2) : '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.unitPrice != null ? subtotal.toFixed(2) : '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.warehousePosition || '-'}</TableCell>
+                                  <TableCell className="text-blue-800">{m.reason || '-'}</TableCell>
+                                </TableRow>
                               );
                             })}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       ) : (
                         <div className="text-blue-800 text-center py-4">暂无退料物料明细</div>
                       )}
@@ -315,46 +316,46 @@ export function MaterialApprovalTable({
                         </div>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 
   // 采购审批表格
   const renderPurchaseTable = () => (
-    <table className="w-full">
-      <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-        <tr>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划编号</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划名称</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总金额</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">交货日期</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-          <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
+    <Table>
+      <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+        <TableRow>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">计划编号</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">计划名称</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">类型</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请日期</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">总金额</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">交货日期</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">优先级</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+          <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {paginatedData.map((item) => (
-          <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-            <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">{item.businessLink?.items?.[0]?.materialName ? '物资' : '生产物资'}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">{item.applyDate}</td>
-            <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.amount || '-'}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">{item.businessLink?.items?.[0]?.supplier || '-'}</td>
-            <td className="px-4 py-3 text-sm text-gray-600">{item.businessLink?.expectedDeliveryDate || '-'}</td>
-            <td className="px-4 py-3">
+          <TableRow key={item.id} className="hover:bg-gray-50">
+            <TableCell className="font-medium text-gray-900">{item.code}</TableCell>
+            <TableCell className="text-gray-900">{item.title}</TableCell>
+            <TableCell className="text-gray-600">{item.businessLink?.items?.[0]?.materialName ? '物资' : '生产物资'}</TableCell>
+            <TableCell className="text-gray-600">{item.applicantName}</TableCell>
+            <TableCell className="text-gray-600">{item.applyDate}</TableCell>
+            <TableCell className="font-medium text-gray-900">{item.amount || '-'}</TableCell>
+            <TableCell className="text-gray-600">{item.businessLink?.items?.[0]?.supplier || '-'}</TableCell>
+            <TableCell className="text-gray-600">{item.businessLink?.expectedDeliveryDate || '-'}</TableCell>
+            <TableCell>
               <span className={`px-2 py-1 text-xs font-medium rounded ${
                 item.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                 item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
@@ -365,9 +366,9 @@ export function MaterialApprovalTable({
                  item.priority === 'high' ? '高' :
                  item.priority === 'normal' ? '中' : '低'}
               </span>
-            </td>
-            <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
-            <td className="px-4 py-3">
+            </TableCell>
+            <TableCell>{getStatusBadge(item.status)}</TableCell>
+            <TableCell>
               <div className="flex items-center gap-1">
                 {item.status === ApprovalStatus.PENDING && canApprove && (
                   <>
@@ -383,11 +384,11 @@ export function MaterialApprovalTable({
                   <Eye className="w-4 h-4" />
                 </button>
               </div>
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 
   // 空状态
@@ -418,7 +419,7 @@ export function MaterialApprovalTable({
             <button
               key={i + 1}
               onClick={() => setCurrentPage(i + 1)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                 currentPage === i + 1
                   ? 'bg-emerald-600 text-white'
                   : 'border border-gray-200 text-gray-600 hover:bg-gray-50'

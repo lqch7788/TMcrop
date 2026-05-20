@@ -12,12 +12,11 @@ import {
   Clock,
   DollarSign,
   Info,
-  X,
 } from 'lucide-react';
 import { ApprovalType } from '../../types/approval';
 import { ApprovalLevel, getApprovalLevelName } from '../../config/approvalHierarchy';
 import { useApprovalLevel } from '../../hooks/useApprovalLevel';
-import { Button } from '../ui/button';
+import { Button, UnifiedModal } from '@/components/ui';
 
 interface ApprovalSubmitPanelProps {
   /** 审批类型 */
@@ -247,67 +246,62 @@ export function ApprovalSubmitPanel({
       </div>
 
       {/* 确认弹窗 */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-              <span className="font-medium text-gray-900">确认提交审批</span>
-              <Button variant="ghost" size="icon" onClick={() => setShowConfirm(false)}>
-                <X className="w-4 h-4 text-gray-500" />
-              </Button>
+      <UnifiedModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        title="确认提交审批"
+        size="md"
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setShowConfirm(false)} className="flex-1">
+              取消
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
+            >
+              {isSubmitting ? '提交中...' : '确认提交'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Info className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-600">审批信息</span>
             </div>
-
-            <div className="p-4 space-y-4">
-              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Info className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-600">审批信息</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-gray-500">标题：</div>
-                  <div className="font-medium text-gray-900 truncate">{title}</div>
-                  <div className="text-gray-500">金额：</div>
-                  <div className="font-medium text-gray-900">¥{amount.toLocaleString()}</div>
-                  <div className="text-gray-500">审批级别：</div>
-                  <div className="font-medium text-gray-900">{flowInfo.title}</div>
-                  <div className="text-gray-500">审批人数：</div>
-                  <div className="font-medium text-gray-900">{levelResult.approverCount}人</div>
-                </div>
-              </div>
-
-              {levelResult.approvers.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-sm font-medium text-gray-700 mb-2">审批流程：</div>
-                  <div className="space-y-1">
-                    {levelResult.approvers.map((approver, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center">
-                          {index + 1}
-                        </span>
-                        <span className="text-gray-900">{approver.userName}</span>
-                        <span className="text-gray-400">({approver.role})</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setShowConfirm(false)} className="flex-1">
-                  取消
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400"
-                >
-                  {isSubmitting ? '提交中...' : '确认提交'}
-                </Button>
-              </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="text-gray-500">标题：</div>
+              <div className="font-medium text-gray-900 truncate">{title}</div>
+              <div className="text-gray-500">金额：</div>
+              <div className="font-medium text-gray-900">¥{amount.toLocaleString()}</div>
+              <div className="text-gray-500">审批级别：</div>
+              <div className="font-medium text-gray-900">{flowInfo.title}</div>
+              <div className="text-gray-500">审批人数：</div>
+              <div className="font-medium text-gray-900">{levelResult.approverCount}人</div>
             </div>
           </div>
+
+          {levelResult.approvers.length > 0 && (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">审批流程：</div>
+              <div className="space-y-1">
+                {levelResult.approvers.map((approver, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-900">{approver.userName}</span>
+                    <span className="text-gray-400">({approver.role})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </UnifiedModal>
     </div>
   );
 }
