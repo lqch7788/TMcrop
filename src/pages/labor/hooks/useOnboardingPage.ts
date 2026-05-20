@@ -8,6 +8,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useWorkerStore } from '@/stores';
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
 import type { OnboardingData } from '@/stores/useOnboardingStore';
+import { showAlert } from '@/lib/dialogService';
 import type {
   OnboardingRecord,
   OnboardingFilters,
@@ -177,19 +178,19 @@ export function useOnboardingPage() {
   /** 提交入职申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.employeeName || !formData.expectedStartDate) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
     // 验证身份证号格式（18位）
     if (formData.idCard && !/^\d{17}[\dXx]$/.test(formData.idCard)) {
-      alert('身份证号格式不正确，请输入18位身份证号');
+      await showAlert('身份证号格式不正确，请输入18位身份证号');
       return;
     }
 
     // 验证银行卡号格式（16-19位）
     if (formData.bankCard && !/^\d{16,19}$/.test(formData.bankCard)) {
-      alert('银行卡号格式不正确，请输入16-19位银行卡号');
+      await showAlert('银行卡号格式不正确，请输入16-19位银行卡号');
       return;
     }
 
@@ -204,10 +205,10 @@ export function useOnboardingPage() {
         remarks: formData.remarks,
       });
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } catch (error) {
       console.error('提交入职申请失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, storeCreateItem]);
 
@@ -217,7 +218,7 @@ export function useOnboardingPage() {
       await storeUpdateStatus(record.id, 'onboarded');
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [storeUpdateStatus]);
 
@@ -227,7 +228,7 @@ export function useOnboardingPage() {
       await storeUpdateItem(record.id, { status: '已取消' });
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [storeUpdateItem]);
 

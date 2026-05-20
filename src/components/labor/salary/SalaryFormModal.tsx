@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, NumberInput, Label } from '@/components/ui';
 import type { SalaryRecord, SalaryCalcType, SalaryStatus } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 interface SalaryFormModalProps {
   isOpen: boolean;
@@ -86,7 +87,7 @@ export function SalaryFormModal({
 
   const handleSubmit = () => {
     if (!formData.staffId || !formData.staffName) {
-      alert('请选择员工');
+      showAlert('请选择员工');
       return;
     }
     const netSalary = calculateNetSalary();

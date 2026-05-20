@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import type { Staff, SwapRequest } from './types';
 import { Label } from '@/components/ui/label';
+import { showAlert } from '@/lib/dialogService';
 
 interface SwapRequestModalProps {
   staffList: Staff[];
@@ -57,11 +58,11 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
   // 提交
   const handleSubmit = () => {
     if (!formData.requesterId || !formData.targetId || !formData.originalDate || !formData.targetDate) {
-      alert('请填写完整信息');
+      showAlert('请填写完整信息');
       return;
     }
     if (formData.requesterId === formData.targetId) {
-      alert('不能与自己调班');
+      showAlert('不能与自己调班');
       return;
     }
     onSubmit(formData);

@@ -9,6 +9,7 @@ import { Calculator, Search, Plus, TrendingUp, DollarSign, ChevronLeft, RefreshC
 import { useCostStore } from '../stores';
 import type { CostCategoryItem, CostBudgetItem } from '../stores';
 import { useCostStats } from '../hooks/useCost';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import {
   COST_CATEGORY_TYPE_MAP,
   COST_CATEGORY_STATUS_MAP,
@@ -44,7 +45,7 @@ export default function CostAccounting() {
 
   const handleSaveCategory = async () => {
     if (!newCategory.categoryName || !newCategory.categoryCode) {
-      alert('请填写类别名称和编码'); return;
+      await showAlert('请填写类别名称和编码'); return;
     }
     try {
       if (editingCategory) {
@@ -58,7 +59,7 @@ export default function CostAccounting() {
   };
 
   const handleDeleteCategory = async (id: number) => {
-    if (!confirm('确定删除该成本类别吗？')) return;
+    if (!await showConfirm('确定删除该成本类别吗？')) return;
     try { await removeCategory(id); } catch { /* store handles error */ }
   };
 
@@ -70,7 +71,7 @@ export default function CostAccounting() {
 
   const handleSaveBudget = async () => {
     if (!newBudget.budgetName || !newBudget.categoryOid || !newBudget.budgetYear) {
-      alert('请填写预算名称、选择类别和年份'); return;
+      await showAlert('请填写预算名称、选择类别和年份'); return;
     }
     try {
       if (editingBudget) {
@@ -84,7 +85,7 @@ export default function CostAccounting() {
   };
 
   const handleDeleteBudget = async (id: number) => {
-    if (!confirm('确定删除该预算吗？')) return;
+    if (!await showConfirm('确定删除该预算吗？')) return;
     try { await removeBudget(id); } catch { /* store handles error */ }
   };
 

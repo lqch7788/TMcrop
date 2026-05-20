@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Label } from '@/components/ui/label';
 import { EfficiencyMetrics } from './types';
+import { showAlert } from '@/lib/dialogService';
 
 interface EfficiencyFormModalProps {
   isOpen: boolean;
@@ -39,11 +40,11 @@ export function EfficiencyFormModal({
 
   const handleSubmit = () => {
     if (!formData.date) {
-      alert('请选择月份');
+      showAlert('请选择月份');
       return;
     }
     if (!formData.department) {
-      alert('请选择部门');
+      showAlert('请选择部门');
       return;
     }
     onConfirm(formData);

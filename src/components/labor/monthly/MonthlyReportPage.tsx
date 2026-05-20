@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { BarChart3, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useMonthlyReport } from './hooks/useMonthlyReport';
 import { MonthlyReportFilters } from './MonthlyReportFilters';
 import { MonthlyStatsCards } from './MonthlyStatsCards';
@@ -104,8 +105,8 @@ export function MonthlyReportPage() {
   };
 
   // 删除记录
-  const handleDelete = (report: MonthlyReport) => {
-    if (window.confirm(`确定要删除 "${report.month} - ${report.dept}" 吗？`)) {
+  const handleDelete = async (report: MonthlyReport) => {
+    if (await showConfirm(`确定要删除 "${report.month} - ${report.dept}" 吗？`)) {
       // 删除逻辑
     }
   };
@@ -122,7 +123,7 @@ export function MonthlyReportPage() {
   // 确认导出
   const handleBatchExportClick = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

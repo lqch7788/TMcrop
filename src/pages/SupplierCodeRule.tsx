@@ -5,6 +5,7 @@ import { AddMidModal } from '../components/codeRule/AddMidModal';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useSupplierCodeRuleStore } from '../stores';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function SupplierCodeRule() {
   const navigate = useNavigate();
@@ -90,13 +91,13 @@ export default function SupplierCodeRule() {
 
   // 删除大类（通过Store持久化到后端DB）
   const handleDeleteBigCategory = async (bigCode: string) => {
-    if (!confirm(`确定要删除大类 "${bigCode}" 吗？`)) return;
+    if (!await showConfirm(`确定要删除大类 "${bigCode}" 吗？`)) return;
     await deleteBigCategory(bigCode);
   };
 
   // 删除中类（通过Store持久化到后端DB）
   const handleDeleteMidCategory = async (bigCode: string, midCode: string) => {
-    if (!confirm(`确定要删除中类 "${midCode}" 吗？`)) return;
+    if (!await showConfirm(`确定要删除中类 "${midCode}" 吗？`)) return;
     await deleteMidCategory(bigCode, midCode);
   };
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import * as XLSX from 'xlsx';
+import { showAlert } from '@/lib/dialogService';
 
 interface CreatePlanModalProps {
   // 弹窗状态
@@ -95,13 +96,13 @@ export function CreatePlanModal({
 
         if (importedItems.length > 0) {
           onItemsChange([...createItems, ...importedItems]);
-          alert(`成功导入 ${importedItems.length} 条物料明细`);
+          showAlert(`成功导入 ${importedItems.length} 条物料明细`);
         } else {
-          alert('导入失败：未找到有效的物料数据');
+          showAlert('导入失败：未找到有效的物料数据');
         }
       } catch (error) {
         console.error('导入失败:', error);
-        alert('导入失败：请确保文件格式正确');
+        showAlert('导入失败：请确保文件格式正确');
       }
     };
     reader.readAsArrayBuffer(file);

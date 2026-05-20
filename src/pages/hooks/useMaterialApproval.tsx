@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApproval } from '@/hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '@/types/approval';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 import type {
   MaterialApprovalTab,
   TabConfig,
@@ -146,7 +147,7 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
 
   const handleConfirmReject = useCallback(() => {
     if (!rejectModal.reason.trim()) {
-      alert('请输入拒绝原因');
+      showAlert('请输入拒绝原因');
       return;
     }
     if (rejectModal.item) {
@@ -166,8 +167,8 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
   }, []);
 
   // 通过审批
-  const handleApprove = useCallback((item: Approval) => {
-    if (confirm(`确定要通过「${item.title}」吗？`)) {
+  const handleApprove = useCallback(async (item: Approval) => {
+    if (await showConfirm(`确定要通过「${item.title}」吗？`)) {
       approve(item.id);
       handleCloseDetail();
     }

@@ -18,6 +18,7 @@ import { StockType, BusinessType, SourceType } from '../../../types/inventory';
 import { getCurrentUsername } from '../../../hooks/farm';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { validateUnitPrice, validateDateNotFuture } from '../../../lib/validators';
+import { showAlert } from '@/lib/dialogService';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -198,7 +199,7 @@ export default function HarvestPage() {
 
   const handleExportClick = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportTypeModal(true);
@@ -317,7 +318,7 @@ export default function HarvestPage() {
       setSelectedRows([]);
     } catch (error) {
       console.error('导出失败:', error);
-      alert('导出失败，请重试');
+      showAlert('导出失败，请重试');
       setShowExportTypeModal(false);
       setExportMode(false);
       setSelectedRows([]);
@@ -393,7 +394,7 @@ export default function HarvestPage() {
     }
 
     if (failedIds.length > 0) {
-      alert(`部分记录更新失败: ${failedIds.join(', ')}`);
+      await showAlert(`部分记录更新失败: ${failedIds.join(', ')}`);
     }
 
     // 通过 Store 重新加载数据
@@ -734,7 +735,7 @@ export default function HarvestPage() {
           onExport={() => setExportMode(true)}
           onConfirmExport={() => {
             if (selectedRows.length === 0) {
-              alert('请先选择要导出的数据');
+              showAlert('请先选择要导出的数据');
               return;
             }
             // 点击确认导出时，打开导出格式选择弹窗

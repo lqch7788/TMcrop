@@ -19,6 +19,7 @@ import { ApprovalDetail } from '../components/approval/ApprovalDetail';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui';
 import { Button } from '../components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function FarmApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -108,17 +109,17 @@ export default function FarmApproval() {
     setSelectedIds(newSelected);
   };
 
-  const handleBatchApprove = () => {
+  const handleBatchApprove = async () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
+    if (await showConfirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
       selectedIds.forEach(id => approve(id));
       setSelectedIds(new Set());
     }
   };
 
-  const handleBatchReject = () => {
+  const handleBatchReject = async () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
+    if (await showConfirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
       selectedIds.forEach(id => reject(id, '批量拒绝'));
       setSelectedIds(new Set());
     }

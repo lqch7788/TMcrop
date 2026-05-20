@@ -11,6 +11,7 @@ import type {
   AddSubVariety1State,
 } from '../types/produceCodeRule.types';
 import { DEFAULT_CATEGORIES, deepCloneCategories } from '../types/produceCodeRule.types';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export function useProduceCodeRule() {
   // ============================================================
@@ -202,8 +203,8 @@ export function useProduceCodeRule() {
   }, [newSubCode, newSubName]);
 
   /** 删除类型 */
-  const deleteType = useCallback((categoryCode: string, typeCode: string) => {
-    if (!confirm(`确定要删除类型 "${typeCode}" 吗？`)) return;
+  const deleteType = useCallback(async (categoryCode: string, typeCode: string) => {
+    if (!await showConfirm(`确定要删除类型 "${typeCode}" 吗？`)) return;
     setCategories(prev => prev.map(cat => {
       if (cat.code !== categoryCode) return cat;
       return {
@@ -214,8 +215,8 @@ export function useProduceCodeRule() {
   }, []);
 
   /** 删除品种 */
-  const deleteSub = useCallback((categoryCode: string, typeCode: string, subCode: string) => {
-    if (!confirm(`确定要删除品种 "${subCode}" 吗？`)) return;
+  const deleteSub = useCallback(async (categoryCode: string, typeCode: string, subCode: string) => {
+    if (!await showConfirm(`确定要删除品种 "${subCode}" 吗？`)) return;
     setCategories(prev => prev.map(cat => {
       if (cat.code !== categoryCode) return cat;
       return {
@@ -249,7 +250,7 @@ export function useProduceCodeRule() {
               const existingSubVarieties = sub.subVarieties || [];
               // 检查是否已存在相同代码
               if (existingSubVarieties.some(sv => sv.code === code)) {
-                alert('该子品种1代码已存在！');
+                showAlert('该子品种1代码已存在！');
                 return sub;
               }
               return {
@@ -267,8 +268,8 @@ export function useProduceCodeRule() {
   }, [newSubVariety1Code, newSubVariety1Name]);
 
   /** 删除子品种1 */
-  const deleteSubVariety1 = useCallback((categoryCode: string, typeCode: string, subCode: string, subVariety1Code: string) => {
-    if (!confirm(`确定要删除子品种1 "${subVariety1Code}" 吗？`)) return;
+  const deleteSubVariety1 = useCallback(async (categoryCode: string, typeCode: string, subCode: string, subVariety1Code: string) => {
+    if (!await showConfirm(`确定要删除子品种1 "${subVariety1Code}" 吗？`)) return;
     setCategories(prev => prev.map(cat => {
       if (cat.code !== categoryCode) return cat;
       return {
@@ -292,7 +293,7 @@ export function useProduceCodeRule() {
 
   /** 保存所有修改 */
   const handleSave = useCallback(() => {
-    alert('编码规则已保存！（演示模式）');
+    showAlert('编码规则已保存！（演示模式）');
   }, []);
 
   return {

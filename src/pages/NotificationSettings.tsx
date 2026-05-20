@@ -13,6 +13,7 @@ import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { useNotificationSettingsStore } from '../stores';
 import type { NotificationChannel, NotificationRule } from '../services/apiNotificationService';
+import { showConfirm } from '@/lib/dialogService';
 
 // ============================================
 // 常量
@@ -386,8 +387,8 @@ export default function NotificationSettings() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingRule(rule); setRuleModal(true); }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          if (confirm('确定删除该规则？')) removeRule(rule.id);
+                        <Button variant="ghost" size="icon" onClick={async () => {
+                          if (await showConfirm('确定删除该规则？')) removeRule(rule.id);
                         }}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
@@ -447,8 +448,8 @@ export default function NotificationSettings() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditingChannel(ch); setChannelModal(true); }}>
                             <Edit2 className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            if (confirm('确定删除该渠道？')) removeChannel(ch.id);
+                          <Button variant="ghost" size="icon" onClick={async () => {
+                            if (await showConfirm('确定删除该渠道？')) removeChannel(ch.id);
                           }}>
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </Button>

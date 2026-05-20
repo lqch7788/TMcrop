@@ -13,6 +13,7 @@ import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { TextArea } from '../../ui/TextArea';
+import { showAlert } from '@/lib/dialogService';
 
 interface CreateTaskModalProps {
   onClose: () => void;
@@ -77,11 +78,11 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      alert('请输入任务标题');
+      await showAlert('请输入任务标题');
       return;
     }
     if (!greenhouse.trim()) {
-      alert('请选择执行区域');
+      await showAlert('请选择执行区域');
       return;
     }
 
@@ -112,7 +113,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
       onCreated();
     } catch (error) {
       // 创建任务失败
-      alert('创建任务失败');
+      await showAlert('创建任务失败');
     } finally {
       setIsSubmitting(false);
     }

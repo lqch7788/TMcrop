@@ -13,6 +13,7 @@ import { ProduceInventory, StockType } from '../../types/inventory';
 import { useWarehouseStore } from '../../stores';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { DictSelect } from '../common/settings/DictSelect';
+import { showAlert } from '@/lib/dialogService';
 
 interface ProduceInventoryAddModalProps {
   isOpen: boolean;
@@ -140,7 +141,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
   // 提交表单
   const handleSubmit = () => {
     if (!cropName || !variety || !warehouseId || quantity <= 0) {
-      alert('请填写必填字段');
+      showAlert('请填写必填字段');
       return;
     }
 

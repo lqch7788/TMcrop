@@ -8,6 +8,7 @@ import { Button, Input, TextArea, Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBaseStore } from '../../stores';
 import type { Base } from '../../services/apiBasicDataService';
+import { showAlert } from '@/lib/dialogService';
 
 /** 公司分组（临时内存结构，后续可扩展为独立表） */
 interface CompanyGroup {
@@ -69,7 +70,7 @@ export default function CompanyBaseTab() {
   /** 保存（新增或编辑） */
   const handleSave = async () => {
     if (!formData.name || !formData.companyName) {
-      alert('请填写基地名称和所属公司');
+      await showAlert('请填写基地名称和所属公司');
       return;
     }
     try {
@@ -83,7 +84,7 @@ export default function CompanyBaseTab() {
       setShowModal(false);
       setEditingBase(null);
     } catch (err) {
-      alert('保存失败: ' + (err instanceof Error ? err.message : '未知错误'));
+      await showAlert('保存失败: ' + (err instanceof Error ? err.message : '未知错误'));
     }
   };
 
@@ -94,7 +95,7 @@ export default function CompanyBaseTab() {
       await removeBase(showDeleteConfirm.oid);
       setShowDeleteConfirm(null);
     } catch (err) {
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 

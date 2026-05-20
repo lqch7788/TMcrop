@@ -7,6 +7,7 @@ import type { Team } from './types';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
+import { showConfirm } from '@/lib/dialogService';
 
 interface TeamTableProps {
   onBack?: () => void;
@@ -101,8 +102,8 @@ export function TeamTable({
   };
 
   // 处理删除
-  const handleDelete = (team: Team) => {
-    if (window.confirm(`确定删除班组 "${team.name}" 吗？`)) {
+  const handleDelete = async (team: Team) => {
+    if (await showConfirm(`确定删除班组 "${team.name}" 吗？`)) {
       deleteTeam(team.id);
     }
   };

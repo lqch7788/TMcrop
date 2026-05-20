@@ -8,6 +8,7 @@ import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -200,7 +201,7 @@ export function PurchasePlanTable({
                   variant="blue"
                   onClick={() => {
                     if (selectedRows.length === 0) {
-                      alert('请先选择要编辑的数据');
+                      showAlert('请先选择要编辑的数据');
                       return;
                     }
                     onBatchEditConfirm?.();
@@ -221,7 +222,7 @@ export function PurchasePlanTable({
                   variant="destructive"
                   onClick={() => {
                     if (selectedRows.length === 0) {
-                      alert('请先选择要删除的数据');
+                      showAlert('请先选择要删除的数据');
                       return;
                     }
                     onBatchDeleteConfirm?.();
@@ -382,8 +383,8 @@ export function PurchasePlanTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              if (confirm(`确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`)) {
+                            onClick={async () => {
+                              if (await showConfirm(`确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`)) {
                                 onDelete(plan);
                               }
                             }}

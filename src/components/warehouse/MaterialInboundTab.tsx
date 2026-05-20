@@ -10,6 +10,7 @@ import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { showAlert } from '@/lib/dialogService';
 
 export interface InboundMaterial {
   id: number;
@@ -325,7 +326,7 @@ export function MaterialInboundTab({
 
   const handleConfirmEdit = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要编辑的记录');
+      showAlert('请先选择要编辑的记录');
       return;
     }
     setShowEditWarning(true);

@@ -12,6 +12,7 @@ import { TaskDetailModal } from '../modals/TaskDetailModal';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
 import { useAuthPermission } from '../../../../hooks/usePermission';
+import { showConfirm } from '@/lib/dialogService';
 
 /**
  * 农事任务Tab组件
@@ -96,8 +97,8 @@ export const FarmDispatchTab: React.FC = () => {
   };
 
   // 处理删除
-  const handleDelete = (taskId: string) => {
-    if (window.confirm('确定要删除这个任务吗？')) {
+  const handleDelete = async (taskId: string) => {
+    if (await showConfirm('确定要删除这个任务吗？')) {
       deleteTask(taskId);
     }
   };

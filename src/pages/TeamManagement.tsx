@@ -10,6 +10,7 @@ import { Button } from '../components/ui/button';
 import { useTeamStore, useShiftStore } from '../stores';
 import type { Team } from '../services/apiBasicDataService';
 import type { Shift } from '../stores';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function TeamManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +46,7 @@ export default function TeamManagement() {
 
   const handleSaveTeam = async () => {
     if (!newTeam.teamName || !newTeam.teamCode) {
-      alert('请填写班组名称和编码');
+      await showAlert('请填写班组名称和编码');
       return;
     }
     try {
@@ -55,13 +56,13 @@ export default function TeamManagement() {
         await addTeam(newTeam);
       }
       setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' });
-    } catch (err) { console.error('保存班组失败:', err); alert('保存班组失败'); }
+    } catch (err) { console.error('保存班组失败:', err); await showAlert('保存班组失败'); }
   };
 
   const handleDeleteTeam = async (id: string) => {
-    if (!confirm('确定删除该班组吗？')) return;
+    if (!await showConfirm('确定删除该班组吗？')) return;
     try { await removeTeam(id); }
-    catch (err) { console.error('删除班组失败:', err); alert('删除班组失败'); }
+    catch (err) { console.error('删除班组失败:', err); await showAlert('删除班组失败'); }
   };
 
   const editTeam = (team: Team) => {
@@ -72,7 +73,7 @@ export default function TeamManagement() {
 
   const handleSaveShift = async () => {
     if (!newShift.shiftName || !newShift.shiftCode || !newShift.startTime || !newShift.endTime) {
-      alert('请填写班次编码、名称、开始时间和结束时间');
+      await showAlert('请填写班次编码、名称、开始时间和结束时间');
       return;
     }
     try {
@@ -83,13 +84,13 @@ export default function TeamManagement() {
       }
       setShowShiftModal(false); setEditingShift(null);
       setNewShift({ status: 'active', shiftType: '早班' });
-    } catch (err) { console.error('保存班次失败:', err); alert('保存班次失败'); }
+    } catch (err) { console.error('保存班次失败:', err); await showAlert('保存班次失败'); }
   };
 
   const handleDeleteShift = async (id: number) => {
-    if (!confirm('确定删除该班次吗？')) return;
+    if (!await showConfirm('确定删除该班次吗？')) return;
     try { await removeShift(id); }
-    catch (err) { console.error('删除班次失败:', err); alert('删除班次失败'); }
+    catch (err) { console.error('删除班次失败:', err); await showAlert('删除班次失败'); }
   };
 
   const editShift = (shift: Shift) => {

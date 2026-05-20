@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import { useProductionPlanStore } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
@@ -356,7 +357,7 @@ export default function MonthlyPlanningPage() {
   };
 
   const handleExport = () => {
-    alert('导出功能开发中...');
+    showAlert('导出功能开发中...');
   };
 
   const statsData = monthlyPlan

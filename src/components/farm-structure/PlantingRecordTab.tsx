@@ -9,6 +9,7 @@ import { usePlantingRecordStore } from '../../stores/usePlantingRecordStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
 import type { PlantingRecord } from '../../services/apiPlantingRecordService';
+import { showAlert } from '@/lib/dialogService';
 
 const PAGE_SIZE = 10;
 
@@ -64,7 +65,7 @@ export default function PlantingRecordTab() {
   /** 保存创建 */
   const handleSaveCreate = async () => {
     if (!formData.facility_oid || !formData.crop_name) {
-      alert('请选择设施和填写作物名称');
+      await showAlert('请选择设施和填写作物名称');
       return;
     }
     try {
@@ -79,7 +80,7 @@ export default function PlantingRecordTab() {
       });
       setShowCreateModal(false);
     } catch (err) {
-      alert('创建失败');
+      await showAlert('创建失败');
     }
   };
 
@@ -102,7 +103,7 @@ export default function PlantingRecordTab() {
       await editRecord(currentRecord.oid, formData);
       setShowEditModal(false);
     } catch (err) {
-      alert('更新失败');
+      await showAlert('更新失败');
     }
   };
 
@@ -122,7 +123,7 @@ export default function PlantingRecordTab() {
   /** 结束种植季 */
   const handleEndSeason = async () => {
     if (!currentRecord || !formData.end_date) {
-      alert('请填写结束日期');
+      await showAlert('请填写结束日期');
       return;
     }
     try {
@@ -135,7 +136,7 @@ export default function PlantingRecordTab() {
       });
       setShowEndModal(false);
     } catch (err) {
-      alert('结束种植季失败');
+      await showAlert('结束种植季失败');
     }
   };
 
@@ -146,7 +147,7 @@ export default function PlantingRecordTab() {
       await removeRecord(showDeleteConfirm.oid);
       setShowDeleteConfirm(null);
     } catch (err) {
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 

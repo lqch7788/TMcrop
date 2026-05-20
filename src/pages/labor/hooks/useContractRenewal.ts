@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useContractRenewalStore } from '@/stores';
 import type { ContractRenewalData } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import type {
   ContractRenewalFilters,
   ContractRenewalFormData,
@@ -175,9 +176,9 @@ export function useContractRenewal(
     const daysUntilExpiry = Math.ceil((contractDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     if (daysUntilExpiry > 0 && daysUntilExpiry <= 30) {
-      alert(`提醒：员工 ${employeeName} 的合同将在 ${daysUntilExpiry} 天后（${currentContractEnd}）到期，请及时处理续签！`);
+      showAlert(`提醒：员工 ${employeeName} 的合同将在 ${daysUntilExpiry} 天后（${currentContractEnd}）到期，请及时处理续签！`);
     } else if (daysUntilExpiry <= 0) {
-      alert(`警告：员工 ${employeeName} 的合同已到期（${currentContractEnd}），请立即处理！`);
+      showAlert(`警告：员工 ${employeeName} 的合同已到期（${currentContractEnd}），请立即处理！`);
     }
 
     setFormData(prev => ({
@@ -250,7 +251,7 @@ export function useContractRenewal(
   /** 提交合同续签申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.newContractStart || !formData.newContractEnd) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -270,9 +271,9 @@ export function useContractRenewal(
 
     if (result) {
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } else {
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
 

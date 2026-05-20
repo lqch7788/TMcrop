@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSalaryBudgetStore } from '@/stores';
 import type { SalaryBudgetData } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import type {
   SalaryBudgetFilters,
   SalaryBudgetFormData,
@@ -214,7 +215,7 @@ export function useSalaryBudget(_departments: { id: string; name: string }[]): U
   /** 提交工资预算申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.deptId || !formData.budgetMonth || formData.totalBaseSalary <= 0) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -232,9 +233,9 @@ export function useSalaryBudget(_departments: { id: string; name: string }[]): U
 
     if (result) {
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } else {
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
 

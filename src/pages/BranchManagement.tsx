@@ -8,6 +8,7 @@ import { MapPin, Building2, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRigh
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useBranchStore } from '../stores';
 import type { Branch } from '../stores';
+import { showConfirm } from '@/lib/dialogService';
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',
@@ -96,7 +97,7 @@ export default function BranchManagement() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('确定要删除该基地吗？')) {
+    if (await showConfirm('确定要删除该基地吗？')) {
       try {
         await removeBranch(id);
       } catch {

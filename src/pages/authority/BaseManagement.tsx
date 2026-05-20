@@ -23,6 +23,7 @@ import {
   getBases,
   saveBases,
 } from '../../services/dictionaryService';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function BaseManagement() {
   const [bases, setBases] = useState<Base[]>([]);
@@ -107,7 +108,7 @@ export default function BaseManagement() {
 
   // 删除
   const handleDelete = async (base: Base) => {
-    if (!confirm(`确定要删除基地"${base.baseName}"吗？`)) return;
+    if (!await showConfirm(`确定要删除基地"${base.baseName}"吗？`)) return;
     try {
       setLoading(true);
       await saveBases({

@@ -11,6 +11,7 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
+import { showAlert } from '@/lib/dialogService';
 
 interface EditCropVarietyModalProps {
   isOpen: boolean;
@@ -124,7 +125,7 @@ export function EditCropVarietyModal({
       onSuccess();
       onClose();
     } catch (error) {
-      alert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      await showAlert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
 

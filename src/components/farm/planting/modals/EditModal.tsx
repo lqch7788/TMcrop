@@ -13,6 +13,7 @@ import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '../../../ui/input';
 import { TextArea } from '../../../ui/TextArea';
+import { showAlert } from '@/lib/dialogService';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export function EditModal({
       onClose();
     } catch (error) {
       console.error('更新失败:', error);
-      alert('更新失败，请重试');
+      showAlert('更新失败，请重试');
     }
   };
 

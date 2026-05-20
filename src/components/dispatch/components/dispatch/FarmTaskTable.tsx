@@ -7,6 +7,7 @@ import React from 'react';
 import { Edit2, Trash2, Send, Eye } from 'lucide-react';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
+import { showConfirm } from '@/lib/dialogService';
 
 /**
  * 农事任务表格组件 Props
@@ -222,8 +223,8 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                     )}
                     {canDelete && (
                       <button
-                        onClick={() => {
-                          if (window.confirm('确定要删除吗？')) {
+                        onClick={async () => {
+                          if (await showConfirm('确定要删除吗？')) {
                             onDelete(task.id);
                           }
                         }}

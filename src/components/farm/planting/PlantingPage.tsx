@@ -25,6 +25,7 @@ import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { enhancedApiClient } from '../../../lib/apiClient';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
@@ -202,7 +203,7 @@ export default function PlantingPage() {
       try {
         const res = await enhancedApiClient.get(`/plantings/${id}/check-deletable`);
         if (!res.data?.deletable) {
-          alert(`种植记录已被 ${res.data?.labelCount || '多个'} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
+          await showAlert(`种植记录已被 ${res.data?.labelCount || '多个'} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
           return;
         }
       } catch {
@@ -218,18 +219,18 @@ export default function PlantingPage() {
   // 处理结束计划
   const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
     if (!record.productionPlanCode) {
-      alert('该种植没有关联的生产计划，无法结束');
+      await showAlert('该种植没有关联的生产计划，无法结束');
       return;
     }
 
     const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
     if (!batch) {
-      alert('未找到关联的生产计划');
+      await showAlert('未找到关联的生产计划');
       return;
     }
 
     if (batch.batchStatus === 'completed') {
-      alert('该生产计划已完成结束，不能重复结束');
+      await showAlert('该生产计划已完成结束，不能重复结束');
       return;
     }
 
@@ -239,16 +240,16 @@ export default function PlantingPage() {
       ? `确认正常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
       : `确认异常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
 
-    if (!confirm(confirmMsg)) {
+    if (!await showConfirm(confirmMsg)) {
       return;
     }
 
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
-      alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       window.location.reload();
     } else {
-      alert('结束失败');
+      await showAlert('结束失败');
     }
   };
 
@@ -295,14 +296,14 @@ export default function PlantingPage() {
     const freshLabels = usePlantLabelStore.getState().labels;
     const label = freshLabels.find(l => l.label_number === data.labelNumber);
     if (!label) {
-      alert('未找到对应标签，请检查标签编号');
+      await showAlert('未找到对应标签，请检查标签编号');
       return false;
     }
     const ok = await submitMove(label.id, data);
     if (ok) {
-      alert('移动操作成功');
+      await showAlert('移动操作成功');
     } else {
-      alert('移动操作失败');
+      await showAlert('移动操作失败');
     }
     return ok;
   };
@@ -310,9 +311,9 @@ export default function PlantingPage() {
   const handleMarkSubmit = async (markId: number, labelIds: number[]) => {
     const ok = await submitMark(markId, labelIds);
     if (ok) {
-      alert('标记分配成功');
+      await showAlert('标记分配成功');
     } else {
-      alert('标记分配失败');
+      await showAlert('标记分配失败');
     }
     return ok;
   };
@@ -362,7 +363,7 @@ export default function PlantingPage() {
 
   const handleExportClickConfirm = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -371,7 +372,7 @@ export default function PlantingPage() {
   // 确认打印
   const handlePrintConfirm = (records: Planting[]) => {
     if (records.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     setPrintRecords(records);

@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Leaf, Sprout, Copy, Check, RefreshCw, ChevronDown, ChevronRight, List, GitBranch } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../../types/cropVariety';
 import { CropVarietyTable } from './CropVarietyTable';
 import { VarietyTree } from './VarietyTree';
@@ -155,7 +156,7 @@ export default function CropVarietyManagement() {
   // 处理内联编辑保存
   const handleInlineEditSave = useCallback(async () => {
     if (!inlineEditName.trim()) {
-      alert('请输入名称');
+      await showAlert('请输入名称');
       return;
     }
 
@@ -173,7 +174,7 @@ export default function CropVarietyManagement() {
       setInlineEditState({ active: false, level: 'type', nodeKey: '', nodeName: '', extensionId: undefined, parentPath: {} });
       setInlineEditName('');
     } catch (error) {
-      alert(error instanceof Error ? error.message : '保存失败');
+      await showAlert(error instanceof Error ? error.message : '保存失败');
     }
   }, [inlineEditState, inlineEditName]);
 
@@ -186,7 +187,7 @@ export default function CropVarietyManagement() {
   // 处理内联新增保存
   const handleInlineAddSave = useCallback(async () => {
     if (!inlineAddCode.trim() || !inlineAddName.trim()) {
-      alert('请输入编号和名称');
+      await showAlert('请输入编号和名称');
       return;
     }
 
@@ -220,7 +221,7 @@ export default function CropVarietyManagement() {
       setInlineAddCode('');
       setInlineAddName('');
     } catch (error) {
-      alert(error instanceof Error ? error.message : '保存失败');
+      await showAlert(error instanceof Error ? error.message : '保存失败');
     }
   }, [inlineAddState, inlineAddCode, inlineAddName]);
 
@@ -411,7 +412,7 @@ export default function CropVarietyManagement() {
     if (deleteConfirm.variety) {
       const success = await store.deleteItem(deleteConfirm.variety.id);
       if (!success) {
-        alert('删除失败，请重试');
+        await showAlert('删除失败，请重试');
         return;
       }
       handleRefresh();

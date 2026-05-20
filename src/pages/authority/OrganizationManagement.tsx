@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { Organization } from '@/types/authority';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function OrganizationManagement() {
   const organizations = useOrganizationStore((s) => s.organizations);
@@ -109,7 +110,7 @@ export default function OrganizationManagement() {
 
   // 删除
   const handleDelete = async (oid: string) => {
-    if (!confirm('确定要删除该组织吗？')) return;
+    if (!await showConfirm('确定要删除该组织吗？')) return;
     try {
       await deleteOrganization(oid);
     } catch (err) {

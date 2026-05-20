@@ -19,6 +19,7 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '../../../ui/input';
 import { TextArea } from '../../../ui/TextArea';
+import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -101,7 +102,7 @@ export function AddModal({
 
   const handleSubmit = async () => {
     if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -174,7 +175,7 @@ export function AddModal({
       }
     } catch (error) {
       console.error('添加种植记录失败:', error);
-      alert('添加失败，请重试');
+      showAlert('添加失败，请重试');
       return;
     }
 

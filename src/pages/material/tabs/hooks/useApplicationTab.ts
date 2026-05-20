@@ -9,6 +9,7 @@ import { Approval, ApprovalType, ApprovalStatus } from '@/types/approval';
 import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
 import { useMaterialRequestDataStore, useUserStore } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 
 // 默认新增表单初始状态
 const getDefaultAddForm = () => ({
@@ -483,7 +484,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     await loadItems();
 
     setShowEditModal(false);
-    alert('编辑已保存，领料单已重新提交，等待审批');
+    await showAlert('编辑已保存，领料单已重新提交，等待审批');
   };
 
   // ============================================
@@ -500,7 +501,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   const submitVoidApply = async () => {
     if (!voidReason.trim()) {
-      alert('请填写作废原因');
+      await showAlert('请填写作废原因');
       return;
     }
     if (!selectedRecord) return;
@@ -563,11 +564,11 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // ============================================
   const handleSaveAdd = async () => {
     if (!addForm.applicant) {
-      alert('请选择申请人');
+      await showAlert('请选择申请人');
       return;
     }
     if (addForm.materials.length === 0) {
-      alert('请添加至少一个物料');
+      await showAlert('请添加至少一个物料');
       return;
     }
 
@@ -588,7 +589,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     });
 
     if (!newRecord) {
-      alert('保存领料单失败，请重试');
+      await showAlert('保存领料单失败，请重试');
       return;
     }
 

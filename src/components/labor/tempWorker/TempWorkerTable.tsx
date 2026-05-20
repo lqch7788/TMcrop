@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { showConfirm } from '@/lib/dialogService';
 
 /**
  * 获取状态对应的样式
@@ -74,8 +75,8 @@ export function TempWorkerTable({
   const allSelected = selectedRows.length === data.length && data.length > 0;
 
   // 处理删除确认
-  const handleDelete = (record: TempWorker) => {
-    if (confirm(`确定要删除员工 "${record.name}" 吗？`)) {
+  const handleDelete = async (record: TempWorker) => {
+    if (await showConfirm(`确定要删除员工 "${record.name}" 吗？`)) {
       onDelete(record);
     }
   };

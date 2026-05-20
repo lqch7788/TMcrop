@@ -12,6 +12,7 @@ import {
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useFarmActivityStore, useZoneStore, useWorkerStore } from '../stores';
 import type { FarmActivity } from '../services/apiBasicDataService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const ACTIVITY_TYPES: Record<string, { label: string; color: string }> = {
   WATERING: { label: '灌溉', color: 'bg-blue-100 text-blue-700' },
@@ -116,13 +117,13 @@ export default function FarmActivityManagement() {
       handleCloseModal();
     } catch (err) {
       console.error('保存农事活动失败:', err);
-      alert('保存农事活动失败');
+      await showAlert('保存农事活动失败');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('确定要删除该农事活动吗？')) {
-      try { await removeActivity(id); } catch (err) { alert('删除失败'); }
+    if (await showConfirm('确定要删除该农事活动吗？')) {
+      try { await removeActivity(id); } catch (err) { await showAlert('删除失败'); }
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, NumberInput, Label } from '@/components/ui';
 import type { MonthlyBudget } from '../types';
+import { showAlert } from '@/lib/dialogService';
 
 interface BudgetFormModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function BudgetFormModal({
 
   const handleSubmit = () => {
     if (!formData.month) {
-      alert('请选择月份');
+      showAlert('请选择月份');
       return;
     }
     // 计算总成本

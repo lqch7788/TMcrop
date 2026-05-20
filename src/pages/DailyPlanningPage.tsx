@@ -11,6 +11,7 @@ import { Calendar, CheckCircle, Clock, AlertTriangle,
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
+import { showAlert } from '@/lib/dialogService';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
@@ -249,7 +250,7 @@ export default function DailyPlanningPage() {
   const handleConfirmDispatch = async () => {
     const result = await confirmAndDispatch(todayPlan);
     if (result.success) {
-      alert(`成功派发 ${result.dispatchedTasks} 个任务！`);
+      await showAlert(`成功派发 ${result.dispatchedTasks} 个任务！`);
     }
   };
 

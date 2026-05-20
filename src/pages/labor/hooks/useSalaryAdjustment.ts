@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSalaryAdjustmentStore } from '@/stores';
 import type { SalaryAdjustmentData } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import type {
   SalaryAdjustmentFilters,
   SalaryAdjustmentFormData,
@@ -231,12 +232,12 @@ export function useSalaryAdjustment(
   /** 提交调薪申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.employeeId || !formData.proposedSalary || !formData.effectiveDate || !formData.reason) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
     if (formData.proposedSalary <= formData.currentSalary) {
-      alert('申请工资必须大于当前工资');
+      await showAlert('申请工资必须大于当前工资');
       return;
     }
 
@@ -255,9 +256,9 @@ export function useSalaryAdjustment(
 
     if (result) {
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } else {
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
 

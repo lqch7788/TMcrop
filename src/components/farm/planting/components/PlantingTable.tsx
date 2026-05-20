@@ -13,6 +13,7 @@ import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
+import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型
 type PlantingOperationMode = 'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export';
@@ -521,7 +522,7 @@ export function PlantingTable({
   const executeOperation = (op: PlantingOperationMode) => {
     const record = getFirstSelectedRecord();
     if (!record) {
-      alert('请先在表格中选择一条记录');
+      showAlert('请先在表格中选择一条记录');
       return;
     }
     switch (op) {
@@ -535,7 +536,7 @@ export function PlantingTable({
         if (!record.isHarvest && onHarvest) {
           onHarvest(record);
         } else {
-          alert('该记录已采收或无法进行采收操作');
+          showAlert('该记录已采收或无法进行采收操作');
           return;
         }
         break;
@@ -546,7 +547,7 @@ export function PlantingTable({
         if (record.pictures?.length > 0 && onImageClick) {
           onImageClick(record.pictures);
         } else {
-          alert('该记录没有图片');
+          showAlert('该记录没有图片');
           return;
         }
         break;
@@ -575,7 +576,7 @@ export function PlantingTable({
   // 确认打印
   const confirmPrint = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     const selectedRecords = data.filter(item => selectedRows.includes(item.id));

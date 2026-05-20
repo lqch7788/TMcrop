@@ -6,6 +6,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRecruitmentStore } from '@/stores';
 import type { RecruitmentData } from '@/stores';
+import { showAlert } from '@/lib/dialogService';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -232,12 +233,12 @@ export function useRecruitment(
   /** 提交招聘申请 */
   const handleSubmit = useCallback(async () => {
     if (!formData.deptId || !formData.positionId || formData.headcount < 1 || !formData.reason) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
     if (formData.salaryMin > formData.salaryMax) {
-      alert('最低薪资不能大于最高薪资');
+      await showAlert('最低薪资不能大于最高薪资');
       return;
     }
 
@@ -265,13 +266,13 @@ export function useRecruitment(
       });
       if (result) {
         setIsFormModalOpen(false);
-        alert('提交成功！');
+        await showAlert('提交成功！');
       } else {
-        alert('提交失败，请重试');
+        await showAlert('提交失败，请重试');
       }
     } catch (error) {
       console.error('提交招聘申请失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, departments, positions, createItem]);
 
@@ -281,7 +282,7 @@ export function useRecruitment(
       await updateItem(record.id, { status: 'approved' });
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('审批失败，请重试');
+      await showAlert('审批失败，请重试');
     }
   }, [updateItem]);
 
@@ -291,7 +292,7 @@ export function useRecruitment(
       await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [updateItem]);
 

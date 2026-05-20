@@ -30,6 +30,7 @@ import { TaskTypeConfigPanel } from '../../components/farm/hub/components/TaskTy
 import { FARM_OPERATION_TYPES } from '../../types/farm/common';
 import { useUserStore, useGreenhouseStore, useWorkerStore } from '../../stores';
 import { format, parse, addDays, addHours } from 'date-fns';
+import { showAlert } from '@/lib/dialogService';
 
 // 导入弹窗适配器
 import { WithdrawCancelAdapter } from '../../components/farm/hub/modals/WithdrawCancelAdapter';
@@ -157,7 +158,7 @@ export function FarmTaskHub() {
   // 批量导入处理函数
   const handleBatchImport = (importData: ImportRow[]) => {
     if (importData.length === 0) {
-      alert('没有可导入的数据');
+      showAlert('没有可导入的数据');
       return;
     }
 
@@ -207,7 +208,7 @@ export function FarmTaskHub() {
       });
     });
 
-    alert(`成功导入 ${importData.length} 条任务`);
+    showAlert(`成功导入 ${importData.length} 条任务`);
     hub.refresh();
   };
 

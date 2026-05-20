@@ -10,6 +10,7 @@ import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../types';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';
@@ -267,7 +268,7 @@ export default function ProductionPage() {
       setErrors({});
     } catch (error) {
       console.error('保存草稿失败:', error);
-      alert('保存草稿失败，请重试');
+      await showAlert('保存草稿失败，请重试');
     }
   };
 
@@ -392,7 +393,7 @@ export default function ProductionPage() {
       setErrors({});
     } catch (error) {
       console.error('提交审批失败:', error);
-      alert('提交审批失败，请重试');
+      await showAlert('提交审批失败，请重试');
     }
   };
 
@@ -508,7 +509,7 @@ export default function ProductionPage() {
       setSelectedRows([]);
     } catch (error) {
       console.error('导出失败:', error);
-      alert('导出失败，请重试');
+      await showAlert('导出失败，请重试');
       setShowExportModal(false);
       setExportMode(false);
       setSelectedRows([]);
@@ -576,7 +577,7 @@ export default function ProductionPage() {
     // 找到当前选中的计划
     const currentBatch = batches.find(b => b.batchCode === selectedBatchCode);
     if (!currentBatch) {
-      alert('请先选择一个生产计划');
+      await showAlert('请先选择一个生产计划');
       return;
     }
 
@@ -634,13 +635,13 @@ export default function ProductionPage() {
       setEditedBatches({ ...editedBatches });
 
       // 提示用户
-      alert(`已提交作废申请：${currentBatch.batchCode}`);
+      await showAlert(`已提交作废申请：${currentBatch.batchCode}`);
 
       // 关闭弹窗，因为只处理一个
       setShowBatchEditModal(false);
     } catch (error) {
       console.error('提交作废申请失败:', error);
-      alert('提交作废申请失败，请重试');
+      await showAlert('提交作废申请失败，请重试');
     }
 
     setShowVoidWarning(false);
@@ -650,7 +651,7 @@ export default function ProductionPage() {
   const handleSingleEdit = (batch: CropBatch) => {
     // 已完成或已取消状态不可编辑
     if (batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled') {
-      alert('该生产计划已归档，无法编辑');
+      showAlert('该生产计划已归档，无法编辑');
       return;
     }
     // 设置选中的batchCode并打开批量编辑弹窗（复用它）
@@ -664,17 +665,17 @@ export default function ProductionPage() {
   const handleSingleDelete = async (batch: CropBatch) => {
     // 草稿和已作废状态可以删除
     if (batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled') {
-      alert('只有草稿或已作废状态的生产计划才能删除');
+      showAlert('只有草稿或已作废状态的生产计划才能删除');
       return;
     }
     try {
       if (USE_API) {
         await deletePlan(batch.id);
       }
-      alert('删除成功');
+      await showAlert('删除成功');
     } catch (error) {
       console.error('删除生产计划失败:', error);
-      alert('删除失败，请重试');
+      await showAlert('删除失败，请重试');
     }
   };
 
@@ -700,7 +701,7 @@ export default function ProductionPage() {
       setSelectedRows([]);
     } catch (error) {
       console.error('删除生产计划失败:', error);
-      alert('删除失败，请重试');
+      await showAlert('删除失败，请重试');
     }
   };
 
@@ -712,7 +713,7 @@ export default function ProductionPage() {
     );
 
     if (hasCompleteRequest) {
-      const confirmed = window.confirm(
+      const confirmed = await showConfirm(
         '⚠️ 重要提示：\n\n' +
         '您选择将计划标记为完成状态。\n\n' +
         '完成后将进行归档：\n' +
@@ -826,7 +827,7 @@ export default function ProductionPage() {
         await refreshApprovals();
       } catch (error) {
         console.error('提交审批失败:', error);
-        alert('提交审批失败，请重试');
+        await showAlert('提交审批失败，请重试');
         return;
       }
 
@@ -858,11 +859,11 @@ export default function ProductionPage() {
         setEditedBatchCodes([]);
         setSelectedRows([]);
       } else {
-        alert(`已提交 ${submittedBatchIds.length} 项编辑申请，还有 ${remainingSelectedRows.length} 项待处理`);
+        await showAlert(`已提交 ${submittedBatchIds.length} 项编辑申请，还有 ${remainingSelectedRows.length} 项待处理`);
       }
     } else {
       // 没有编辑任何批次，不做任何操作
-      alert('请先编辑至少一个生产计划');
+      await showAlert('请先编辑至少一个生产计划');
     }
   };
 

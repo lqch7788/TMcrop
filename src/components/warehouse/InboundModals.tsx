@@ -12,6 +12,7 @@ import { UnifiedModal } from '../ui/UnifiedModal';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 import { NumberInput } from '../ui/NumberInput';
 import { DatePicker } from '../ui/DatePicker';
+import { showAlert } from '@/lib/dialogService';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;
@@ -199,7 +200,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
       footer={
         <>
           {record.status === 'completed' && (
-            <Button variant="warning" onClick={() => alert('申请作废功能待实现')}>
+            <Button variant="warning" onClick={() => showAlert('申请作废功能待实现')}>
               申请作废
             </Button>
           )}
@@ -902,7 +903,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
               取消
             </Button>
             <Button variant="warning" onClick={() => {
-              alert('作废申请已提交');
+              showAlert('作废申请已提交');
               setShowVoidModal(false);
             }}>
               确认作废

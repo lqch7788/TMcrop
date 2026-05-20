@@ -11,6 +11,7 @@ import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 import { usePlantLabelStore } from '../../../../stores';
 import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
 import { Input } from '../../../ui/input';
+import { showAlert } from '@/lib/dialogService';
 
 const PAGE_SIZE = 20;
 const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
@@ -77,7 +78,7 @@ export default function SeedlingLabelManageModal({
   // 导出标签数据
   const handleExport = useCallback((size: number) => {
     const toExport = size === 0 ? filteredLabels : filteredLabels.slice(0, size);
-    if (toExport.length === 0) { alert('无数据可导出'); return; }
+    if (toExport.length === 0) { showAlert('无数据可导出'); return; }
 
     const headers = ['标签编号', '移入位置', '移入日期', '移出位置', '移出日期', '创建时间'];
     const rows = toExport.map((l) => [

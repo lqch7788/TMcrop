@@ -10,6 +10,7 @@ import { useSmartRecommend } from '../../hooks/useSmartRecommend';
 import type { Task } from '../../../../types/task';
 import { DispatchMode } from '../../types/dispatch';
 import type { RecommendedExecutor } from '../../types/dispatch';
+import { showAlert } from '@/lib/dialogService';
 
 // 温室/地块选项
 const GREENHOUSE_OPTIONS = [
@@ -147,17 +148,17 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
     e.preventDefault();
 
     if (!title.trim()) {
-      alert('请输入任务标题');
+      showAlert('请输入任务标题');
       return;
     }
 
     if (!greenhouseId) {
-      alert('请选择温室');
+      showAlert('请选择温室');
       return;
     }
 
     if (!assigneeId) {
-      alert('请选择执行人或等待推荐完成');
+      showAlert('请选择执行人或等待推荐完成');
       return;
     }
 

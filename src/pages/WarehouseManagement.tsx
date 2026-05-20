@@ -15,6 +15,7 @@ import {
   useWarehouseStore,
   type Warehouse as WarehouseType,
 } from '../stores';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const WAREHOUSE_TYPES = ['原料仓库', '成品仓库', '耗材仓库', '农药仓库', '化肥仓库', '设备仓库', '其他'];
 
@@ -48,7 +49,7 @@ export default function WarehouseManagement() {
   // 创建仓库
   const handleCreate = async () => {
     if (!newWarehouse.name || !newWarehouse.code) {
-      alert('请填写仓库名称和编码');
+      await showAlert('请填写仓库名称和编码');
       return;
     }
     try {
@@ -66,7 +67,7 @@ export default function WarehouseManagement() {
       setNewWarehouse({ status: 'active' });
     } catch (err) {
       console.error('创建仓库失败:', err);
-      alert('创建仓库失败');
+      await showAlert('创建仓库失败');
     }
   };
 
@@ -89,19 +90,19 @@ export default function WarehouseManagement() {
       setNewWarehouse({ status: 'active' });
     } catch (err) {
       console.error('更新仓库失败:', err);
-      alert('更新仓库失败');
+      await showAlert('更新仓库失败');
     }
   };
 
   // 删除仓库
   const handleDeleteWarehouse = async (id: string) => {
-    if (!confirm('确定删除该仓库吗？')) return;
+    if (!await showConfirm('确定删除该仓库吗？')) return;
     try {
       await removeWarehouse(id);
       await refreshWarehouses();
     } catch (err) {
       console.error('删除仓库失败:', err);
-      alert('删除仓库失败');
+      await showAlert('删除仓库失败');
     }
   };
 

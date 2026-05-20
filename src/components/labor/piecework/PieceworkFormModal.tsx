@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
+import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
@@ -68,12 +69,12 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
     const task = taskOptions.find((t) => t.id === formData.taskId);
 
     if (!worker || !task) {
-      alert('请选择员工和任务');
+      showAlert('请选择员工和任务');
       return;
     }
 
     if (formData.quantity <= 0 || formData.unitPrice <= 0) {
-      alert('数量和单价必须大于0');
+      showAlert('数量和单价必须大于0');
       return;
     }
 

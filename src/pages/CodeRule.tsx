@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { useMaterialCodeRuleStore } from '../stores/useMaterialCodeRuleStore';
 import type { BigCategory } from '../stores/useMaterialCodeRuleStore';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function CodeRule() {
   const navigate = useNavigate();
@@ -107,7 +108,7 @@ export default function CodeRule() {
       setEditingCell(null);
       setEditValue('');
     } catch (err: any) {
-      alert(`保存失败: ${err.message || '未知错误'}`);
+      await showAlert(`保存失败: ${err.message || '未知错误'}`);
     }
   }, [editingCell, editValue, updateBigName, updateMidName, updateSubName]);
 
@@ -125,7 +126,7 @@ export default function CodeRule() {
       setNewBigName('');
       setShowAddBig(false);
     } catch (err: any) {
-      alert(`新增大类失败: ${err.message || '未知错误'}`);
+      await showAlert(`新增大类失败: ${err.message || '未知错误'}`);
     }
   };
 
@@ -138,7 +139,7 @@ export default function CodeRule() {
       setNewMidName('');
       setShowAddMid(null);
     } catch (err: any) {
-      alert(`新增中类失败: ${err.message || '未知错误'}`);
+      await showAlert(`新增中类失败: ${err.message || '未知错误'}`);
     }
   };
 
@@ -151,37 +152,37 @@ export default function CodeRule() {
       setNewSubName('');
       setShowAddSub(null);
     } catch (err: any) {
-      alert(`新增小类失败: ${err.message || '未知错误'}`);
+      await showAlert(`新增小类失败: ${err.message || '未知错误'}`);
     }
   };
 
   // 删除大类
   const handleDeleteBig = async (bigCode: string) => {
-    if (!confirm(`确定要删除大类 "${bigCode}" 及其所有子分类吗？此操作不可恢复。`)) return;
+    if (!await showConfirm(`确定要删除大类 "${bigCode}" 及其所有子分类吗？此操作不可恢复。`)) return;
     try {
       await storeDeleteBig(bigCode);
     } catch (err: any) {
-      alert(`删除失败: ${err.message || '未知错误'}`);
+      await showAlert(`删除失败: ${err.message || '未知错误'}`);
     }
   };
 
   // 删除中类
   const handleDeleteMid = async (bigCode: string, midCode: string) => {
-    if (!confirm(`确定要删除中类 "${midCode}" 及其所有小类吗？`)) return;
+    if (!await showConfirm(`确定要删除中类 "${midCode}" 及其所有小类吗？`)) return;
     try {
       await storeDeleteMid(bigCode, midCode);
     } catch (err: any) {
-      alert(`删除失败: ${err.message || '未知错误'}`);
+      await showAlert(`删除失败: ${err.message || '未知错误'}`);
     }
   };
 
   // 删除小类
   const handleDeleteSub = async (bigCode: string, midCode: string, subCode: string) => {
-    if (!confirm(`确定要删除小类 "${subCode}" 吗？`)) return;
+    if (!await showConfirm(`确定要删除小类 "${subCode}" 吗？`)) return;
     try {
       await storeDeleteSub(bigCode, midCode, subCode);
     } catch (err: any) {
-      alert(`删除失败: ${err.message || '未知错误'}`);
+      await showAlert(`删除失败: ${err.message || '未知错误'}`);
     }
   };
 

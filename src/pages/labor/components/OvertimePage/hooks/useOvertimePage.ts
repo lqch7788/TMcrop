@@ -5,6 +5,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useOvertimeStore } from '@/stores/overtimeStore';
 import type { OvertimeRecord as StoreOvertimeRecord } from '@/stores/overtimeStore';
+import { showAlert } from '@/lib/dialogService';
 import type {
   OvertimeRecord,
   OvertimeFilters,
@@ -247,7 +248,7 @@ export function useOvertimePage() {
   /** 提交加班申请 — 使用 Store */
   const handleSubmit = useCallback(async () => {
     if (!formData.staffId || !formData.startTime || !formData.endTime || !formData.reason) {
-      alert('请填写完整信息');
+      await showAlert('请填写完整信息');
       return;
     }
 
@@ -267,10 +268,10 @@ export function useOvertimePage() {
       });
 
       setIsFormModalOpen(false);
-      alert('提交成功！');
+      await showAlert('提交成功！');
     } catch (error) {
       console.error('提交加班申请失败:', error);
-      alert('提交失败，请重试');
+      await showAlert('提交失败，请重试');
     }
   }, [formData, store]);
 
@@ -280,7 +281,7 @@ export function useOvertimePage() {
       await store.approveOvertime(record.id);
     } catch (error) {
       console.error('审批通过失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [store]);
 
@@ -290,7 +291,7 @@ export function useOvertimePage() {
       await store.rejectOvertime(record.id, '不符合条件');
     } catch (error) {
       console.error('审批驳回失败:', error);
-      alert('操作失败，请重试');
+      await showAlert('操作失败，请重试');
     }
   }, [store]);
 
@@ -318,10 +319,10 @@ export function useOvertimePage() {
   const handleDelete = useCallback(async (record: OvertimeRecord) => {
     try {
       await store.deleteItem(record.id);
-      alert('删除成功！');
+      await showAlert('删除成功！');
     } catch (error) {
       console.error('删除失败:', error);
-      alert('删除失败，请重试');
+      await showAlert('删除失败，请重试');
     }
   }, [store]);
 
@@ -331,10 +332,10 @@ export function useOvertimePage() {
       await store.deleteItems(selectedRowKeys as string[]);
       setSelectedRowKeys([]);
       setBatchMode('none');
-      alert('批量删除成功！');
+      await showAlert('批量删除成功！');
     } catch (error) {
       console.error('批量删除失败:', error);
-      alert('批量删除失败，请重试');
+      await showAlert('批量删除失败，请重试');
     }
   }, [selectedRowKeys, store]);
 

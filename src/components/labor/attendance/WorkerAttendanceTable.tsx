@@ -7,6 +7,7 @@ import { AttendanceRecord, PAGE_SIZE_OPTIONS } from './types';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { showAlert } from '@/lib/dialogService';
 
 interface WorkerAttendanceTableProps {
   data: AttendanceRecord[];
@@ -76,7 +77,7 @@ export function WorkerAttendanceTable({
           if (file) {
             console.log('导入文件:', file.name);
             // 这里可以添加文件处理逻辑
-            alert(`已选择文件: ${file.name}`);
+            showAlert(`已选择文件: ${file.name}`);
           }
           // 重置input以允许重复选择同一文件
           e.target.value = '';

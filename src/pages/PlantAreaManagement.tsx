@@ -10,6 +10,7 @@ import { MapPin, Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2
 import { Button } from '../components/ui/button';
 import { useGreenhouseStore } from '../stores';
 import type { Greenhouse } from '../services/apiBasicDataService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const GREENHOUSE_TYPES = ['温室大棚', '春秋大棚', '日光温室', '智能温室', '其他'];
 
@@ -38,7 +39,7 @@ export default function PlantAreaManagement() {
 
   const handleSaveGreenhouse = async () => {
     if (!newGreenhouse.name || !newGreenhouse.code) {
-      alert('请填写温室名称和编码');
+      await showAlert('请填写温室名称和编码');
       return;
     }
     try {
@@ -64,17 +65,17 @@ export default function PlantAreaManagement() {
       setNewGreenhouse({ status: 'active' });
     } catch (err) {
       console.error('保存温室失败:', err);
-      alert('保存温室失败');
+      await showAlert('保存温室失败');
     }
   };
 
   const handleDeleteGreenhouse = async (id: string) => {
-    if (!confirm('确定删除该温室吗？')) return;
+    if (!await showConfirm('确定删除该温室吗？')) return;
     try {
       await removeGreenhouse(id);
     } catch (err) {
       console.error('删除温室失败:', err);
-      alert('删除温室失败');
+      await showAlert('删除温室失败');
     }
   };
 

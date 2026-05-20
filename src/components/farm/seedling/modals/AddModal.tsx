@@ -25,6 +25,7 @@ import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -250,19 +251,19 @@ export function AddModal({
   const handleSubmit = async () => {
     // 基本信息验证
     if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId) {
-      alert('请填写完整信息：关联种源、作物品种、育苗区域为必填项');
+      await showAlert('请填写完整信息：关联种源、作物品种、育苗区域为必填项');
       return;
     }
 
     if (!formData.seedlingCode) {
-      alert('请先生成育苗批次号');
+      await showAlert('请先生成育苗批次号');
       return;
     }
 
     // 单株育苗模式验证
     if (formData.calculateMode === SeedlingCalculateMode.SINGLE) {
       if (!formData.initialCount || formData.initialCount <= 0) {
-        alert('请输入初始数量');
+        await showAlert('请输入初始数量');
         return;
       }
     }
@@ -270,12 +271,12 @@ export function AddModal({
     // 扩繁育苗模式验证
     if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
       if (!formData.motherPlantCount || formData.motherPlantCount <= 0) {
-        alert('请输入母株数量');
+        await showAlert('请输入母株数量');
         return;
       }
       if (formData.propagationMultiple === 0) {
         if (!formData.customMultiple || formData.customMultiple <= 0) {
-          alert('请输入扩繁倍数');
+          await showAlert('请输入扩繁倍数');
           return;
         }
       }
@@ -287,7 +288,7 @@ export function AddModal({
       : formData.seedlingType;
 
     if (formData.seedlingType === '其他' && !formData.seedlingTypeOther.trim()) {
-      alert('请输入其他育苗方式的具体描述');
+      await showAlert('请输入其他育苗方式的具体描述');
       return;
     }
 
@@ -344,7 +345,7 @@ export function AddModal({
       addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
     } catch (error) {
       console.error('保存育苗记录失败:', error);
-      alert('保存失败，请重试');
+      await showAlert('保存失败，请重试');
       return;
     }
 

@@ -11,6 +11,7 @@ import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { showAlert } from '@/lib/dialogService';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
 
   const handleSubmit = async () => {
     if (!formData.recordDate) {
-      alert('请选择记录日期');
+      await showAlert('请选择记录日期');
       return;
     }
 
@@ -77,7 +78,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       });
     } catch (error) {
       console.error('添加每日记录失败:', error);
-      alert('添加记录失败，请重试');
+      await showAlert('添加记录失败，请重试');
       return;
     }
 

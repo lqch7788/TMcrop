@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, X } from 'lucide-react';
 import type { SalaryRecord } from './types';
 import { Label, Button, UnifiedModal } from '@/components/ui';
+import { showAlert } from '@/lib/dialogService';
 
 interface SalaryExportProps {
   record: SalaryRecord | null;
@@ -84,7 +85,7 @@ export function SalaryExport({ record, open, onClose }: SalaryExportProps) {
 
     setTimeout(() => {
       // 模拟PDF导出（实际应使用jspdf等库）
-      alert('PDF导出功能需要集成jspdf库，请确认是否安装');
+      showAlert('PDF导出功能需要集成jspdf库，请确认是否安装');
       setIsExporting(false);
       onClose();
     }, 1000);

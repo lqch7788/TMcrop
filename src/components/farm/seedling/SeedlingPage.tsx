@@ -21,6 +21,7 @@ import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
@@ -255,18 +256,18 @@ export default function SeedlingPage() {
     // 检查是否有关联的生产计划
     const planCode = record.productionPlanCode;
     if (!planCode || planCode.trim() === '') {
-      alert('该育苗没有关联的生产计划，无法结束');
+      await showAlert('该育苗没有关联的生产计划，无法结束');
       return;
     }
 
     const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      alert('未找到关联的生产计划 [' + planCode + ']，请检查生产计划是否存在');
+      await showAlert('未找到关联的生产计划 [' + planCode + ']，请检查生产计划是否存在');
       return;
     }
 
     if (batch.batchStatus === 'completed') {
-      alert('该生产计划已完成结束，不能重复结束');
+      await showAlert('该生产计划已完成结束，不能重复结束');
       return;
     }
 
@@ -276,16 +277,16 @@ export default function SeedlingPage() {
       ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
       : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
 
-    if (!confirm(confirmMsg)) {
+    if (!await showConfirm(confirmMsg)) {
       return;
     }
 
     const result = await cropBatchService.endCropBatch(batch.id, endType);
     if (result) {
-      alert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
       loadItems();
     } else {
-      alert('结束失败');
+      await showAlert('结束失败');
     }
   };
 
@@ -344,7 +345,7 @@ export default function SeedlingPage() {
 
   const handleExportClickConfirm = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
@@ -353,7 +354,7 @@ export default function SeedlingPage() {
   // 确认打印
   const handlePrintConfirm = (records: Seedling[]) => {
     if (records.length === 0) {
-      alert('请先选择要打印的记录');
+      showAlert('请先选择要打印的记录');
       return;
     }
     setPrintRecords(records);

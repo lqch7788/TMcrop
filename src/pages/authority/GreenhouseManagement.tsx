@@ -25,6 +25,7 @@ import {
   getBases,
   saveGreenhouses,
 } from '../../services/dictionaryService';
+import { showConfirm } from '@/lib/dialogService';
 
 export default function GreenhouseManagement() {
   const [greenhouses, setGreenhouses] = useState<Greenhouse[]>([]);
@@ -120,7 +121,7 @@ export default function GreenhouseManagement() {
 
   // 删除
   const handleDelete = async (greenhouse: Greenhouse) => {
-    if (!confirm(`确定要删除温室"${greenhouse.greenhouseName}"吗？`)) return;
+    if (!await showConfirm(`确定要删除温室"${greenhouse.greenhouseName}"吗？`)) return;
     try {
       setLoading(true);
       await saveGreenhouses({

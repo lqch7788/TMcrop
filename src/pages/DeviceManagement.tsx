@@ -10,6 +10,7 @@ import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronL
 import { Button } from '../components/ui/button';
 import { useDeviceStore } from '../stores';
 import type { Device } from '../services/apiBasicDataService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const DEVICE_TYPES = ['传感器', '摄像头', '控制器', '气象站', '灌溉设备', '施肥设备', '其他'];
 
@@ -35,7 +36,7 @@ export default function DeviceManagement() {
 
   const handleSaveDevice = async () => {
     if (!newDevice.deviceName || !newDevice.deviceCode) {
-      alert('请填写设备名称和编码');
+      await showAlert('请填写设备名称和编码');
       return;
     }
     try {
@@ -70,17 +71,17 @@ export default function DeviceManagement() {
       setNewDevice({ status: 'online' });
     } catch (err) {
       console.error('保存设备失败:', err);
-      alert('保存设备失败');
+      await showAlert('保存设备失败');
     }
   };
 
   const handleDeleteDevice = async (id: string) => {
-    if (!confirm('确定删除该设备吗？')) return;
+    if (!await showConfirm('确定删除该设备吗？')) return;
     try {
       await removeDevice(id);
     } catch (err) {
       console.error('删除设备失败:', err);
-      alert('删除设备失败');
+      await showAlert('删除设备失败');
     }
   };
 

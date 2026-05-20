@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { MaterialReceivingRecord, ExecuteMaterialItem, MaterialExecuteRecord } from '@/types/materialReceiving';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
+import { showAlert } from '@/lib/dialogService';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -302,7 +303,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   // 添加选中物料到物料池
   const handleAddToMaterialPool = useCallback(() => {
     if (!executeSelectedApplicationCode || executeSelectedMaterialIndices.size === 0) {
-      alert('请先选择领料单并勾选要出库的物料');
+      showAlert('请先选择领料单并勾选要出库的物料');
       return;
     }
     const selectedApp = materialRequestStore.items.find(app => app.code === executeSelectedApplicationCode);
@@ -391,12 +392,12 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       materials: executeEditForm.materials,
     } as any);
     setExecuteShowEditModal(false);
-    alert('保存成功');
+    showAlert('保存成功');
   }, [executeSelectedRecord, executeEditForm, executeStore]);
 
   const handleExecuteSaveAdd = useCallback(() => {
     if (executeMaterialPool.length === 0) {
-      alert('请先添加物料到物料池');
+      showAlert('请先添加物料到物料池');
       return;
     }
 
@@ -437,7 +438,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       productionBatchCode: '',
       materials: []
     });
-    alert('新增成功');
+    showAlert('新增成功');
   }, [executeMaterialPool, executeAddForm, executeStore, materialRequestStore.items]);
 
   const handleExecuteCancelAdd = useCallback(() => {

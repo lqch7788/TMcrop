@@ -22,6 +22,7 @@ import { useTempTasks } from '../../../hooks/useTempTasks';
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../types/task';
 import { Label } from '@/components/ui/label';
+import { showAlert } from '@/lib/dialogService';
 
 // 状态映射
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
@@ -1016,7 +1017,7 @@ export function TempTaskPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

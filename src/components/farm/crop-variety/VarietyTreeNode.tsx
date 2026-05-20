@@ -12,6 +12,7 @@ import * as extensionService from '../../../services/cropVarietyExtensionService
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TableRow, TableCell } from '@/components/ui/table';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface VarietyTreeNodeProps {
   node: VarietyTreeNodeType;
@@ -137,7 +138,7 @@ export function VarietyTreeNode({
       }
       onRefresh?.();
     } catch (err: any) {
-      alert('更新失败: ' + err.message);
+      await showAlert('更新失败: ' + err.message);
     }
     setIsInlineEditing(false);
   };
@@ -215,26 +216,26 @@ export function VarietyTreeNode({
         if (node.level === 'category' && extensionId) {
           extensionService.updateCategoryExtension(extensionId, newName.trim()).then(() => {
             onRefresh?.();
-          }).catch((err: Error) => alert('更新失败: ' + err.message));
+          }).catch((err: Error) => showAlert('更新失败: ' + err.message));
         } else if (node.level === 'type' && extensionId) {
           extensionService.updateTypeExtension(extensionId, newName.trim()).then(() => {
             onRefresh?.();
-          }).catch((err: Error) => alert('更新失败: ' + err.message));
+          }).catch((err: Error) => showAlert('更新失败: ' + err.message));
         } else if (node.level === 'variety' && extensionId) {
           extensionService.updateVarietyExtension(extensionId, newName.trim()).then(() => {
             onRefresh?.();
-          }).catch((err: Error) => alert('更新失败: ' + err.message));
+          }).catch((err: Error) => showAlert('更新失败: ' + err.message));
         } else if (node.level === 'subVariety1' && extensionId) {
           extensionService.updateSubVariety1Extension(extensionId, newName.trim()).then(() => {
             onRefresh?.();
-          }).catch((err: Error) => alert('更新失败: ' + err.message));
+          }).catch((err: Error) => showAlert('更新失败: ' + err.message));
         }
       }
     }
   };
 
   // 处理删除
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (node.recordedVariety) {
       onDelete(node.recordedVariety);
@@ -248,24 +249,24 @@ export function VarietyTreeNode({
       };
       const levelKey = node.level as string;
       const levelName = levelNames[levelKey] || levelKey;
-      if (confirm(`确定要删除这个${levelName} "${node.name}" 吗？此操作不可恢复。`)) {
+      if (await showConfirm(`确定要删除这个${levelName} "${node.name}" 吗？此操作不可恢复。`)) {
         const extensionId = (node as any).extensionId;
         if (node.level === 'category' && extensionId) {
           extensionService.removeCategoryExtension(extensionId).then(() => {
             onRefresh?.();
-          }).catch(err => alert('删除失败: ' + err.message));
+          }).catch(err => showAlert('删除失败: ' + err.message));
         } else if (node.level === 'type' && extensionId) {
           extensionService.removeTypeExtension(extensionId).then(() => {
             onRefresh?.();
-          }).catch(err => alert('删除失败: ' + err.message));
+          }).catch(err => showAlert('删除失败: ' + err.message));
         } else if (node.level === 'variety' && extensionId) {
           extensionService.removeVarietyExtension(extensionId).then(() => {
             onRefresh?.();
-          }).catch(err => alert('删除失败: ' + err.message));
+          }).catch(err => showAlert('删除失败: ' + err.message));
         } else if (node.level === 'subVariety1' && extensionId) {
           extensionService.removeSubVariety1Extension(extensionId).then(() => {
             onRefresh?.();
-          }).catch(err => alert('删除失败: ' + err.message));
+          }).catch(err => showAlert('删除失败: ' + err.message));
         }
       }
     }

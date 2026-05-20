@@ -12,6 +12,7 @@ import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
 import { getDictionaries } from '../../services/dictionaryService';
 import { useTechSolutionStore } from '../../stores';
+import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 
@@ -251,7 +252,7 @@ export function TechSolutionPage() {
   const handleEditClick = (tech: TechSolution) => {
     // 作废的方案不能编辑
     if (tech.isValid === '作废') {
-      alert('该方案已作废，无法编辑');
+      showAlert('该方案已作废，无法编辑');
       return;
     }
     setSelectedTech(tech);
@@ -293,7 +294,7 @@ export function TechSolutionPage() {
       setEditModalOpen(false);
     } catch (error) {
       console.error('更新技术方案失败:', error);
-      alert('更新失败，请重试');
+      await showAlert('更新失败，请重试');
     }
   };
 
@@ -370,7 +371,7 @@ export function TechSolutionPage() {
       });
     } catch (error) {
       console.error('创建技术方案失败:', error);
-      alert('创建技术方案失败，请重试');
+      await showAlert('创建技术方案失败，请重试');
     }
   };
 
@@ -397,7 +398,7 @@ export function TechSolutionPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     handleDoExport();
@@ -489,7 +490,7 @@ export function TechSolutionPage() {
 
   const handleDeleteClick = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要删除的数据');
+      showAlert('请先选择要删除的数据');
       return;
     }
     setShowDeleteModal(true);
@@ -508,7 +509,7 @@ export function TechSolutionPage() {
       }
     } catch (error) {
       console.error('删除技术方案失败:', error);
-      alert('删除失败，请重试');
+      await showAlert('删除失败，请重试');
     }
 
     setShowDeleteModal(false);
@@ -626,7 +627,7 @@ export function TechSolutionPage() {
                 <>
                   <Button variant="blue" size="sm" onClick={() => {
                       if (selectedRows.length === 0) {
-                        alert('请先选择要编辑的数据');
+                        showAlert('请先选择要编辑的数据');
                         return;
                       }
                       // 初始化批量编辑状态
@@ -653,7 +654,7 @@ export function TechSolutionPage() {
                 <>
                   <Button variant="destructive" size="sm" onClick={() => {
                       if (selectedRows.length === 0) {
-                        alert('请先选择要删除的数据');
+                        showAlert('请先选择要删除的数据');
                         return;
                       }
                       setShowDeleteModal(true);
@@ -1607,10 +1608,10 @@ export function TechSolutionPage() {
                   setSelectedRows([]);
                   setEditedTechCodes([]);
                   setEditedTechs({});
-                  alert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
+                  await showAlert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
                 } catch (error) {
                   console.error('批量保存失败:', error);
-                  alert('保存失败，请重试');
+                  await showAlert('保存失败，请重试');
                 }
               }}
             >

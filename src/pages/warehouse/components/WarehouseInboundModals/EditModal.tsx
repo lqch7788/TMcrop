@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useSupplierStore } from '@/stores/useSupplierStore';
+import { showAlert } from '@/lib/dialogService';
 
 interface InboundEditModalProps {
   record: InboundRecord | null;
@@ -105,7 +106,7 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
       footer={
         <div className="flex justify-end gap-3">
           {record.status === 'completed' && (
-            <Button variant="warning" onClick={() => alert('申请作废功能待实现')}>
+            <Button variant="warning" onClick={() => showAlert('申请作废功能待实现')}>
               申请作废
             </Button>
           )}

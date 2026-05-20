@@ -14,6 +14,7 @@ import {
 } from '../components/ui';
 import { useApprovalWorkflowStore } from '../stores';
 import type { ApprovalWorkflow, ApprovalNode } from '../services/apiApprovalWorkflowService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 const MODULE_OPTIONS = [
   { value: 'production', label: '生产管理' },
@@ -72,17 +73,17 @@ export default function ApprovalWorkflowConfig() {
       setNewWorkflow({ status: 'active', nodes: [] });
     } catch (err) {
       console.error('保存审批工作流失败:', err);
-      alert('保存审批工作流失败');
+      await showAlert('保存审批工作流失败');
     }
   };
 
   const handleDeleteWorkflow = async (id: string) => {
-    if (!confirm('确定删除该审批流程吗？')) return;
+    if (!await showConfirm('确定删除该审批流程吗？')) return;
     try {
       await removeWorkflow(id);
     } catch (err) {
       console.error('删除审批工作流失败:', err);
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 
@@ -128,7 +129,7 @@ export default function ApprovalWorkflowConfig() {
       await toggleWorkflowStatus(id);
     } catch (err) {
       console.error('切换审批工作流状态失败:', err);
-      alert('切换状态失败');
+      await showAlert('切换状态失败');
     }
   };
 

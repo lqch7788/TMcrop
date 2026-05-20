@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
+import { showConfirm } from '@/lib/dialogService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
@@ -232,8 +233,8 @@ export function ProductionTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            if (confirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
+                          onClick={async () => {
+                            if (await showConfirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
                               onDelete(batch);
                             }
                           }}

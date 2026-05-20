@@ -7,6 +7,7 @@ import { Label, Modal, UnifiedModal, Checkbox, Table, TableHeader, TableBody, Ta
 import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 导出格式弹窗 - 使用 UnifiedModal 包装
 interface ExportFormatModalProps {
@@ -232,8 +233,8 @@ export function ContractTable() {
   };
 
   // 删除合同
-  const handleDelete = (contract: Contract) => {
-    if (window.confirm(`确定删除合同 "${contract.contractCode}" 吗？`)) {
+  const handleDelete = async (contract: Contract) => {
+    if (await showConfirm(`确定删除合同 "${contract.contractCode}" 吗？`)) {
       deleteContract(contract.id);
     }
   };
@@ -289,7 +290,7 @@ export function ContractTable() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);

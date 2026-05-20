@@ -16,6 +16,7 @@ import { CropVariety } from '@/types/cropVariety';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { Modal } from '@/components/ui/Modal';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
+import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -145,7 +146,7 @@ export function AddModal({
       console.log('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
     } catch (error) {
       console.error('创建订单失败:', error);
-      alert('创建订单失败，请重试');
+      await showAlert('创建订单失败，请重试');
       return;
     }
     onSuccess();

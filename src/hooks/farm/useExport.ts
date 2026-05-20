@@ -5,6 +5,7 @@
  */
 
 import { useCallback } from 'react';
+import { showAlert } from '@/lib/dialogService';
 
 // 导出格式类型
 export type ExportFormat = 'csv' | 'xlsx' | 'word';
@@ -35,7 +36,7 @@ export function useExport() {
     exportFormat: ExportFormat = 'xlsx'
   ) => {
     if (selectedData.length === 0) {
-      alert('请先选择要导出的数据');
+      await showAlert('请先选择要导出的数据');
       return;
     }
 

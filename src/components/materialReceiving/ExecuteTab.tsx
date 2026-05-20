@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialExecuteRecord, ExecuteMaterialItem, MaterialReceivingRecord, ExecuteAddFormState, ExecuteEditFormState } from '../../types/materialReceiving';
+import { showAlert } from '@/lib/dialogService';
 
 interface ExecuteTabProps {
   // 状态
@@ -318,7 +319,7 @@ export default function ExecuteTab({
                 <>
                   <Button onClick={() => {
                       if (selectedRows.length === 0) {
-                        alert('请先选择要编辑的记录');
+                        showAlert('请先选择要编辑的记录');
                         setBatchEditMode(false);
                       } else {
                         setShowBatchEditModal(true);

@@ -9,6 +9,7 @@ import {
   Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   DatePicker, TextArea, Input
 } from '../../../ui';
+import { showAlert } from '@/lib/dialogService';
 
 // ========== 表单数据接口 ==========
 export interface MoveFormData {
@@ -69,11 +70,11 @@ export default function PlantingMoveModal({
 
   const handleSubmit = async () => {
     if (!form.labelNumber.trim()) {
-      alert('请输入标签编号');
+      await showAlert('请输入标签编号');
       return;
     }
     if (!form.targetArea) {
-      alert('请选择目标区域');
+      await showAlert('请选择目标区域');
       return;
     }
     await onSubmit(form);

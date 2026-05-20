@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
+import { showAlert } from '@/lib/dialogService';
 import type { UseApplicationTabReturn } from '../hooks/useApplicationTab';
 
 interface ApplicationTableProps {
@@ -100,7 +101,7 @@ export function ApplicationTable({
           <div className="flex gap-2">
             <Button variant="blue" size="sm" onClick={() => {
               if (selectedRows.length === 0) {
-                alert('请先选择要编辑的记录');
+                showAlert('请先选择要编辑的记录');
                 onBatchCancel();
               } else {
                 onShowBatchEditModal();

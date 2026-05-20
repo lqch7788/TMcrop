@@ -12,6 +12,7 @@ import {
   Server, Plus, Loader2,
 } from 'lucide-react';
 import { enhancedApiClient } from '../../lib/apiClient';
+import { showAlert, showConfirm } from '../../lib/dialogService';
 
 interface BackupRecord {
   id: string;
@@ -89,7 +90,7 @@ const BackupRecovery: React.FC = () => {
       await fetchData();
     } catch (err) {
       console.error('备份失败:', err);
-      alert('备份失败，请检查服务器');
+      await showAlert('备份失败，请检查服务器');
     } finally {
       setBackingUp(false);
     }
@@ -97,7 +98,7 @@ const BackupRecovery: React.FC = () => {
 
   // 删除备份
   const handleDeleteBackup = async (record: BackupRecord) => {
-    if (!confirm(`确定删除备份 "${record.name}" 吗？`)) return;
+    if (!await showConfirm(`确定删除备份 "${record.name}" 吗？`)) return;
     try {
       const filename = record.filePath.split(/[/\\]/).pop();
       if (filename) {
@@ -106,31 +107,31 @@ const BackupRecovery: React.FC = () => {
       }
     } catch (err) {
       console.error('删除备份失败:', err);
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 
   // 恢复备份
   const handleRestore = async () => {
     if (!selectedBackup) return;
-    if (!confirm('数据恢复将覆盖当前数据库，确定继续？建议先创建当前数据备份。')) return;
+    if (!await showConfirm('数据恢复将覆盖当前数据库，确定继续？建议先创建当前数据备份。')) return;
     try {
       const filename = selectedBackup.filePath.split(/[/\\]/).pop();
       if (filename) {
         await enhancedApiClient.post(`/backup/restore/${filename}`);
         setShowRestoreModal(false);
-        alert('数据恢复成功！服务器将自动重启以加载恢复的数据。');
+        await showAlert('数据恢复成功！服务器将自动重启以加载恢复的数据。');
       }
     } catch (err) {
       console.error('恢复失败:', err);
-      alert('数据恢复失败');
+      await showAlert('数据恢复失败');
     }
   };
 
   // 新增策略
   const handleAddStrategy = async () => {
     if (!strategyForm.name || !strategyForm.schedule) {
-      alert('请填写策略名称和执行周期');
+      await showAlert('请填写策略名称和执行周期');
       return;
     }
     try {
@@ -140,7 +141,7 @@ const BackupRecovery: React.FC = () => {
       await fetchData();
     } catch (err) {
       console.error('创建策略失败:', err);
-      alert('创建策略失败');
+      await showAlert('创建策略失败');
     }
   };
 
@@ -156,13 +157,13 @@ const BackupRecovery: React.FC = () => {
 
   // 删除策略
   const handleDeleteStrategy = async (strategy: BackupStrategy) => {
-    if (!confirm(`确定删除策略 "${strategy.name}" 吗？`)) return;
+    if (!await showConfirm(`确定删除策略 "${strategy.name}" 吗？`)) return;
     try {
       await enhancedApiClient.delete(`/backup/strategies/${strategy.id}`);
       await fetchData();
     } catch (err) {
       console.error('删除策略失败:', err);
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 

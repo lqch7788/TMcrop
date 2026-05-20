@@ -9,6 +9,7 @@ import { useGreenhouseStore } from '../../stores';
 import { useBaseStore } from '../../stores/useBaseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
 import type { Greenhouse } from '../../services/apiBasicDataService';
+import { showAlert } from '@/lib/dialogService';
 
 const PAGE_SIZE = 10;
 
@@ -60,7 +61,7 @@ export default function FacilityTab() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.code) {
-      alert('请填写设施名称和编码');
+      await showAlert('请填写设施名称和编码');
       return;
     }
     try {
@@ -72,7 +73,7 @@ export default function FacilityTab() {
       setShowModal(false);
       setEditingItem(null);
     } catch (err) {
-      alert('保存失败');
+      await showAlert('保存失败');
     }
   };
 
@@ -82,7 +83,7 @@ export default function FacilityTab() {
       await removeGreenhouse(showDeleteConfirm.id);
       setShowDeleteConfirm(null);
     } catch (err) {
-      alert('删除失败');
+      await showAlert('删除失败');
     }
   };
 

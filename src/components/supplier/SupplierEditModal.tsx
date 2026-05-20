@@ -18,6 +18,7 @@ import {
   validateCode,
   runValidations,
 } from '../../lib/validators';
+import { showAlert } from '@/lib/dialogService';
 
 interface SupplierEditModalProps {
   isOpen: boolean;
@@ -154,7 +155,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
       { field: 'bankCardNumber', valid: validateBankCard(form.bankCardNumber), message: '银行卡号格式不正确，应为15位或17-18位数字' },
     ]);
     if (errors.length > 0) {
-      alert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
+      showAlert(`请检查以下字段：\n${errors.map(e => e.message).join('\n')}`);
       return;
     }
 

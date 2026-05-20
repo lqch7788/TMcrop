@@ -14,6 +14,7 @@ import { usePlantLabelStore } from '../../../../stores';
 import { useUserStore } from '../../../../stores';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '../../../ui/input';
+import { showAlert } from '@/lib/dialogService';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       let labelsToPrint: string[] = [];
 
       if (printMode === 'single') {
-        if (!previewLabel) { alert('请选择要打印的标签'); return; }
+        if (!previewLabel) { await showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [previewLabel];
         await generateBatchLabels({
           planting_id: record.id,
@@ -97,7 +98,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           start_date: record.plantingDate,
         });
       } else if (printMode === 'multi') {
-        if (selectedLabels.length === 0) { alert('请选择要打印的标签'); return; }
+        if (selectedLabels.length === 0) { await showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [...selectedLabels];
         await generateBatchLabels({
           planting_id: record.id,
@@ -161,7 +162,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         }
       }
 
-      if (labelsToExport.length === 0) { alert('没有可导出的标签'); return; }
+      if (labelsToExport.length === 0) { await showAlert('没有可导出的标签'); return; }
 
       // 构建标签URL（扫描功能码 = URL链接）
       const baseUrl = 'https://tm-crop.com/ResumeTimeline';

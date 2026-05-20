@@ -10,6 +10,7 @@ import { TempWorkerBatchEditModal } from './TempWorkerBatchEditModal';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
+import { showAlert } from '@/lib/dialogService';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -211,7 +212,7 @@ export function TempWorkerPage() {
 
   const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
-      alert('请先选择要导出的数据');
+      showAlert('请先选择要导出的数据');
       return;
     }
     setShowExportModal(true);
