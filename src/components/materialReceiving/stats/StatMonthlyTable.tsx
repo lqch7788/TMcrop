@@ -1,6 +1,8 @@
 import React from 'react';
 import { BarChart3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface StatMonthlyTableProps {
   activeTab: 'monthly' | 'material';
@@ -88,25 +90,29 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
           </div>
           {/* 月份切换器 */}
           <div className="flex items-center gap-2">
-            <select
+            <Select
               value={selectedMonth}
-              onChange={(e) => onMonthChange(e.target.value)}
-              className="h-8 px-3 bg-white/60 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              onValueChange={(v) => onMonthChange(v)}
             >
-              <option value="all">全部月份</option>
-              <option value="2025-01">1月</option>
-              <option value="2025-02">2月</option>
-              <option value="2025-03">3月</option>
-              <option value="2025-04">4月</option>
-              <option value="2025-05">5月</option>
-              <option value="2025-06">6月</option>
-              <option value="2025-07">7月</option>
-              <option value="2025-08">8月</option>
-              <option value="2025-09">9月</option>
-              <option value="2025-10">10月</option>
-              <option value="2025-11">11月</option>
-              <option value="2025-12">12月</option>
-            </select>
+              <SelectTrigger className="h-8 bg-white/60">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部月份</SelectItem>
+                <SelectItem value="2025-01">1月</SelectItem>
+                <SelectItem value="2025-02">2月</SelectItem>
+                <SelectItem value="2025-03">3月</SelectItem>
+                <SelectItem value="2025-04">4月</SelectItem>
+                <SelectItem value="2025-05">5月</SelectItem>
+                <SelectItem value="2025-06">6月</SelectItem>
+                <SelectItem value="2025-07">7月</SelectItem>
+                <SelectItem value="2025-08">8月</SelectItem>
+                <SelectItem value="2025-09">9月</SelectItem>
+                <SelectItem value="2025-10">10月</SelectItem>
+                <SelectItem value="2025-11">11月</SelectItem>
+                <SelectItem value="2025-12">12月</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -150,11 +156,9 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
               <tr>
                 {exportMode && (
                   <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedRows.length === getAllMonthKeys().length && getAllMonthKeys().length > 0}
-                      onChange={onSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={() => onSelectAll()}
                     />
                   </th>
                 )}
@@ -191,11 +195,9 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                     <tr key={idx} className="hover:bg-emerald-50/50 transition-colors">
                       {exportMode && (
                         <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={selectedRows.includes(idx)}
-                            onChange={() => onSelectRow(idx)}
-                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                            onCheckedChange={() => onSelectRow(idx)}
                           />
                         </td>
                       )}
@@ -236,11 +238,9 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                       >
                         {exportMode && (
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={selectedRows.includes(monthIdx)}
-                              onChange={() => onSelectRow(monthIdx)}
-                              className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                              onCheckedChange={() => onSelectRow(monthIdx)}
                             />
                           </td>
                         )}

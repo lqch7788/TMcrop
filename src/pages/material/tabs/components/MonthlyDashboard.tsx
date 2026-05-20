@@ -2,6 +2,7 @@
 // 包含环形图、堆叠柱状图、单独月份分组柱状图、分类汇总卡片
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useStatisticsStore, getMonthCategoryData, getMonthSummary } from '@/stores';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface MonthlyDashboardProps {
   /** 选中的月份 */
@@ -97,16 +98,20 @@ export function MonthlyDashboard({ selectedMonth, onMonthChange }: MonthlyDashbo
             月度用量趋势（按物料分类）
             {selectedMonth !== 'all' && <span className="ml-2 text-cyan-600">- {selectedMonth.replace(/^\d{4}-/, '')}月 各分类详情</span>}
           </h5>
-          <select
+          <Select
             value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-            className="h-8 px-3 bg-white/60 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            onValueChange={(v) => onMonthChange(v)}
           >
-            <option value="all">全部月份</option>
-            {monthOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 px-3 bg-white/60 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部月份</SelectItem>
+              {monthOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 全部月份：堆叠柱状图 */}

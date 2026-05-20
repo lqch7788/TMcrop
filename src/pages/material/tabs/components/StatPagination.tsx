@@ -2,6 +2,7 @@
 // 物料统计表格的分页控制
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface StatPaginationProps {
   /** 当前页码 */
@@ -29,15 +30,19 @@ export function StatPagination({
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">每页</span>
-        <select
-          value={pageSize}
-          onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-          className="px-2 py-1 border border-gray-200 rounded text-sm"
+        <Select
+          value={String(pageSize)}
+          onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}
         >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
+          <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto inline-flex">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="20">20</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+          </SelectContent>
+        </Select>
         <span className="text-sm text-gray-500">条</span>
       </div>
       <div className="flex items-center gap-2">

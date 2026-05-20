@@ -1,5 +1,6 @@
 import React from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
 import type { MaterialReceivingRecord, MaterialItem } from '../../../types/materialReceiving';
 
 interface DetailModalProps {
@@ -19,43 +20,43 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
     >
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="text-sm text-gray-500">领料单号</label>
+          <Label className="text-sm text-gray-500">领料单号</Label>
           <p className="font-mono font-semibold text-gray-900">{record.code}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">申请日期</label>
+          <Label className="text-sm text-gray-500">申请日期</Label>
           <p className="font-semibold text-gray-900">{record.date}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">申请人</label>
+          <Label className="text-sm text-gray-500">申请人</Label>
           <p className="font-semibold text-gray-900">{record.applicant}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">部门</label>
+          <Label className="text-sm text-gray-500">部门</Label>
           <p className="font-semibold text-gray-900">{record.department}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">库存地点</label>
+          <Label className="text-sm text-gray-500">库存地点</Label>
           <p className="font-semibold text-gray-900">{record.warehouseLocation}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">物料种类</label>
+          <Label className="text-sm text-gray-500">物料种类</Label>
           <p className="font-semibold text-gray-900">{record.materials.length > 0 ? `${record.materials.length}种` : '-'}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">种植区域/用途</label>
+          <Label className="text-sm text-gray-500">种植区域/用途</Label>
           <p className="font-semibold text-gray-900">{record.plantArea}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">审核人</label>
+          <Label className="text-sm text-gray-500">审核人</Label>
           <p className="font-semibold text-gray-900">{record.reviewer}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">生产计划批次号</label>
+          <Label className="text-sm text-gray-500">生产计划批次号</Label>
           <p className="font-semibold text-gray-900">{record.productionBatchCode}</p>
         </div>
         <div>
-          <label className="text-sm text-gray-500">状态</label>
+          <Label className="text-sm text-gray-500">状态</Label>
           <p className="font-semibold">
             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
               record.statusClass === 'approved' ? 'bg-green-100 text-green-700' :
@@ -75,7 +76,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
       </div>
       {record.materials.length > 0 && (
         <div className="mt-6">
-          <label className="text-sm text-gray-500 block mb-2">物料明细</label>
+          <Label className="text-sm text-gray-500 block mb-2">物料明细</Label>
           <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
             <thead className="bg-blue-600">
               <tr>

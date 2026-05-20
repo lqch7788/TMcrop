@@ -604,18 +604,19 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                               }}
                             >
                               {results.map((wm) => (
-                                <button
+                                <Button
                                   key={wm.id}
                                   type="button"
+                                  variant="ghost"
                                   onMouseDown={(e) => {
                                     e.preventDefault();
                                     handleSelectMaterial(m.id, wm);
                                   }}
-                                  className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-blue-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
+                                  className="h-auto w-full text-left px-2.5 py-1.5 text-xs hover:bg-blue-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
                                 >
                                   <span className="font-medium text-gray-800 truncate max-w-[140px]">{wm.name}</span>
                                   <span className="text-gray-400 font-mono text-[10px] ml-2 flex-shrink-0">{wm.code}</span>
-                                </button>
+                                </Button>
                               ))}
                             </div>
                           );

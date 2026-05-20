@@ -1,5 +1,7 @@
 import { BarChart3, ClipboardList, Package, TrendingDown, TrendingUp, Download, RefreshCw, ChevronDown, ChevronRight as ChevronRightIcon, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { MonthlyStatistics, MaterialStatistics, DepartmentStatistics, GreenhouseStatistics, FieldStatistics, BatchStatistics, MonthSummaryRow, MonthDetailRow, CategorySummary, CategoryTrend, TrendChartData, DepartmentPieData, CategoryPieData } from '../../types/materialReceiving';
 import { monthlyStatisticsData, materialStatisticsData, departmentStatisticsData, greenhouseStatisticsData, fieldStatisticsData, batchStatisticsData, categorySummaryData, categoryTrendData, trendChartData, departmentPieData, categoryPieData, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getMonthCategoryData, getSingleMonthTableData, getSingleMonthTotal, CATEGORY_COLORS } from '../../data/materialReceivingData';
@@ -302,25 +304,29 @@ export default function StatisticsTab({
                 </div>
                 {/* 月份切换器 */}
                 <div className="flex items-center gap-2">
-                  <select
+                  <Select
                     value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="h-8 px-3 bg-white/60 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    onValueChange={(val) => setSelectedMonth(val)}
                   >
-                    <option value="all">全部月份</option>
-                    <option value="2025-01">1月</option>
-                    <option value="2025-02">2月</option>
-                    <option value="2025-03">3月</option>
-                    <option value="2025-04">4月</option>
-                    <option value="2025-05">5月</option>
-                    <option value="2025-06">6月</option>
-                    <option value="2025-07">7月</option>
-                    <option value="2025-08">8月</option>
-                    <option value="2025-09">9月</option>
-                    <option value="2025-10">10月</option>
-                    <option value="2025-11">11月</option>
-                    <option value="2025-12">12月</option>
-                  </select>
+                    <SelectTrigger className="h-8 px-3 bg-white/60 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部月份</SelectItem>
+                      <SelectItem value="2025-01">1月</SelectItem>
+                      <SelectItem value="2025-02">2月</SelectItem>
+                      <SelectItem value="2025-03">3月</SelectItem>
+                      <SelectItem value="2025-04">4月</SelectItem>
+                      <SelectItem value="2025-05">5月</SelectItem>
+                      <SelectItem value="2025-06">6月</SelectItem>
+                      <SelectItem value="2025-07">7月</SelectItem>
+                      <SelectItem value="2025-08">8月</SelectItem>
+                      <SelectItem value="2025-09">9月</SelectItem>
+                      <SelectItem value="2025-10">10月</SelectItem>
+                      <SelectItem value="2025-11">11月</SelectItem>
+                      <SelectItem value="2025-12">12月</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -567,45 +573,53 @@ export default function StatisticsTab({
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-end gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-900 mb-1">年份</label>
-                  <select
+                  <Label className="block text-sm font-medium text-gray-900 mb-1">年份</Label>
+                  <Select
                     value={yearFilter}
-                    onChange={(e) => {
-                      setYearFilter(e.target.value);
+                    onValueChange={(val) => {
+                      setYearFilter(val);
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
-                    <option value="2025">2025年</option>
-                    <option value="2024">2024年</option>
-                    <option value="2023">2023年</option>
-                  </select>
+                    <SelectTrigger className="w-full border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025">2025年</SelectItem>
+                      <SelectItem value="2024">2024年</SelectItem>
+                      <SelectItem value="2023">2023年</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-900 mb-1">月份</label>
-                  <select
+                  <Label className="block text-sm font-medium text-gray-900 mb-1">月份</Label>
+                  <Select
                     value={monthFilter}
-                    onChange={(e) => {
-                      setMonthFilter(e.target.value);
+                    onValueChange={(val) => {
+                      setMonthFilter(val);
                       setExpandedMonths(new Set());
                       setCurrentPage(1);
                     }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
-                    <option value="all">全部月份</option>
-                    <option value="01">1月</option>
-                    <option value="02">2月</option>
-                    <option value="03">3月</option>
-                    <option value="04">4月</option>
-                    <option value="05">5月</option>
-                    <option value="06">6月</option>
-                    <option value="07">7月</option>
-                    <option value="08">8月</option>
-                    <option value="09">9月</option>
-                    <option value="10">10月</option>
-                    <option value="11">11月</option>
-                    <option value="12">12月</option>
-                  </select>
+                    <SelectTrigger className="w-full border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部月份</SelectItem>
+                      <SelectItem value="01">1月</SelectItem>
+                      <SelectItem value="02">2月</SelectItem>
+                      <SelectItem value="03">3月</SelectItem>
+                      <SelectItem value="04">4月</SelectItem>
+                      <SelectItem value="05">5月</SelectItem>
+                      <SelectItem value="06">6月</SelectItem>
+                      <SelectItem value="07">7月</SelectItem>
+                      <SelectItem value="08">8月</SelectItem>
+                      <SelectItem value="09">9月</SelectItem>
+                      <SelectItem value="10">10月</SelectItem>
+                      <SelectItem value="11">11月</SelectItem>
+                      <SelectItem value="12">12月</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button variant="secondary" onClick={() => {
                     setYearFilter('2025');
@@ -625,24 +639,28 @@ export default function StatisticsTab({
               <div className="flex items-center gap-4 flex-wrap">
                 {/* 部门筛选 */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">部门:</label>
-                  <select
-                    value={departmentFilter[0] || ''}
-                    onChange={(e) => setDepartmentFilter(e.target.value ? [e.target.value] : [])}
-                    className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  <Label className="text-sm font-medium text-gray-700 mb-0">部门:</Label>
+                  <Select
+                    value={departmentFilter[0] || 'all'}
+                    onValueChange={(val) => setDepartmentFilter(val === 'all' ? [] : [val])}
                   >
-                    <option value="">全部</option>
-                    <option value="生产部">生产部</option>
-                    <option value="技术部">技术部</option>
-                    <option value="设备部">设备部</option>
-                    <option value="后勤部">后勤部</option>
-                    <option value="采后处理部">采后处理部</option>
-                  </select>
+                    <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-[150px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectItem value="生产部">生产部</SelectItem>
+                      <SelectItem value="技术部">技术部</SelectItem>
+                      <SelectItem value="设备部">设备部</SelectItem>
+                      <SelectItem value="后勤部">后勤部</SelectItem>
+                      <SelectItem value="采后处理部">采后处理部</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 时间范围 */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">时间:</label>
+                  <Label className="text-sm font-medium text-gray-700 mb-0">时间:</Label>
                   <input
                     type="date"
                     value={dateRange.start}
@@ -677,52 +695,64 @@ export default function StatisticsTab({
               {activeTab === 'area' && activeAreaTab === 'greenhouse' && (
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">大棚类型:</label>
-                    <select
+                    <Label className="text-sm font-medium text-gray-700 mb-0">大棚类型:</Label>
+                    <Select
                       value={greenhouseTypeFilter}
-                      onChange={(e) => setGreenhouseTypeFilter(e.target.value)}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      onValueChange={(val) => setGreenhouseTypeFilter(val)}
                     >
-                      <option value="all">全部</option>
-                      <option value="玻璃温室">玻璃温室</option>
-                      <option value="日光温室">日光温室</option>
-                      <option value="塑料大棚">塑料大棚</option>
-                      <option value="露天">露天</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部</SelectItem>
+                        <SelectItem value="玻璃温室">玻璃温室</SelectItem>
+                        <SelectItem value="日光温室">日光温室</SelectItem>
+                        <SelectItem value="塑料大棚">塑料大棚</SelectItem>
+                        <SelectItem value="露天">露天</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">具体大棚:</label>
-                    <select
-                      value={greenhouseFilter[0] || ''}
-                      onChange={(e) => setGreenhouseFilter(e.target.value ? [e.target.value] : [])}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    <Label className="text-sm font-medium text-gray-700 mb-0">具体大棚:</Label>
+                    <Select
+                      value={greenhouseFilter[0] || 'all'}
+                      onValueChange={(val) => setGreenhouseFilter(val === 'all' ? [] : [val])}
                     >
-                      <option value="">全部</option>
-                      <option value="玻璃温室A区">玻璃温室A区</option>
-                      <option value="玻璃温室B区">玻璃温室B区</option>
-                      <option value="玻璃温室C区">玻璃温室C区</option>
-                      <option value="日光温室1号">日光温室1号</option>
-                      <option value="日光温室2号">日光温室2号</option>
-                      <option value="日光温室3号">日光温室3号</option>
-                      <option value="日光温室4号">日光温室4号</option>
-                      <option value="塑料大棚1号">塑料大棚1号</option>
-                      <option value="塑料大棚2号">塑料大棚2号</option>
-                      <option value="露天种植区">露天种植区</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部</SelectItem>
+                        <SelectItem value="玻璃温室A区">玻璃温室A区</SelectItem>
+                        <SelectItem value="玻璃温室B区">玻璃温室B区</SelectItem>
+                        <SelectItem value="玻璃温室C区">玻璃温室C区</SelectItem>
+                        <SelectItem value="日光温室1号">日光温室1号</SelectItem>
+                        <SelectItem value="日光温室2号">日光温室2号</SelectItem>
+                        <SelectItem value="日光温室3号">日光温室3号</SelectItem>
+                        <SelectItem value="日光温室4号">日光温室4号</SelectItem>
+                        <SelectItem value="塑料大棚1号">塑料大棚1号</SelectItem>
+                        <SelectItem value="塑料大棚2号">塑料大棚2号</SelectItem>
+                        <SelectItem value="露天种植区">露天种植区</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">对比周期:</label>
-                    <select
+                    <Label className="text-sm font-medium text-gray-700 mb-0">对比周期:</Label>
+                    <Select
                       value={comparisonPeriod}
-                      onChange={(e) => setComparisonPeriod(e.target.value)}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      onValueChange={(val) => setComparisonPeriod(val)}
                     >
-                      <option value="none">不对比</option>
-                      <option value="lastWeek">上周对比</option>
-                      <option value="lastMonth">上月对比</option>
-                      <option value="lastQuarter">上季度对比</option>
-                      <option value="lastYear">去年同期</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">不对比</SelectItem>
+                        <SelectItem value="lastWeek">上周对比</SelectItem>
+                        <SelectItem value="lastMonth">上月对比</SelectItem>
+                        <SelectItem value="lastQuarter">上季度对比</SelectItem>
+                        <SelectItem value="lastYear">去年同期</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -730,36 +760,44 @@ export default function StatisticsTab({
               {activeTab === 'area' && activeAreaTab === 'field' && (
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">具体地块:</label>
-                    <select
-                      value={fieldFilter[0] || ''}
-                      onChange={(e) => setFieldFilter(e.target.value ? [e.target.value] : [])}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    <Label className="text-sm font-medium text-gray-700 mb-0">具体地块:</Label>
+                    <Select
+                      value={fieldFilter[0] || 'all'}
+                      onValueChange={(val) => setFieldFilter(val === 'all' ? [] : [val])}
                     >
-                      <option value="">全部</option>
-                      <option value="A1地块">A1地块</option>
-                      <option value="A2地块">A2地块</option>
-                      <option value="A3地块">A3地块</option>
-                      <option value="B1地块">B1地块</option>
-                      <option value="B2地块">B2地块</option>
-                      <option value="C1地块">C1地块</option>
-                      <option value="C2地块">C2地块</option>
-                      <option value="D1地块">D1地块</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部</SelectItem>
+                        <SelectItem value="A1地块">A1地块</SelectItem>
+                        <SelectItem value="A2地块">A2地块</SelectItem>
+                        <SelectItem value="A3地块">A3地块</SelectItem>
+                        <SelectItem value="B1地块">B1地块</SelectItem>
+                        <SelectItem value="B2地块">B2地块</SelectItem>
+                        <SelectItem value="C1地块">C1地块</SelectItem>
+                        <SelectItem value="C2地块">C2地块</SelectItem>
+                        <SelectItem value="D1地块">D1地块</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">对比周期:</label>
-                    <select
+                    <Label className="text-sm font-medium text-gray-700 mb-0">对比周期:</Label>
+                    <Select
                       value={comparisonPeriod}
-                      onChange={(e) => setComparisonPeriod(e.target.value)}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      onValueChange={(val) => setComparisonPeriod(val)}
                     >
-                      <option value="none">不对比</option>
-                      <option value="lastWeek">上周对比</option>
-                      <option value="lastMonth">上月对比</option>
-                      <option value="lastQuarter">上季度对比</option>
-                      <option value="lastYear">去年同期</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">不对比</SelectItem>
+                        <SelectItem value="lastWeek">上周对比</SelectItem>
+                        <SelectItem value="lastMonth">上月对比</SelectItem>
+                        <SelectItem value="lastQuarter">上季度对比</SelectItem>
+                        <SelectItem value="lastYear">去年同期</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -767,21 +805,25 @@ export default function StatisticsTab({
               {activeTab === 'area' && activeAreaTab === 'batch' && (
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700">批次选择:</label>
-                    <select
-                      value={batchFilter}
-                      onChange={(e) => setBatchFilter(e.target.value)}
-                      className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[280px]"
+                    <Label className="text-sm font-medium text-gray-700 mb-0">批次选择:</Label>
+                    <Select
+                      value={batchFilter || 'all'}
+                      onValueChange={(val) => setBatchFilter(val === 'all' ? '' : val)}
                     >
-                      <option value="">全部批次</option>
-                      <option value="ZZB2026-001">ZZB2026-001（番茄-玻璃温室A区）</option>
-                      <option value="ZZB2026-002">ZZB2026-002（黄瓜-玻璃温室B区）</option>
-                      <option value="ZZB2026-003">ZZB2026-003（草莓-日光温室1号）</option>
-                      <option value="YMB2026-001">YMB2026-001（番茄育苗-育苗基地A区）</option>
-                      <option value="YMB2026-002">YMB2026-002（黄瓜育苗-育苗基地B区）</option>
-                      <option value="JZB2026-001">JZB2026-001（番茄种源-先正达种业）</option>
-                      <option value="JZB2026-002">JZB2026-002（黄瓜种源-圣尼斯种业）</option>
-                    </select>
+                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[280px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部批次</SelectItem>
+                        <SelectItem value="ZZB2026-001">ZZB2026-001（番茄-玻璃温室A区）</SelectItem>
+                        <SelectItem value="ZZB2026-002">ZZB2026-002（黄瓜-玻璃温室B区）</SelectItem>
+                        <SelectItem value="ZZB2026-003">ZZB2026-003（草莓-日光温室1号）</SelectItem>
+                        <SelectItem value="YMB2026-001">YMB2026-001（番茄育苗-育苗基地A区）</SelectItem>
+                        <SelectItem value="YMB2026-002">YMB2026-002（黄瓜育苗-育苗基地B区）</SelectItem>
+                        <SelectItem value="JZB2026-001">JZB2026-001（番茄种源-先正达种业）</SelectItem>
+                        <SelectItem value="JZB2026-002">JZB2026-002（黄瓜种源-圣尼斯种业）</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}

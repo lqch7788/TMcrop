@@ -1,5 +1,9 @@
 import { Search, Download, Eye, Edit, ChevronLeft, ChevronRight, Trash2, ChevronDown, ChevronRight as ChevronRightIcon, Plus, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { MaterialReceivingRecord, MaterialItem } from '../../types/materialReceiving';
 
 interface ApplicationTabProps {
@@ -216,73 +220,78 @@ export default function ApplicationTab({
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="flex items-end gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-900 mb-1">领料单号</label>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">领料单号</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+              <Input
                 placeholder="搜索领料单号..."
                 value={searchCode}
                 onChange={(e) => { setSearchCode(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="pl-9 pr-4 py-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-900 mb-1">申领人</label>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">申领人</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+              <Input
                 placeholder="搜索申领人..."
                 value={searchApplicant}
                 onChange={(e) => { setSearchApplicant(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="pl-9 pr-4 py-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
+            <Label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+              <Input
                 placeholder="搜索生产计划批次号..."
                 value={searchBatchCode}
                 onChange={(e) => { setSearchBatchCode(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="pl-9 pr-4 py-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-900 mb-1">库存地点</label>
-            <select
-              value={searchWarehouse}
-              onChange={(e) => { setSearchWarehouse(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            <Label className="block text-sm font-medium text-gray-900 mb-1">库存地点</Label>
+            <Select
+              value={searchWarehouse || 'all'}
+              onValueChange={(val) => { setSearchWarehouse(val === 'all' ? '' : val); setCurrentPage(1); }}
             >
-              <option value="">全部</option>
-              <option value="仓库A区">仓库A区</option>
-              <option value="仓库B区">仓库B区</option>
-              <option value="仓库C区">仓库C区</option>
-              <option value="仓库D区">仓库D区</option>
-              <option value="仓库E区">仓库E区</option>
-            </select>
+              <SelectTrigger className="w-full border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部</SelectItem>
+                <SelectItem value="仓库A区">仓库A区</SelectItem>
+                <SelectItem value="仓库B区">仓库B区</SelectItem>
+                <SelectItem value="仓库C区">仓库C区</SelectItem>
+                <SelectItem value="仓库D区">仓库D区</SelectItem>
+                <SelectItem value="仓库E区">仓库E区</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-900 mb-1">审批状态</label>
-            <select
+            <Label className="block text-sm font-medium text-gray-900 mb-1">审批状态</Label>
+            <Select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}
             >
-              <option value="all">全部状态</option>
-              <option value="待审批">待审批</option>
-              <option value="已审批">已审批</option>
-              <option value="已拒绝">已拒绝</option>
-              <option value="已作废">已作废</option>
-              <option value="已取消">已取消</option>
-            </select>
+              <SelectTrigger className="w-full border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="待审批">待审批</SelectItem>
+                <SelectItem value="已审批">已审批</SelectItem>
+                <SelectItem value="已拒绝">已拒绝</SelectItem>
+                <SelectItem value="已作废">已作废</SelectItem>
+                <SelectItem value="已取消">已取消</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button variant="secondary" onClick={onReset}>
             重置
@@ -361,10 +370,9 @@ export default function ApplicationTab({
               <tr>
                 {(exportMode || batchEditMode) && (
                   <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedRows.length === filteredData.length && filteredData.length > 0}
-                      onChange={onSelectAll}
+                      onCheckedChange={onSelectAll}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />
                   </th>
@@ -389,10 +397,9 @@ export default function ApplicationTab({
                   <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                     {(exportMode || batchEditMode) && (
                       <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedRows.includes(item.id)}
-                          onChange={() => onSelectRow(item.id)}
+                          onCheckedChange={() => onSelectRow(item.id)}
                           className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
                       </td>
@@ -516,15 +523,19 @@ export default function ApplicationTab({
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+              <SelectTrigger className="w-20 h-8 border-gray-200 rounded text-sm px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
             <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">

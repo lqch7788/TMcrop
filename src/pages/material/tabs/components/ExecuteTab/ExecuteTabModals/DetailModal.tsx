@@ -2,6 +2,7 @@
 // 领料出库详情弹窗
 import { X, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface ExecuteDetailModalProps {
   // 弹窗状态
@@ -35,15 +36,15 @@ export function ExecuteDetailModal({
           {/* 基本信息 */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div>
-              <label className="text-sm text-gray-500">出库单号</label>
+              <Label className="text-sm text-gray-500 mb-0">出库单号</Label>
               <p className="font-mono font-semibold text-gray-900">{record.code}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">申请日期</label>
+              <Label className="text-sm text-gray-500 mb-0">申请日期</Label>
               <p className="font-semibold text-gray-900">{record.date}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">执行状态</label>
+              <Label className="text-sm text-gray-500 mb-0">执行状态</Label>
               <p className="font-semibold">
                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                   record.executeStatusClass === 'completed' ? 'bg-green-100 text-green-700' :
@@ -55,30 +56,30 @@ export function ExecuteDetailModal({
               </p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">申请人</label>
+              <Label className="text-sm text-gray-500 mb-0">申请人</Label>
               <p className="font-semibold text-gray-900">{record.applicant}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">库存地点</label>
+              <Label className="text-sm text-gray-500 mb-0">库存地点</Label>
               <p className="font-semibold text-gray-900">{record.warehouseLocation}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">审核人</label>
+              <Label className="text-sm text-gray-500 mb-0">审核人</Label>
               <p className="font-semibold text-gray-900">{record.reviewer}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">操作人</label>
+              <Label className="text-sm text-gray-500 mb-0">操作人</Label>
               <p className="font-semibold text-gray-900">{record.operator}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">生产计划批次号</label>
+              <Label className="text-sm text-gray-500 mb-0">生产计划批次号</Label>
               <p className="font-semibold text-gray-900">{record.productionBatchCode}</p>
             </div>
           </div>
 
           {/* 物料明细 */}
           <div className="mb-6">
-            <label className="text-sm text-gray-500 block mb-2">物料明细</label>
+            <Label className="text-sm text-gray-500 block mb-2">物料明细</Label>
             {record.materials && record.materials.length > 0 ? (
               <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead className="bg-emerald-100">

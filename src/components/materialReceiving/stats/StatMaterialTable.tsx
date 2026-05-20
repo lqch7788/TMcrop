@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface StatMaterialTableProps {
   activeTab: 'monthly' | 'material';
@@ -58,12 +59,13 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
               <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600">¥{item.totalAmount.toLocaleString()}</td>
               <td className="px-4 py-3 text-sm text-gray-600">{item.mainWarehouse}</td>
               <td className="px-4 py-3 text-center">
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={() => onViewDetail(item)}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm"
                 >
                   查看明细
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
@@ -75,36 +77,36 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
           显示第 {startIdx + 1} 至 {endIdx} 条，共 {totalItems} 条
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
+          </Button>
           {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
             const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
             return (
-              <button
+              <Button
                 key={i}
+                variant={currentPage === startPage + i ? 'default' : 'outline'}
+                size="icon"
                 onClick={() => onPageChange(startPage + i)}
-                className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === startPage + i
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
+                className={currentPage === startPage + i ? 'shadow-md shadow-emerald-500/30' : ''}
               >
                 {startPage + i}
-              </button>
+              </Button>
             );
           })}
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

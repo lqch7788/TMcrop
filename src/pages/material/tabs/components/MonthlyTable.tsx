@@ -2,6 +2,7 @@
 // 按物料分类统计的月度汇总表格（折叠模式）
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   useStatisticsStore,
   getSingleMonthTableData,
@@ -110,11 +111,9 @@ export function MonthlyTable({
             <tr>
               {exportMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === getAllMonthKeys().length && getAllMonthKeys().length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -151,11 +150,9 @@ export function MonthlyTable({
                   <tr key={idx} className="hover:bg-blue-100 transition-colors">
                     {exportMode && (
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedRows.includes(idx)}
-                          onChange={(e) => onRowSelectChange(idx, e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onCheckedChange={(checked) => onRowSelectChange(idx, checked === true)}
                         />
                       </td>
                     )}
@@ -196,11 +193,9 @@ export function MonthlyTable({
                     >
                       {exportMode && (
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={selectedRows.includes(monthIdx)}
-                            onChange={(e) => onRowSelectChange(monthIdx, e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                            onCheckedChange={(checked) => onRowSelectChange(monthIdx, checked === true)}
                           />
                         </td>
                       )}
