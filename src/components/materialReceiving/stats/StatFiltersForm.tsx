@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface StatFiltersFormProps {
   dateRange: { start: string; end: string };
@@ -25,18 +26,16 @@ export const StatFiltersForm: React.FC<StatFiltersFormProps> = ({
         {/* 时间范围 */}
         <div className="flex items-center gap-2">
           <Label className="text-sm font-medium text-gray-700">时间:</Label>
-          <Input
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-            className="h-9"
+          <DatePicker
+            selected={dateRange.start ? new Date(dateRange.start) : undefined}
+            onChange={(d) => onDateRangeChange({ ...dateRange, start: d.toISOString().slice(0, 10) })}
+            placeholder="开始日期"
           />
           <span className="text-gray-400">至</span>
-          <Input
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-            className="h-9"
+          <DatePicker
+            selected={dateRange.end ? new Date(dateRange.end) : undefined}
+            onChange={(d) => onDateRangeChange({ ...dateRange, end: d.toISOString().slice(0, 10) })}
+            placeholder="结束日期"
           />
         </div>
 
@@ -93,7 +92,7 @@ export const StatFiltersForm: React.FC<StatFiltersFormProps> = ({
           variant="outline"
           size="sm"
           onClick={onReset}
-          className="h-9"
+          className="h-10"
         >
           <RefreshCw className="w-4 h-4" />
           重置

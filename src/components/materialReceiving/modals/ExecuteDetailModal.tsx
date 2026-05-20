@@ -2,6 +2,7 @@ import React from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteDetailModalProps {
@@ -76,41 +77,41 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
       {record.materials.length > 0 && (
         <div className="mt-6">
           <Label className="text-sm text-gray-500 block mb-2">物料明细</Label>
-          <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-emerald-100">
-              <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实际库存</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+            <TableHeader className="bg-emerald-100">
+              <TableRow>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实际库存</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200">
               {record.materials.map((material: ExecuteMaterialItem, idx: number) => {
                 const subtotal = (material.requestedQuantity || 0) * (material.unitPrice || 0);
                 const isQuantityDifferent = material.actualQuantity < material.requestedQuantity;
                 return (
-                  <tr key={idx} className={`hover:bg-emerald-100 ${isQuantityDifferent ? 'bg-amber-50' : ''}`}>
-                    <td className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700 font-mono">{material.materialCode}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.materialName}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.spec}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.unit}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.requestedQuantity}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">
+                  <TableRow key={idx} className={`hover:bg-emerald-100 ${isQuantityDifferent ? 'bg-amber-50' : ''}`}>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700 font-mono">{material.materialCode}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.materialName}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.spec}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.unit}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.requestedQuantity}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">
                       <span className={material.stockQuantity < material.requestedQuantity ? 'text-red-600 font-medium' : 'text-green-600'}>
                         {material.stockQuantity}
                       </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-blue-700">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">
                       {material.actualQuantity > 0 ? (
                         <span className={material.actualQuantity < material.requestedQuantity ? 'text-amber-600 font-medium' : 'text-green-600'}>
                           {material.actualQuantity}
@@ -120,16 +121,16 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
                           {material.actualQuantity}
                         </span>
                       )}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{(material.unitPrice || 0).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{subtotal.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.warehousePosition || '-'}</td>
-                    <td className="px-3 py-2 text-sm text-blue-700">{material.remark}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{(material.unitPrice || 0).toFixed(2)}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{subtotal.toFixed(2)}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.warehousePosition || '-'}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700">{material.remark}</TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

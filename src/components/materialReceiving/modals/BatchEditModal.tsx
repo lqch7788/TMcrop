@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 // 类型定义
 interface MaterialItem {
@@ -125,11 +127,10 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
         {/* 日期 */}
         <div>
           <Label className="block text-xs font-medium text-gray-900 mb-1">日期</Label>
-          <Input
-            type="date"
-            value={currentEditedData.date || ''}
-            onChange={(e) => onFieldChange(currentRecordId, 'date', e.target.value)}
-            className="h-9"
+          <DatePicker
+            selected={currentEditedData.date ? new Date(currentEditedData.date) : undefined}
+            onChange={(date) => onFieldChange(currentRecordId, 'date', date.toISOString().slice(0, 10))}
+            placeholder="选择日期"
           />
         </div>
         {/* 申领人 */}
@@ -139,7 +140,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             type="text"
             value={currentEditedData.applicant || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
-            className="h-9"
+            className="h-10"
           />
         </div>
         {/* 仓库地点 */}
@@ -149,7 +150,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             value={currentEditedData.warehouseLocation || 'none'}
             onValueChange={(v) => onFieldChange(currentRecordId, 'warehouseLocation', v === 'none' ? '' : v)}
           >
-            <SelectTrigger className="h-9">
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -167,7 +168,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             type="text"
             value={currentEditedData.productionBatchCode || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
-            className="h-9"
+            className="h-10"
           />
         </div>
         {/* 状态 */}
@@ -177,7 +178,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             value={currentEditedData.status || 'none'}
             onValueChange={(v) => onFieldChange(currentRecordId, 'status', v === 'none' ? '' : v)}
           >
-            <SelectTrigger className="h-9">
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +196,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
             type="text"
             value={currentEditedData.reviewer || ''}
             onChange={(e) => onFieldChange(currentRecordId, 'reviewer', e.target.value)}
-            className="h-9"
+            className="h-10"
           />
         </div>
       </div>
@@ -234,30 +235,30 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
       <div className="border border-gray-300 rounded-lg overflow-hidden">
         {/* 横向滚动容器 */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[1200px]">
-            <thead className="bg-blue-600">
-              <tr>
-                <th className="px-2 py-2 text-left text-sm font-semibold text-white w-10 whitespace-nowrap">操作</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">单位</th>
-                <th className="px-3 py-2 text-right text-sm font-semibold text-white">申请数量</th>
-                <th className="px-3 py-2 text-right text-sm font-semibold text-white">当前库存</th>
-                <th className="px-3 py-2 text-right text-sm font-semibold text-white">单价(元)</th>
-                <th className="px-3 py-2 text-right text-sm font-semibold text-white whitespace-nowrap">小计(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-white">备注</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+          <Table className="w-full text-sm min-w-[1200px]">
+            <TableHeader className="bg-blue-600">
+              <TableRow>
+                <TableHead className="px-2 py-2 text-left text-sm font-semibold text-white w-10 whitespace-nowrap">操作</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">物料编码</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">物料名称</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">规格</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">单位</TableHead>
+                <TableHead className="px-3 py-2 text-right text-sm font-semibold text-white">申请数量</TableHead>
+                <TableHead className="px-3 py-2 text-right text-sm font-semibold text-white">当前库存</TableHead>
+                <TableHead className="px-3 py-2 text-right text-sm font-semibold text-white">单价(元)</TableHead>
+                <TableHead className="px-3 py-2 text-right text-sm font-semibold text-white whitespace-nowrap">小计(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">仓库货位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-white">备注</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {materials.map((mat, idx) => {
                 const subtotal = (mat.requestedQuantity || 0) * (mat.unitPrice || 0);
                 const isStockWarning = (mat.requestedQuantity || 0) > (mat.stockQuantity || 0);
                 return (
-                  <tr key={idx}>
+                  <TableRow key={idx}>
                     {/* 删除按钮 */}
-                    <td className="px-2 py-2 text-center">
+                    <TableCell className="px-2 py-2 text-center">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -267,40 +268,40 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.materialCode || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
                         className="w-24 h-8 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.materialName || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
                         className="w-24 h-8 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.spec || ''}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
                         className="w-20 h-8 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.unit || ''}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
                         className="w-16 h-8 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         min="0"
@@ -308,8 +309,8 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
                         className={`w-16 h-8 text-right text-xs ${isStockWarning ? 'border-red-500 text-red-600' : ''}`}
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         min="0"
@@ -317,8 +318,8 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
                         className="w-16 h-8 text-right text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         step="0.01"
@@ -331,36 +332,36 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         }}
                         className="w-20 h-8 text-right text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2 text-right text-xs text-blue-700 bg-gray-50">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-right text-xs text-blue-700 bg-gray-50">
                       {subtotal.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
                         className="w-24 h-8 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={mat.remark || ''}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
                         className="w-24 h-8 text-xs"
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
               {(!materials || materials.length === 0) && (
-                <tr>
-                  <td colSpan={11} className="px-3 py-4 text-center text-gray-500">暂无物料明细</td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={11} className="px-3 py-4 text-center text-gray-500">暂无物料明细</TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialReceivingRecord, MaterialItem, MaterialRequestFormState } from '../../types/materialReceiving';
 
 interface ApplicationTabProps {
@@ -345,46 +346,46 @@ export default function ApplicationTab({
           )}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {(exportMode || batchEditMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <Checkbox
                       checked={selectedRows.length === filteredData.length && filteredData.length > 0}
                       onCheckedChange={onSelectAll}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-8"></th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">领料单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域/用途</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-8"></TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">领料单号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">库存地点</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料种类</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域/用途</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审核人</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划批次号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item) => (
                 <>
-                  <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={item.id} className="hover:bg-blue-100 transition-colors">
                     {(exportMode || batchEditMode) && (
-                      <td className="px-4 py-3">
+                      <TableCell className="px-4 py-3">
                         <Checkbox
                           checked={selectedRows.includes(item.id)}
                           onCheckedChange={() => onSelectRow(item.id)}
                           className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -396,17 +397,17 @@ export default function ApplicationTab({
                           <ChevronRightIcon className="w-4 h-4 text-gray-500" />
                         )}
                       </Button>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-700" onClick={() => onView(item)}>{item.code}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.applicant}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.department}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.warehouseLocation}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.materials.length > 0 ? `${item.materials.length}种` : '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.plantArea}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.reviewer}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.productionBatchCode}</td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-700" onClick={() => onView(item)}>{item.code}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.date}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.applicant}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.department}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.warehouseLocation}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.materials.length > 0 ? `${item.materials.length}种` : '-'}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.plantArea}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.reviewer}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">{item.productionBatchCode}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium w-fit ${
                           item.statusClass === 'approved' ? 'bg-green-100 text-green-700' :
@@ -425,66 +426,66 @@ export default function ApplicationTab({
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600">
                       {item.materials.length > 0 ? item.materials[0].remark : '-'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                   {expandedRows.has(item.id) && (
-                    <tr key={`${item.id}-expanded`} className="bg-white">
-                      <td colSpan={(exportMode || batchEditMode) ? 10 : 9} className="px-4 py-3">
+                    <TableRow key={`${item.id}-expanded`} className="bg-white">
+                      <TableCell colSpan={(exportMode || batchEditMode) ? 10 : 9} className="px-4 py-3">
                         <div className="text-sm">
                           <div className="font-medium text-blue-800 mb-2">物料明细</div>
                           {item.materials.length > 0 ? (
-                            <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                              <thead className="bg-[#F2F6FA]">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">当前库存</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-200">
+                            <Table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                              <TableHeader className="bg-[#F2F6FA]">
+                                <TableRow>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料编码</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">物料名称</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">批次号</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">规格</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单位</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">申领数量</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">当前库存</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">单价(元)</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">小计(元)</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">仓库货位</TableHead>
+                                  <TableHead className="px-3 py-2 text-left text-sm font-semibold text-blue-800">备注</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody className="divide-y divide-gray-200">
                                 {item.materials.map((material, idx) => {
                                   const subtotal = material.requestedQuantity * material.unitPrice;
                                   const isStockWarning = material.requestedQuantity > material.stockQuantity;
                                   return (
-                                    <tr key={idx} className="hover:bg-[#F2F6FA]/50">
-                                      <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.materialCode}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.materialName}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800 font-mono">{material.batchNo || ''}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.spec}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.unit}</td>
-                                      <td className={`px-3 py-2 text-sm ${isStockWarning ? 'text-red-600 font-bold' : 'text-blue-800'}`}>{material.requestedQuantity}{isStockWarning && ' ⚠️'}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.stockQuantity}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.unitPrice.toFixed(2)}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{subtotal.toFixed(2)}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.warehousePosition}</td>
-                                      <td className="px-3 py-2 text-sm text-blue-800">{material.remark}</td>
-                                    </tr>
+                                    <TableRow key={idx} className="hover:bg-[#F2F6FA]/50">
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800 font-mono">{material.materialCode}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.materialName}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800 font-mono">{material.batchNo || ''}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.spec}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.unit}</TableCell>
+                                      <TableCell className={`px-3 py-2 text-sm ${isStockWarning ? 'text-red-600 font-bold' : 'text-blue-800'}`}>{material.requestedQuantity}{isStockWarning && ' ⚠️'}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.stockQuantity}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.unitPrice.toFixed(2)}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{subtotal.toFixed(2)}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.warehousePosition}</TableCell>
+                                      <TableCell className="px-3 py-2 text-sm text-blue-800">{material.remark}</TableCell>
+                                    </TableRow>
                                   );
                                 })}
-                              </tbody>
-                            </table>
+                              </TableBody>
+                            </Table>
                           ) : (
                             <div className="text-blue-800 text-center py-4">暂无物料明细</div>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                 </>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 导出模式底部 */}

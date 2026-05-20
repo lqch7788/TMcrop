@@ -35,6 +35,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     greenhouseName: '',
     dilutionRatio: '',
     quantity: 0,
+    unit: '千克',
     unitPrice: 0,
     totalCost: 0,
     fertilizeTime: '',
@@ -79,6 +80,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         greenhouseName: record.greenhouseName || '',
         dilutionRatio: record.dilutionRatio || '',
         quantity: record.quantity || 0,
+        unit: record.unit || '千克',
         unitPrice: record.unitPrice || 0,
         totalCost: record.totalCost || 0,
         fertilizeTime: record.fertilizeTime || '',
@@ -110,6 +112,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       greenhouseName: form.greenhouseName,
       dilutionRatio: form.dilutionRatio,
       quantity: form.quantity,
+      unit: form.unit,
       unitPrice: form.unitPrice,
       totalCost: form.totalCost,
       fertilizeTime: form.fertilizeTime,
@@ -200,7 +203,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label className="text-gray-900">稀释比例</Label>
                 <Input
@@ -212,7 +215,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <Label className="text-gray-900">施肥量 (kg)</Label>
+                <Label className="text-gray-900">施肥量</Label>
                 <Input
                   type="number"
                   value={form.quantity || ''}
@@ -224,7 +227,17 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <Label className="text-gray-900">单价 (元/kg)</Label>
+                <Label className="text-gray-900">单位</Label>
+                <DictSelect
+                  category="unit"
+                  value={form.unit}
+                  onChange={(value) => updateField('unit', value)}
+                  placeholder="选择单位"
+                  disabled={isIot}
+                />
+              </div>
+              <div>
+                <Label className="text-gray-900">单价 (元/{form.unit || '单位'})</Label>
                 <Input
                   type="number"
                   value={form.unitPrice || ''}

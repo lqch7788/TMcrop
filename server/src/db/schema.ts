@@ -2341,6 +2341,7 @@ export function initializeDatabase() {
       fertilizer_type TEXT NOT NULL,
       dilution_ratio TEXT NOT NULL,
       quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT DEFAULT '千克',
       unit_price REAL DEFAULT 0,
       total_cost REAL DEFAULT 0,
       fertilize_time TEXT NOT NULL,

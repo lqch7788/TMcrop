@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteAddModalProps {
@@ -155,25 +156,25 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
               添加到物料池 ({selectedMaterialIndices.size})
             </Button>
           </div>
-          <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-10">选择</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">当前库存</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实发数量</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-10">选择</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">当前库存</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实发数量</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200">
               {selectedApp.materials.map((material, idx) => (
-                <tr key={idx} className={selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
-                  <td className="px-3 py-2">
+                <TableRow key={idx} className={selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
+                  <TableCell className="px-3 py-2">
                     <Checkbox
                       checked={selectedMaterialIndices.has(idx)}
                       onCheckedChange={(checked) => {
@@ -193,16 +194,16 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                         onSelectedMaterialIndicesChange(newSelected);
                       }}
                     />
-                  </td>
-                  <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.materialName}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.spec}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.unit}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.stockQuantity}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</td>
-                  <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
-                  <td className="px-3 py-2">
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.materialName}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.spec}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.unit}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.stockQuantity}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</TableCell>
+                  <TableCell className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</TableCell>
+                  <TableCell className="px-3 py-2">
                     <Input
                       type="number"
                       min="0"
@@ -217,40 +218,40 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                       disabled={!selectedMaterialIndices.has(idx)}
                       className="w-20 h-8 text-sm"
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
       {materialPool.length > 0 && (
         <div className="mt-6">
           <Label className="text-sm font-medium text-gray-700 mb-2">物料池（可修改实发数量或移除）</Label>
-          <table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
-            <thead className="bg-emerald-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-16">操作</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
+            <TableHeader className="bg-emerald-50">
+              <TableRow>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600 w-16">操作</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200">
               {materialPool.map((material, idx) => {
                 const subtotal = (material.requestedQuantity || 0) * (material.unitPrice || 0);
                 const isQuantityDifferent = material.actualQuantity < material.requestedQuantity;
                 return (
-                  <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
-                    <td className="px-3 py-2">
+                  <TableRow key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
+                    <TableCell className="px-3 py-2">
                       <Button
                         variant="link"
                         size="sm"
@@ -259,17 +260,17 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                       >
                         移除
                       </Button>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{material.materialName}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{material.spec}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{material.unit}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{subtotal.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600 font-mono">{material.materialCode}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{material.materialName}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{material.spec}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{material.unit}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{material.requestedQuantity}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{(material.unitPrice || 0).toFixed(2)}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{subtotal.toFixed(2)}</TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-gray-600">{material.warehousePosition || '-'}</TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         min="0"
@@ -278,12 +279,12 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                         onChange={(e) => onUpdateMaterialPoolQuantity(idx, Number(e.target.value))}
                         className={`w-20 h-8 text-sm ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

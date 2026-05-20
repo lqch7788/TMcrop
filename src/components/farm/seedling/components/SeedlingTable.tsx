@@ -5,14 +5,14 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, ChevronLeft, ChevronRight, CheckCircle, XCircle, Tag } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -649,47 +649,18 @@ export function SeedlingTable({
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pagination.pageSize)}
-            onValueChange={(val) => {
-              const newSize = Number(val);
-              onPageSizeChange?.(newSize);
-              onChange({ ...pagination, pageSize: newSize, current: 1 });
-            }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 w-auto">
-              <SelectValue placeholder="20" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
-            disabled={pagination.current === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
-            disabled={pagination.current >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={pagination.current}
+          totalPages={totalPages || 1}
+          onPageChange={(page) => onChange({ ...pagination, current: page })}
+          pageSize={pagination.pageSize}
+          onPageSizeChange={(size) => {
+            onPageSizeChange?.(size);
+            onChange({ ...pagination, pageSize: size, current: 1 });
+          }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

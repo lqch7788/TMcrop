@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteEditModalProps {
@@ -145,31 +146,31 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
           </Button>
         </div>
         {editForm.materials.length > 0 && (
-          <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实际库存</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-gray-600">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">来源领料单号</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料编码</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">物料名称</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">规格</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">申请数量</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">实际库存</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">本次实发</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">单价(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">小计(元)</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">仓库货位</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">备注</TableHead>
+                <TableHead className="px-3 py-2 text-left text-sm font-semibold text-gray-600">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200">
               {editForm.materials.map((material, idx) => {
                 const subtotal = (material.requestedQuantity || 0) * (material.unitPrice || 0);
                 const isQuantityDifferent = material.actualQuantity < material.requestedQuantity;
                 return (
-                  <tr key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
-                    <td className="px-3 py-2">
+                  <TableRow key={idx} className={isQuantityDifferent ? 'bg-amber-50' : ''}>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.applicationCode || ''}
@@ -177,91 +178,91 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
                         className="h-8 px-2 text-xs font-mono bg-gray-50"
                         readOnly
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.materialCode}
                         onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.materialName}
                         onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.spec}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.unit}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         value={material.requestedQuantity}
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         value={material.stockQuantity}
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         value={material.actualQuantity}
                         onChange={(e) => onMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
                         className={`h-8 px-2 text-xs ${isQuantityDifferent ? 'border-amber-500 text-amber-600' : ''}`}
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="number"
                         value={material.unitPrice || ''}
                         onChange={(e) => onMaterialChange(idx, 'unitPrice', Number(e.target.value))}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2 text-sm text-blue-700 bg-gray-50">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-sm text-blue-700 bg-gray-50">
                       {subtotal.toFixed(2)}
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Input
                         type="text"
                         value={material.remark}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
                         className="h-8 px-2 text-xs"
                       />
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -270,12 +271,12 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
 

@@ -930,6 +930,18 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• device_distributions:', e.message);
   }
 
+  // 34. fertilizer_records 表添加 unit 列
+  try {
+    db.run(`ALTER TABLE fertilizer_records ADD COLUMN unit TEXT DEFAULT '千克'`);
+    console.log('✓ fertilizer_records 表添加 unit 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• fertilizer_records.unit 列已存在');
+    } else {
+      console.log('• fertilizer_records.unit:', e.message);
+    }
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

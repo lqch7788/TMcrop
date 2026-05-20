@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { useWarehouseMaterialStore } from '@/stores/useWarehouseMaterialStore';
@@ -455,11 +457,11 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
             {/* 入库日期 */}
             <div>
               <Label className="text-xs text-emerald-700">入库日期</Label>
-              <input
-                type="date"
-                value={formData.inboundDate}
-                readOnly
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
+              <DatePicker
+                selected={formData.inboundDate ? new Date(formData.inboundDate) : undefined}
+                onChange={() => {}}
+                placeholder="入库日期"
+                disabled
               />
             </div>
 
@@ -538,42 +540,42 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">操作</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">物料编码</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">物料名称</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">分类</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">规格</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">条形码</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">单位</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">数量</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">单价</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">存放位置</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">批号</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">生产日期</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">有效期至</th>
-                    <th className="px-2 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">备注</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+              <Table className="min-w-full text-xs">
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">操作</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">物料编码</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">物料名称</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">分类</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">规格</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">条形码</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">单位</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">数量</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">单价</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">存放位置</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">批号</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">生产日期</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">有效期至</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-gray-600 whitespace-nowrap">备注</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {materials.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="px-2 py-1.5 whitespace-nowrap">
+                    <TableRow key={m.id} className="hover:bg-gray-50">
+                      <TableCell className="px-2 py-1.5 whitespace-nowrap">
                         <Button variant="ghost" size="icon" onClick={() => handleDeleteMaterial(m.id)}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.code}
                           onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
                           className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         <div className="flex items-center">
                           <Input
                             ref={(el) => { inputRefs.current[m.id] = el; }}
@@ -622,40 +624,40 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                             </div>
                           );
                         })()}
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
                           className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
                           className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
                           className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
                           className="w-12 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <NumberInput
                           value={m.quantity}
                           onChange={(val) => handleMaterialChange(m.id, 'quantity', Number(val))}
@@ -663,24 +665,24 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           placeholder="数量"
                           decimals={0}
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
                           className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
                           className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.batchNo}
@@ -688,24 +690,22 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
                           placeholder="批号"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="date"
-                          value={m.productionDate}
-                          onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
-                          className="w-24 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
+                        <DatePicker
+                          selected={m.productionDate ? new Date(m.productionDate) : undefined}
+                          onChange={(date) => handleMaterialChange(m.id, 'productionDate', date.toISOString().slice(0, 10))}
+                          placeholder="生产日期"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="date"
-                          value={m.expiryDate}
-                          onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
-                          className="w-24 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
+                        <DatePicker
+                          selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
+                          onChange={(date) => handleMaterialChange(m.id, 'expiryDate', date.toISOString().slice(0, 10))}
+                          placeholder="有效期至"
                         />
-                      </td>
-                      <td className="px-1 py-1.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input
                           type="text"
                           value={m.remarks}
@@ -713,11 +713,11 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
                           placeholder="备注"
                         />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>

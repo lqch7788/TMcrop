@@ -125,13 +125,13 @@ router.post('/', (req: Request, res: Response) => {
       id, fertilizer_code, farm_task_id, production_plan_id, production_plan_code,
       planting_id, planting_code, greenhouse_id, greenhouse_name, area_name,
       crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
-      quantity, unit_price, total_cost, fertilize_time, operator_id, operator_name,
+      quantity, unit, unit_price, total_cost, fertilize_time, operator_id, operator_name,
       data_source, iot_device_id, iot_record_id, description, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.farm_task_id || null, body.production_plan_id || null, body.production_plan_code || null,
        body.planting_id || null, body.planting_code || null, body.greenhouse_id || null, body.greenhouse_name,
        body.area_name || null, body.crop_name, body.crop_variety || null, body.fertilizer_name, body.fertilizer_type,
-       body.dilution_ratio, qty, price, qty * price, body.fertilize_time,
+       body.dilution_ratio, qty, body.unit || '千克', price, qty * price, body.fertilize_time,
        body.operator_id || null, body.operator_name || null, body.data_source || 'manual',
        body.iot_device_id || null, body.iot_record_id || null, body.description || null,
        body.status || 'completed', now, now]
@@ -252,11 +252,11 @@ router.put('/:id', (req: Request, res: Response) => {
     const qty = body.quantity ?? existing[0].quantity;
     const price = body.unit_price ?? existing[0].unit_price;
     db.run(`UPDATE fertilizer_records SET fertilizer_name=?, fertilizer_type=?, dilution_ratio=?,
-      quantity=?, unit_price=?, total_cost=?, greenhouse_name=?, area_name=?, crop_name=?, crop_variety=?,
+      quantity=?, unit=?, unit_price=?, total_cost=?, greenhouse_name=?, area_name=?, crop_name=?, crop_variety=?,
       fertilize_time=?, operator_name=?, description=?, production_plan_id=?, production_plan_code=?,
       planting_id=?, planting_code=?, update_time=? WHERE id=?`,
       [body.fertilizer_name ?? existing[0].fertilizer_name, body.fertilizer_type ?? existing[0].fertilizer_type,
-       body.dilution_ratio ?? existing[0].dilution_ratio, qty, price, qty * price,
+       body.dilution_ratio ?? existing[0].dilution_ratio, qty, body.unit ?? existing[0].unit ?? '千克', price, qty * price,
        body.greenhouse_name ?? existing[0].greenhouse_name, body.area_name ?? existing[0].area_name,
        body.crop_name ?? existing[0].crop_name, body.crop_variety ?? existing[0].crop_variety,
        body.fertilize_time ?? existing[0].fertilize_time, body.operator_name ?? existing[0].operator_name,

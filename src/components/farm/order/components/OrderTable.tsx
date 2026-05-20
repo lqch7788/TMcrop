@@ -3,10 +3,10 @@
  */
 
 import React from 'react';
-import { Eye, Trash2, Download, Check, X, Plus, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { Eye, Trash2, Download, Check, X, Plus, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 
 interface OrderTableProps {
@@ -212,45 +212,15 @@ export function OrderTable({
 
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pagination.pageSize)}
-            onValueChange={(v) => onChange({ ...pagination, pageSize: Number(v), current: 1 })}
-          >
-            <SelectTrigger className="w-auto px-2 py-1 border-gray-200 rounded text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
-            disabled={pagination.current === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">
-            {pagination.current} / {Math.ceil(data.length / pagination.pageSize) || 1}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.min(Math.ceil(data.length / pagination.pageSize), pagination.current + 1) })}
-            disabled={pagination.current >= Math.ceil(data.length / pagination.pageSize)}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={pagination.current}
+          totalPages={Math.ceil(data.length / pagination.pageSize) || 1}
+          onPageChange={(page) => onChange({ ...pagination, current: page })}
+          pageSize={pagination.pageSize}
+          onPageSizeChange={(size) => onChange({ pageSize: size, current: 1 })}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

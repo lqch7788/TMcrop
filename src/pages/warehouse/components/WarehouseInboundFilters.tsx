@@ -51,7 +51,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               value={searchCode}
               onChange={(e) => onSearchCodeChange(e.target.value)}
               placeholder="搜索单号"
-              className="h-9"
+              className="h-10"
             />
           </div>
 
@@ -63,7 +63,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               value={searchSupplier}
               onChange={(e) => onSearchSupplierChange(e.target.value)}
               placeholder="搜索供应商"
-              className="h-9"
+              className="h-10"
             />
           </div>
 
@@ -74,7 +74,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               value={searchStatus || 'all'}
               onValueChange={(val) => onSearchStatusChange(val === 'all' ? '' : val)}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-10">
                 <SelectValue placeholder="全部" />
               </SelectTrigger>
               <SelectContent>
@@ -94,7 +94,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               value={searchMaterialName}
               onChange={(e) => onSearchMaterialNameChange(e.target.value)}
               placeholder="搜索物料名称"
-              className="h-9"
+              className="h-10"
             />
           </div>
 
@@ -106,7 +106,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
               value={searchMaterialCode}
               onChange={(e) => onSearchMaterialCodeChange(e.target.value)}
               placeholder="搜索物料编码"
-              className="h-9"
+              className="h-10"
             />
           </div>
         </div>

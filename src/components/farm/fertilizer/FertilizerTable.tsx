@@ -33,9 +33,6 @@ interface FertilizerTableProps {
   onToggleStats?: () => void;
 }
 
-// 简易分页
-const PAGE_SIZE = 10;
-
 export function FertilizerTable({
   data,
   isLoading,
@@ -54,10 +51,11 @@ export function FertilizerTable({
   onToggleStats,
 }: FertilizerTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
-  const totalPages = Math.ceil(data.length / PAGE_SIZE) || 1;
+  const [pageSize, setPageSize] = React.useState(10);
+  const totalPages = Math.ceil(data.length / pageSize) || 1;
   const showCheckbox = operationMode === 'delete';
-  const startIdx = (currentPage - 1) * PAGE_SIZE;
-  const currentData = data.slice(startIdx, startIdx + PAGE_SIZE);
+  const startIdx = (currentPage - 1) * pageSize;
+  const currentData = data.slice(startIdx, startIdx + pageSize);
 
   // 切换页面时重置
   React.useEffect(() => {
@@ -191,7 +189,7 @@ export function FertilizerTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作物品种</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">温室位置</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">稀释比例</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥量(kg)</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥量</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">总成本</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥时间</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">数据来源</TableHead>
@@ -262,7 +260,7 @@ export function FertilizerTable({
                     </TableCell>
                     {/* 施肥量 - 绿色加粗 */}
                     <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 whitespace-nowrap">
-                      {record.quantity?.toLocaleString() || '0'} kg
+                      {record.quantity?.toLocaleString() || '0'} {record.unit || 'kg'}
                     </TableCell>
                     {/* 总成本 - amber */}
                     <TableCell className="px-4 py-3 text-sm font-medium text-amber-600 whitespace-nowrap">
@@ -325,12 +323,15 @@ export function FertilizerTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <span className="text-sm text-gray-500">共 {data.length} 条记录</span>
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
         />
       </div>
     </div>

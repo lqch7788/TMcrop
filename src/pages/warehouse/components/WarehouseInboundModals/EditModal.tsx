@@ -4,11 +4,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 
 interface InboundEditModalProps {
@@ -94,18 +96,31 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl shadow-xl max-h-[90vh] flex flex-col">
-        {/* 标题栏 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 flex-shrink-0">
-          <h3 className="text-lg font-semibold text-white">编辑入库记录</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="编辑入库记录"
+      size="xxl"
+      showFooter={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          {record.status === 'completed' && (
+            <Button variant="warning" onClick={() => alert('申请作废功能待实现')}>
+              申请作废
+            </Button>
+          )}
+          {record.status === 'pending' && (
+            <Button variant="blue" onClick={handleSave}>
+              保存
+            </Button>
+          )}
+          <Button variant="secondary" onClick={onClose}>
+            关闭
           </Button>
         </div>
-
-        {/* 内容区域 */}
-        <div className="p-6 overflow-y-auto flex-1">
+      }
+    >
+      <div className="overflow-y-auto flex-1">
           {/* 状态提示 */}
           {record.status === 'completed' && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
@@ -176,40 +191,26 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               )}
             </div>
             <div className="overflow-auto rounded-lg border border-gray-200 bg-white max-h-80">
-              <table className="text-xs" style={{ tableLayout: 'auto', minWidth: '1200px' }}>
-                <colgroup>
-                  <col style={{ width: '50px', minWidth: '50px' }} />
-                  <col style={{ width: '120px', minWidth: '120px' }} />
-                  <col style={{ width: '150px', minWidth: '150px' }} />
-                  <col style={{ width: '180px', minWidth: '180px' }} />
-                  <col style={{ width: '150px', minWidth: '150px' }} />
-                  <col style={{ width: '80px', minWidth: '80px' }} />
-                  <col style={{ width: '60px', minWidth: '60px' }} />
-                  <col style={{ width: '70px', minWidth: '70px' }} />
-                  <col style={{ width: '80px', minWidth: '80px' }} />
-                  <col style={{ width: '120px', minWidth: '120px' }} />
-                  <col style={{ width: '100px', minWidth: '100px' }} />
-                  <col style={{ width: '100px', minWidth: '100px' }} />
-                </colgroup>
-                <thead className="bg-blue-50 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">操作</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">物料编码</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">物料名称</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">分类</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">规格</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">单位</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">数量</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">单价</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">批号</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">生产日期</th>
-                    <th className="px-2 py-2 text-left font-semibold text-blue-800">有效期至</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+              <Table className="text-xs" style={{ minWidth: '1200px' }}>
+                <TableHeader>
+                  <TableRow className="bg-blue-50 sticky top-0 z-10">
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">操作</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">物料编码</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">物料名称</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">分类</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">规格</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">单位</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">数量</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">单价</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">批号</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">生产日期</TableHead>
+                    <TableHead className="px-2 py-2 text-xs font-semibold text-blue-800">有效期至</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {editedMaterials.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="px-2 py-1.5">
+                    <TableRow key={m.id} className="hover:bg-gray-50">
+                      <TableCell className="px-2 py-1.5">
                         {record.status === 'pending' ? (
                           <Button
                             variant="ghost"
@@ -222,8 +223,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -234,8 +235,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-blue-600 font-medium">{m.code}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -246,8 +247,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-900">{m.name}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -258,8 +259,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.category || '-'}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -270,8 +271,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.specification || '-'}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -282,8 +283,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.unit}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <NumberInput
                             value={m.quantity}
@@ -294,8 +295,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-900">{m.quantity}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -306,8 +307,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-900">{m.price}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -318,8 +319,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.batchNo || '-'}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -330,8 +331,8 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.productionDate || '-'}</span>
                         )}
-                      </td>
-                      <td className="px-1 py-1.5">
+                      </TableCell>
+                      <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
                           <Input
                             type="text"
@@ -342,33 +343,16 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                         ) : (
                           <span className="text-xs text-gray-600">{m.expiryDate || '-'}</span>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>
 
-        {/* 底部按钮 */}
-        <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
-          {record.status === 'completed' && (
-            <Button variant="warning" onClick={() => alert('申请作废功能待实现')}>
-              申请作废
-            </Button>
-          )}
-          {record.status === 'pending' && (
-            <Button variant="blue" onClick={handleSave}>
-              保存
-            </Button>
-          )}
-          <Button variant="secondary" onClick={onClose}>
-            关闭
-          </Button>
-        </div>
-      </div>
-    </div>
+    </UnifiedModal>
   );
 };
 
