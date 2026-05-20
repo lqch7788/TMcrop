@@ -26,8 +26,8 @@ import {
   HarvestFilterToolbar,
   HarvestTableToolbar,
   HarvestTable,
-  HarvestPagination,
 } from './components';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 初始化品种库
 cropVarietyService.initVarieties();
@@ -780,12 +780,13 @@ export default function HarvestPage() {
               </div>
             </div>
           )}
-          <HarvestPagination
+          <Pagination
             currentPage={currentPage}
             pageSize={pageSize}
-            totalCount={filteredRecords.length}
+            totalPages={Math.ceil(filteredRecords.length / pageSize) || 1}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
+            showPageSize
           />
         </div>
       </div>

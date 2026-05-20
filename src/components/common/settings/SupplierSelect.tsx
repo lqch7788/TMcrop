@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getActiveSuppliers } from '../../../services/apiSupplierService';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 
 interface SupplierOption {
   value: string;
@@ -54,19 +55,23 @@ export function SupplierSelect({
   }, [supplierType]);
 
   return (
-    <select
+    <Select
       value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
+      onValueChange={(val) => onChange(val)}
       disabled={disabled || loading}
-      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
-      <option value="">{placeholder}</option>
-      {suppliers.map((supplier) => (
-        <option key={supplier.value} value={supplier.value}>
-          {supplier.label} ({supplier.code})
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="">{placeholder}</SelectItem>
+        {suppliers.map((supplier) => (
+          <SelectItem key={supplier.value} value={supplier.value}>
+            {supplier.label} ({supplier.code})
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

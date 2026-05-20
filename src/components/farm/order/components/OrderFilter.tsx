@@ -7,6 +7,7 @@ import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CropOrderFilters } from '@/types/crop';
 
@@ -107,10 +108,9 @@ export function OrderFilter({
           <Label className="text-gray-700">
             订单日期
           </Label>
-          <Input
-            type="date"
-            value={filters.orderDate}
-            onChange={(e) => onChange({ ...filters, orderDate: e.target.value })}
+          <DatePicker
+            selected={filters.orderDate ? new Date(filters.orderDate) : undefined}
+            onChange={(date) => onChange({ ...filters, orderDate: date.toISOString().split('T')[0] })}
             className="border-gray-200"
           />
         </div>

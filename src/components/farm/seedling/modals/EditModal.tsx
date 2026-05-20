@@ -11,6 +11,7 @@ import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '../../../ui/input';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -338,10 +339,9 @@ export function EditModal({
         {/* 开始日期 */}
         <div>
           <Label className="text-gray-900">开始日期</Label>
-          <Input
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+          <DatePicker
+            selected={formData.startDate ? new Date(formData.startDate) : undefined}
+            onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
@@ -349,10 +349,9 @@ export function EditModal({
         {/* 预计结束日期 */}
         <div>
           <Label className="text-gray-900">预计结束日期</Label>
-          <Input
-            type="date"
-            value={formData.expectedEndDate}
-            onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
+          <DatePicker
+            selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
+            onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

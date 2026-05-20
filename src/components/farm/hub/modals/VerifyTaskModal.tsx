@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { TextArea } from '../../../ui/TextArea';
 import { CheckCircle, XCircle, Clock, User, MessageSquare, Image, Mic, MapPin, Package } from 'lucide-react';
 import { Task, TaskRecord, TASK_STATUS_CONFIG } from '../../../../types/task';
@@ -87,19 +87,19 @@ export function VerifyTaskModal({
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
-              <label className="text-gray-500">任务编号</label>
+              <Label className="text-gray-500">任务编号</Label>
               <p className="font-medium">{task.taskCode}</p>
             </div>
             <div>
-              <label className="text-gray-500">执行人</label>
+              <Label className="text-gray-500">执行人</Label>
               <p className="font-medium">{task.assigneeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">任务类型</label>
+              <Label className="text-gray-500">任务类型</Label>
               <p className="font-medium">{task.typeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">当前进度</label>
+              <Label className="text-gray-500">当前进度</Label>
               <p className="font-medium">{task.progress}%</p>
             </div>
           </div>
@@ -112,10 +112,10 @@ export function VerifyTaskModal({
 
         {/* 进度历史 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <Label className="text-gray-700 mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4" />
             执行记录
-          </label>
+          </Label>
           <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
             {records.length > 0 ? (
               <TaskProgressTimeline records={records} />
@@ -138,10 +138,10 @@ export function VerifyTaskModal({
 
         {/* 验收意见 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Label className="text-gray-700 mb-2">
             {handleType === 'reject' ? '驳回原因' : '验收意见'}
             {handleType === 'reject' && <span className="text-red-500">*</span>}
-          </label>
+          </Label>
           <TextArea
             value={comments}
             onChange={(e) => setComments(e.target.value)}

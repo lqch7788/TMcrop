@@ -6,12 +6,14 @@
  * IoT记录行有绿色左边框，仅可查看不可编辑删除
  */
 import React from 'react';
-import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, Edit2, Trash2, Plus, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table';
+import { Pagination } from '../../ui/Pagination';
 
 interface FertilizerTableProps {
   data: FertilizerData[];
@@ -170,62 +172,62 @@ export function FertilizerTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow className="hover:bg-transparent">
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="py-3 font-semibold text-white whitespace-nowrap w-12">
                   <Input
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.length === data.length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">施肥编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">肥料名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">肥料类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室位置</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">稀释比例</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">施肥量(kg)</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">总成本</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">施肥时间</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">数据来源</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥编号</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料名称</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料类型</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作物品种</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">温室位置</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">稀释比例</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥量(kg)</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">总成本</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥时间</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">数据来源</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作员</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
                   暂无施肥记录
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               currentData.map((record) => {
                 const isIot = record.dataSource === 'auto_iot';
                 return (
-                  <tr
+                  <TableRow
                     key={record.id}
                     className={`hover:bg-emerald-50 transition-colors ${
                       isIot ? 'border-l-4 border-l-green-400' : ''
                     }`}
                   >
                     {showCheckbox && (
-                      <td className="px-4 py-3">
+                      <TableCell className="px-4 py-3">
                         <Input
                           type="checkbox"
                           checked={selectedIds.includes(record.id)}
                           onChange={(e) => handleSelectRow(record.id, e.target.checked)}
                           className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
-                      </td>
+                      </TableCell>
                     )}
                     {/* 施肥编号 - 蓝色链接 */}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Button
                         variant="link"
                         size="sm"
@@ -235,51 +237,51 @@ export function FertilizerTable({
                       >
                         {record.fertilizerCode}
                       </Button>
-                    </td>
+                    </TableCell>
                     {/* 肥料名称 - 加粗 */}
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
                       {record.fertilizerName}
-                    </td>
+                    </TableCell>
                     {/* 肥料类型 - Badge */}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getTypeBadgeColor(record.fertilizerType)}`}>
                         {getFertilizerTypeLabel(record.fertilizerType)}
                       </span>
-                    </td>
+                    </TableCell>
                     {/* 作物品种 */}
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.cropName || '-'}
-                    </td>
+                    </TableCell>
                     {/* 温室位置 */}
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.greenhouseName || '-'}
-                    </td>
+                    </TableCell>
                     {/* 稀释比例 */}
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.dilutionRatio || '-'}
-                    </td>
+                    </TableCell>
                     {/* 施肥量 - 绿色加粗 */}
-                    <td className="px-4 py-3 text-sm font-bold text-emerald-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm font-bold text-emerald-600 whitespace-nowrap">
                       {record.quantity?.toLocaleString() || '0'} kg
-                    </td>
+                    </TableCell>
                     {/* 总成本 - amber */}
-                    <td className="px-4 py-3 text-sm font-medium text-amber-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm font-medium text-amber-600 whitespace-nowrap">
                       {record.totalCost?.toLocaleString() || '0'} 元
-                    </td>
+                    </TableCell>
                     {/* 施肥时间 */}
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.fertilizeTime || '-'}
-                    </td>
+                    </TableCell>
                     {/* 数据来源 - Badge */}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       {getSourceBadge(record.dataSource)}
-                    </td>
+                    </TableCell>
                     {/* 操作员 */}
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.operatorName || '-'}
-                    </td>
+                    </TableCell>
                     {/* 操作区 */}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -313,37 +315,23 @@ export function FertilizerTable({
                           </>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <span className="text-sm text-gray-500">共 {data.length} 条记录</span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

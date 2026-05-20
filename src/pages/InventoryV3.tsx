@@ -18,6 +18,9 @@ import {
   InventoryStock,
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
 
 // Tab 类型
 type TabType = 'list' | 'outbound';
@@ -235,53 +238,66 @@ export default function InventoryV3Page() {
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
+                <Input
                   type="text"
                   placeholder="搜索实例ID、作物名称..."
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
-            <select
+            <Select
               value={filter.stockType}
-              onChange={(e) => setFilter({ ...filter, stockType: e.target.value as any })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setFilter({ ...filter, stockType: val as any })}
             >
-              <option value="">全部类型</option>
-              <option value={StockType.SEED}>种源</option>
-              <option value={StockType.SEEDLING}>育苗</option>
-              <option value={StockType.PRODUCT}>成品</option>
-            </select>
-            <select
+              <SelectTrigger className="w-auto">
+                <SelectValue placeholder="全部类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部类型</SelectItem>
+                <SelectItem value={StockType.SEED}>种源</SelectItem>
+                <SelectItem value={StockType.SEEDLING}>育苗</SelectItem>
+                <SelectItem value={StockType.PRODUCT}>成品</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={filter.status}
-              onChange={(e) => setFilter({ ...filter, status: e.target.value as any })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setFilter({ ...filter, status: val as any })}
             >
-              <option value="">全部状态</option>
-              <option value={InventoryStatus.IN_STOCK}>库存中</option>
-              <option value={InventoryStatus.LOW_STOCK}>低库存</option>
-              <option value={InventoryStatus.FROZEN}>已冻结</option>
-              <option value={InventoryStatus.OUTBOUND}>已出库</option>
-              <option value={InventoryStatus.EMPTY}>已用完</option>
-            </select>
-            <select
+              <SelectTrigger className="w-auto">
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部状态</SelectItem>
+                <SelectItem value={InventoryStatus.IN_STOCK}>库存中</SelectItem>
+                <SelectItem value={InventoryStatus.LOW_STOCK}>低库存</SelectItem>
+                <SelectItem value={InventoryStatus.FROZEN}>已冻结</SelectItem>
+                <SelectItem value={InventoryStatus.OUTBOUND}>已出库</SelectItem>
+                <SelectItem value={InventoryStatus.EMPTY}>已用完</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={filter.sourceType}
-              onChange={(e) => setFilter({ ...filter, sourceType: e.target.value as any })}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setFilter({ ...filter, sourceType: val as any })}
             >
-              <option value="">全部来源</option>
-              <option value={SourceType.SELF_PRODUCED}>自产</option>
-              <option value={SourceType.EXTERNAL_PURCHASED}>外购</option>
-            </select>
-            <button
+              <SelectTrigger className="w-auto">
+                <SelectValue placeholder="全部来源" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部来源</SelectItem>
+                <SelectItem value={SourceType.SELF_PRODUCED}>自产</SelectItem>
+                <SelectItem value={SourceType.EXTERNAL_PURCHASED}>外购</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={loadData}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               刷新
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -355,23 +371,26 @@ export default function InventoryV3Page() {
                         <div className="flex items-center gap-2">
                           {/* 出库按钮 */}
                           {(stock.status === InventoryStatus.IN_STOCK || stock.status === InventoryStatus.LOW_STOCK) && (
-                            <button
+                            <Button
+                              variant="link"
+                              size="sm"
                               onClick={() => handleOpenOutbound(stock)}
-                              className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                              className="text-red-600 hover:text-red-700"
                               title="出库"
                             >
                               <ArrowUpCircle className="w-4 h-4" />
                               出库
-                            </button>
+                            </Button>
                           )}
                           {/* 追溯按钮 */}
-                          <button
+                          <Button
+                            variant="link"
+                            size="sm"
                             onClick={() => handleTrace(stock)}
-                            className="text-emerald-600 hover:text-emerald-700 text-sm flex items-center gap-1"
                           >
                             <History className="w-4 h-4" />
                             追溯
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -391,15 +410,17 @@ export default function InventoryV3Page() {
                   <h3 className="text-lg font-semibold text-white">库存追溯链</h3>
                   <p className="text-sm text-emerald-200">实例ID: {selectedStock.instanceId}</p>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => {
                     setSelectedStock(null);
                     setTraceData(null);
                   }}
-                  className="text-white hover:bg-emerald-700 p-1 rounded"
+                  className="text-white hover:bg-emerald-700"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
               <div className="p-6 overflow-y-auto flex-1">
                 <div className="grid grid-cols-2 gap-6">

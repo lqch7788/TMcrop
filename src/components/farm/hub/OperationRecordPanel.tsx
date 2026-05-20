@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { X, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
@@ -86,11 +86,10 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
-            <Input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <DatePicker
+              selected={filterDate ? new Date(filterDate) : undefined}
+              onChange={(date) => setFilterDate(date.toISOString().split('T')[0])}
+              placeholder="选择日期"
             />
           </div>
           {(filterType !== 'all' || filterDate) && (

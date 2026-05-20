@@ -9,7 +9,7 @@ import type { ProblemData } from '../../../stores/useProblemStore';
 import { useProblemDispatch, type ProblemFlowRecord } from '../../../hooks/useProblemDispatch';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../ui/input';
 
 interface ProblemDispatchModalProps {
@@ -175,7 +175,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
             <h4 className="text-sm font-medium text-gray-700 mb-3">执行人选择</h4>
             <div className="space-y-2">
               {availableWorkers.map((worker) => (
-                <label
+                <Label
                   key={worker.id}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedWorkerId === worker.id ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
@@ -192,7 +192,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{worker.name}（{worker.position}）</p>
                   </div>
-                </label>
+                </Label>
               ))}
             </div>
           </div>
@@ -202,7 +202,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
             <h4 className="text-sm font-medium text-gray-700 mb-3">分派设置</h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">优先级:</label>
+                <Label className="text-gray-600 mb-2">优先级:</Label>
                 <div className="flex gap-2">
                   {(['高', '中', '低'] as const).map((level) => (
                     <Button
@@ -221,18 +221,17 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">期望完成日期:</label>
-                <Input
-                  type="date"
-                  value={expectedDate}
-                  onChange={(e) => setExpectedDate(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                <Label className="text-gray-600 mb-2">期望完成日期:</Label>
+                <DatePicker
+                  selected={expectedDate ? new Date(expectedDate) : undefined}
+                  onChange={(date) => setExpectedDate(date.toISOString().split('T')[0])}
+                  placeholder="选择日期"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">必填项:</label>
+                <Label className="text-gray-600 mb-2">必填项:</Label>
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <Label className="flex items-center gap-2 cursor-pointer">
                     <Input
                       type="checkbox"
                       checked={requireCheckin}
@@ -240,8 +239,8 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                       className="w-4 h-4 text-emerald-600 rounded"
                     />
                     <span className="text-sm text-gray-700">位置打卡</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  </Label>
+                  <Label className="flex items-center gap-2 cursor-pointer">
                     <Input
                       type="checkbox"
                       checked={requirePhoto}
@@ -249,7 +248,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                       className="w-4 h-4 text-emerald-600 rounded"
                     />
                     <span className="text-sm text-gray-700">作业照片</span>
-                  </label>
+                  </Label>
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { Label } from '../../../ui/label';
 import { getTaskTypeConfig, TaskConfigField, MultiEntryDef } from '../../../../types/farm/taskTypeConfig';
 import { TaskConfigValues } from '../hooks/useTaskTypeConfig';
 
@@ -183,10 +184,10 @@ export function TaskTypeConfigDisplay({ taskType, configValues }: TaskTypeConfig
 
             return (
               <div key={field.key} className="space-y-1">
-                <label className="text-xs text-gray-500 flex items-center gap-1">
+                <Label className="text-xs text-gray-500 flex items-center gap-1">
                   {field.label}
                   {field.unit && field.type !== 'number' && <span className="text-gray-400">({field.unit})</span>}
-                </label>
+                </Label>
                 <div className="text-sm">
                   {renderFieldValue(field, value)}
                 </div>
@@ -204,9 +205,9 @@ export function TaskTypeConfigDisplay({ taskType, configValues }: TaskTypeConfig
 
             return (
               <div key={field.key} className="space-y-2">
-                <label className="text-xs text-gray-500 font-medium">
+                <Label className="text-xs text-gray-500">
                   {field.label}
-                </label>
+                </Label>
                 {renderMultiEntry(field, value, configValues)}
               </div>
             );

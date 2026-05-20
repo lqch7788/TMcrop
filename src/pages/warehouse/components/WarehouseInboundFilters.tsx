@@ -6,6 +6,9 @@
 import React from 'react';
 import { RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { InboundSearchFilters } from '../../../types/warehouseInbound.types';
 
 interface WarehouseInboundFiltersProps {
@@ -42,64 +45,68 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
         <div className="flex-1 grid grid-cols-5 gap-4">
           {/* 入库单号搜索 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">入库单号</label>
-            <input
+            <Label>入库单号</Label>
+            <Input
               type="text"
               value={searchCode}
               onChange={(e) => onSearchCodeChange(e.target.value)}
               placeholder="搜索单号"
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="h-9"
             />
           </div>
 
           {/* 供应商搜索 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-            <input
+            <Label>供应商</Label>
+            <Input
               type="text"
               value={searchSupplier}
               onChange={(e) => onSearchSupplierChange(e.target.value)}
               placeholder="搜索供应商"
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="h-9"
             />
           </div>
 
           {/* 状态筛选 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-            <select
-              value={searchStatus}
-              onChange={(e) => onSearchStatusChange(e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label>状态</Label>
+            <Select
+              value={searchStatus || 'all'}
+              onValueChange={(val) => onSearchStatusChange(val === 'all' ? '' : val)}
             >
-              <option value="">全部</option>
-              <option value="pending">待审核</option>
-              <option value="completed">已完成</option>
-              <option value="voided">已作废</option>
-            </select>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部</SelectItem>
+                <SelectItem value="pending">待审核</SelectItem>
+                <SelectItem value="completed">已完成</SelectItem>
+                <SelectItem value="voided">已作废</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 物料名称搜索 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
-            <input
+            <Label>物料名称</Label>
+            <Input
               type="text"
               value={searchMaterialName}
               onChange={(e) => onSearchMaterialNameChange(e.target.value)}
               placeholder="搜索物料名称"
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="h-9"
             />
           </div>
 
           {/* 物料编码搜索 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">物料编码</label>
-            <input
+            <Label>物料编码</Label>
+            <Input
               type="text"
               value={searchMaterialCode}
               onChange={(e) => onSearchMaterialCodeChange(e.target.value)}
               placeholder="搜索物料编码"
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="h-9"
             />
           </div>
         </div>

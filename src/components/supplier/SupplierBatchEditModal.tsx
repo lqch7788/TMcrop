@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { TextArea } from '../../components/ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
+import { Label } from '../../components/ui/label';
 import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierBatchEditModalProps {
@@ -171,7 +172,7 @@ export default function SupplierBatchEditModal({
 
         {/* 供应商选择下拉 + 导航 */}
         <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">当前编辑：</label>
+          <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">当前编辑：</Label>
           <Select
             value={currentSupplierId != null ? String(currentSupplierId) : ''}
             onValueChange={(val) => {
@@ -217,19 +218,19 @@ export default function SupplierBatchEditModal({
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">供应商编号</label>
+              <Label className="block text-xs text-gray-500 mb-1">供应商编号</Label>
               <div className="text-sm font-medium text-gray-900">{currentSupplier?.code || '-'}</div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">供应商名称</label>
+              <Label className="block text-xs text-gray-500 mb-1">供应商名称</Label>
               <div className="text-sm font-medium text-gray-900">{currentSupplier?.name || '-'}</div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">创建时间</label>
+              <Label className="block text-xs text-gray-500 mb-1">创建时间</Label>
               <div className="text-sm text-gray-600">{currentSupplier?.createDate || '-'}</div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">原始状态</label>
+              <Label className="block text-xs text-gray-500 mb-1">原始状态</Label>
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                 (currentSupplier?.status) === '合作中' ? 'bg-green-100 text-green-700' :
                 (currentSupplier?.status) === '暂停' ? 'bg-yellow-100 text-yellow-700' :
@@ -247,7 +248,7 @@ export default function SupplierBatchEditModal({
           <h4 className="text-sm font-semibold text-emerald-700 mb-3 pb-1 border-b border-emerald-200">基本信息</h4>
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">供应类型</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">供应类型</Label>
               <Select
                 value={getValue('supplierType')}
                 onValueChange={(val) => handleFieldChange('supplierType', val)}
@@ -264,7 +265,7 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">供应商属性</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">供应商属性</Label>
               <Select
                 value={getValue('supplierAttribute')}
                 onValueChange={(val) => handleFieldChange('supplierAttribute', val)}
@@ -281,7 +282,7 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">所属组织</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">所属组织</Label>
               <Select
                 value={getValue('organization')}
                 onValueChange={(val) => handleFieldChange('organization', val)}
@@ -297,7 +298,7 @@ export default function SupplierBatchEditModal({
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">状态</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">状态</Label>
               <Select
                 value={getValue('status')}
                 onValueChange={(val) => handleFieldChange('status', val)}
@@ -319,7 +320,7 @@ export default function SupplierBatchEditModal({
           <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">联系信息</h4>
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">联系人</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">联系人</Label>
               <Input
                 type="text"
                 value={getValue('contact')}
@@ -329,7 +330,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">移动电话</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">移动电话</Label>
               <Input
                 type="text"
                 value={getValue('mobilePhone')}
@@ -339,7 +340,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">工作电话</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">工作电话</Label>
               <Input
                 type="text"
                 value={getValue('workPhone')}
@@ -349,7 +350,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">传真</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">传真</Label>
               <Input
                 type="text"
                 value={getValue('fax')}
@@ -364,7 +365,7 @@ export default function SupplierBatchEditModal({
           <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">地区信息</h4>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">国家</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">国家</Label>
               <Input
                 type="text"
                 value={getValue('country')}
@@ -374,7 +375,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">省份</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">省份</Label>
               <Input
                 type="text"
                 value={getValue('province')}
@@ -384,7 +385,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">城市</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">城市</Label>
               <Input
                 type="text"
                 value={getValue('city')}
@@ -395,7 +396,7 @@ export default function SupplierBatchEditModal({
             </div>
           </div>
           <div className="mb-4">
-            <label className="block text-xs font-medium text-gray-700 mb-1">详细地址</label>
+            <Label className="block text-xs font-medium text-gray-700 mb-1">详细地址</Label>
             <Input
               type="text"
               value={getValue('address')}
@@ -409,7 +410,7 @@ export default function SupplierBatchEditModal({
           <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">财务信息</h4>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">开户行</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">开户行</Label>
               <Input
                 type="text"
                 value={getValue('bankName')}
@@ -419,7 +420,7 @@ export default function SupplierBatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</Label>
               <Input
                 type="text"
                 value={getValue('bankCardNumber')}

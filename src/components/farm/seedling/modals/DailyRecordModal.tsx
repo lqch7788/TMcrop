@@ -7,6 +7,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -102,10 +103,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-700">记录日期</Label>
-              <Input
-                type="date"
-                value={formData.recordDate}
-                onChange={(e) => setFormData({ ...formData, recordDate: e.target.value })}
+              <DatePicker
+                selected={formData.recordDate ? new Date(formData.recordDate) : undefined}
+                onChange={(date) => setFormData({ ...formData, recordDate: date.toISOString().split('T')[0] })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>

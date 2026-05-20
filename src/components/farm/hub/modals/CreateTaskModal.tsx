@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { TextArea } from '../../../ui/TextArea';
@@ -486,7 +486,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
+                <Label className="text-gray-700 mb-1">任务编号</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="text"
@@ -506,7 +506,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">关联生产批次</label>
+                <Label className="text-gray-700 mb-1">关联生产批次</Label>
                 <div className="relative">
                   <Input
                     type="text"
@@ -556,7 +556,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></label>
+                <Label className="text-gray-700 mb-1">任务区域 <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <div
                     className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
@@ -592,7 +592,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   {showFieldDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {taskDispatchFields.slice(0, 12).map(f => (
-                        <label
+                        <Label
                           key={f.id}
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
@@ -610,9 +610,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                             className="w-4 h-4 text-emerald-600 rounded"
                           />
                           <span className="text-sm text-gray-700">{f.name}</span>
-                        </label>
+                        </Label>
                       ))}
-                      <label
+                      <Label
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -629,7 +629,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="w-4 h-4 text-emerald-600 rounded"
                         />
                         <span className="text-sm text-gray-700">其他</span>
-                      </label>
+                      </Label>
                     </div>
                   )}
                 </div>
@@ -638,7 +638,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">作物 <span className="text-red-500">*</span></label>
+                <Label className="text-gray-700 mb-1">作物 <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <div
                     className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
@@ -671,7 +671,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   {showCropDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                       {uniqueCrops.map(crop => (
-                        <label
+                        <Label
                           key={crop}
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
@@ -689,9 +689,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                             className="w-4 h-4 text-emerald-600 rounded"
                           />
                           <span className="text-sm text-gray-700">{crop}</span>
-                        </label>
+                        </Label>
                       ))}
-                      <label
+                      <Label
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -708,7 +708,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="w-4 h-4 text-emerald-600 rounded"
                         />
                         <span className="text-sm text-gray-700">其他</span>
-                      </label>
+                      </Label>
                     </div>
                   )}
                 </div>
@@ -717,7 +717,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 )}
                 {newTask.crops?.includes('other') && (
                   <div className="mt-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></label>
+                    <Label className="text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></Label>
                     <Input
                       type="text"
                       value={newTask.cropRemarks || ''}
@@ -731,7 +731,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></label>
+              <Label className="text-gray-700 mb-1">任务类型 <span className="text-red-500">*</span></Label>
               <div className="relative">
                 <div
                   className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex flex-wrap gap-1 items-center"
@@ -767,7 +767,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 {showTaskTypeDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {FARM_OPERATION_TYPES.map(t => (
-                      <label
+                      <Label
                         key={t.value}
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
@@ -785,7 +785,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="w-4 h-4 text-emerald-600 rounded"
                         />
                         <span className="text-sm text-gray-700">{t.label}</span>
-                      </label>
+                      </Label>
                     ))}
                   </div>
                 )}
@@ -797,7 +797,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
             {newTask.types.includes('other') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">其他任务备注 <span className="text-red-500">*</span></label>
+                <Label className="text-gray-700 mb-1">其他任务备注 <span className="text-red-500">*</span></Label>
                 <Input
                   type="text"
                   value={newTask.typeRemarks || ''}
@@ -815,7 +815,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">作业标准 (SOP)</label>
+              <Label className="text-gray-700 mb-1">作业标准 (SOP)</Label>
               <TextArea
                 value={newTask.sopContent}
                 onChange={(e) => setNewTask({ ...newTask, sopContent: e.target.value })}
@@ -858,7 +858,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         {createStep === 2 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">所需物资</label>
+              <Label className="text-gray-700 mb-1">所需物资</Label>
               <div className="border border-gray-200 rounded-lg p-3 space-y-2">
                 {(!newTask.materials || newTask.materials.length === 0) ? (
                   <p className="text-sm text-gray-400 text-center py-2">暂无所需物资</p>
@@ -943,7 +943,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">所需工具</label>
+              <Label className="text-gray-700 mb-1">所需工具</Label>
               <div className="border border-gray-200 rounded-lg p-3 space-y-2">
                 {(!newTask.tools || newTask.tools.length === 0) ? (
                   <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
@@ -1026,7 +1026,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             </div>
             {/* 资源备注 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注（可选）</label>
+              <Label className="text-gray-700 mb-1">备注（可选）</Label>
               <TextArea
                 value={newTask.toolsRemarks || ''}
                 onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
@@ -1039,7 +1039,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {/* 工作制 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">工作制</label>
+                <Label className="text-gray-700 mb-1">工作制</Label>
                 <Select
                   value={String(newTask.workHoursPerDay)}
                   onValueChange={(val) => {
@@ -1062,20 +1062,19 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
               {/* 计划开始日期 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">开始日期 <span className="text-red-500">*</span></label>
-                <Input
-                  type="date"
-                  value={newTask.planStart?.split(' ')[0] || ''}
-                  onChange={(e) => {
+                <Label className="text-gray-700 mb-1">开始日期 <span className="text-red-500">*</span></Label>
+                <DatePicker
+                  selected={newTask.planStart ? new Date(newTask.planStart.split(' ')[0]) : undefined}
+                  onChange={(date) => {
                     const timePart = newTask.planStart?.split(' ')[1] || '08:00';
-                    setNewTask({ ...newTask, planStart: e.target.value + ' ' + timePart });
+                    setNewTask({ ...newTask, planStart: date.toISOString().split('T')[0] + ' ' + timePart });
                   }}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="选择开始日期"
                 />
               </div>
               {/* 开始时间 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+                <Label className="text-gray-700 mb-1">开始时间</Label>
                 <Select
                   value={newTask.planStart?.split(' ')[1] || '08:00'}
                   onValueChange={(val) => {
@@ -1095,7 +1094,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
               {/* 天数 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">天数</label>
+                <Label className="text-gray-700 mb-1">天数</Label>
                 <Input
                   type="text"
                   inputMode="numeric"
@@ -1110,7 +1109,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
               {/* 小时 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></label>
+                <Label className="text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></Label>
                 <Input
                   type="text"
                   inputMode="numeric"
@@ -1145,7 +1144,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+              <Label className="text-gray-700 mb-1">优先级</Label>
               <Select
                 value={newTask.priority}
                 onValueChange={(val) => setNewTask({ ...newTask, priority: val })}
@@ -1162,9 +1161,9 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             </div>
             {/* 班组选择（数据来自农事管理-班组分配，选择后自动提示该班组成员） */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="text-gray-700 mb-1">
                 班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
-              </label>
+              </Label>
               <Select
                 value={newTask.teamId || ''}
                 onValueChange={(val) => {
@@ -1180,7 +1179,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   <SelectValue placeholder="不关联班组（直接选人）" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">不关联班组（直接选人）</SelectItem>
+                  <SelectItem value="__none__">不关联班组（直接选人）</SelectItem>
                   {teams.map(team => (
                     <SelectItem key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</SelectItem>
                   ))}
@@ -1194,7 +1193,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             </div>
             {/* 执行人选择 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">执行人</label>
+              <Label className="text-gray-700 mb-1">执行人</Label>
               <Select
                 value={newTask.assignee || ''}
                 onValueChange={(val) => setNewTask({ ...newTask, assignee: val })}
@@ -1202,16 +1201,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择执行人" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">请选择执行人</SelectItem>
-                  {responsiblePersons.map(person => (
+                <SelectContent>                  {responsiblePersons.map(person => (
                     <SelectItem key={person.code || person.name} value={person.name}>{person.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-red-600 mb-2">必填反馈 <span className="text-red-500">*</span></label>
+              <Label className="font-bold text-red-600 mb-2">必填反馈 <span className="text-red-500">*</span></Label>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: 'workload_confirm', label: '工作量确认', icon: Clock, iconBg: 'bg-emerald-500', iconColor: 'text-white' },
@@ -1224,7 +1221,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   const isSelected = newTask.requiredFeedback.includes(item.key);
                   const Icon = item.icon;
                   return (
-                    <label
+                    <Label
                       key={item.key}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-gray-100 border-2 border-emerald-300' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'}`}
                     >
@@ -1244,7 +1241,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         <Icon className={`w-4 h-4 ${isSelected ? item.iconColor : 'text-gray-400'}`} />
                       </div>
                       <span className={`text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>{item.label}</span>
-                    </label>
+                    </Label>
                   );
                 })}
               </div>

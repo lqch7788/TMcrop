@@ -20,6 +20,7 @@ import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '@/components/ui';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 
@@ -1000,7 +1001,7 @@ export function InspectionTab({
                 { value: 'csv', label: 'CSV 文件 (.csv)', icon: '📄' },
                 { value: 'word', label: 'Word 文件 (.docx)', icon: '📝' },
               ].map((format) => (
-                <label
+                <Label
                   key={format.value}
                   className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                     exportFormat === format.value
@@ -1018,7 +1019,7 @@ export function InspectionTab({
                   />
                   <span className="text-lg">{format.icon}</span>
                   <span className="text-sm font-medium text-gray-900">{format.label}</span>
-                </label>
+                </Label>
               ))}
             </div>
             <div className="flex gap-3 justify-end">

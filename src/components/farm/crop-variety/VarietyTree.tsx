@@ -8,6 +8,7 @@ import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead } from '@/components/ui/table';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
@@ -267,20 +268,20 @@ export function VarietyTree({
             </p>
           </div>
         ) : (
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
-            <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">类别</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">类型</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-28">品种</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-28">子品种</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-32">作物品种</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-36">编码</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-20">状态</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+          <Table style={{ tableLayout: 'fixed' }}>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white sticky top-0 z-10">
+              <TableRow>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-24 text-white">类别</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-24 text-white">类型</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-28 text-white">品种</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-28 text-white">子品种</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-32 text-white">作物品种</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-36 text-white">编码</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-20 text-white">状态</TableHead>
+                <TableHead className="py-2 text-sm font-semibold whitespace-nowrap w-24 text-white">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200">
               {treeData.map(node => (
                 <VarietyTreeNode
                   key={node.key}
@@ -304,8 +305,8 @@ export function VarietyTree({
                   onRefresh={onRefresh}
                 />
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
     </div>

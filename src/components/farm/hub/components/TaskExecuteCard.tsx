@@ -8,7 +8,7 @@ import { Play, Pause, CheckCircle, Clock, MapPin, Camera, Mic, FileText, Package
 import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '../../../ui/Modal';
 import FeedbackInput from '../../../common/FeedbackInput';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { Input } from '../../../ui/input';
 import { TextArea } from '../../../ui/TextArea';
 
@@ -74,15 +74,15 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
           <h3 className="font-semibold text-gray-900 mb-2">{task.title}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div>
-              <label className="text-gray-500">执行人</label>
+              <Label className="text-gray-500">执行人</Label>
               <p className="font-medium">{task.assigneeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">任务类型</label>
+              <Label className="text-gray-500">任务类型</Label>
               <p className="font-medium">{task.typeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">当前状态</label>
+              <Label className="text-gray-500">当前状态</Label>
               <p className="font-medium">
                 <span className={`px-2 py-0.5 rounded text-xs ${statusConfig.bg} ${statusConfig.color}`}>
                   {statusConfig.label}
@@ -90,7 +90,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
               </p>
             </div>
             <div>
-              <label className="text-gray-500">截止日期</label>
+              <Label className="text-gray-500">截止日期</Label>
               <p className="font-medium">{task.dueDate || '未设置'}</p>
             </div>
           </div>
@@ -99,10 +99,10 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
         {/* 执行进度 */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <Label className="text-gray-700 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               执行进度
-            </label>
+            </Label>
             <span className="text-sm font-medium text-gray-700">{progress}%</span>
           </div>
           <Input
@@ -128,7 +128,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
         {/* 必填反馈项 */}
         {task.feedbackRequirements && task.feedbackRequirements.length > 0 && (
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-3 block">必填反馈项</label>
+            <Label className="text-gray-700 mb-3">必填反馈项</Label>
             <div className="grid grid-cols-2 gap-3">
               {task.feedbackRequirements.map((req, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-3">
@@ -209,9 +209,9 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
 
         {/* 进度反馈文本 */}
         <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
+          <Label className="text-gray-700 mb-2">
             进度说明 {progress < 100 && '(选填)'}
-          </label>
+          </Label>
           <TextArea
             value={submitText}
             onChange={(e) => setSubmitText(e.target.value)}

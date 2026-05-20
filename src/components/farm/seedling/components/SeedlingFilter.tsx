@@ -45,7 +45,7 @@ export function SeedlingFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {cropNames.map(c => (
                 <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
               ))}
@@ -76,7 +76,7 @@ export function SeedlingFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {seedlingTypes.map(t => (
                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
@@ -107,7 +107,7 @@ export function SeedlingFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {sites.map(s => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
@@ -126,7 +126,7 @@ export function SeedlingFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {statusOptions.map(s => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}

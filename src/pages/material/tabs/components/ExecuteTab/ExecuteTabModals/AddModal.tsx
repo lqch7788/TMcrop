@@ -3,6 +3,10 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Modal } from '@/components/ui/Modal';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
@@ -97,9 +101,9 @@ export function ExecuteAddModal({
   const renderBasicForm = () => (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">出库单号</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">出库单号</Label>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={addForm.code}
             onChange={(e) => onFormChange({ ...addForm, code: e.target.value })}
@@ -109,8 +113,8 @@ export function ExecuteAddModal({
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">出库日期</label>
-        <input
+        <Label className="block text-sm font-medium text-gray-700 mb-1">出库日期</Label>
+        <Input
           type="date"
           value={addForm.date}
           onChange={(e) => onFormChange({ ...addForm, date: e.target.value })}
@@ -118,7 +122,7 @@ export function ExecuteAddModal({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">申领人</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">申领人</Label>
         <UserSelect
           value={addForm.applicant}
           onChange={(value) => onFormChange({ ...addForm, applicant: value })}
@@ -127,21 +131,25 @@ export function ExecuteAddModal({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">库存地点</label>
-        <select
-          value={addForm.warehouseLocation}
-          onChange={(e) => onFormChange({ ...addForm, warehouseLocation: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        <Label className="block text-sm font-medium text-gray-700 mb-1">库存地点</Label>
+        <Select
+          value={addForm.warehouseLocation || 'none'}
+          onValueChange={(val) => onFormChange({ ...addForm, warehouseLocation: val === 'none' ? '' : val })}
         >
-          <option value="仓库A区">仓库A区</option>
-          <option value="仓库B区">仓库B区</option>
-          <option value="仓库C区">仓库C区</option>
-          <option value="仓库D区">仓库D区</option>
-          <option value="仓库E区">仓库E区</option>
-        </select>
+          <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectValue placeholder="请选择库存地点" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="仓库A区">仓库A区</SelectItem>
+            <SelectItem value="仓库B区">仓库B区</SelectItem>
+            <SelectItem value="仓库C区">仓库C区</SelectItem>
+            <SelectItem value="仓库D区">仓库D区</SelectItem>
+            <SelectItem value="仓库E区">仓库E区</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">审核人</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
         <UserSelect
           value={addForm.reviewer}
           onChange={(value) => onFormChange({ ...addForm, reviewer: value })}
@@ -150,7 +158,7 @@ export function ExecuteAddModal({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">操作人</Label>
         <UserSelect
           value={addForm.operator}
           onChange={(value) => onFormChange({ ...addForm, operator: value })}
@@ -159,8 +167,8 @@ export function ExecuteAddModal({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</label>
-        <input
+        <Label className="block text-sm font-medium text-gray-700 mb-1">生产计划批次号</Label>
+        <Input
           type="text"
           value={addForm.productionBatchCode}
           onChange={(e) => onFormChange({ ...addForm, productionBatchCode: e.target.value })}
@@ -180,7 +188,7 @@ export function ExecuteAddModal({
       <div className="flex gap-3 mb-3">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
+          <Input
             type="text"
             value={appSearch}
             onChange={(e) => setAppSearch(e.target.value)}
@@ -188,13 +196,14 @@ export function ExecuteAddModal({
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <select
-          value={selectedApplicationCode}
-          onChange={(e) => {
-            onSelectApplicationCode(e.target.value);
-            if (e.target.value) {
+        <Select
+          value={selectedApplicationCode || 'none'}
+          onValueChange={(val) => {
+            const actualVal = val === 'none' ? '' : val;
+            onSelectApplicationCode(actualVal);
+            if (actualVal) {
               // 自动填充表单字段
-              const app = applicationItems.find(a => a.code === e.target.value);
+              const app = applicationItems.find(a => a.code === actualVal);
               if (app) {
                 // 自动填充领料单信息（仅填充有值的字段，不覆盖已填内容）
                 const updates: Record<string, string> = {};
@@ -207,15 +216,19 @@ export function ExecuteAddModal({
               }
             }
           }}
-          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
-          <option value="">请选择领料申请单</option>
-          {availableApplications.map(app => (
-            <option key={app.code} value={app.code}>
-              {app.code} ({app.applicant} / {app.materials.length}种物料)
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectValue placeholder="请选择领料申请单" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">请选择领料申请单</SelectItem>
+            {availableApplications.map(app => (
+              <SelectItem key={app.code} value={app.code}>
+                {app.code} ({app.applicant} / {app.materials.length}种物料)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 选中申请单的物料列表 */}
@@ -234,21 +247,22 @@ export function ExecuteAddModal({
             <thead className="bg-emerald-50">
               <tr>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600 w-8">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedMaterialIndices.size === selectedApplication.materials.length && selectedApplication.materials.length > 0}
-                    onChange={() => {
-                      if (selectedMaterialIndices.size === selectedApplication.materials.length) {
-                        // 全不选
-                        selectedApplication.materials.forEach((_, i) => onToggleMaterialIndex(i));
-                      } else {
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      if (isChecked) {
                         // 全选
                         selectedApplication.materials.forEach((_, i) => {
                           if (!selectedMaterialIndices.has(i)) onToggleMaterialIndex(i);
                         });
+                      } else {
+                        // 全不选
+                        selectedApplication.materials.forEach((_, i) => {
+                          if (selectedMaterialIndices.has(i)) onToggleMaterialIndex(i);
+                        });
                       }
                     }}
-                    className="w-3.5 h-3.5 rounded border-gray-300 text-emerald-600"
                   />
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-semibold text-gray-600">物料编码</th>
@@ -264,11 +278,9 @@ export function ExecuteAddModal({
               {selectedApplication.materials.map((material, idx) => (
                 <tr key={idx} className={selectedMaterialIndices.has(idx) ? 'bg-emerald-50' : ''}>
                   <td className="px-2 py-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedMaterialIndices.has(idx)}
-                      onChange={() => onToggleMaterialIndex(idx)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-emerald-600"
+                      onCheckedChange={() => onToggleMaterialIndex(idx)}
                     />
                   </td>
                   <td className="px-2 py-2 text-xs text-gray-700 font-mono">{material.materialCode}</td>
@@ -278,7 +290,7 @@ export function ExecuteAddModal({
                   <td className="px-2 py-2 text-xs text-gray-700">{material.requestedQuantity}</td>
                   <td className="px-2 py-2 text-xs text-gray-700">{material.stockQuantity}</td>
                   <td className="px-2 py-2">
-                    <input
+                    <Input
                       type="number"
                       value={materialActualQuantities[idx] ?? material.requestedQuantity}
                       onChange={(e) => onMaterialActualQuantityChange(idx, Number(e.target.value))}
@@ -300,12 +312,12 @@ export function ExecuteAddModal({
   const renderMaterialPool = () => (
     <div className="mt-6">
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-gray-700">
+        <Label className="text-sm font-medium text-gray-700">
           出库物料池
           {materialPool.length > 0 && (
             <span className="ml-1 text-emerald-600">({materialPool.length}种 / {materialPool.reduce((sum, m) => sum + m.actualQuantity, 0)}件)</span>
           )}
-        </label>
+        </Label>
         <Button variant="secondary" size="sm" onClick={onAddMaterial}>
           <Plus className="w-3 h-3" />
           手动添加
@@ -340,7 +352,7 @@ export function ExecuteAddModal({
                   <td className="px-2 py-2 text-xs text-gray-700">{material.unit}</td>
                   <td className="px-2 py-2 text-xs text-gray-700">{material.requestedQuantity}</td>
                   <td className="px-2 py-2">
-                    <input
+                    <Input
                       type="number"
                       value={material.actualQuantity}
                       onChange={(e) => onUpdateMaterialPoolQuantity(idx, Number(e.target.value))}

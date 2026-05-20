@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { UnifiedModal } from '../ui/UnifiedModal';
 
 interface SupplierExportModalProps {
@@ -34,7 +35,7 @@ export default function SupplierExportModal({ isOpen, exportFormat, selectedCoun
               { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
               { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
             ].map((format) => (
-              <label
+              <Label
                 key={format.value}
                 className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                   exportFormat === format.value
@@ -54,7 +55,7 @@ export default function SupplierExportModal({ isOpen, exportFormat, selectedCoun
                   <span className="block text-sm font-medium text-gray-900">{format.label}</span>
                   <span className="block text-xs text-gray-500">{format.desc}</span>
                 </div>
-              </label>
+              </Label>
             ))}
           </div>
           {/* 底部按钮 */}

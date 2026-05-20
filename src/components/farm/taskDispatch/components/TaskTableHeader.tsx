@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Input } from '../../../ui/input';
+import { TableRow, TableHead } from '../../../ui/table';
 
 interface TaskTableHeaderProps {
   exportMode?: boolean;
@@ -25,9 +26,9 @@ export function TaskTableHeader({
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
 
   return (
-    <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+    <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-500 hover:to-blue-600">
       {showCheckbox && (
-        <th className="px-4 py-3 text-center">
+        <TableHead className="px-4 py-3 text-center text-white">
           <Input
             type="checkbox"
             checked={isAllSelected}
@@ -37,23 +38,23 @@ export function TaskTableHeader({
             onChange={onSelectAll}
             className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
           />
-        </th>
+        </TableHead>
       )}
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务ID</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务类型</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务区域</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">批次</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">执行人</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">优先级</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作业标准</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划开始</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">计划结束</th>
-      <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">任务工时</th>
-    </tr>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">任务ID</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">任务类型</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">任务区域</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">作物</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">批次</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">执行人</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">进度</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">优先级</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">状态</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">操作</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">备注</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">作业标准</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">计划开始</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">计划结束</TableHead>
+      <TableHead className="px-4 py-3 text-center text-white whitespace-nowrap font-semibold">任务工时</TableHead>
+    </TableRow>
   );
 }

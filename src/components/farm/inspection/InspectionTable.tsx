@@ -1,9 +1,9 @@
 import React from 'react';
-import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useUserStore } from '../../../stores';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Pagination } from '../../ui/Pagination';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {
@@ -447,46 +447,15 @@ export function InspectionTable({
           </div>
         )}
       </div>
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(val) => { onPageSizeChange(Number(val)); onPageChange(1); }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-300 rounded text-sm w-auto">
-              <SelectValue placeholder="20" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {records.length} 条</span>
-          <Button
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
-          <Button
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      {/* 分页器 - 使用统一 Pagination 组件 */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={(size) => { onPageSizeChange(size); onPageChange(1); }}
+        showPageSize={true}
+      />
     </div>
   );
 }

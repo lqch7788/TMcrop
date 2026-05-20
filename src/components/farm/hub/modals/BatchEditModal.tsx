@@ -1,5 +1,6 @@
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import { NumberInput } from '../../../ui/NumberInput';
+import { DatePicker } from '@/components/ui';
 import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS, WEATHER_OPTIONS } from '../../../../types/farm/common';
 
 interface InspectionRecord {
@@ -172,10 +173,10 @@ export function BatchEditModal({
 
             {/* 巡查日期 - 可编辑 */}
             <FormField label="巡查日期">
-              <Input
-                type="date"
-                value={editedData.checkDate ?? currentRecord.checkDate}
-                onChange={(e) => handleFieldChange('checkDate', e.target.value)}
+              <DatePicker
+                selected={(editedData.checkDate ?? currentRecord.checkDate) ? new Date((editedData.checkDate ?? currentRecord.checkDate)!) : undefined}
+                onChange={(date) => handleFieldChange('checkDate', date.toISOString().split('T')[0])}
+                placeholder="选择日期"
               />
             </FormField>
 

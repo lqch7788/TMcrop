@@ -8,7 +8,8 @@ import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, Che
 import { Button } from '@/components/ui/button';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
-import { Pagination } from './Pagination';
+import { Pagination } from '@/components/ui/Pagination';
+import { Table, TableHeader, TableBody } from '@/components/ui';
 import { EDITABLE_STATUSES, STATUS_MAP } from '../constants_taskDispatch';
 
 interface Task {
@@ -408,8 +409,8 @@ export function TaskTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
+        <Table>
+          <TableHeader>
             <TaskTableHeader
               exportMode={exportMode}
               batchEditMode={batchEditMode}
@@ -421,8 +422,8 @@ export function TaskTable({
               isSomeSelected={isSomeSelected}
               onSelectAll={onSelectAll}
             />
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {paginatedTasks.map((task, index) => {
               const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
               const isSelectable = batchEditMode ? isEditable : true;
@@ -460,17 +461,18 @@ export function TaskTable({
                 />
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}
       <Pagination
         currentPage={currentPage}
+        totalPages={Math.ceil(total / pageSize) || 1}
         pageSize={pageSize}
-        total={total}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        showPageSize={true}
       />
 
       {/* 导出模式底部栏 */}

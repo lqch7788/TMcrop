@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Modal, FormField } from '../../../ui/Modal';
 import { NumberInput } from '../../../ui/NumberInput';
-import { Button } from '@/components/ui/button';
+import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { TextArea } from '../../../ui/TextArea';
@@ -207,9 +207,7 @@ export function CreateInspectionModal({
                 <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择区域" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">请选择区域</SelectItem>
-                  {greenhouses.map(gh => (
+                <SelectContent>                  {greenhouses.map(gh => (
                     <SelectItem key={gh.id} value={gh.id}>{gh.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -223,9 +221,7 @@ export function CreateInspectionModal({
                 <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择作物" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">请选择作物</SelectItem>
-                  {cropTypes.map(crop => (
+                <SelectContent>                  {cropTypes.map(crop => (
                     <SelectItem key={crop.id} value={crop.name}>{crop.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -251,9 +247,7 @@ export function CreateInspectionModal({
                 <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <SelectValue placeholder="请选择设备" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">请选择设备</SelectItem>
-                  {equipmentRecords.map(eq => (
+                <SelectContent>                  {equipmentRecords.map(eq => (
                     <SelectItem key={eq.id} value={eq.id}>{eq.name} - {eq.location}</SelectItem>
                   ))}
                 </SelectContent>
@@ -289,9 +283,7 @@ export function CreateInspectionModal({
                 <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
                   <SelectValue placeholder="请选择基础设施" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">请选择基础设施</SelectItem>
-                  {infrastructureRecords.map(inf => (
+                <SelectContent>                  {infrastructureRecords.map(inf => (
                     <SelectItem key={inf.id} value={inf.id}>{inf.name} - {inf.type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -340,7 +332,7 @@ export function CreateInspectionModal({
                 <SelectValue placeholder="不关联批次" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">不关联批次</SelectItem>
+                <SelectItem value="__none__">不关联批次</SelectItem>
                 {cropBatches.filter(b => b.status === 'active' || b.status === 'planning').map(batch => (
                   <SelectItem key={batch.id} value={batch.id}>{batch.batchCode} - {batch.cropName}</SelectItem>
                 ))}
@@ -352,11 +344,10 @@ export function CreateInspectionModal({
         {/* 日期、时间、时长 */}
         <div className="grid grid-cols-3 gap-4">
           <FormField label="巡查日期" required error={errors.checkDate}>
-            <Input
-              type="date"
-              value={newRecord.checkDate}
-              onChange={(e) => updateField('checkDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <DatePicker
+              selected={newRecord.checkDate ? new Date(newRecord.checkDate) : undefined}
+              onChange={(date) => updateField('checkDate', date.toISOString().split('T')[0])}
+              placeholder="选择日期"
             />
           </FormField>
           <FormField label="巡查时间">
@@ -480,7 +471,7 @@ export function CreateInspectionModal({
         <div className="border-t border-gray-200 pt-4">
           <FormField label="巡查结果" required>
             <div className="flex gap-6">
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <Label className="flex items-center gap-2 cursor-pointer group">
                 <Input
                   type="checkbox"
                   checked={newRecord.inspectionResult === 'normal'}
@@ -493,8 +484,8 @@ export function CreateInspectionModal({
                 <span className={`text-sm font-medium group-hover:text-emerald-600 transition-colors ${newRecord.inspectionResult === 'normal' ? 'text-emerald-600' : 'text-gray-700'}`}>
                   正常
                 </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer group">
+              </Label>
+              <Label className="flex items-center gap-2 cursor-pointer group">
                 <Input
                   type="checkbox"
                   checked={newRecord.inspectionResult === 'abnormal'}
@@ -507,7 +498,7 @@ export function CreateInspectionModal({
                 <span className={`text-sm font-medium group-hover:text-red-600 transition-colors ${newRecord.inspectionResult === 'abnormal' ? 'text-red-600' : 'text-gray-700'}`}>
                   异常
                 </span>
-              </label>
+              </Label>
             </div>
           </FormField>
         </div>
@@ -521,7 +512,7 @@ export function CreateInspectionModal({
                 {issueCategories.map(cat => {
                   const isSelected = newRecord.issueCategories?.includes(cat.value);
                   return (
-                    <label
+                    <Label
                       key={cat.value}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all ${
                         isSelected
@@ -548,7 +539,7 @@ export function CreateInspectionModal({
                         className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
                       />
                       <span className="text-sm font-medium">{cat.label}</span>
-                    </label>
+                    </Label>
                   );
                 })}
               </div>
@@ -602,7 +593,7 @@ export function CreateInspectionModal({
             <FormField label="严重程度">
               <div className="flex gap-4">
                 {(['轻微', '中等', '严重'] as const).map((level) => (
-                  <label
+                  <Label
                     key={level}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer transition-all ${
                       newRecord.issueSeverity === level
@@ -623,14 +614,14 @@ export function CreateInspectionModal({
                       className="sr-only"
                     />
                     <span className="text-sm font-medium">{level}</span>
-                  </label>
+                  </Label>
                 ))}
               </div>
             </FormField>
 
             {/* 问题照片 */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">问题照片 (最多6张)</label>
+              <Label className="text-gray-700 mb-2">问题照片 (最多6张)</Label>
               <div className="space-y-3">
                 <div className="flex gap-3 flex-wrap">
                   {(newRecord.issuePhotos || []).map((img, idx) => (
@@ -652,7 +643,7 @@ export function CreateInspectionModal({
                     </div>
                   ))}
                   {(newRecord.issuePhotos || []).length < 6 && (
-                    <label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
+                    <Label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
                       <Camera className="w-6 h-6 text-gray-400" />
                       <span className="text-xs text-gray-400 mt-1">添加</span>
                       <Input
@@ -676,7 +667,7 @@ export function CreateInspectionModal({
                         }}
                         className="hidden"
                       />
-                    </label>
+                    </Label>
                   )}
                 </div>
                 <p className="text-xs text-gray-500">已添加 {(newRecord.issuePhotos || []).length}/6 张照片</p>
@@ -719,7 +710,7 @@ export function CreateInspectionModal({
                   <SelectValue placeholder="+ 选择反馈人员" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">+ 选择反馈人员</SelectItem>
+                  <SelectItem value="__add__">+ 选择反馈人员</SelectItem>
                   {users.filter(u => !(newRecord.feedbackUsers || []).includes(u.id)).map(user => (
                     <SelectItem key={user.id} value={user.id}>{user.name} - {user.role}</SelectItem>
                   ))}

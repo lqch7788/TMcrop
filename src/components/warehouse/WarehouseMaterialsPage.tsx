@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from './MaterialFilters';
 import { MaterialsTable } from './MaterialsTable';
@@ -789,7 +790,7 @@ export default function WarehouseMaterialsPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="grid grid-cols-6 gap-4">
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">大类</Label>
               <Select
                 value={codeGen.bigCategory}
                 onValueChange={(val) => setCodeGen(prev => ({ ...prev, bigCategory: val, midCategory: '', subCategory: '', generatedCode: '' }))}
@@ -805,7 +806,7 @@ export default function WarehouseMaterialsPage() {
               </Select>
             </div>
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">中类</Label>
               <Select
                 value={codeGen.midCategory}
                 onValueChange={(val) => setCodeGen(prev => ({ ...prev, midCategory: val, subCategory: '', generatedCode: '' }))}
@@ -822,7 +823,7 @@ export default function WarehouseMaterialsPage() {
               </Select>
             </div>
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">小类</Label>
               <Select
                 value={codeGen.subCategory}
                 onValueChange={(val) => setCodeGen(prev => ({ ...prev, subCategory: val, generatedCode: '' }))}
@@ -839,7 +840,7 @@ export default function WarehouseMaterialsPage() {
               </Select>
             </div>
             <div className="col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="block text-sm font-medium text-gray-700 mb-1">
                 生成编码
                 {codeGenSuccess && !codeGenError && (
                   <span className="ml-2 text-sm text-green-600 font-normal">{codeGenSuccess}</span>
@@ -847,7 +848,7 @@ export default function WarehouseMaterialsPage() {
                 {codeGenError && (
                   <span className="ml-2 text-sm text-red-600 font-normal">{codeGenError}</span>
                 )}
-              </label>
+              </Label>
               <div className="flex gap-2">
                 <Input
                   type="text"

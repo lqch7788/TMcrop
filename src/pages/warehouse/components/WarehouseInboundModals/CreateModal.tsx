@@ -7,6 +7,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Search } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { useWarehouseMaterialStore } from '@/stores/useWarehouseMaterialStore';
@@ -397,9 +401,11 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
           <h3 className="text-lg font-semibold text-white select-none">新增入库记录</h3>
           <div className="flex items-center gap-1">
             {/* 最大化/还原按钮 */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleMaximize}
-              className="text-white hover:bg-emerald-500 p-1.5 rounded transition-colors"
+              className="text-white hover:bg-emerald-500"
               title={isMaximized ? '还原' : '最大化'}
             >
               {isMaximized ? (
@@ -411,7 +417,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
               )}
-            </button>
+            </Button>
             {/* 关闭按钮 */}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-5 h-5" />
@@ -424,9 +430,9 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {/* 入库单号 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</label>
+              <Label className="text-xs text-emerald-700">入库单号</Label>
               <div className="flex gap-1">
-                <input
+                <Input
                   type="text"
                   value={formData.code}
                   onChange={(e) => {
@@ -434,7 +440,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                     setCodeError('');
                   }}
                   placeholder="点击生成"
-                  className="flex-1 h-8 px-2 border border-gray-200 rounded text-sm font-mono"
+                  className="flex-1 h-8 text-sm font-mono"
                 />
                 <Button variant="blue" size="sm" onClick={handleGenerateCode} title="生成入库单号">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,7 +453,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 入库日期 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">入库日期</label>
+              <Label className="text-xs text-emerald-700">入库日期</Label>
               <input
                 type="date"
                 value={formData.inboundDate}
@@ -458,14 +464,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 供应商 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应商</label>
-              <input
+              <Label className="text-xs text-emerald-700">供应商</Label>
+              <Input
                 type="text"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
                 placeholder="选择或输入供应商名称"
                 list="supplier-list"
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className="h-8 text-sm"
               />
               <datalist id="supplier-list">
                 {suppliers.map((s) => (
@@ -476,26 +482,30 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
             {/* 操作员 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">操作员</label>
-              <input
+              <Label className="text-xs text-emerald-700">操作员</Label>
+              <Input
                 type="text"
                 value={formData.operator}
                 readOnly
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100 cursor-not-allowed"
+                className="h-8 text-sm bg-gray-100"
               />
             </div>
 
             {/* 状态 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">状态</label>
-              <select
+              <Label className="text-xs text-emerald-700">状态</Label>
+              <Select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'completed' | 'pending' })}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-white"
+                onValueChange={(val) => setFormData({ ...formData, status: val as 'completed' | 'pending' })}
               >
-                <option value="completed">已完成</option>
-                <option value="pending">待审核</option>
-              </select>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">已完成</SelectItem>
+                  <SelectItem value="pending">待审核</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -555,16 +565,16 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                         </Button>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.code}
                           onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5">
                         <div className="flex items-center">
-                          <input
+                          <Input
                             ref={(el) => { inputRefs.current[m.id] = el; }}
                             type="text"
                             value={materialSearchQueries[m.id] ?? m.name}
@@ -574,7 +584,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                               setTimeout(() => setOpenDropdowns(prev => ({ ...prev, [m.id]: false })), 150);
                             }}
                             placeholder="搜索物料名称"
-                            className="w-32 h-6 px-1.5 pr-5 border border-blue-300 rounded text-xs bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                            className="w-32 h-6 px-1.5 pr-5 text-xs border-blue-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                           />
                           <Search className="w-3 h-3 text-blue-400 -ml-4" />
                         </div>
@@ -612,68 +622,68 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                         })()}
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
-                          className="w-20 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
-                          className="w-12 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-12 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
-                          type="number"
+                        <NumberInput
                           value={m.quantity}
-                          onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
-                          className="w-16 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          onChange={(val) => handleMaterialChange(m.id, 'quantity', Number(val))}
+                          className="w-16 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
                           placeholder="数量"
+                          decimals={0}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
-                          className="w-16 h-6 px-1 border border-gray-300 rounded text-xs bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
-                          className="w-20 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
                           placeholder="批号"
                         />
                       </td>
@@ -694,11 +704,11 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
-                          className="w-20 h-6 px-1 border border-yellow-300 rounded text-xs bg-yellow-50"
+                          className="w-20 h-6 px-1 text-xs border-yellow-300 bg-yellow-50"
                           placeholder="备注"
                         />
                       </td>

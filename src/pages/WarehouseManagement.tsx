@@ -8,6 +8,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Warehouse, Search, Plus, Edit2, Trash2, Layers, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
 import {
   useWarehouseStore,
   type Warehouse as WarehouseType,
@@ -196,12 +199,12 @@ export default function WarehouseManagement() {
       {/* 搜索 */}
       <div className="relative">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
+        <Input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="搜索仓库..."
-          className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+          className="pl-10 w-full"
         />
       </div>
 
@@ -279,79 +282,81 @@ export default function WarehouseManagement() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">仓库名称</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">仓库名称</Label>
+                  <Input
                     type="text"
                     value={newWarehouse.name || ''}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="请输入仓库名称"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">仓库编码</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">仓库编码</Label>
+                  <Input
                     type="text"
                     value={newWarehouse.code || ''}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, code: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="如：WH001"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">仓库类型</label>
-                  <select
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">仓库类型</Label>
+                  <Select
                     value={newWarehouse.warehouseType || ''}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, warehouseType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onValueChange={(val) => setNewWarehouse({ ...newWarehouse, warehouseType: val })}
                   >
-                    <option value="">请选择</option>
-                    {WAREHOUSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WAREHOUSE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">负责人</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">负责人</Label>
+                  <Input
                     type="text"
                     value={newWarehouse.managerName || ''}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, managerName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     placeholder="请输入负责人"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">位置</label>
-                <input
+                <Label className="block text-sm font-medium text-gray-700 mb-1">位置</Label>
+                <Input
                   type="text"
                   value={newWarehouse.location || ''}
                   onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="请输入仓库位置"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">容量</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">容量</Label>
+                  <Input
                     type="number"
                     value={newWarehouse.capacity || 0}
                     onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-                  <select
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
+                  <Select
                     value={newWarehouse.status || 'active'}
-                    onChange={(e) => setNewWarehouse({ ...newWarehouse, status: e.target.value as Warehouse['status'] })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onValueChange={(val) => setNewWarehouse({ ...newWarehouse, status: val as WarehouseType['status'] })}
                   >
-                    <option value="active">启用</option>
-                    <option value="inactive">停用</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">启用</SelectItem>
+                      <SelectItem value="inactive">停用</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

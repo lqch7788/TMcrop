@@ -9,6 +9,7 @@ import { TextArea } from '../ui/TextArea';
 import { Cascader } from '../ui/Cascader';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Label } from '../ui/label';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,
@@ -256,7 +257,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* 供应商编号 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号</Label>
               <Input
                 type="text"
                 value={form.code}
@@ -268,7 +269,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 供应商名称 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应商名称 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商名称 *</Label>
               <Input
                 type="text"
                 value={form.name}
@@ -279,7 +280,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 供应类型 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应类型 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应类型 *</Label>
               <Select
                 value={form.supplierType}
                 onValueChange={(val) => handleChange('supplierType', val)}
@@ -298,7 +299,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 供应商属性 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应商属性 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商属性 *</Label>
               <Select
                 value={form.supplierAttribute}
                 onValueChange={(val) => handleChange('supplierAttribute', val)}
@@ -317,7 +318,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 所属组织 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">所属组织 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">所属组织 *</Label>
               <Select
                 value={form.organization}
                 onValueChange={(val) => handleChange('organization', val)}
@@ -335,7 +336,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 联系人 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">联系人 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">联系人 *</Label>
               <Input
                 type="text"
                 value={form.contact}
@@ -346,7 +347,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 移动电话 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">移动电话 *</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">移动电话 *</Label>
               <Input
                 type="text"
                 value={form.mobilePhone}
@@ -357,7 +358,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 状态 */}
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">状态</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">状态</Label>
               <Select
                 value={form.status}
                 onValueChange={(val) => handleChange('status', val)}
@@ -380,7 +381,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
           <div className="grid grid-cols-3 gap-3">
             {/* 工作电话 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">工作电话</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">工作电话</Label>
               <Input
                 type="text"
                 value={form.workPhone}
@@ -391,7 +392,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 传真 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">传真</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">传真</Label>
               <Input
                 type="text"
                 value={form.fax}
@@ -402,7 +403,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 国家 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">国家</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">国家</Label>
               <Input
                 type="text"
                 value={form.country}
@@ -413,7 +414,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 区域选择（四级级联：省份→城市→区县） */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">省/市/区</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">省/市/区</Label>
               <Cascader
                 options={provincesOptions}
                 lazy
@@ -428,7 +429,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 创建时间 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">创建时间</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">创建时间</Label>
               <Input
                 type="date"
                 value={form.createDate}
@@ -439,7 +440,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 详细地址 */}
             <div className="col-span-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">详细地址</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">详细地址</Label>
               <Input
                 type="text"
                 value={form.address}
@@ -450,7 +451,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 开户行 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">开户行</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">开户行</Label>
               <Input
                 type="text"
                 value={form.bankName}
@@ -461,7 +462,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 银行卡号 */}
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</Label>
               <Input
                 type="text"
                 value={form.bankCardNumber}
@@ -472,7 +473,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
 
             {/* 备注 */}
             <div className="col-span-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
+              <Label className="block text-xs font-medium text-gray-700 mb-1">备注</Label>
               <TextArea
                 value={form.remarks}
                 onChange={(e) => handleChange('remarks', e.target.value)}

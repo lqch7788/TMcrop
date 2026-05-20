@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun } from 'docx';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface InboundDetailModalProps {
@@ -559,7 +560,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
 
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">选择入库记录</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">选择入库记录</Label>
               <Select
                 value={String(currentRecord.id)}
                 onValueChange={(val) => {
@@ -582,7 +583,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
           </div>
           <div className="grid grid-cols-5 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">入库单号</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">入库单号</Label>
               <Input
                 type="text"
                 value={currentRecord.code}
@@ -591,7 +592,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">入库日期</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">入库日期</Label>
               <Input
                 type="date"
                 value={currentRecord.inboundDate}
@@ -600,7 +601,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">供应商</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">供应商</Label>
               <Input
                 type="text"
                 value={currentRecord.supplier}
@@ -609,7 +610,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">操作员</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">操作员</Label>
               <Input
                 type="text"
                 value={currentRecord.operator}
@@ -618,7 +619,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">状态</label>
+              <Label className="block text-xs font-medium text-gray-600 mb-1">状态</Label>
               <Select value={currentRecord.status} disabled>
                 <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100">
                   <SelectValue />
@@ -1234,7 +1235,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
               { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
               { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
             ].map((format) => (
-              <label
+              <Label
                 key={format.value}
                 className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                   exportFormat === format.value
@@ -1254,7 +1255,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
                   <span className="block text-sm font-medium text-gray-900">{format.label}</span>
                   <span className="block text-xs text-gray-500">{format.desc}</span>
                 </div>
-              </label>
+              </Label>
             ))}
           </div>
           <div className="flex gap-3 mt-6">
@@ -1555,7 +1556,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
         <div className="p-4 bg-emerald-50 border-b border-gray-200">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</Label>
               <div className="flex gap-1">
                 <Input
                   type="text"
@@ -1576,7 +1577,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
               {codeError && <span className="text-xs text-red-500 mt-0.5">{codeError}</span>}
             </div>
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">入库日期</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">入库日期</Label>
               <Input
                 type="date"
                 value={formData.inboundDate}
@@ -1585,7 +1586,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">供应商</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">供应商</Label>
               <Input
                 type="text"
                 value={formData.supplier}
@@ -1594,7 +1595,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-emerald-700 mb-1">操作员</label>
+              <Label className="block text-xs font-medium text-emerald-700 mb-1">操作员</Label>
               <Input
                 type="text"
                 value={formData.operator}

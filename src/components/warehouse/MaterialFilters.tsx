@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 export interface Material {
@@ -104,7 +105,7 @@ export function MaterialFilters({
     <div className="bg-white rounded-xl p-4 shadow-sm">
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">物料编号</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">物料编号</Label>
           <Input
             type="text"
             value={filters.code}
@@ -114,7 +115,7 @@ export function MaterialFilters({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">物料名称</Label>
           <Input
             type="text"
             value={filters.name}
@@ -124,7 +125,7 @@ export function MaterialFilters({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
           <Input
             type="text"
             value={filters.supplier}
@@ -134,7 +135,7 @@ export function MaterialFilters({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">存放位置</Label>
           <Input
             type="text"
             value={filters.location}
@@ -144,7 +145,7 @@ export function MaterialFilters({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">大类</Label>
           <Select value={filters.searchBigCategory} onValueChange={(val) => handleChange('searchBigCategory', val)}>
             <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
@@ -158,7 +159,7 @@ export function MaterialFilters({
           </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">中类</Label>
           <Select value={filters.searchMidCategory} onValueChange={(val) => handleChange('searchMidCategory', val)} disabled={!filters.searchBigCategory}>
             <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
@@ -172,7 +173,7 @@ export function MaterialFilters({
           </Select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">小类</Label>
           <Select value={filters.searchSubCategory} onValueChange={(val) => handleChange('searchSubCategory', val)} disabled={!filters.searchMidCategory}>
             <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />

@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { type Task } from '../../../hooks/useTasks';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
@@ -197,23 +197,23 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">任务类型</label>
+                  <Label className="text-xs text-gray-500">任务类型</Label>
                   <p className="font-semibold text-gray-900">{task.typeName || task.type || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">任务区域</label>
+                  <Label className="text-xs text-gray-500">任务区域</Label>
                   <p className="font-semibold text-gray-900">{task.greenhouseName || task.field || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">作物</label>
+                  <Label className="text-xs text-gray-500">作物</Label>
                   <p className="font-semibold text-gray-900">{task.cropName || task.crop || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">执行人</label>
+                  <Label className="text-xs text-gray-500">执行人</Label>
                   <p className="font-semibold text-gray-900">{task.assigneeName || task.assignee || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">优先级</label>
+                  <Label className="text-xs text-gray-500">优先级</Label>
                   <p className={`font-semibold ${priorityMap[task.priority]?.color || 'text-gray-900'}`}>
                     {priorityMap[task.priority]?.label || task.priority || '普通'}
                   </p>
@@ -228,26 +228,26 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                 <div className="bg-blue-50 rounded-lg p-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs text-gray-500">来源类型</label>
+                      <Label className="text-xs text-gray-500">来源类型</Label>
                       <p className="font-semibold text-gray-900">
                         {task.type === 'seedling' ? '育苗任务' : task.sourceType === 'dispatch' ? '任务派工' : task.sourceType === 'tempTask' ? '临时任务' : task.sourceType === 'inspection' ? '巡查任务' : '-'}
                       </p>
                     </div>
                     {task.sourceCode && (
                       <div>
-                        <label className="text-xs text-gray-500">来源编号</label>
+                        <Label className="text-xs text-gray-500">来源编号</Label>
                         <p className="font-semibold text-gray-900">{task.sourceCode}</p>
                       </div>
                     )}
                     <div>
-                      <label className="text-xs text-gray-500">关联ID</label>
+                      <Label className="text-xs text-gray-500">关联ID</Label>
                       <p className="font-semibold text-gray-900 text-xs">{task.sourceId}</p>
                     </div>
                   </div>
                   {/* 显示详细工作内容（如果有） */}
                   {task.remarks && (
                     <div className="mt-3 pt-3 border-t border-blue-100">
-                      <label className="text-xs text-gray-500 block mb-1">工作内容</label>
+                      <Label className="text-xs text-gray-500">工作内容</Label>
                       <p className="text-sm text-gray-700 whitespace-pre-line bg-white rounded p-2">{task.remarks}</p>
                     </div>
                   )}
@@ -266,24 +266,24 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               <div>
                 <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-xs text-gray-500 border-b border-gray-200">
-                        <th className="text-left pb-2">物资名称</th>
-                        <th className="text-right pb-2">数量</th>
-                        <th className="text-right pb-2">单位</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="text-xs text-gray-500">
+                        <TableHead className="text-left pb-2">物资名称</TableHead>
+                        <TableHead className="text-right pb-2">数量</TableHead>
+                        <TableHead className="text-right pb-2">单位</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {task.materials.map((m, i) => (
-                        <tr key={`mat-${m.name}-${i}`} className="border-b border-gray-100 last:border-0">
-                          <td className="py-2 text-gray-900">{m.name}</td>
-                          <td className="py-2 text-gray-900 text-right">{m.qty}</td>
-                          <td className="py-2 text-gray-500 text-right">{m.unit}</td>
-                        </tr>
+                        <TableRow key={`mat-${m.name}-${i}`}>
+                          <TableCell className="py-2 text-gray-900">{m.name}</TableCell>
+                          <TableCell className="py-2 text-gray-900 text-right">{m.qty}</TableCell>
+                          <TableCell className="py-2 text-gray-500 text-right">{m.unit}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
@@ -294,24 +294,24 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                 <h4 className="text-sm font-semibold text-gray-900 mb-3">所需工具</h4>
                 <div className="bg-gray-50 rounded-lg p-3">
                   {task.tools && task.tools.length > 0 ? (
-                    <table className="w-full text-sm mb-2">
-                      <thead>
-                        <tr className="text-xs text-gray-500 border-b border-gray-200">
-                          <th className="text-left pb-2">工具名称</th>
-                          <th className="text-right pb-2">数量</th>
-                          <th className="text-right pb-2">单位</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table className="mb-2">
+                      <TableHeader>
+                        <TableRow className="text-xs text-gray-500">
+                          <TableHead className="text-left pb-2">工具名称</TableHead>
+                          <TableHead className="text-right pb-2">数量</TableHead>
+                          <TableHead className="text-right pb-2">单位</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {task.tools.map((t, i) => (
-                          <tr key={`tool-${t.name}-${i}`} className="border-b border-gray-100 last:border-0">
-                            <td className="py-2 text-gray-900">{t.name}</td>
-                            <td className="py-2 text-gray-900 text-right">{t.qty}</td>
-                            <td className="py-2 text-gray-500 text-right">{t.unit}</td>
-                          </tr>
+                          <TableRow key={`tool-${t.name}-${i}`}>
+                            <TableCell className="py-2 text-gray-900">{t.name}</TableCell>
+                            <TableCell className="py-2 text-gray-900 text-right">{t.qty}</TableCell>
+                            <TableCell className="py-2 text-gray-500 text-right">{t.unit}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   ) : (
                     <p className="text-sm text-gray-400 text-center py-2">暂无所需工具</p>
                   )}
@@ -330,15 +330,15 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">计划开始</label>
+                  <Label className="text-xs text-gray-500">计划开始</Label>
                   <p className="font-semibold text-gray-900">{task.planStart || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">计划结束</label>
+                  <Label className="text-xs text-gray-500">计划结束</Label>
                   <p className="font-semibold text-gray-900">{task.planEnd || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">状态</label>
+                  <Label className="text-xs text-gray-500">状态</Label>
                   <p>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || ''} ${statusMap[task.status]?.color || ''}`}>
                       {statusMap[task.status]?.label || task.status}
@@ -346,7 +346,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">预计时长</label>
+                  <Label className="text-xs text-gray-500">预计时长</Label>
                   <p className="font-semibold text-gray-900">
                     {task.estimatedDays > 0 ? `${task.estimatedDays}天` : ''}
                     {task.estimatedHours > 0 ? `${task.estimatedHours}小时` : ''}
@@ -363,19 +363,19 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs text-green-600">实际工日</label>
+                      <Label className="text-xs text-green-600">实际工日</Label>
                       <p className="font-bold text-green-700 text-lg">
                         {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-green-600">实际工时</label>
+                      <Label className="text-xs text-green-600">实际工时</Label>
                       <p className="font-bold text-green-700 text-lg">
                         {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
                       </p>
                     </div>
                     <div>
-                      <label className="text-xs text-green-600">作业人数</label>
+                      <Label className="text-xs text-green-600">作业人数</Label>
                       <p className="font-bold text-green-700 text-lg">
                         {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
                       </p>

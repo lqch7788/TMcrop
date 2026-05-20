@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { TextArea } from '../../../ui/TextArea';
 import { CheckCircle, XCircle, Clock, User, MapPin, Camera, Mic, FileText } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
@@ -65,19 +65,19 @@ export function TaskAcceptanceModal({
           <h3 className="font-semibold text-gray-900 mb-3">{task.title}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <label className="text-gray-500">执行人</label>
+              <Label className="text-gray-500">执行人</Label>
               <p className="font-medium">{task.assigneeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">任务类型</label>
+              <Label className="text-gray-500">任务类型</Label>
               <p className="font-medium">{task.typeName}</p>
             </div>
             <div>
-              <label className="text-gray-500">当前进度</label>
+              <Label className="text-gray-500">当前进度</Label>
               <p className="font-medium">{task.progress}%</p>
             </div>
             <div>
-              <label className="text-gray-500">返工次数</label>
+              <Label className="text-gray-500">返工次数</Label>
               <p className="font-medium">{task.reworkCount}次</p>
             </div>
           </div>

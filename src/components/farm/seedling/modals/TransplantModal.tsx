@@ -8,6 +8,7 @@ import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { Input } from '../../../ui/input';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -201,10 +202,9 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div className="col-span-2">
               <Label className="text-gray-700">定植日期</Label>
-              <Input
-                type="date"
-                value={formData.transplantDate}
-                onChange={(e) => setFormData({ ...formData, transplantDate: e.target.value })}
+              <DatePicker
+                selected={formData.transplantDate ? new Date(formData.transplantDate) : undefined}
+                onChange={(date) => setFormData({ ...formData, transplantDate: date.toISOString().split('T')[0] })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>

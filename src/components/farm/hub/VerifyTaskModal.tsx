@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Task } from '../../../hooks/useTasks';
 import { useFarmTaskStore } from '@/stores';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { Input } from '../../ui/input';
 import { TextArea } from '../../ui/TextArea';
 
@@ -165,7 +165,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-sm font-medium text-gray-700 mb-3">验收结果</h4>
             <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <Label className="flex items-center gap-3 cursor-pointer">
                 <Input
                   type="radio"
                   name="verifyResult"
@@ -175,8 +175,8 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
                   className="w-4 h-4 text-emerald-600"
                 />
                 <span className="text-sm text-gray-700">验收通过</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              </Label>
+              <Label className="flex items-center gap-3 cursor-pointer">
                 <Input
                   type="radio"
                   name="verifyResult"
@@ -186,7 +186,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
                   className="w-4 h-4 text-red-600"
                 />
                 <span className="text-sm text-gray-700">验收驳回（需返工）</span>
-              </label>
+              </Label>
             </div>
           </div>
 
