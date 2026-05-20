@@ -6,6 +6,7 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { GRADE_OPTIONS } from '../../../../constants/cropConstants';
 
@@ -43,7 +44,7 @@ export function HarvestFilterToolbar({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 采收单号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采收单号</label>
+          <Label className="text-gray-700">采收单号</Label>
           <Input
             type="text"
             value={searchFilters.harvestCode}
@@ -55,7 +56,7 @@ export function HarvestFilterToolbar({
 
         {/* 批次信息 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">批次信息</label>
+          <Label className="text-gray-700">批次信息</Label>
           <Input
             type="text"
             value={searchFilters.batchCode}
@@ -67,7 +68,7 @@ export function HarvestFilterToolbar({
 
         {/* 采收区域 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采收区域</label>
+          <Label className="text-gray-700">采收区域</Label>
           <Select
             value={searchFilters.greenhouseId}
             onValueChange={(val) => onFiltersChange({ ...searchFilters, greenhouseId: val })}
@@ -85,7 +86,7 @@ export function HarvestFilterToolbar({
 
         {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
+          <Label className="text-gray-700">作物品种</Label>
           <Input
             type="text"
             value={searchFilters.cropName}
@@ -97,7 +98,7 @@ export function HarvestFilterToolbar({
 
         {/* 品质等级（使用共享常量 GRADE_OPTIONS） */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">品质等级</label>
+          <Label className="text-gray-700">品质等级</Label>
           <Select
             value={searchFilters.grade}
             onValueChange={(val) => onFiltersChange({ ...searchFilters, grade: val })}
@@ -115,7 +116,7 @@ export function HarvestFilterToolbar({
 
         {/* 入库仓库 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">入库仓库</label>
+          <Label className="text-gray-700">入库仓库</Label>
           <Select
             value={searchFilters.warehouseId}
             onValueChange={(val) => onFiltersChange({ ...searchFilters, warehouseId: val })}
@@ -133,7 +134,7 @@ export function HarvestFilterToolbar({
 
         {/* TODO: 状态选项含 'harvesting' 不在共享常量 HARVEST_STATUS_MAP 中，暂保留本地列表 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+          <Label className="text-gray-700">状态</Label>
           <Select
             value={searchFilters.status}
             onValueChange={(val) => onFiltersChange({ ...searchFilters, status: val })}

@@ -6,6 +6,7 @@ import React from 'react';
 import { CropVariety } from '../../../types/cropVariety';
 import { Edit2, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 interface CropVarietyDetailProps {
   variety: CropVariety | null;
@@ -67,11 +68,11 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">作物编码</label>
+                <Label className="text-xs text-emerald-600">作物编码</Label>
                 <p className="font-mono text-emerald-700 font-bold text-lg">{variety.cropCode}</p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">状态</label>
+                <Label className="text-xs text-emerald-600">状态</Label>
                 <span className={`inline-flex px-3 py-1 rounded text-sm font-bold ${
                   variety.status === 'active'
                     ? 'bg-green-500 text-white'
@@ -91,21 +92,21 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <label className="block text-xs font-medium text-blue-600 mb-1">类别</label>
+                <Label className="text-xs text-blue-600">类别</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.categoryCode}</span>
                   {variety.categoryName}
                 </p>
               </div>
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <label className="block text-xs font-medium text-blue-600 mb-1">类型</label>
+                <Label className="text-xs text-blue-600">类型</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.typeCode}</span>
                   {variety.typeName}
                 </p>
               </div>
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <label className="block text-xs font-medium text-blue-600 mb-1">品种</label>
+                <Label className="text-xs text-blue-600">品种</Label>
                 <p className="text-blue-900 font-medium">
                   <span className="font-mono text-blue-500 mr-2">{variety.varietyCode}</span>
                   {variety.varietyName}
@@ -113,7 +114,7 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
               </div>
               {variety.subVariety1Name && (
                 <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                  <label className="block text-xs font-medium text-blue-600 mb-1">子品种</label>
+                  <Label className="text-xs text-blue-600">子品种</Label>
                   <p className="text-blue-900 font-medium">
                     <span className="font-mono text-blue-500 mr-2">{variety.subVariety1Code}</span>
                     {variety.subVariety1Name}
@@ -121,7 +122,7 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
                 </div>
               )}
               <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <label className="block text-xs font-medium text-blue-600 mb-1">作物品种</label>
+                <Label className="text-xs text-blue-600">作物品种</Label>
                 <p className="text-blue-900 font-bold text-lg">
                   {variety.detailVarietyName || variety.subVariety1Name || variety.varietyName}
                 </p>
@@ -160,14 +161,14 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             <div className="grid grid-cols-2 gap-4">
               {variety.image && (
                 <div className="bg-white rounded-lg p-3 border-2 border-orange-300">
-                  <label className="block text-xs font-medium text-orange-600 mb-2">作物图片</label>
+                  <Label className="text-xs text-orange-600">作物图片</Label>
                   <div className="w-full h-40 rounded-lg overflow-hidden bg-gray-50 border border-orange-200">
                     <img src={variety.image} alt="作物图片" className="w-full h-full object-contain" />
                   </div>
                 </div>
               )}
               <div className={`bg-white rounded-lg p-3 border-2 border-orange-300 ${!variety.image ? 'col-span-2' : ''}`}>
-                <label className="block text-xs font-medium text-orange-600 mb-2">特性描述</label>
+                <Label className="text-xs text-orange-600">特性描述</Label>
                 <p className="text-orange-900 whitespace-pre-wrap">
                   {variety.description || '暂无特性描述'}
                 </p>
@@ -183,31 +184,31 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </h4>
             <div className="grid grid-cols-5 gap-3">
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">发芽期</label>
+                <Label className="text-xs text-emerald-600">发芽期</Label>
                 <p className="text-emerald-900 font-bold text-lg">
                   {variety.germinationPeriod ? `${variety.germinationPeriod}天` : '-'}
                 </p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">育苗期</label>
+                <Label className="text-xs text-emerald-600">育苗期</Label>
                 <p className="text-emerald-900 font-bold text-lg">
                   {variety.seedlingPeriod ? `${variety.seedlingPeriod}天` : '-'}
                 </p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">开花期</label>
+                <Label className="text-xs text-emerald-600">开花期</Label>
                 <p className="text-emerald-900 font-bold text-lg">
                   {variety.floweringPeriod ? `${variety.floweringPeriod}天` : '-'}
                 </p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">结果期</label>
+                <Label className="text-xs text-emerald-600">结果期</Label>
                 <p className="text-emerald-900 font-bold text-lg">
                   {variety.fruitingPeriod ? `${variety.fruitingPeriod}天` : '-'}
                 </p>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200 text-center">
-                <label className="block text-xs font-medium text-emerald-600 mb-1">摘收期</label>
+                <Label className="text-xs text-emerald-600">摘收期</Label>
                 <p className="text-emerald-900 font-bold text-lg">
                   {variety.harvestPeriod ? `${variety.harvestPeriod}天` : '-'}
                 </p>
@@ -236,49 +237,49 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </h4>
             <div className="grid grid-cols-4 gap-3">
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">空气温度(℃)</label>
+                <Label className="text-xs text-cyan-600">空气温度(℃)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.airTemperature != null ? `${variety.airTemperature}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">空气湿度(%)</label>
+                <Label className="text-xs text-cyan-600">空气湿度(%)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.airHumidity != null ? `${variety.airHumidity}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">CO₂含量(ppm)</label>
+                <Label className="text-xs text-cyan-600">CO₂含量(ppm)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.co2Content != null ? `${variety.co2Content}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">光照度(lx)</label>
+                <Label className="text-xs text-cyan-600">光照度(lx)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.lightIntensity != null ? `${variety.lightIntensity}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤温度(℃)</label>
+                <Label className="text-xs text-cyan-600">土壤温度(℃)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.soilTemperature != null ? `${variety.soilTemperature}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤湿度(%)</label>
+                <Label className="text-xs text-cyan-600">土壤湿度(%)</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.soilHumidity != null ? `${variety.soilHumidity}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤PH值</label>
+                <Label className="text-xs text-cyan-600">土壤PH值</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.soilPh != null ? `${variety.soilPh}` : '-'}
                 </p>
               </div>
               <div className="bg-cyan-50 rounded-lg p-3 border border-cyan-200 text-center">
-                <label className="block text-xs font-medium text-cyan-600 mb-1">土壤EC值</label>
+                <Label className="text-xs text-cyan-600">土壤EC值</Label>
                 <p className="text-cyan-900 font-bold text-lg">
                   {variety.soilEc != null ? `${variety.soilEc}` : '-'}
                 </p>
@@ -294,11 +295,11 @@ export function CropVarietyDetail({ variety, onEdit }: CropVarietyDetailProps) {
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-100 rounded-lg p-3 border border-slate-200">
-                <label className="block text-xs font-medium text-slate-600 mb-1">创建时间</label>
+                <Label className="text-xs text-slate-600">创建时间</Label>
                 <p className="text-slate-700 font-medium">{variety.createTime || '-'}</p>
               </div>
               <div className="bg-slate-100 rounded-lg p-3 border border-slate-200">
-                <label className="block text-xs font-medium text-slate-600 mb-1">更新时间</label>
+                <Label className="text-xs text-slate-600">更新时间</Label>
                 <p className="text-slate-700 font-medium">{variety.updateTime || '-'}</p>
               </div>
             </div>

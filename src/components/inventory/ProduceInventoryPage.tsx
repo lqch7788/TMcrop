@@ -9,6 +9,7 @@ import { useWarehouseStore } from '../../stores';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Select, Modal } from '../ui/Modal';
 import { Select as RadixSelect, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
@@ -400,10 +401,10 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
         {/* 存储时间预警 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Label className="flex items-center gap-2 text-gray-700">
               <Clock className="w-4 h-4 text-amber-600" />
               启用存储时间预警
-            </label>
+            </Label>
             <Input
               type="checkbox"
               checked={settings.enableStorageTimeAlert}
@@ -429,10 +430,10 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
         {/* 库存量预警 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Label className="flex items-center gap-2 text-gray-700">
               <Package className="w-4 h-4 text-blue-600" />
               启用库存量预警
-            </label>
+            </Label>
             <Input
               type="checkbox"
               checked={settings.enableQuantityAlert}

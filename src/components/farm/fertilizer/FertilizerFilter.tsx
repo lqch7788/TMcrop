@@ -7,6 +7,8 @@ import { Search, RotateCcw } from 'lucide-react';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { DatePicker } from '../../ui/DatePicker';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 
 interface FertilizerFilterProps {
@@ -31,7 +33,7 @@ export function FertilizerFilter({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 肥料类型（字典选择） */}
         <div className="min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">肥料类型</label>
+          <Label className="text-gray-700">肥料类型</Label>
           <DictSelect
             category="fertilizer_type"
             value={filters.fertilizerType || ''}
@@ -42,7 +44,7 @@ export function FertilizerFilter({
 
         {/* 作物品种 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
+          <Label className="text-gray-700">作物品种</Label>
           <Input
             type="text"
             value={filters.cropName || ''}
@@ -54,7 +56,7 @@ export function FertilizerFilter({
 
         {/* 温室位置 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">温室位置</label>
+          <Label className="text-gray-700">温室位置</Label>
           <Input
             type="text"
             value={filters.greenhouseName || ''}
@@ -66,7 +68,7 @@ export function FertilizerFilter({
 
         {/* 数据来源 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">数据来源</label>
+          <Label className="text-gray-700">数据来源</Label>
           <Select
             value={filters.dataSource || ''}
             onValueChange={(val) => updateFilter('dataSource', val)}
@@ -83,29 +85,27 @@ export function FertilizerFilter({
 
         {/* 日期范围 - 开始 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-          <Input
-            type="date"
-            value={filters.startDate || ''}
-            onChange={(e) => updateFilter('startDate', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="text-gray-700">开始日期</Label>
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date) => updateFilter('startDate', date.toISOString().split('T')[0])}
+            className="w-full"
           />
         </div>
 
         {/* 日期范围 - 结束 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-          <Input
-            type="date"
-            value={filters.endDate || ''}
-            onChange={(e) => updateFilter('endDate', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="text-gray-700">结束日期</Label>
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date) => updateFilter('endDate', date.toISOString().split('T')[0])}
+            className="w-full"
           />
         </div>
 
         {/* 操作员 */}
         <div className="flex-1 min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作员</label>
+          <Label className="text-gray-700">操作员</Label>
           <Input
             type="text"
             value={filters.operatorName || ''}

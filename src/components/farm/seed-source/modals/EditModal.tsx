@@ -12,6 +12,7 @@ import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as supplierService from '../../../../services/supplierService';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -218,7 +219,7 @@ export function EditModal({
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         {/* 种源批号 - 只读显示 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种源批号</label>
+          <Label className="text-gray-900">种源批号</Label>
           <Input
             type="text"
             value={record.seedCode}
@@ -229,9 +230,9 @@ export function EditModal({
 
         {/* 作物选择 - 使用统一的 CropCodeSelector */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <Label className="text-gray-900">
             <span className="text-red-500">*</span> 作物选择
-          </label>
+          </Label>
           <CropCodeSelector
             value={cropCode}
             onChange={handleCropCodeChange}
@@ -252,7 +253,7 @@ export function EditModal({
 
         {/* 种源类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种源类型</label>
+          <Label className="text-gray-900">种源类型</Label>
           <DictSelect
             category="source_type"
             value={formData.sourceType}
@@ -277,7 +278,7 @@ export function EditModal({
 
         {/* 来源途径 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">来源途径</label>
+          <Label className="text-gray-900">来源途径</Label>
           <DictSelect
             category="source_origin"
             value={formData.sourceOrigin}
@@ -292,10 +293,10 @@ export function EditModal({
 
         {/* 供应商 - 外部采购时必填，其他来源可选 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <Label className="text-gray-900">
             {formData.sourceOrigin === 'external_purchase' && <span className="text-red-500">*</span>}
             {formData.sourceOrigin === 'external_purchase' ? '供应商' : '供应商（可选）'}
-          </label>
+          </Label>
           <Select
             value={formData.supplierId || '__none__'}
             onValueChange={(val) => {
@@ -328,9 +329,9 @@ export function EditModal({
 
         {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <Label className="text-gray-900">
             {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
-          </label>
+          </Label>
           <Input
             type="date"
             value={formData.purchaseDate}
@@ -341,7 +342,7 @@ export function EditModal({
 
         {/* 登记数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">登记数量</label>
+          <Label className="text-gray-900">登记数量</Label>
           <div className="flex gap-2">
             <Input
               type="number"
@@ -360,7 +361,7 @@ export function EditModal({
 
         {/* 单价 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">单价（元）</label>
+          <Label className="text-gray-900">单价（元）</Label>
           <Input
             type="number"
             value={formData.unitPrice || ''}
@@ -371,7 +372,7 @@ export function EditModal({
 
         {/* 图片上传 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
+          <Label className="text-gray-900">图片上传</Label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer">
             <div className="text-gray-500 text-sm">
               点击上传或拖拽图片到此处
@@ -381,7 +382,7 @@ export function EditModal({
 
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+          <Label className="text-gray-900">备注</Label>
           <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

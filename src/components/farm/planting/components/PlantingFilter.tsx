@@ -6,7 +6,7 @@ import React, { useMemo } from 'react';
 import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
-import { TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Label, TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { TreeSelectNode } from '@/components/ui/TreeSelect';
 import { Input } from '../../../ui/input';
 
@@ -70,7 +70,7 @@ export function PlantingFilter({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 作物品种 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
+          <Label className="text-gray-700">作物品种</Label>
           <Select
             value={filters.cropName}
             onValueChange={(val) => onChange({ ...filters, cropName: val })}
@@ -88,7 +88,7 @@ export function PlantingFilter({
 
         {/* 种植批号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">种植批号</label>
+          <Label className="text-gray-700">种植批号</Label>
           <Input
             type="text"
             value={filters.plantCode}
@@ -100,7 +100,7 @@ export function PlantingFilter({
 
         {/* 来源批号（种源/育苗批号） */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">来源批号</label>
+          <Label className="text-gray-700">来源批号</Label>
           <Input
             type="text"
             value={filters.sourceCode}
@@ -112,7 +112,7 @@ export function PlantingFilter({
 
         {/* 定植日期 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
+          <Label className="text-gray-700">定植日期</Label>
           <Input
             type="date"
             value={filters.transplantDate}
@@ -123,7 +123,7 @@ export function PlantingFilter({
 
         {/* 种植区域/大棚位置（树形选择） */}
         <div className="min-w-[160px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">大棚位置</label>
+          <Label className="text-gray-700">大棚位置</Label>
           <TreeSelect
             value={filters.areaName || undefined}
             onChange={(val) => onChange({ ...filters, areaName: val || '' })}
@@ -137,7 +137,7 @@ export function PlantingFilter({
 
         {/* 采收状态 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采收状态</label>
+          <Label className="text-gray-700">采收状态</Label>
           <Select
             value={filters.isHarvest}
             onValueChange={(val) => onChange({ ...filters, isHarvest: val })}
@@ -157,7 +157,7 @@ export function PlantingFilter({
       <div className="flex flex-wrap gap-4 items-end mt-3">
         {/* 组织 */}
         <div className="min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">组织</label>
+          <Label className="text-gray-700">组织</Label>
           <Input
             type="text"
             value={filters.orgName || ''}
@@ -169,7 +169,7 @@ export function PlantingFilter({
 
         {/* 定植数量最小值 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≥</label>
+          <Label className="text-gray-700">定植数量≥</Label>
           <Input
             type="number"
             value={filters.countMin || ''}
@@ -182,7 +182,7 @@ export function PlantingFilter({
 
         {/* 定植数量最大值 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≤</label>
+          <Label className="text-gray-700">定植数量≤</Label>
           <Input
             type="number"
             value={filters.countMax || ''}

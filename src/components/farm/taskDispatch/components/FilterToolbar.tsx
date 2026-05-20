@@ -8,6 +8,7 @@ import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface FilterToolbarProps {
@@ -63,7 +64,7 @@ export function FilterToolbar({
         <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
           {/* 任务ID搜索 */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">任务ID</label>
+            <Label className="text-xs text-gray-500">任务ID</Label>
             <Input
               type="text"
               value={taskIdSearch}
@@ -75,7 +76,7 @@ export function FilterToolbar({
 
           {/* 时间范围筛选 */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">时间范围</label>
+            <Label className="text-xs text-gray-500">时间范围</Label>
             <Select
               value={timeFilter}
               onValueChange={(val) => onTimeFilterChange(val)}
@@ -93,7 +94,7 @@ export function FilterToolbar({
 
           {/* 任务区域筛选 */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">任务区域编号</label>
+            <Label className="text-xs text-gray-500">任务区域编号</Label>
             <Select
               value={fieldFilter}
               onValueChange={(val) => onFieldFilterChange(val)}
@@ -112,7 +113,7 @@ export function FilterToolbar({
 
           {/* 执行人筛选 */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">执行人</label>
+            <Label className="text-xs text-gray-500">执行人</Label>
             <Select
               value={assigneeFilter}
               onValueChange={(val) => onAssigneeFilterChange(val)}
@@ -131,7 +132,7 @@ export function FilterToolbar({
 
           {/* 状态筛选 */}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">状态</label>
+            <Label className="text-xs text-gray-500">状态</Label>
             <Select
               value={statusFilter}
               onValueChange={(val) => onStatusFilterChange(val)}

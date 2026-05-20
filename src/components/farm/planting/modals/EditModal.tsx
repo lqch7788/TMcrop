@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import { Label } from '@/components/ui/label';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
@@ -88,7 +89,7 @@ export function EditModal({
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         {/* 作物品种选择 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <Label className="text-gray-900">作物品种</Label>
           <CropCodeSelector
             value={formData.selectedCropCode}
             onChange={handleCropCodeChange}
@@ -99,7 +100,7 @@ export function EditModal({
 
         {/* 种植区域 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植区域</label>
+          <Label className="text-gray-900">种植区域</Label>
           <DictSelect
             category="planting_area"
             value={formData.areaId}
@@ -110,7 +111,7 @@ export function EditModal({
 
         {/* 种植数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植数量</label>
+          <Label className="text-gray-900">种植数量</Label>
           <Input
             type="number"
             value={formData.plantingCount || ''}
@@ -121,7 +122,7 @@ export function EditModal({
 
         {/* 种植日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植日期</label>
+          <Label className="text-gray-900">种植日期</Label>
           <Input
             type="date"
             value={formData.plantingDate}
@@ -132,7 +133,7 @@ export function EditModal({
 
         {/* 损耗率(%) */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">损耗率(%)</label>
+          <Label className="text-gray-900">损耗率(%)</Label>
           <Input
             type="number"
             step="0.1"
@@ -146,7 +147,7 @@ export function EditModal({
 
         {/* 土壤PH值 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">土壤PH值</label>
+          <Label className="text-gray-900">土壤PH值</Label>
           <Input
             type="number"
             step="0.1"
@@ -158,7 +159,7 @@ export function EditModal({
 
         {/* 土壤EC值 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">土壤EC值</label>
+          <Label className="text-gray-900">土壤EC值</Label>
           <Input
             type="number"
             step="0.1"
@@ -170,7 +171,7 @@ export function EditModal({
 
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+          <Label className="text-gray-900">备注</Label>
           <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

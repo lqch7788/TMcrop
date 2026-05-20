@@ -8,6 +8,7 @@ import { AlertTriangle } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import { TextArea } from '../../ui/TextArea';
 import { DictSelect } from '../../common/settings/DictSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
@@ -150,7 +151,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥编号</label>
+                <Label className="text-gray-900">施肥编号</Label>
                 <Input
                   type="text"
                   value={form.fertilizerCode}
@@ -159,7 +160,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
+                <Label className="text-gray-900">数据来源</Label>
                 <Input
                   type="text"
                   value={isIot ? 'IoT自动' : '手动录入'}
@@ -179,7 +180,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">肥料类型</label>
+                <Label className="text-gray-900">肥料类型</Label>
                 <DictSelect
                   category="fertilizer_type"
                   value={form.fertilizerType}
@@ -189,7 +190,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">肥料名称 <span className="text-red-500">*</span></label>
+                <Label className="text-gray-900">肥料名称 <span className="text-red-500">*</span></Label>
                 <Input
                   type="text"
                   value={form.fertilizerName}
@@ -201,7 +202,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
+                <Label className="text-gray-900">稀释比例</Label>
                 <Input
                   type="text"
                   value={form.dilutionRatio}
@@ -211,7 +212,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
+                <Label className="text-gray-900">施肥量 (kg)</Label>
                 <Input
                   type="number"
                   value={form.quantity || ''}
@@ -223,7 +224,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
+                <Label className="text-gray-900">单价 (元/kg)</Label>
                 <Input
                   type="number"
                   value={form.unitPrice || ''}
@@ -236,7 +237,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
+              <Label className="text-gray-900">总成本（自动计算）</Label>
               <Input
                 type="text"
                 value={`${form.totalCost.toFixed(2)} 元`}
@@ -253,7 +254,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
+                <Label className="text-gray-900">温室位置</Label>
                 <Input
                   type="text"
                   value={form.greenhouseName}
@@ -263,7 +264,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+                <Label className="text-gray-900">作物品种</Label>
                 <CropCodeSelector
                   value={cropCode}
                   onChange={handleCropCodeChange}
@@ -283,7 +284,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
+              <Label className="text-gray-900">施肥时间</Label>
               <Input
                 type="datetime-local"
                 value={form.fertilizeTime}
@@ -300,7 +301,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
           <SectionTitle title="操作与备注" icon="📝" />
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+              <Label className="text-gray-900">操作员</Label>
               <Input
                 type="text"
                 value={form.operatorName}
@@ -310,7 +311,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+              <Label className="text-gray-900">备注</Label>
               <TextArea
                 value={form.description}
                 onChange={(e) => updateField('description', e.target.value)}

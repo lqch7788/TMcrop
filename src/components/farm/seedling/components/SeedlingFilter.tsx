@@ -7,6 +7,7 @@ import { Search, RotateCcw } from 'lucide-react';
 import { SeedlingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
 import { Input } from '../../../ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedlingFilterProps {
@@ -35,7 +36,7 @@ export function SeedlingFilter({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 作物品种 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
+          <Label className="text-gray-700">作物品种</Label>
           <Select
             value={filters.cropName}
             onValueChange={(val) => onChange({ ...filters, cropName: val })}
@@ -54,7 +55,7 @@ export function SeedlingFilter({
 
         {/* 育苗批号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">育苗批号</label>
+          <Label className="text-gray-700">育苗批号</Label>
           <Input
             type="text"
             value={filters.seedlingCode}
@@ -66,7 +67,7 @@ export function SeedlingFilter({
 
         {/* 育苗方式 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">育苗方式</label>
+          <Label className="text-gray-700">育苗方式</Label>
           <Select
             value={filters.seedlingType}
             onValueChange={(val) => onChange({ ...filters, seedlingType: val })}
@@ -85,7 +86,7 @@ export function SeedlingFilter({
 
         {/* 种源批号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">种源批号</label>
+          <Label className="text-gray-700">种源批号</Label>
           <Input
             type="text"
             value={filters.sourceCode}
@@ -97,7 +98,7 @@ export function SeedlingFilter({
 
         {/* 温室场地 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">温室场地</label>
+          <Label className="text-gray-700">温室场地</Label>
           <Select
             value={filters.siteName}
             onValueChange={(val) => onChange({ ...filters, siteName: val })}
@@ -116,7 +117,7 @@ export function SeedlingFilter({
 
         {/* 状态 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+          <Label className="text-gray-700">状态</Label>
           <Select
             value={filters.status}
             onValueChange={(val) => onChange({ ...filters, status: val })}

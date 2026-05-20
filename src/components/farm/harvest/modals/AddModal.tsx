@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
@@ -167,7 +168,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 基本信息区域 */}
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收单号</label>
+          <Label className="text-gray-900">采收单号</Label>
           <div className="flex gap-2">
             <Input
               type="text"
@@ -190,7 +191,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.harvestCode && <p className="text-red-500 text-xs mt-1">{errors.harvestCode}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收时间</label>
+          <Label className="text-gray-900">采收时间</Label>
           <Input
             type="datetime-local"
             value={addForm.harvestDate}
@@ -200,7 +201,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.harvestDate && <p className="text-red-500 text-xs mt-1">{errors.harvestDate}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
+          <Label className="text-gray-900">操作员</Label>
           <Input
             type="text"
             value={currentOperator}
@@ -209,7 +210,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">入库类型</label>
+          <Label className="text-gray-900">入库类型</Label>
           <DictSelect
             category="inbound_type"
             value={addForm.inboundType}
@@ -223,7 +224,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <p className="mt-1 text-xs text-gray-400">{inboundTypeLabels[addForm.inboundType]}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
+          <Label className="text-gray-900">生产计划批次号</Label>
           <Select
             value={addForm.batchCode}
             onValueChange={(val) => onFormChange('batchCode', val)}
@@ -240,7 +241,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.batchCode && <p className="text-red-500 text-xs mt-1">{errors.batchCode}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收区域</label>
+          <Label className="text-gray-900">采收区域</Label>
           <Select
             value={addForm.greenhouseId}
             onValueChange={(val) => onFormChange('greenhouseId', val)}
@@ -257,7 +258,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.greenhouseId && <p className="text-red-500 text-xs mt-1">{errors.greenhouseId}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">入库仓库</label>
+          <Label className="text-gray-900">入库仓库</Label>
           <Select
             value={addForm.warehouseId}
             onValueChange={(val) => onFormChange('warehouseId', val)}
@@ -274,7 +275,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">审核人员</label>
+          <Label className="text-gray-900">审核人员</Label>
           <Input
             type="text"
             value={addForm.auditor}
@@ -285,9 +286,9 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         {/* V3.2 单价字段 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <Label className="text-gray-900">
             单价 (元/kg) <span className="text-xs text-gray-400">(可选)</span>
-          </label>
+          </Label>
           <Input
             type="number"
             value={addForm.unitPrice || ''}
@@ -305,7 +306,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         {/* V3.0 采收类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收类型</label>
+          <Label className="text-gray-900">采收类型</Label>
           <DictSelect
             category="harvest_type"
             value={addForm.harvestType}
@@ -320,7 +321,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         {/* V3.0 目标库存 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">目标库存</label>
+          <Label className="text-gray-900">目标库存</Label>
           <DictSelect
             category="target_inventory"
             value={addForm.targetInventory}
@@ -335,7 +336,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         {/* V3.1 补录字段 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">是否补录</label>
+          <Label className="text-gray-900">是否补录</Label>
           <DictSelect
             category="is_supplementary"
             value={addForm.isSupplementary ? 'yes' : 'no'}
@@ -345,9 +346,9 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         {addForm.isSupplementary && (
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="text-gray-900">
               补录原因 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <Input
               type="text"
               value={addForm.supplementaryReason}
@@ -358,7 +359,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           </div>
         )}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">采收人员</label>
+          <Label className="text-gray-900">采收人员</Label>
           <div className="relative">
             <div
               className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex items-center justify-between"
@@ -376,7 +377,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             </div>
             <div id="harvester-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
               {users.filter(u => u.role === 'worker' || u.role === 'technician').map(user => (
-                <label
+                <Label
                   key={user.id}
                   className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                 >
@@ -387,7 +388,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                     className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
                   />
                   <span className="text-sm text-gray-700">{user.name}</span>
-                </label>
+                </Label>
               ))}
             </div>
           </div>
@@ -422,7 +423,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 产品明细 */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-bold text-gray-700">产品明细</label>
+          <Label className="font-bold text-gray-700">产品明细</Label>
           <Button
             variant="default"
             size="sm"
@@ -561,7 +562,7 @@ export const AddModal: React.FC<AddModalProps> = ({
 
       {/* 备注 */}
       <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+        <Label className="text-gray-900">备注</Label>
         <TextArea
           value={addForm.remarks}
           onChange={(e) => onFormChange('remarks', e.target.value)}

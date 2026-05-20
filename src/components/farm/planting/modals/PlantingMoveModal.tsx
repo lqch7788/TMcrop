@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import {
   Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   DatePicker, TextArea, Input
@@ -109,7 +110,7 @@ export default function PlantingMoveModal({
         <div className="p-4 space-y-4">
           {/* 操作类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">操作类型 *</label>
+            <Label className="text-gray-700">操作类型 *</Label>
             <Select
               value={form.operationType}
               onValueChange={(v) => handleChange('operationType', v as 'move_in' | 'move_out')}
@@ -127,7 +128,7 @@ export default function PlantingMoveModal({
 
           {/* 标签编号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">标签编号 *</label>
+            <Label className="text-gray-700">标签编号 *</Label>
             <Input
               value={form.labelNumber}
               onChange={(e) => handleChange('labelNumber', (e.target as HTMLInputElement).value)}
@@ -138,9 +139,9 @@ export default function PlantingMoveModal({
 
           {/* 目标区域 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               {form.operationType === 'move_in' ? '移入目标区域' : '移出目标区域'} *
-            </label>
+            </Label>
             <Select
               value={form.targetArea}
               onValueChange={(v) => handleChange('targetArea', v)}
@@ -161,7 +162,7 @@ export default function PlantingMoveModal({
 
           {/* 操作日期 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">操作日期</label>
+            <Label className="text-gray-700">操作日期</Label>
             <DatePicker
               value={form.operationDate}
               onChange={(date) => handleChange('operationDate', date)}
@@ -171,7 +172,7 @@ export default function PlantingMoveModal({
 
           {/* 备注 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <Label className="text-gray-700">备注</Label>
             <TextArea
               value={form.remarks}
               onChange={(e) => handleChange('remarks', (e.target as HTMLTextAreaElement).value)}

@@ -13,6 +13,7 @@ import * as apiService from '../../../../services/apiSeedlingService';
 import { usePlantLabelStore } from '../../../../stores';
 import { useUserStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface PrintLabelModalProps {
@@ -266,7 +267,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         <div className="bg-blue-50 rounded-lg p-4">
           <div className="flex gap-4 mb-4">
             {(['single', 'multi', 'batch'] as const).map(mode => (
-              <label key={mode} className="flex items-center gap-2">
+              <Label key={mode} className="flex items-center gap-2">
                 <Input type="radio" name="printMode" value={mode}
                   checked={printMode === mode}
                   onChange={() => { setPrintMode(mode); setSelectedLabels([]); }}
@@ -274,7 +275,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <span className="text-sm font-medium">
                   {mode === 'single' ? '单标签打印' : mode === 'multi' ? '多标签打印' : '批量生成'}
                 </span>
-              </label>
+              </Label>
             ))}
           </div>
 
@@ -282,7 +283,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           {printMode === 'single' && (
             <div className="flex items-center gap-4">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">选择标签编号</label>
+                <Label className="text-xs text-gray-600">选择标签编号</Label>
                 <Select value={previewLabel} onValueChange={(val) => setPreviewLabel(val)}>
                   <SelectTrigger className="w-48 px-3 py-1 border border-gray-300 rounded text-sm">
                     <SelectValue placeholder="选择标签" />
@@ -300,7 +301,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           {printMode === 'multi' && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-gray-600">选择标签（已选 {selectedLabels.length} 个）</label>
+                <Label className="text-xs text-gray-600">选择标签（已选 {selectedLabels.length} 个）</Label>
                 <Button onClick={toggleSelectAll} variant="link" size="sm" className="text-xs">
                   {selectedLabels.length === allLabelNumbers.length ? '取消全选' : '全选'}
                 </Button>
@@ -308,12 +309,12 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               <div className="max-h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-white">
                 <div className="grid grid-cols-4 gap-1">
                   {allLabelNumbers.slice(0, 100).map(label => (
-                    <label key={label} className={`flex items-center gap-1 p-1 rounded cursor-pointer text-xs ${
+                    <Label key={label} className={`flex items-center gap-1 p-1 rounded cursor-pointer text-xs ${
                       selectedLabels.includes(label) ? 'bg-blue-100' : 'hover:bg-gray-50'}`}>
                       <Input type="checkbox" checked={selectedLabels.includes(label)}
                         onChange={() => toggleLabel(label)} className="w-3 h-3" />
                       <span className="truncate">{label}</span>
-                    </label>
+                    </Label>
                   ))}
                 </div>
                 {allLabelNumbers.length > 100 && (
@@ -328,7 +329,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             <div className="space-y-2">
               <div className="flex items-center gap-4">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">生成数量</label>
+                  <Label className="text-xs text-gray-600">生成数量</Label>
                   <Input type="number" min="1" max={remainingCount}
                     value={printCount}
                     onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
@@ -350,11 +351,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         {/* 模板选择 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
+            <Label className="text-gray-700">操作人员</Label>
             <div className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50">{currentOperator}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">模板选择</label>
+            <Label className="text-gray-700">模板选择</Label>
             <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
               <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                 <SelectValue placeholder="详情标签" />

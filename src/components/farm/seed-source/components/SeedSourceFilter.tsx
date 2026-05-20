@@ -11,7 +11,7 @@ import { useDictionaryStore, getDictItems } from '../../../../stores/useDictiona
 import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
 import { useUserStore } from '../../../../stores/useUserStore';
 import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -90,7 +90,7 @@ export function SeedSourceFilter({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
+          <Label className="text-gray-700">作物品种</Label>
           <Input
             type="text"
             value={filters.cropName}
@@ -102,7 +102,7 @@ export function SeedSourceFilter({
 
         {/* 种源批号 */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">种源批号</label>
+          <Label className="text-gray-700">种源批号</Label>
           <Input
             type="text"
             value={filters.seedCode}
@@ -114,7 +114,7 @@ export function SeedSourceFilter({
 
         {/* 种源类型 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">种源类型</label>
+          <Label className="text-gray-700">种源类型</Label>
           <Select
             value={filters.sourceType}
             onValueChange={(val) => onChange({ ...filters, sourceType: val })}
@@ -132,7 +132,7 @@ export function SeedSourceFilter({
 
         {/* 供应商 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
+          <Label className="text-gray-700">供应商</Label>
           <Select
             value={filters.supplierName}
             onValueChange={(val) => onChange({ ...filters, supplierName: val })}
@@ -151,7 +151,7 @@ export function SeedSourceFilter({
 
         {/* 状态 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+          <Label className="text-gray-700">状态</Label>
           <Select
             value={filters.status}
             onValueChange={(val) => onChange({ ...filters, status: val })}
@@ -170,7 +170,7 @@ export function SeedSourceFilter({
 
         {/* 入库方式（繁殖途径） */}
         <div className="min-w-[130px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">入库方式</label>
+          <Label className="text-gray-700">入库方式</Label>
           <Select
             value={filters.propagationType || ''}
             onValueChange={(val) => onChange({ ...filters, propagationType: val || undefined })}
@@ -190,7 +190,7 @@ export function SeedSourceFilter({
 
         {/* 繁殖阶段 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">繁殖阶段</label>
+          <Label className="text-gray-700">繁殖阶段</Label>
           <Select
             value={filters.propagationStatus || ''}
             onValueChange={(val) => onChange({ ...filters, propagationStatus: val || undefined })}
@@ -212,7 +212,7 @@ export function SeedSourceFilter({
 
         {/* 采购/入库日期 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">采购/入库日期</label>
+          <Label className="text-gray-700">采购/入库日期</Label>
           <Input
             type="date"
             value={filters.startDate}
@@ -223,7 +223,7 @@ export function SeedSourceFilter({
 
         {/* 创建人 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">创建人</label>
+          <Label className="text-gray-700">创建人</Label>
           <Input
             type="text"
             value={filters.createBy}
@@ -284,7 +284,7 @@ export function SeedSourceFilter({
                   {/* 作物类型 → 作物名称级联 */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">作物类型</label>
+                      <Label className="text-gray-600 text-xs">作物类型</Label>
                       <Select
                         value={filters.cropType || ''}
                         onValueChange={(val) => {
@@ -303,7 +303,7 @@ export function SeedSourceFilter({
                       </Select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">作物名称</label>
+                      <Label className="text-gray-600 text-xs">作物名称</Label>
                       <Input
                         type="text"
                         value={filters.cropName}
@@ -317,7 +317,7 @@ export function SeedSourceFilter({
                   {/* 组织 → 记录人级联 */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">组织</label>
+                      <Label className="text-gray-600 text-xs">组织</Label>
                       <Select
                         value={filters.orgId || ''}
                         onValueChange={(val) => {
@@ -337,7 +337,7 @@ export function SeedSourceFilter({
                       </Select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">记录人</label>
+                      <Label className="text-gray-600 text-xs">记录人</Label>
                       <Select
                         value={filters.recorderId || ''}
                         onValueChange={(val) => updateAdvanced({ recorderId: val || undefined })}
@@ -357,7 +357,7 @@ export function SeedSourceFilter({
 
                   {/* 剩余数量范围 */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">剩余数量范围</label>
+                    <Label className="text-gray-600 text-xs">剩余数量范围</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"

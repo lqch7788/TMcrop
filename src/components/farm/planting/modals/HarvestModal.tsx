@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Label } from '@/components/ui/label';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
@@ -117,7 +118,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
           <div className="grid grid-cols-2 gap-4">
             {/* 是否采收 */}
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">是否采收</label>
+              <Label className="text-gray-700">是否采收</Label>
               <Select
                 value={isHarvest}
                 onValueChange={(val) => handleIsHarvestChange(val as 'yes' | 'no')}
@@ -135,7 +136,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">采收日期</label>
+              <Label className="text-gray-700">采收日期</Label>
               <Input
                 type="date"
                 value={formData.harvestDate}
@@ -148,7 +149,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">采收产量</label>
+              <Label className="text-gray-700">采收产量</Label>
               <Input
                 type="number"
                 value={formData.harvestYield || ''}
@@ -158,7 +159,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <Label className="text-gray-700">备注</Label>
               <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

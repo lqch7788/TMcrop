@@ -7,6 +7,7 @@ import { Search, Eye, Package, Calendar, MapPin, ArrowRight, CheckCircle, Barcod
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '@/types/crop';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { CROP_INSTANCE_STATUS_MAP, SOURCE_ORIGIN_MAP } from '@/constants/cropConstants';
 import { Input } from '../../ui/input';
 
@@ -88,9 +89,9 @@ export default function InstancePage() {
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               搜索实例编码/作物品种
-            </label>
+            </Label>
             <Input
               type="text"
               value={searchCode}
