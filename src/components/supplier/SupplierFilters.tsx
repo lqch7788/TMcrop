@@ -4,6 +4,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { useDictionaryStore, useRegionStore } from '../../stores';
 
 interface SupplierFiltersProps {
@@ -97,7 +99,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           {/* 供应商名称 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">供应商名称</label>
-            <input
+            <Input
               type="text"
               value={filters.name}
               onChange={(e) => onFilterChange('name', e.target.value)}
@@ -109,59 +111,75 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           {/* 组织 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">所属组织</label>
-            <select
+            <Select
               value={filters.organization}
-              onChange={(e) => onFilterChange('organization', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => onFilterChange('organization', val)}
             >
-              {organizationOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                {organizationOptions.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 供应商类型 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">供应商类型</label>
-            <select
+            <Select
               value={filters.type}
-              onChange={(e) => onFilterChange('type', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => onFilterChange('type', val)}
             >
-              {typeOptions.map(opt => (
-                <option key={opt} value={opt}>
-                  {opt === '全部' ? '全部类型' : getSupplierTypeName(opt)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="全部类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {typeOptions.map(opt => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt === '全部' ? '全部类型' : getSupplierTypeName(opt)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 供应商属性 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">供应商属性</label>
-            <select
+            <Select
               value={filters.supplierAttribute}
-              onChange={(e) => onFilterChange('supplierAttribute', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => onFilterChange('supplierAttribute', val)}
             >
-              {attributeOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                {attributeOptions.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 供应商状态 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">供应商状态</label>
-            <select
+            <Select
               value={filters.status}
-              onChange={(e) => onFilterChange('status', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => onFilterChange('status', val)}
             >
-              {statusOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -195,7 +213,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           {/* 联系人 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">联系人</label>
-            <input
+            <Input
               type="text"
               value={filters.contact || ''}
               onChange={(e) => onFilterChange('contact', e.target.value)}
@@ -207,54 +225,66 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           {/* 区域级联：省 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">省份</label>
-            <select
+            <Select
               value={(filters as any).province || ''}
-              onChange={(e) => handleProvinceChange(e.target.value)}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => handleProvinceChange(val)}
             >
-              <option value="">全部</option>
-              {provinces.map(p => (
-                <option key={p.id} value={p.name}>{p.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部</SelectItem>
+                {provinces.map(p => (
+                  <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 区域级联：市 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">城市</label>
-            <select
+            <Select
               value={(filters as any).city || ''}
-              onChange={(e) => handleCityChange(e.target.value)}
+              onValueChange={(val) => handleCityChange(val)}
               disabled={!(filters as any).province}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
             >
-              <option value="">全部</option>
-              {cityOptions.filter(c => c.value !== '').map(c => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部</SelectItem>
+                {cityOptions.filter(c => c.value !== '').map(c => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 区域级联：区 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">区县</label>
-            <select
+            <Select
               value={(filters as any).district || ''}
-              onChange={(e) => onFilterChange('district' as any, e.target.value)}
+              onValueChange={(val) => onFilterChange('district' as any, val)}
               disabled={!(filters as any).city}
-              className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
             >
-              <option value="">全部</option>
-              {districtOptions.filter(d => d.value !== '').map(d => (
-                <option key={d.value} value={d.value}>{d.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">全部</SelectItem>
+                {districtOptions.filter(d => d.value !== '').map(d => (
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 供应商编号 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</label>
-            <input
+            <Input
               type="text"
               value={filters.code || ''}
               onChange={(e) => onFilterChange('code', e.target.value)}

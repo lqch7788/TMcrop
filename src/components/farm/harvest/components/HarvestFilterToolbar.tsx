@@ -5,6 +5,8 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { GRADE_OPTIONS } from '../../../../constants/cropConstants';
 
 interface HarvestFilterToolbarProps {
@@ -42,7 +44,7 @@ export function HarvestFilterToolbar({
         {/* 采收单号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">采收单号</label>
-          <input
+          <Input
             type="text"
             value={searchFilters.harvestCode}
             onChange={(e) => onFiltersChange({ ...searchFilters, harvestCode: e.target.value })}
@@ -54,7 +56,7 @@ export function HarvestFilterToolbar({
         {/* 批次信息 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">批次信息</label>
-          <input
+          <Input
             type="text"
             value={searchFilters.batchCode}
             onChange={(e) => onFiltersChange({ ...searchFilters, batchCode: e.target.value })}
@@ -66,22 +68,25 @@ export function HarvestFilterToolbar({
         {/* 采收区域 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">采收区域</label>
-          <select
+          <Select
             value={searchFilters.greenhouseId}
-            onChange={(e) => onFiltersChange({ ...searchFilters, greenhouseId: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...searchFilters, greenhouseId: val })}
           >
-            <option value="">全部</option>
-            {greenhouses.map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {greenhouses.map(g => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
-          <input
+          <Input
             type="text"
             value={searchFilters.cropName}
             onChange={(e) => onFiltersChange({ ...searchFilters, cropName: e.target.value })}
@@ -93,48 +98,57 @@ export function HarvestFilterToolbar({
         {/* 品质等级（使用共享常量 GRADE_OPTIONS） */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">品质等级</label>
-          <select
+          <Select
             value={searchFilters.grade}
-            onChange={(e) => onFiltersChange({ ...searchFilters, grade: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...searchFilters, grade: val })}
           >
-            <option value="">全部</option>
-            {GRADE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {GRADE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 入库仓库 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">入库仓库</label>
-          <select
+          <Select
             value={searchFilters.warehouseId}
-            onChange={(e) => onFiltersChange({ ...searchFilters, warehouseId: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...searchFilters, warehouseId: val })}
           >
-            <option value="">全部</option>
-            {warehouseOptions.map(w => (
-              <option key={w.value} value={w.value}>{w.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {warehouseOptions.map(w => (
+                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* TODO: 状态选项含 'harvesting' 不在共享常量 HARVEST_STATUS_MAP 中，暂保留本地列表 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
+          <Select
             value={searchFilters.status}
-            onChange={(e) => onFiltersChange({ ...searchFilters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...searchFilters, status: val })}
           >
-            <option value="">全部</option>
-            <option value="pending">待采收</option>
-            <option value="harvesting">采收中</option>
-            <option value="harvested">已采收</option>
-            <option value="graded">已分级</option>
-            <option value="stored">已入库</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">待采收</SelectItem>
+              <SelectItem value="harvesting">采收中</SelectItem>
+              <SelectItem value="harvested">已采收</SelectItem>
+              <SelectItem value="graded">已分级</SelectItem>
+              <SelectItem value="stored">已入库</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 按钮行 - 放同一行后面 */}

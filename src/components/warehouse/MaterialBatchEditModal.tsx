@@ -1,6 +1,8 @@
 import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface MaterialBatchEditModalProps {
   isOpen: boolean;
@@ -49,20 +51,21 @@ export function MaterialBatchEditModal({
 
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">选择物料</label>
-        <select
-          value={currentMaterialId || ''}
-          onChange={(e) => {
-            const idx = selectedRows.indexOf(Number(e.target.value));
+        <Select value={String(currentMaterialId)} onValueChange={(val) => {
+            const idx = selectedRows.indexOf(Number(val));
             onMaterialSelect(idx >= 0 ? idx : 0);
-          }}
-          className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-        >
-          {selectedMaterialsList.map((material, idx) => (
-            <option key={material.id} value={material.id}>
-              {material.name} ({material.code}) {batchEditedMaterials[material.id] && <span className="bg-green-100 text-green-700">✅ 已编辑</span>}
-            </option>
-          ))}
-        </select>
+          }}>
+          <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+            <SelectValue placeholder="请选择物料" />
+          </SelectTrigger>
+          <SelectContent>
+            {selectedMaterialsList.map((material, idx) => (
+              <SelectItem key={material.id} value={String(material.id)}>
+                {material.name} ({material.code}){batchEditedMaterials[material.id] ? ' ✅ 已编辑' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-3">
@@ -77,21 +80,25 @@ export function MaterialBatchEditModal({
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">数据状态</div>
-            <select
+            <Select
               value={currentEditedData.dataStatus || '启用'}
-              onChange={(e) => onFieldChange(currentMaterialId, 'dataStatus', e.target.value)}
-              className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+              onValueChange={(val) => onFieldChange(currentMaterialId, 'dataStatus', val)}
             >
-              <option value="启用">启用</option>
-              <option value="停用">停用</option>
-            </select>
+              <SelectTrigger className="w-full h-8 px-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500">
+                <SelectValue placeholder="启用" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="启用">启用</SelectItem>
+                <SelectItem value="停用">停用</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">库存数量</label>
-            <input
+            <Input
               type="number"
               value={currentEditedData.quantity ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'quantity', Number(e.target.value))}
@@ -100,7 +107,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">最低库存</label>
-            <input
+            <Input
               type="number"
               value={currentEditedData.minStock ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'minStock', Number(e.target.value))}
@@ -109,7 +116,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">最高库存</label>
-            <input
+            <Input
               type="number"
               value={currentEditedData.maxStock ?? ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'maxStock', Number(e.target.value))}
@@ -121,7 +128,7 @@ export function MaterialBatchEditModal({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">单价（元）</label>
-            <input
+            <Input
               type="text"
               value={(currentEditedData.price || '').toString().replace('元', '')}
               onChange={(e) => onFieldChange(currentMaterialId, 'price', e.target.value)}
@@ -130,7 +137,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">单位</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.unit || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'unit', e.target.value)}
@@ -139,7 +146,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">存放位置</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.location || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'location', e.target.value)}
@@ -150,7 +157,7 @@ export function MaterialBatchEditModal({
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">供应商</label>
-          <input
+          <Input
             type="text"
             value={currentEditedData.supplier || ''}
             onChange={(e) => onFieldChange(currentMaterialId, 'supplier', e.target.value)}
@@ -161,7 +168,7 @@ export function MaterialBatchEditModal({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">规格型号</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.specification || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'specification', e.target.value)}
@@ -170,7 +177,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">条形码</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.barcode || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'barcode', e.target.value)}
@@ -179,7 +186,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">批次号</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.batchNo || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'batchNo', e.target.value)}
@@ -191,7 +198,7 @@ export function MaterialBatchEditModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">生产日期</label>
-            <input
+            <Input
               type="date"
               value={currentEditedData.productionDate || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'productionDate', e.target.value)}
@@ -200,7 +207,7 @@ export function MaterialBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">有效期至</label>
-            <input
+            <Input
               type="date"
               value={currentEditedData.expiryDate || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'expiryDate', e.target.value)}

@@ -4,6 +4,8 @@ import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Tra
 import { X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 export interface InboundMaterial {
   id: number;
@@ -353,7 +355,7 @@ export function MaterialInboundTab({
           <div className="flex-1 grid grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">入库单号</label>
-              <input
+              <Input
                 type="text"
                 value={inboundSearchCode}
                 onChange={(e) => setInboundSearchCode(e.target.value)}
@@ -363,7 +365,7 @@ export function MaterialInboundTab({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-              <input
+              <Input
                 type="text"
                 value={inboundSearchSupplier}
                 onChange={(e) => setInboundSearchSupplier(e.target.value)}
@@ -373,20 +375,21 @@ export function MaterialInboundTab({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-              <select
-                value={inboundSearchStatus}
-                onChange={(e) => setInboundSearchStatus(e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">全部</option>
-                <option value="pending">待审核</option>
-                <option value="completed">已完成</option>
-                <option value="voided">已作废</option>
-              </select>
+              <Select value={inboundSearchStatus} onValueChange={(val) => setInboundSearchStatus(val)}>
+                <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">全部</SelectItem>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="completed">已完成</SelectItem>
+                  <SelectItem value="voided">已作废</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
-              <input
+              <Input
                 type="text"
                 value={inboundSearchMaterialName}
                 onChange={(e) => setInboundSearchMaterialName(e.target.value)}
@@ -396,7 +399,7 @@ export function MaterialInboundTab({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">物料编码</label>
-              <input
+              <Input
                 type="text"
                 value={inboundSearchMaterialCode}
                 onChange={(e) => setInboundSearchMaterialCode(e.target.value)}
@@ -513,7 +516,7 @@ export function MaterialInboundTab({
               <tr>
                 {(editMode || deleteMode || exportMode) && (
                   <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={isAllSelected}
                       onChange={handleSelectAll}
@@ -539,7 +542,7 @@ export function MaterialInboundTab({
                         {deleteMode && record.status !== 'pending' ? (
                           <span className="text-gray-300 text-xs">—</span>
                         ) : (
-                          <input
+                          <Input
                             type="checkbox"
                             checked={selectedRows.includes(record.id)}
                             onChange={() => handleSelectRow(record.id)}
@@ -635,15 +638,16 @@ export function MaterialInboundTab({
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+            <Select value={String(pageSize)} onValueChange={(val) => { onPageSizeChange(Number(val)); onPageChange(1); }}>
+              <SelectTrigger className="h-8 px-2 py-1 border border-gray-200 rounded text-sm">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
             <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">

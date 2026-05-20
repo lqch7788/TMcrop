@@ -11,6 +11,8 @@ import { Button } from '../../../ui/button';
 import { SeedSource } from '../../../../types/crop';
 import { printLabel } from '../../../../services/seedSourceService';
 import { useUserStore } from '../../../../stores';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -241,7 +243,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           <div className="flex gap-4 mb-4">
             {(['single', 'multi', 'batch'] as const).map(mode => (
               <label key={mode} className="flex items-center gap-2">
-                <input type="radio" name="printMode" value={mode}
+                <Input type="radio" name="printMode" value={mode}
                   checked={printMode === mode}
                   onChange={() => { setPrintMode(mode); setSelectedLabels([]); }}
                   className="w-4 h-4 text-emerald-600" />
@@ -257,10 +259,14 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             <div className="flex items-center gap-4">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">选择标签编号</label>
-                <select value={previewLabel} onChange={(e) => setPreviewLabel(e.target.value)}
-                  className="w-48 px-3 py-1 border border-gray-300 rounded text-sm">
-                  {allLabelNumbers.map(label => <option key={label} value={label}>{label}</option>)}
-                </select>
+                <Select value={previewLabel} onValueChange={(val) => setPreviewLabel(val)}>
+                  <SelectTrigger className="w-48 px-3 py-1 border border-gray-300 rounded text-sm">
+                    <SelectValue placeholder="选择标签" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allLabelNumbers.map(label => <SelectItem key={label} value={label}>{label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="text-xs text-gray-500">共 {allLabelNumbers.length} 个标签</div>
             </div>
@@ -280,7 +286,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                   {allLabelNumbers.slice(0, 100).map(label => (
                     <label key={label} className={`flex items-center gap-1 p-1 rounded cursor-pointer text-xs ${
                       selectedLabels.includes(label) ? 'bg-blue-100' : 'hover:bg-gray-50'}`}>
-                      <input type="checkbox" checked={selectedLabels.includes(label)}
+                      <Input type="checkbox" checked={selectedLabels.includes(label)}
                         onChange={() => toggleLabel(label)} className="w-3 h-3" />
                       <span className="truncate">{label}</span>
                     </label>
@@ -298,7 +304,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             <div className="flex items-center gap-4">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">生成数量</label>
-                <input type="number" min="1" max={remainingCount}
+                <Input type="number" min="1" max={remainingCount}
                   value={printCount}
                   onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
                   className="w-24 px-3 py-1 border border-gray-300 rounded text-sm" />
@@ -318,12 +324,16 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">模板选择</label>
-            <select value={template} onChange={(e) => setTemplate(e.target.value as 'small' | 'large' | 'detail')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="small">小标签</option>
-              <option value="large">大标签</option>
-              <option value="detail">详情标签</option>
-            </select>
+            <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <SelectValue placeholder="详情标签" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">小标签</SelectItem>
+                <SelectItem value="large">大标签</SelectItem>
+                <SelectItem value="detail">详情标签</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

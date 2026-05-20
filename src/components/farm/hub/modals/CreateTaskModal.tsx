@@ -6,6 +6,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { TextArea } from '../../../ui/TextArea';
 import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
@@ -485,7 +488,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">任务编号</label>
                 <div className="flex items-center gap-2">
-                  <input
+                  <Input
                     type="text"
                     value={newTask.taskId || ''}
                     onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
@@ -505,7 +508,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">关联生产批次</label>
                 <div className="relative">
-                  <input
+                  <Input
                     type="text"
                     value={newTask.batchCode || ''}
                     onChange={(e) => {
@@ -594,7 +597,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <input
+                          <Input
                             type="checkbox"
                             checked={(newTask.fields || []).includes(f.name)}
                             onChange={(e) => {
@@ -613,7 +616,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <input
+                        <Input
                           type="checkbox"
                           checked={(newTask.fields || []).includes('other')}
                           onChange={(e) => {
@@ -673,7 +676,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <input
+                          <Input
                             type="checkbox"
                             checked={(newTask.crops || []).includes(crop)}
                             onChange={(e) => {
@@ -692,7 +695,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-t border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <input
+                        <Input
                           type="checkbox"
                           checked={(newTask.crops || []).includes('other')}
                           onChange={(e) => {
@@ -715,7 +718,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 {newTask.crops?.includes('other') && (
                   <div className="mt-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">作物备注 <span className="text-red-500">*</span></label>
-                    <input
+                    <Input
                       type="text"
                       value={newTask.cropRemarks || ''}
                       onChange={(e) => setNewTask({ ...newTask, cropRemarks: e.target.value })}
@@ -769,7 +772,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <input
+                        <Input
                           type="checkbox"
                           checked={newTask.types.includes(t.value)}
                           onChange={(e) => {
@@ -795,7 +798,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             {newTask.types.includes('other') && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">其他任务备注 <span className="text-red-500">*</span></label>
-                <input
+                <Input
                   type="text"
                   value={newTask.typeRemarks || ''}
                   onChange={(e) => setNewTask({ ...newTask, typeRemarks: e.target.value })}
@@ -813,7 +816,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">作业标准 (SOP)</label>
-              <textarea
+              <TextArea
                 value={newTask.sopContent}
                 onChange={(e) => setNewTask({ ...newTask, sopContent: e.target.value })}
                 rows={4}
@@ -862,7 +865,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 ) : (
                   newTask.materials.map((m, i) => (
                     <div key={`mat-${i}`} className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={m.name}
                         onChange={(e) => {
@@ -873,7 +876,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
                         placeholder="物资名称"
                       />
-                      <input
+                      <Input
                         type="text"
                         inputMode="decimal"
                         value={m.qty}
@@ -894,24 +897,28 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         }}
                         className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
                       />
-                      <select
+                      <Select
                         value={m.unit}
-                        onChange={(e) => {
+                        onValueChange={(val) => {
                           const newMaterials = [...(newTask.materials || [])];
-                          newMaterials[i].unit = e.target.value;
+                          newMaterials[i].unit = val;
                           setNewTask({ ...newTask, materials: newMaterials });
                         }}
-                        className="px-2 py-1 border border-gray-200 rounded text-sm"
                       >
-                        <option value="个">个</option>
-                        <option value="件">件</option>
-                        <option value="kg">kg</option>
-                        <option value="g">g</option>
-                        <option value="L">L</option>
-                        <option value="mL">mL</option>
-                        <option value="袋">袋</option>
-                        <option value="箱">箱</option>
-                      </select>
+                        <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+                          <SelectValue placeholder="个" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="个">个</SelectItem>
+                          <SelectItem value="件">件</SelectItem>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="g">g</SelectItem>
+                          <SelectItem value="L">L</SelectItem>
+                          <SelectItem value="mL">mL</SelectItem>
+                          <SelectItem value="袋">袋</SelectItem>
+                          <SelectItem value="箱">箱</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -943,7 +950,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 ) : (
                   newTask.tools.map((t, i) => (
                     <div key={`tool-${i}`} className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={t.name}
                         onChange={(e) => {
@@ -954,7 +961,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
                         placeholder="工具名称"
                       />
-                      <input
+                      <Input
                         type="text"
                         inputMode="decimal"
                         value={t.qty}
@@ -975,21 +982,25 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                         }}
                         className="w-16 px-2 py-1 border border-gray-200 rounded text-sm"
                       />
-                      <select
+                      <Select
                         value={t.unit}
-                        onChange={(e) => {
+                        onValueChange={(val) => {
                           const newTools = [...(newTask.tools || [])];
-                          newTools[i].unit = e.target.value;
+                          newTools[i].unit = val;
                           setNewTask({ ...newTask, tools: newTools });
                         }}
-                        className="px-2 py-1 border border-gray-200 rounded text-sm"
                       >
-                        <option value="把">把</option>
-                        <option value="个">个</option>
-                        <option value="台">台</option>
-                        <option value="套">套</option>
-                        <option value="件">件</option>
-                      </select>
+                        <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+                          <SelectValue placeholder="把" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="把">把</SelectItem>
+                          <SelectItem value="个">个</SelectItem>
+                          <SelectItem value="台">台</SelectItem>
+                          <SelectItem value="套">套</SelectItem>
+                          <SelectItem value="件">件</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1016,7 +1027,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             {/* 资源备注 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">备注（可选）</label>
-              <textarea
+              <TextArea
                 value={newTask.toolsRemarks || ''}
                 onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
                 placeholder="补充说明资源相关要求"
@@ -1029,26 +1040,30 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               {/* 工作制 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">工作制</label>
-                <select
-                  value={newTask.workHoursPerDay}
-                  onChange={(e) => {
-                    const newWorkHours = Number(e.target.value);
+                <Select
+                  value={String(newTask.workHoursPerDay)}
+                  onValueChange={(val) => {
+                    const newWorkHours = Number(val);
                     setNewTask({ ...newTask, workHoursPerDay: newWorkHours });
                     if ((newTask.estimatedHours || 0) >= newWorkHours) {
                       setNewTask({ ...newTask, workHoursPerDay: newWorkHours, estimatedHours: newWorkHours - 1 });
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value={8}>8小时/天</option>
-                  <option value={10}>10小时/天</option>
-                  <option value={12}>12小时/天</option>
-                </select>
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectValue placeholder="8小时/天" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="8">8小时/天</SelectItem>
+                    <SelectItem value="10">10小时/天</SelectItem>
+                    <SelectItem value="12">12小时/天</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {/* 计划开始日期 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">开始日期 <span className="text-red-500">*</span></label>
-                <input
+                <Input
                   type="date"
                   value={newTask.planStart?.split(' ')[0] || ''}
                   onChange={(e) => {
@@ -1061,23 +1076,27 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               {/* 开始时间 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
-                <select
+                <Select
                   value={newTask.planStart?.split(' ')[1] || '08:00'}
-                  onChange={(e) => {
+                  onValueChange={(val) => {
                     const datePart = newTask.planStart?.split(' ')[0] || '';
-                    setNewTask({ ...newTask, planStart: datePart + ' ' + e.target.value });
+                    setNewTask({ ...newTask, planStart: datePart + ' ' + val });
                   }}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  {[7,8,9,10,11,12,13,14,15,16,17,18,19].map(h => (
-                    <option key={h} value={`${String(h).padStart(2, '0')}:00`}>{String(h).padStart(2, '0')}:00</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectValue placeholder="08:00" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[7,8,9,10,11,12,13,14,15,16,17,18,19].map(h => (
+                      <SelectItem key={h} value={`${String(h).padStart(2, '0')}:00`}>{String(h).padStart(2, '0')}:00</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {/* 天数 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">天数</label>
-                <input
+                <Input
                   type="text"
                   inputMode="numeric"
                   value={newTask.estimatedDays || 0}
@@ -1092,7 +1111,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               {/* 小时 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">小时 <span className="text-xs text-gray-400">(最大{(newTask.workHoursPerDay || 8) - 1})</span></label>
-                <input
+                <Input
                   type="text"
                   inputMode="numeric"
                   value={newTask.estimatedHours || 0}
@@ -1127,38 +1146,46 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
-              <select
+              <Select
                 value={newTask.priority}
-                onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setNewTask({ ...newTask, priority: val })}
               >
-                <option value="normal">普通</option>
-                <option value="high">高</option>
-                <option value="urgent">紧急</option>
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="普通" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">普通</SelectItem>
+                  <SelectItem value="high">高</SelectItem>
+                  <SelectItem value="urgent">紧急</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {/* 班组选择（数据来自农事管理-班组分配，选择后自动提示该班组成员） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 班组 <span className="text-xs text-gray-400">（来自农事管理-班组分配）</span>
               </label>
-              <select
+              <Select
                 value={newTask.teamId || ''}
-                onChange={(e) => {
-                  const selectedTeam = teams.find(t => t.id === e.target.value);
+                onValueChange={(val) => {
+                  const selectedTeam = teams.find(t => t.id === val);
                   setNewTask({
                     ...newTask,
-                    teamId: e.target.value,
+                    teamId: val,
                     teamName: selectedTeam?.name || '',
                   });
                 }}
-                className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
               >
-                <option value="">不关联班组（直接选人）</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">
+                  <SelectValue placeholder="不关联班组（直接选人）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不关联班组（直接选人）</SelectItem>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>{team.name}（{team.memberCount}人 - {team.workZone || '未分配区域'}）</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {newTask.teamId && (
                 <p className="text-xs text-blue-600 mt-1">
                   已选班组：{newTask.teamName}，请在下方选择该班组成员作为执行人
@@ -1168,16 +1195,20 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
             {/* 执行人选择 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">执行人</label>
-              <select
+              <Select
                 value={newTask.assignee || ''}
-                onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setNewTask({ ...newTask, assignee: val })}
               >
-                <option value="">请选择执行人</option>
-                {responsiblePersons.map(person => (
-                  <option key={person.code || person.name} value={person.name}>{person.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择执行人" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择执行人</SelectItem>
+                  {responsiblePersons.map(person => (
+                    <SelectItem key={person.code || person.name} value={person.name}>{person.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-bold text-red-600 mb-2">必填反馈 <span className="text-red-500">*</span></label>
@@ -1197,7 +1228,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                       key={item.key}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-gray-100 border-2 border-emerald-300' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'}`}
                     >
-                      <input
+                      <Input
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => {

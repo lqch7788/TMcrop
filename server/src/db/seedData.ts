@@ -2656,6 +2656,24 @@ function seedSystemConfigs() {
     { id: 'cfg-031', config_key: 'task_reward_multiplier', config_value: '1.0', config_type: 'number', category: 'business', description: '工序奖励系数' },
     { id: 'cfg-032', config_key: 'seedling_survival_threshold', config_value: '85', config_type: 'number', category: 'business', description: '育苗成活率阈值（%）' },
     { id: 'cfg-033', config_key: 'harvest_cycle_days', config_value: '7', config_type: 'number', category: 'business', description: '采收周期（天）' },
+
+    // 界面设置（旧 TAB 还原）
+    { id: 'cfg-040', config_key: 'theme_color', config_value: 'emerald', config_type: 'string', category: 'ui', description: '系统主题色' },
+    { id: 'cfg-041', config_key: 'page_size', config_value: '10', config_type: 'number', category: 'ui', description: '列表默认分页大小' },
+
+    // 功能设置（旧 TAB 还原）
+    { id: 'cfg-042', config_key: 'enable_notifications', config_value: 'true', config_type: 'boolean', category: 'feature', description: '是否启用系统通知' },
+    { id: 'cfg-043', config_key: 'enable_export', config_value: 'true', config_type: 'boolean', category: 'feature', description: '是否启用数据导出功能' },
+
+    // 演示设置（旧 TAB 还原）
+    { id: 'cfg-044', config_key: 'demo_mode', config_value: 'true', config_type: 'boolean', category: 'demo', description: '是否启用演示模式' },
+    { id: 'cfg-045', config_key: 'show_tutorial', config_value: 'true', config_type: 'boolean', category: 'demo', description: '是否显示新手引导' },
+
+    // 系统设置补充（旧 TAB 还原）
+    { id: 'cfg-046', config_key: 'system_name', config_value: '智慧种植生产管理系统', config_type: 'string', category: 'system', description: '系统显示名称' },
+    { id: 'cfg-047', config_key: 'system_version', config_value: 'V1.1', config_type: 'string', category: 'system', description: '当前系统版本' },
+    { id: 'cfg-048', config_key: 'auto_save_interval', config_value: '5000', config_type: 'number', category: 'system', description: '自动保存间隔（毫秒）' },
+    { id: 'cfg-049', config_key: 'data_retention_days', config_value: '365', config_type: 'number', category: 'system', description: '本地数据保留天数' },
   ];
 
   for (const config of configs) {

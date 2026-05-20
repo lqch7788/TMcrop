@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '@/components/ui/button';
+import { TextArea } from '../../../ui/TextArea';
 import { CheckCircle, XCircle, Clock, User, MapPin, Camera, Mic, FileText } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 
@@ -253,7 +254,7 @@ export function TaskAcceptanceModal({
           ) : (
             <div className="bg-red-50 rounded-lg p-4">
               <h5 className="font-medium text-red-700 mb-3">驳回原因（必填）</h5>
-              <textarea
+              <TextArea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="请输入驳回原因，说明需要返工的具体问题..."

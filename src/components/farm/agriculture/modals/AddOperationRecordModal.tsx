@@ -6,6 +6,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Modal } from '../../../ui/Modal';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
@@ -175,46 +178,55 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             <label className="block text-sm font-medium text-gray-700 mb-1">
               操作类型 <span className="text-red-500">*</span>
             </label>
-            <select
+            <Select
               value={formData.operationType}
-              onChange={(e) => setFormData({ ...formData, operationType: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => setFormData({ ...formData, operationType: val })}
             >
-              <option value="">请选择</option>
-              {FARM_OPERATION_TYPES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {FARM_OPERATION_TYPES.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               操作区域 <span className="text-red-500">*</span>
             </label>
-            <select
+            <Select
               value={formData.greenhouseId}
-              onChange={(e) => setFormData({ ...formData, greenhouseId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => setFormData({ ...formData, greenhouseId: val })}
             >
-              <option value="">请选择</option>
-              {greenhouseOptions.map(g => (
-                <option key={g.value} value={g.value}>{g.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {greenhouseOptions.map(g => (
+                  <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               操作人员 <span className="text-red-500">*</span>
             </label>
-            <select
+            <Select
               value={formData.operatorId}
-              onChange={(e) => setFormData({ ...formData, operatorId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => setFormData({ ...formData, operatorId: val })}
             >
-              <option value="">请选择</option>
-              {operatorOptions.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {operatorOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -222,7 +234,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
-            <input
+            <Input
               type="text"
               value={formData.cropName}
               onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
@@ -232,7 +244,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
-            <input
+            <Input
               type="text"
               value={formData.variety}
               onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
@@ -244,7 +256,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             <label className="block text-sm font-medium text-gray-700 mb-1">
               操作日期 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="date"
               value={formData.operationDate}
               onChange={(e) => setFormData({ ...formData, operationDate: e.target.value })}
@@ -257,7 +269,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         <div className="grid grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
-            <input
+            <Input
               type="time"
               value={formData.startTime}
               onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
@@ -266,7 +278,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
-            <input
+            <Input
               type="time"
               value={formData.endTime}
               onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
@@ -275,7 +287,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">工作量</label>
-            <input
+            <Input
               type="number"
               value={formData.workload}
               onChange={(e) => setFormData({ ...formData, workload: e.target.value })}
@@ -285,15 +297,19 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
-            <select
+            <Select
               value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => setFormData({ ...formData, unit: val })}
             >
-              {workloadUnitOptions.map(u => (
-                <option key={u.value} value={u.value}>{u.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue placeholder="选择单位" />
+              </SelectTrigger>
+              <SelectContent>
+                {workloadUnitOptions.map(u => (
+                  <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -322,7 +338,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
                     key={m}
                     className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
                   >
-                    <input
+                    <Input
                       type="checkbox"
                       checked={formData.materials.includes(m)}
                       onChange={() => toggleMaterial(m)}
@@ -339,7 +355,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         {/* 备注 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             placeholder="请输入备注信息"

@@ -10,6 +10,8 @@ import {
 } from 'recharts';
 import { useFertilizerStore } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface FertilizerStatsPanelProps {
   filters: Record<string, string>;
@@ -103,7 +105,7 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
         <div className="flex items-center gap-4 mt-3 flex-wrap">
           <div>
             <label className="text-xs text-gray-500 mr-2">开始日期</label>
-            <input
+            <Input
               type="date"
               value={timeRange.start}
               onChange={(e) => setTimeRange((p) => ({ ...p, start: e.target.value }))}
@@ -112,7 +114,7 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
           </div>
           <div>
             <label className="text-xs text-gray-500 mr-2">结束日期</label>
-            <input
+            <Input
               type="date"
               value={timeRange.end}
               onChange={(e) => setTimeRange((p) => ({ ...p, end: e.target.value }))}
@@ -121,15 +123,19 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
           </div>
           <div>
             <label className="text-xs text-gray-500 mr-2">分组维度</label>
-            <select
+            <Select
               value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value as any)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(val) => setGroupBy(val as any)}
             >
-              {groupByOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 w-auto">
+                <SelectValue placeholder="肥料类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {groupByOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

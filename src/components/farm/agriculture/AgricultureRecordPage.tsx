@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 import {
   Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
   X, Pencil, Trash2, Sprout, Droplets, AlertTriangle
@@ -394,7 +395,7 @@ export default function AgricultureRecordPage() {
               <tr>
                 {batchDeleteMode && (
                   <th className="px-4 py-3 text-center text-sm font-semibold w-12">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
                       onChange={handleSelectAll}
@@ -429,7 +430,7 @@ export default function AgricultureRecordPage() {
                     <tr className="hover:bg-blue-50 transition-colors">
                       {batchDeleteMode && (
                         <td className="px-4 py-3 text-center">
-                          <input
+                          <Input
                             type="checkbox"
                             checked={selectedRows.includes(record.id)}
                             onChange={() => handleSelectRow(record.id)}

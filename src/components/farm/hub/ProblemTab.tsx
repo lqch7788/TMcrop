@@ -22,6 +22,7 @@ import {
   CheckCircle, Plus, Trash2, Download, Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
@@ -755,7 +756,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                         isChecked ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
                       }`}
                     >
-                      <input
+                      <Input
                         type="checkbox"
                         checked={isChecked}
                         onChange={handleToggle}
@@ -870,7 +871,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               自定义
             </Button>
             {expectedCompletion === 'custom' && (
-              <input
+              <Input
                 type="date"
                 value={customDueDate}
                 onChange={(e) => setCustomDueDate(e.target.value)}
@@ -901,7 +902,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                     : 'border-gray-200 bg-white hover:border-emerald-200'
                 }`}
               >
-                <input
+                <Input
                   type="checkbox"
                   checked={requiredFeedback.includes(item.key)}
                   onChange={(e) => {

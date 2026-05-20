@@ -7,6 +7,9 @@ import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { TextArea } from '../../../ui/TextArea';
 
 interface ConfigFieldRendererProps {
   /** 配置项定义 */
@@ -45,7 +48,7 @@ export function ConfigFieldRenderer({
 
   // ========== 渲染文本输入 ==========
   const renderTextInput = () => (
-    <input
+    <Input
       type="text"
       value={(value as string) || ''}
       onChange={e => handleChange(e.target.value)}
@@ -58,7 +61,7 @@ export function ConfigFieldRenderer({
   // ========== 渲染数字输入（纯人工输入，保留2位有效数字，无上下箭头） ==========
   const renderNumberInput = () => (
     <div className="flex items-center gap-2">
-      <input
+      <Input
         type="text"
         inputMode="decimal"
         value={value as number ?? ''}
@@ -95,19 +98,23 @@ export function ConfigFieldRenderer({
 
   // ========== 渲染下拉选择 ==========
   const renderSelect = () => (
-    <select
+    <Select
       value={(value as string) || ''}
-      onChange={e => handleChange(e.target.value)}
+      onValueChange={val => handleChange(val)}
       disabled={disabled}
-      className={baseInputClass}
     >
-      <option value="">请选择</option>
-      {field.options?.map(opt => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className={baseInputClass}>
+        <SelectValue placeholder="请选择" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="">请选择</SelectItem>
+        {field.options?.map(opt => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
   // ========== 渲染多选 ==========
@@ -126,7 +133,7 @@ export function ConfigFieldRenderer({
                   : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <input
+              <Input
                 type="checkbox"
                 checked={isSelected}
                 onChange={e => {
@@ -149,7 +156,7 @@ export function ConfigFieldRenderer({
 
   // ========== 渲染多行文本 ==========
   const renderTextarea = () => (
-    <textarea
+    <TextArea
       value={(value as string) || ''}
       onChange={e => handleChange(e.target.value)}
       placeholder={field.placeholder}
@@ -173,7 +180,7 @@ export function ConfigFieldRenderer({
         return (
           <div key={fieldDef.key} className="flex-1 min-w-[120px]">
             <label className="block text-xs text-gray-500 mb-1">{fieldDef.label}</label>
-            <input
+            <Input
               type="text"
               value={fieldValue as string}
               onChange={e => onEntryChange(fieldDef.key, e.target.value)}
@@ -188,19 +195,23 @@ export function ConfigFieldRenderer({
         return (
           <div key={fieldDef.key} className="flex-1 min-w-[120px]">
             <label className="block text-xs text-gray-500 mb-1">{fieldDef.label}</label>
-            <select
+            <Select
               value={fieldValue as string}
-              onChange={e => onEntryChange(fieldDef.key, e.target.value)}
+              onValueChange={val => onEntryChange(fieldDef.key, val)}
               disabled={disabled}
-              className={`${baseInputClass} text-sm`}
             >
-              <option value="">请选择</option>
-              {fieldDef.options?.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className={`${baseInputClass} text-sm`}>
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">请选择</SelectItem>
+                {fieldDef.options?.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         );
 
@@ -211,7 +222,7 @@ export function ConfigFieldRenderer({
               {fieldDef.label}
               {fieldDef.unit && <span className="text-gray-400 ml-1">({fieldDef.unit})</span>}
             </label>
-            <input
+            <Input
               type="text"
               inputMode="decimal"
               value={fieldValue}

@@ -5,6 +5,9 @@
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { TextArea } from '@/components/ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import { useCropVarietyStore } from '../../../../stores/useCropVarietyStore';
 
@@ -175,7 +178,7 @@ export function EditCropVarietyModal({
             <label className="block text-sm font-bold text-blue-700 mb-1">
               作物品种 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={formData.varietyName}
               onChange={(e) => setFormData({ ...formData, varietyName: e.target.value })}
@@ -189,7 +192,7 @@ export function EditCropVarietyModal({
             <label className="block text-sm font-medium text-amber-700 mb-1">
               别名 <span className="text-xs text-gray-400">(多个用逗号分隔)</span>
             </label>
-            <input
+            <Input
               type="text"
               value={formData.alias}
               onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
@@ -213,7 +216,7 @@ export function EditCropVarietyModal({
                 <span className="text-amber-600">
                   {formData.image ? '更换图片' : '上传图片'}
                 </span>
-                <input
+                <Input
                   type="file"
                   accept="image/*"
                   className="hidden"
@@ -246,7 +249,7 @@ export function EditCropVarietyModal({
             <label className="block text-sm font-medium text-amber-700 mb-1">
               特性描述
             </label>
-            <textarea
+            <TextArea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
@@ -263,7 +266,7 @@ export function EditCropVarietyModal({
             <div className="grid grid-cols-5 gap-3">
               <div>
                 <label className="block text-xs text-amber-600 mb-1">发芽期(天)</label>
-                <input
+                <Input
                   type="number"
                   value={formData.germinationPeriod || ''}
                   onChange={(e) => setFormData({ ...formData, germinationPeriod: Number(e.target.value) || undefined })}
@@ -273,7 +276,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-amber-600 mb-1">育苗期(天)</label>
-                <input
+                <Input
                   type="number"
                   value={formData.seedlingPeriod || ''}
                   onChange={(e) => setFormData({ ...formData, seedlingPeriod: Number(e.target.value) || undefined })}
@@ -283,7 +286,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-amber-600 mb-1">开花期(天)</label>
-                <input
+                <Input
                   type="number"
                   value={formData.floweringPeriod || ''}
                   onChange={(e) => setFormData({ ...formData, floweringPeriod: Number(e.target.value) || undefined })}
@@ -293,7 +296,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-amber-600 mb-1">结果期(天)</label>
-                <input
+                <Input
                   type="number"
                   value={formData.fruitingPeriod || ''}
                   onChange={(e) => setFormData({ ...formData, fruitingPeriod: Number(e.target.value) || undefined })}
@@ -303,7 +306,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-amber-600 mb-1">摘收期(天)</label>
-                <input
+                <Input
                   type="number"
                   value={formData.harvestPeriod || ''}
                   onChange={(e) => setFormData({ ...formData, harvestPeriod: Number(e.target.value) || undefined })}
@@ -317,14 +320,18 @@ export function EditCropVarietyModal({
           {/* 状态 - 绿色标签 */}
           <div>
             <label className="block text-sm font-bold text-emerald-700 mb-1">状态</label>
-            <select
+            <Select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as CropVarietyStatus })}
-              className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50"
+              onValueChange={(val) => setFormData({ ...formData, status: val as CropVarietyStatus })}
             >
-              <option value="active">启用</option>
-              <option value="inactive">停用</option>
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-emerald-50">
+                <SelectValue placeholder="启用" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">启用</SelectItem>
+                <SelectItem value="inactive">停用</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 作物适宜环境参数 - 4列布局 */}
@@ -335,7 +342,7 @@ export function EditCropVarietyModal({
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">空气温度(℃)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.airTemperature ?? ''}
@@ -346,7 +353,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">空气湿度(%)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.airHumidity ?? ''}
@@ -357,7 +364,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">CO₂含量(ppm)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.co2Content ?? ''}
@@ -368,7 +375,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">光照度(lx)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.lightIntensity ?? ''}
@@ -379,7 +386,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">土壤温度(℃)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.soilTemperature ?? ''}
@@ -390,7 +397,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">土壤湿度(%)</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.soilHumidity ?? ''}
@@ -401,7 +408,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">土壤PH值</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.soilPh ?? ''}
@@ -412,7 +419,7 @@ export function EditCropVarietyModal({
               </div>
               <div>
                 <label className="block text-xs text-cyan-600 mb-1">土壤EC值</label>
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={formData.soilEc ?? ''}
@@ -427,7 +434,7 @@ export function EditCropVarietyModal({
           {/* 备注 */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
-            <textarea
+            <TextArea
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               rows={3}

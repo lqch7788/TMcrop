@@ -7,7 +7,10 @@
 import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { Button } from '../../../ui/button';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import {
   getProduceCategoryInfo,
 } from '../../../../data/produceCodeRule';
@@ -166,7 +169,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">采收单号</label>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={addForm.harvestCode}
               readOnly
@@ -188,7 +191,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">采收时间</label>
-          <input
+          <Input
             type="datetime-local"
             value={addForm.harvestDate}
             onChange={(e) => onFormChange('harvestDate', e.target.value)}
@@ -198,7 +201,7 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
-          <input
+          <Input
             type="text"
             value={currentOperator}
             readOnly
@@ -221,49 +224,58 @@ export const AddModal: React.FC<AddModalProps> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">生产计划批次号</label>
-          <select
+          <Select
             value={addForm.batchCode}
-            onChange={(e) => onFormChange('batchCode', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => onFormChange('batchCode', val)}
           >
-            <option value="">请选择批次</option>
-            {filteredBatches.map(batch => (
-              <option key={batch.id} value={batch.batchCode}>{batch.batchCode} - {batch.cropName}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择批次" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredBatches.map(batch => (
+                <SelectItem key={batch.id} value={batch.batchCode}>{batch.batchCode} - {batch.cropName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.batchCode && <p className="text-red-500 text-xs mt-1">{errors.batchCode}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">采收区域</label>
-          <select
+          <Select
             value={addForm.greenhouseId}
-            onChange={(e) => onFormChange('greenhouseId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => onFormChange('greenhouseId', val)}
           >
-            <option value="">请选择区域</option>
-            {greenhouses.map(gh => (
-              <option key={gh.id} value={gh.id}>{gh.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择区域" />
+            </SelectTrigger>
+            <SelectContent>
+              {greenhouses.map(gh => (
+                <SelectItem key={gh.id} value={gh.id}>{gh.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.greenhouseId && <p className="text-red-500 text-xs mt-1">{errors.greenhouseId}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">入库仓库</label>
-          <select
+          <Select
             value={addForm.warehouseId}
-            onChange={(e) => onFormChange('warehouseId', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => onFormChange('warehouseId', val)}
           >
-            <option value="">请选择仓库</option>
-            {warehouseOptions.map(w => (
-              <option key={w.value} value={w.value}>{w.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择仓库" />
+            </SelectTrigger>
+            <SelectContent>
+              {warehouseOptions.map(w => (
+                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">审核人员</label>
-          <input
+          <Input
             type="text"
             value={addForm.auditor}
             onChange={(e) => onFormChange('auditor', e.target.value)}
@@ -276,7 +288,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           <label className="block text-sm font-medium text-gray-900 mb-1">
             单价 (元/kg) <span className="text-xs text-gray-400">(可选)</span>
           </label>
-          <input
+          <Input
             type="number"
             value={addForm.unitPrice || ''}
             onChange={(e) => onFormChange('unitPrice', Number(e.target.value))}
@@ -336,7 +348,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             <label className="block text-sm font-medium text-gray-900 mb-1">
               补录原因 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={addForm.supplementaryReason}
               onChange={(e) => onFormChange('supplementaryReason', e.target.value)}
@@ -368,7 +380,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                   key={user.id}
                   className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                 >
-                  <input
+                  <Input
                     type="checkbox"
                     checked={addForm.harvesterIds.includes(user.id)}
                     onChange={() => toggleHarvester(user.id, user.name)}
@@ -448,7 +460,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                     <tr key={idx}>
                       <td className="px-2 py-2">
                         <div className="flex items-center gap-1">
-                          <input
+                          <Input
                             type="text"
                             value={product.productCode}
                             onChange={(e) => onProductChange(idx, 'productCode', e.target.value.toUpperCase())}
@@ -458,7 +470,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                         </div>
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <Input
                           type="text"
                           value={product.cropName}
                           onChange={(e) => onProductChange(idx, 'cropName', e.target.value)}
@@ -480,19 +492,22 @@ export const AddModal: React.FC<AddModalProps> = ({
                         })()}
                       </td>
                       <td className="px-2 py-2">
-                        <select
+                        <Select
                           value={product.grade}
-                          onChange={(e) => onProductChange(idx, 'grade', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          onValueChange={(val) => onProductChange(idx, 'grade', val)}
                         >
-                          <option value="">等级</option>
-                          {qualityGradeOptions.map(g => (
-                            <option key={g.dictCode} value={g.dictCode}>{g.dictLabel}</option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <SelectValue placeholder="等级" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {qualityGradeOptions.map(g => (
+                              <SelectItem key={g.dictCode} value={g.dictCode}>{g.dictLabel}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <Input
                           type="number"
                           value={product.harvestQuantity}
                           onChange={(e) => onProductChange(idx, 'harvestQuantity', Number(e.target.value))}
@@ -501,7 +516,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <Input
                           type="number"
                           value={product.targetYield}
                           onChange={(e) => onProductChange(idx, 'targetYield', Number(e.target.value))}
@@ -513,7 +528,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                         {completionRate}%
                       </td>
                       <td className="px-2 py-2">
-                        <input
+                        <Input
                           type="text"
                           value={product.remarks}
                           onChange={(e) => onProductChange(idx, 'remarks', e.target.value)}
@@ -547,7 +562,7 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 备注 */}
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-        <textarea
+        <TextArea
           value={addForm.remarks}
           onChange={(e) => onFormChange('remarks', e.target.value)}
           placeholder="请输入采收备注"

@@ -4,8 +4,11 @@ import { X } from 'lucide-react';
 import { Supplier, NewSupplierData } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { TextArea } from '../ui/TextArea';
 import { Cascader } from '../ui/Cascader';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,
@@ -254,7 +257,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 供应商编号 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">供应商编号</label>
-              <input
+              <Input
                 type="text"
                 value={form.code}
                 onChange={(e) => handleChange('code', e.target.value)}
@@ -266,7 +269,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 供应商名称 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">供应商名称 *</label>
-              <input
+              <Input
                 type="text"
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
@@ -277,51 +280,63 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 供应类型 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">供应类型 *</label>
-              <select
+              <Select
                 value={form.supplierType}
-                onChange={(e) => handleChange('supplierType', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                onValueChange={(val) => handleChange('supplierType', val)}
               >
-                <option value="">请选择类型</option>
-                {categories.map(cat => (
-                  <option key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                  <SelectValue placeholder="请选择类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择类型</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 供应商属性 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">供应商属性 *</label>
-              <select
+              <Select
                 value={form.supplierAttribute}
-                onChange={(e) => handleChange('supplierAttribute', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                onValueChange={(val) => handleChange('supplierAttribute', val)}
               >
-                <option value="">请选择属性</option>
-                {supplierAttributeOptions.map(opt => (
-                  <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                  <SelectValue placeholder="请选择属性" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择属性</SelectItem>
+                  {supplierAttributeOptions.map(opt => (
+                    <SelectItem key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 所属组织 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">所属组织 *</label>
-              <select
+              <Select
                 value={form.organization}
-                onChange={(e) => handleChange('organization', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                onValueChange={(val) => handleChange('organization', val)}
               >
-                <option value="">请选择组织</option>
-                <option value="宁波帮帮忙公司">宁波帮帮忙公司</option>
-                <option value="成都帮帮您公司">成都帮帮您公司</option>
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                  <SelectValue placeholder="请选择组织" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择组织</SelectItem>
+                  <SelectItem value="宁波帮帮忙公司">宁波帮帮忙公司</SelectItem>
+                  <SelectItem value="成都帮帮您公司">成都帮帮您公司</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 联系人 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">联系人 *</label>
-              <input
+              <Input
                 type="text"
                 value={form.contact}
                 onChange={(e) => handleChange('contact', e.target.value)}
@@ -332,7 +347,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 移动电话 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">移动电话 *</label>
-              <input
+              <Input
                 type="text"
                 value={form.mobilePhone}
                 onChange={(e) => handleChange('mobilePhone', e.target.value)}
@@ -343,15 +358,19 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 状态 */}
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">状态</label>
-              <select
+              <Select
                 value={form.status}
-                onChange={(e) => handleChange('status', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                onValueChange={(val) => handleChange('status', val)}
               >
-                <option value="合作中">合作中</option>
-                <option value="暂停">暂停</option>
-                <option value="终止">终止</option>
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                  <SelectValue placeholder="合作中" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="合作中">合作中</SelectItem>
+                  <SelectItem value="暂停">暂停</SelectItem>
+                  <SelectItem value="终止">终止</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -362,7 +381,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 工作电话 */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">工作电话</label>
-              <input
+              <Input
                 type="text"
                 value={form.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
@@ -373,7 +392,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 传真 */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">传真</label>
-              <input
+              <Input
                 type="text"
                 value={form.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
@@ -384,7 +403,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 国家 */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">国家</label>
-              <input
+              <Input
                 type="text"
                 value={form.country}
                 onChange={(e) => handleChange('country', e.target.value)}
@@ -410,7 +429,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 创建时间 */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">创建时间</label>
-              <input
+              <Input
                 type="date"
                 value={form.createDate}
                 onChange={(e) => handleChange('createDate', e.target.value)}
@@ -421,7 +440,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 详细地址 */}
             <div className="col-span-3">
               <label className="block text-xs font-medium text-gray-700 mb-1">详细地址</label>
-              <input
+              <Input
                 type="text"
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
@@ -432,7 +451,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 开户行 */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">开户行</label>
-              <input
+              <Input
                 type="text"
                 value={form.bankName}
                 onChange={(e) => handleChange('bankName', e.target.value)}
@@ -443,7 +462,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 银行卡号 */}
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</label>
-              <input
+              <Input
                 type="text"
                 value={form.bankCardNumber}
                 onChange={(e) => handleChange('bankCardNumber', e.target.value)}
@@ -454,7 +473,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
             {/* 备注 */}
             <div className="col-span-3">
               <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={form.remarks}
                 onChange={(e) => handleChange('remarks', e.target.value)}
                 rows={2}

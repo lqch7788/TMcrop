@@ -6,6 +6,8 @@ import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 
 interface FertilizerFilterProps {
   filters: Record<string, string>;
@@ -41,7 +43,7 @@ export function FertilizerFilter({
         {/* 作物品种 */}
         <div className="flex-1 min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
-          <input
+          <Input
             type="text"
             value={filters.cropName || ''}
             onChange={(e) => updateFilter('cropName', e.target.value)}
@@ -53,7 +55,7 @@ export function FertilizerFilter({
         {/* 温室位置 */}
         <div className="flex-1 min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">温室位置</label>
-          <input
+          <Input
             type="text"
             value={filters.greenhouseName || ''}
             onChange={(e) => updateFilter('greenhouseName', e.target.value)}
@@ -65,21 +67,24 @@ export function FertilizerFilter({
         {/* 数据来源 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">数据来源</label>
-          <select
+          <Select
             value={filters.dataSource || ''}
-            onChange={(e) => updateFilter('dataSource', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => updateFilter('dataSource', val)}
           >
-            <option value="">全部</option>
-            <option value="manual">手动</option>
-            <option value="auto_iot">IoT自动</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">手动</SelectItem>
+              <SelectItem value="auto_iot">IoT自动</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 日期范围 - 开始 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-          <input
+          <Input
             type="date"
             value={filters.startDate || ''}
             onChange={(e) => updateFilter('startDate', e.target.value)}
@@ -90,7 +95,7 @@ export function FertilizerFilter({
         {/* 日期范围 - 结束 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-          <input
+          <Input
             type="date"
             value={filters.endDate || ''}
             onChange={(e) => updateFilter('endDate', e.target.value)}
@@ -101,7 +106,7 @@ export function FertilizerFilter({
         {/* 操作员 */}
         <div className="flex-1 min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">操作员</label>
-          <input
+          <Input
             type="text"
             value={filters.operatorName || ''}
             onChange={(e) => updateFilter('operatorName', e.target.value)}

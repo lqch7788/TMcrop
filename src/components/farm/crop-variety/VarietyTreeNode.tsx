@@ -10,6 +10,7 @@ import { VarietyTreeNode as VarietyTreeNodeType } from './types';
 import { CropVariety } from '../../../types/cropVariety';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface VarietyTreeNodeProps {
   node: VarietyTreeNodeType;
@@ -325,7 +326,7 @@ export function VarietyTreeNode({
               <span className="font-mono text-blue-600 font-medium text-sm">{node.code}</span>
               {isInlineEditing ? (
                 <div className="flex items-center gap-1">
-                  <input
+                  <Input
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -381,7 +382,7 @@ export function VarietyTreeNode({
               <span className="font-mono text-blue-600 text-sm">{node.code}</span>
               {isInlineEditing ? (
                 <div className="flex items-center gap-1">
-                  <input
+                  <Input
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -440,7 +441,7 @@ export function VarietyTreeNode({
               <span className="font-mono text-green-600 text-sm">{node.code}</span>
               {isInlineEditing ? (
                 <div className="flex items-center gap-1">
-                  <input
+                  <Input
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -569,14 +570,14 @@ export function VarietyTreeNode({
                 {inlineAddState.level === 'variety' && '新增品种：'}
                 {inlineAddState.level === 'subVariety1' && '新增子品种：'}
               </span>
-              <input
+              <Input
                 type="text"
                 value={inlineAddCode}
                 onChange={(e) => onInlineAddCodeChange?.(e.target.value)}
                 placeholder="编号"
                 className="w-24 px-2 py-1.5 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <input
+              <Input
                 type="text"
                 value={inlineAddName}
                 onChange={(e) => onInlineAddNameChange?.(e.target.value)}

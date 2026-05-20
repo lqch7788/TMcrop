@@ -8,6 +8,8 @@ import { Task } from '../../../hooks/useTasks';
 import { useFarmTaskStore } from '@/stores';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
+import { TextArea } from '../../ui/TextArea';
 
 interface TaskRecord {
   id: string;
@@ -164,7 +166,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
             <h4 className="text-sm font-medium text-gray-700 mb-3">验收结果</h4>
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
-                <input
+                <Input
                   type="radio"
                   name="verifyResult"
                   value="pass"
@@ -175,7 +177,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
                 <span className="text-sm text-gray-700">验收通过</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
-                <input
+                <Input
                   type="radio"
                   name="verifyResult"
                   value="reject"
@@ -194,7 +196,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
               <h4 className="text-sm font-medium text-gray-700 mb-2">
                 验收意见 {verifyResult === 'reject' && <span className="text-red-500">*</span>}
               </h4>
-              <textarea
+              <TextArea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder={verifyResult === 'pass' ? '选填：可添加验收备注' : '请输入驳回原因...'}

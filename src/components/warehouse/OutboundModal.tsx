@@ -7,6 +7,9 @@ import { X, ArrowUpCircle, AlertTriangle } from 'lucide-react';
 import { outbound } from '../../services/inventoryService';
 import { InventoryStock, BusinessType } from '../../types/inventory';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { TextArea } from '../ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface OutboundModalProps {
   isOpen: boolean;
@@ -149,7 +152,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
                 出库数量 <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
@@ -166,24 +169,25 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             {/* 业务类型 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">业务类型</label>
-              <select
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value as BusinessType)}
-                className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value={BusinessType.SEED_SOURCE}>种源管理</option>
-                <option value={BusinessType.SEEDLING}>育苗管理</option>
-                <option value={BusinessType.PLANTING}>种植管理</option>
-                <option value={BusinessType.HARVEST}>采收入库</option>
-                <option value={BusinessType.PURCHASE}>采购入库</option>
-                <option value={BusinessType.OTHER}>其他</option>
-              </select>
+              <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
+                <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <SelectValue placeholder="其他" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={BusinessType.SEED_SOURCE}>种源管理</SelectItem>
+                  <SelectItem value={BusinessType.SEEDLING}>育苗管理</SelectItem>
+                  <SelectItem value={BusinessType.PLANTING}>种植管理</SelectItem>
+                  <SelectItem value={BusinessType.HARVEST}>采收入库</SelectItem>
+                  <SelectItem value={BusinessType.PURCHASE}>采购入库</SelectItem>
+                  <SelectItem value={BusinessType.OTHER}>其他</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 业务单号 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">业务单号</label>
-              <input
+              <Input
                 type="text"
                 value={businessCode}
                 onChange={(e) => setBusinessCode(e.target.value)}
@@ -195,7 +199,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             {/* 备注 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="请输入备注信息（可选）"

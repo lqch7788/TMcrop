@@ -11,6 +11,7 @@ import { TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
 import { useReminder } from '../../../hooks/useReminder';
 import { Plus, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 // 导入迁移的 TaskTable 组件
 import { TaskTable } from './components/TaskTable';
@@ -366,62 +367,78 @@ export function TaskTab({
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">状态:</span>
-          <select
+          <Select
             value={filters.status}
-            onChange={(e) => onFilterChange('status', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]"
+            onValueChange={(val) => onFilterChange('status', val)}
           >
-            {STATUS_FILTERS.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]">
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">类型:</span>
-          <select
+          <Select
             value={filters.type}
-            onChange={(e) => onFilterChange('type', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => onFilterChange('type', val)}
           >
-            <option value="all">全部类型</option>
-            {FARM_OPERATION_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="全部类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              {FARM_OPERATION_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">执行人:</span>
-          <select
+          <Select
             value={filters.assignee}
-            onChange={(e) => onFilterChange('assignee', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[100px]"
+            onValueChange={(val) => onFilterChange('assignee', val)}
           >
-            <option value="all">全部</option>
-            {assigneeOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[100px]">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              {assigneeOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">批次:</span>
-          <select
+          <Select
             value={filters.batchCode}
-            onChange={(e) => onFilterChange('batchCode', e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]"
+            onValueChange={(val) => onFilterChange('batchCode', val)}
           >
-            <option value="all">全部批次</option>
-            {batchCodeOptions.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]">
+              <SelectValue placeholder="全部批次" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部批次</SelectItem>
+              {batchCodeOptions.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {code}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button
           variant="ghost"

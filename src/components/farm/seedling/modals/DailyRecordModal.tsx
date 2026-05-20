@@ -6,6 +6,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../../stores';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface DailyRecordModalProps {
   isOpen: boolean;
@@ -98,7 +101,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">记录日期</label>
-              <input
+              <Input
                 type="date"
                 value={formData.recordDate}
                 onChange={(e) => setFormData({ ...formData, recordDate: e.target.value })}
@@ -107,7 +110,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">温度（℃）</label>
-              <input
+              <Input
                 type="number"
                 value={formData.temperature || ''}
                 onChange={(e) => setFormData({ ...formData, temperature: Number(e.target.value) })}
@@ -116,7 +119,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">湿度（%）</label>
-              <input
+              <Input
                 type="number"
                 value={formData.humidity || ''}
                 onChange={(e) => setFormData({ ...formData, humidity: Number(e.target.value) })}
@@ -126,7 +129,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">是否浇水</label>
               <div className="flex items-center h-full">
-                <input
+                <Input
                   type="checkbox"
                   checked={formData.watering}
                   onChange={(e) => setFormData({ ...formData, watering: e.target.checked })}
@@ -138,7 +141,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             {/* pH值（新增） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">pH值</label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.phValue ?? ''}
@@ -153,7 +156,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             {/* EC值（新增） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">EC值（mS/cm）</label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.ecValue ?? ''}
@@ -167,7 +170,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">异常情况</label>
-              <input
+              <Input
                 type="text"
                 value={formData.abnormality}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
@@ -181,7 +184,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">成活变化</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.survivalCountChange ?? ''}
                     onChange={(e) => setFormData({
@@ -194,7 +197,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">定植变化</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.plantedCountChange ?? ''}
                     onChange={(e) => setFormData({
@@ -207,7 +210,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">损耗数量</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.lossCountChange ?? ''}
                     onChange={(e) => setFormData({
@@ -222,7 +225,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
@@ -233,16 +236,19 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             {/* 操作人员（新增） */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
-              <select
+              <Select
                 value={formData.operator}
-                onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setFormData({ ...formData, operator: val })}
               >
-                <option value="">请选择操作人员</option>
-                {OPERATORS.map(op => (
-                  <option key={op.value} value={op.value}>{op.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择操作人员" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.map(op => (
+                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

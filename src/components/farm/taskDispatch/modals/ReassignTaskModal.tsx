@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '../../../ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';
@@ -113,18 +114,22 @@ export function ReassignTaskModal({
           </label>
           <div className="relative">
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <select
+            <Select
               value={selectedAssignee}
-              onChange={(e) => setSelectedAssignee(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setSelectedAssignee(val)}
             >
-              <option value="">请选择执行人</option>
-              {availableAssignees.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="请选择执行人" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">请选择执行人</SelectItem>
+                {availableAssignees.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} ({user.role})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

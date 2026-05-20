@@ -8,6 +8,9 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { validateDateNotFuture } from '../../../../lib/validators';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface HarvestModalProps {
   isOpen: boolean;
@@ -115,21 +118,25 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
             {/* 是否采收 */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">是否采收</label>
-              <select
+              <Select
                 value={isHarvest}
-                onChange={(e) => handleIsHarvestChange(e.target.value as 'yes' | 'no')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => handleIsHarvestChange(val as 'yes' | 'no')}
               >
-                <option value="yes">是 — 确认采收此批次</option>
-                <option value="no">否 — 暂时不采收</option>
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">是 — 确认采收此批次</SelectItem>
+                  <SelectItem value="no">否 — 暂时不采收</SelectItem>
+                </SelectContent>
+              </Select>
               {isHarvest === 'yes' && (
                 <p className="mt-1 text-xs text-amber-600">⚠ 选择"已采收"后，该记录将不可修改</p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">采收日期</label>
-              <input
+              <Input
                 type="date"
                 value={formData.harvestDate}
                 onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
@@ -142,7 +149,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">采收产量</label>
-              <input
+              <Input
                 type="number"
                 value={formData.harvestYield || ''}
                 onChange={(e) => setFormData({ ...formData, harvestYield: Number(e.target.value) })}
@@ -152,7 +159,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}

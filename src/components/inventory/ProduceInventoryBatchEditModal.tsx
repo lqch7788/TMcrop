@@ -6,6 +6,8 @@
 import React from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Input } from '../ui/input';
 import { ProduceInventory } from '../../types/inventory';
 import { getAllVarieties } from '../../services/cropVarietyService';
 
@@ -107,20 +109,21 @@ export function ProduceInventoryBatchEditModal({
       {/* 选择产品下拉框 */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">选择产品</label>
-        <select
-          value={currentItemId || ''}
-          onChange={(e) => {
-            const idx = selectedRows.indexOf(e.target.value);
-            onItemSelect(idx >= 0 ? idx : 0);
-          }}
-          className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-        >
-          {selectedItems.map((item, idx) => (
-            <option key={item.id} value={item.id}>
-              {generateCropCode(item.cropName, item.variety)} - {item.cropName} {batchEditedItems[item.id] && '✅ 已编辑'}
-            </option>
-          ))}
-        </select>
+        <Select value={currentItemId || ''} onValueChange={(val) => {
+          const idx = selectedRows.indexOf(val);
+          onItemSelect(idx >= 0 ? idx : 0);
+        }}>
+          <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectValue placeholder="选择产品" />
+          </SelectTrigger>
+          <SelectContent>
+            {selectedItems.map((item, idx) => (
+              <SelectItem key={item.id} value={item.id}>
+                {generateCropCode(item.cropName, item.variety)} - {item.cropName} {batchEditedItems[item.id] && '✅ 已编辑'}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 产品基本信息（只读） */}
@@ -170,7 +173,7 @@ export function ProduceInventoryBatchEditModal({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">库存数量</label>
-            <input
+            <Input
               type="number"
               min="0"
               value={currentEditedData.quantity ?? ''}
@@ -180,7 +183,7 @@ export function ProduceInventoryBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">最低库存预警</label>
-            <input
+            <Input
               type="number"
               min="0"
               value={currentEditedData.alertSettings?.minStock ?? ''}
@@ -190,7 +193,7 @@ export function ProduceInventoryBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">最高库存预警</label>
-            <input
+            <Input
               type="number"
               min="0"
               value={currentEditedData.alertSettings?.maxStock ?? ''}
@@ -203,7 +206,7 @@ export function ProduceInventoryBatchEditModal({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">存放位置</label>
-            <input
+            <Input
               type="text"
               value={currentEditedData.storageLocation || ''}
               onChange={(e) => onFieldChange(currentItemId, 'storageLocation', e.target.value)}
@@ -213,7 +216,7 @@ export function ProduceInventoryBatchEditModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">保质期天数</label>
-            <input
+            <Input
               type="number"
               min="0"
               value={currentEditedData.alertSettings?.expirationDays ?? ''}

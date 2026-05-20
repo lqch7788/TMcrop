@@ -1,6 +1,8 @@
 // 供应商编码生成器组件 - 参照物料入库 WarehouseInboundCodeGen 样式
 import React from 'react';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
 import { useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierCodeGenState {
@@ -46,36 +48,44 @@ export default function SupplierCodeGenerator({
         {/* 供应商大类选择 */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">供应商大类</label>
-          <select
+          <Select
             value={codeGen.bigCategory}
-            onChange={(e) => onCodeGenChange('bigCategory', e.target.value)}
-            className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onCodeGenChange('bigCategory', val)}
           >
-            <option value="">请选择</option>
-            {categories.map((cat) => (
-              <option key={cat.code} value={cat.code}>
-                {cat.code}-{cat.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">请选择</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>
+                  {cat.code}-{cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 供应商中类选择 */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">供应商中类</label>
-          <select
+          <Select
             value={codeGen.midCategory}
-            onChange={(e) => onCodeGenChange('midCategory', e.target.value)}
+            onValueChange={(val) => onCodeGenChange('midCategory', val)}
             disabled={!codeGen.bigCategory}
-            className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
           >
-            <option value="">请选择</option>
-            {midCategories.map((mid) => (
-              <option key={mid.code} value={mid.code}>
-                {mid.code}-{mid.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">请选择</SelectItem>
+              {midCategories.map((mid) => (
+                <SelectItem key={mid.code} value={mid.code}>
+                  {mid.code}-{mid.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 生成编码显示和操作 */}
@@ -91,7 +101,7 @@ export default function SupplierCodeGenerator({
           </label>
           <div className="flex gap-2">
             {/* 生成的编码显示 */}
-            <input
+            <Input
               type="text"
               value={codeGen.generatedCode}
               placeholder="点击生成"

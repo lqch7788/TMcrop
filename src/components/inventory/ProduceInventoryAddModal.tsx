@@ -5,9 +5,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { TextArea } from '../ui/TextArea';
 import { Modal } from '../ui/Modal';
 import { ProduceInventory, StockType } from '../../types/inventory';
 import { useWarehouseStore } from '../../stores';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { DictSelect } from '../common/settings/DictSelect';
 
 interface ProduceInventoryAddModalProps {
@@ -224,7 +227,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             <label className="block text-sm font-medium text-gray-700 mb-1">
               作物名称 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={cropName}
               onChange={(e) => setCropName(e.target.value)}
@@ -236,7 +239,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             <label className="block text-sm font-medium text-gray-700 mb-1">
               品种 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={variety}
               onChange={(e) => setVariety(e.target.value)}
@@ -250,7 +253,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">产品编码</label>
-            <input
+            <Input
               type="text"
               value={productCode}
               onChange={(e) => setProductCode(e.target.value)}
@@ -260,7 +263,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">批次号</label>
-            <input
+            <Input
               type="text"
               value={batchCode}
               onChange={(e) => setBatchCode(e.target.value)}
@@ -276,7 +279,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             <label className="block text-sm font-medium text-gray-700 mb-1">
               数量 <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="number"
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
@@ -321,16 +324,17 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">品质评定</label>
-            <select
-              value={quality}
-              onChange={(e) => setQuality(e.target.value as typeof quality)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="excellent">优秀</option>
-              <option value="good">良好</option>
-              <option value="average">一般</option>
-              <option value="poor">较差</option>
-            </select>
+            <Select value={quality} onValueChange={(val) => setQuality(val as typeof quality)}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue placeholder="优秀" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excellent">优秀</SelectItem>
+                <SelectItem value="good">良好</SelectItem>
+                <SelectItem value="average">一般</SelectItem>
+                <SelectItem value="poor">较差</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -340,29 +344,29 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             <label className="block text-sm font-medium text-gray-700 mb-1">
               仓库 <span className="text-red-500">*</span>
             </label>
-            <select
-              value={warehouseId}
-              onChange={(e) => handleWarehouseChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">请选择仓库</option>
-              {stockType === StockType.SEED && warehouses.filter(w => w.name.includes('种源') || w.name.includes('常温')).map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-              {stockType === StockType.SEEDLING && warehouses.filter(w => w.name.includes('种苗') || w.name.includes('常温')).map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-              {stockType === StockType.PRODUCT && warehouses.filter(w => w.name.includes('成品') || w.name.includes('冷库')).map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-              {(!stockType || stockType === StockType.PRODUCT) && warehouses.map((w) => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-            </select>
+            <Select value={warehouseId} onValueChange={(val) => handleWarehouseChange(val)}>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <SelectValue placeholder="请选择仓库" />
+              </SelectTrigger>
+              <SelectContent>
+                {stockType === StockType.SEED && warehouses.filter(w => w.name.includes('种源') || w.name.includes('常温')).map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+                {stockType === StockType.SEEDLING && warehouses.filter(w => w.name.includes('种苗') || w.name.includes('常温')).map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+                {stockType === StockType.PRODUCT && warehouses.filter(w => w.name.includes('成品') || w.name.includes('冷库')).map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+                {(!stockType || stockType === StockType.PRODUCT) && warehouses.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
-            <input
+            <Input
               type="text"
               value={storageLocation}
               onChange={(e) => setStorageLocation(e.target.value)}
@@ -376,7 +380,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">入库日期</label>
-            <input
+            <Input
               type="date"
               value={storageDate}
               onChange={(e) => setStorageDate(e.target.value)}
@@ -385,7 +389,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">保质期（天）</label>
-            <input
+            <Input
               type="number"
               value={expirationDays}
               onChange={(e) => setExpirationDays(Number(e.target.value))}
@@ -399,7 +403,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">采收日期</label>
-            <input
+            <Input
               type="date"
               value={harvestDate}
               onChange={(e) => setHarvestDate(e.target.value)}
@@ -408,7 +412,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">过期日期</label>
-            <input
+            <Input
               type="date"
               value={expirationDate}
               readOnly
@@ -420,7 +424,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         {/* 操作人 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
-          <input
+          <Input
             type="text"
             value={operator}
             onChange={(e) => setOperator(e.target.value)}
@@ -433,7 +437,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">种植区域</label>
-            <input
+            <Input
               type="text"
               value={greenhouseName}
               onChange={(e) => setGreenhouseName(e.target.value)}
@@ -455,7 +459,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
         {/* 备注 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}

@@ -10,6 +10,8 @@ import { SeedSourceFilters, SourceType, PropagationType, PropagationStatus } fro
 import { useDictionaryStore, getDictItems } from '../../../../stores/useDictionaryStore';
 import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
 import { useUserStore } from '../../../../stores/useUserStore';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -89,7 +91,7 @@ export function SeedSourceFilter({
         {/* 作物品种 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
-          <input
+          <Input
             type="text"
             value={filters.cropName}
             onChange={(e) => onChange({ ...filters, cropName: e.target.value })}
@@ -101,7 +103,7 @@ export function SeedSourceFilter({
         {/* 种源批号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">种源批号</label>
-          <input
+          <Input
             type="text"
             value={filters.seedCode}
             onChange={(e) => onChange({ ...filters, seedCode: e.target.value })}
@@ -113,85 +115,105 @@ export function SeedSourceFilter({
         {/* 种源类型 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">种源类型</label>
-          <select
+          <Select
             value={filters.sourceType}
-            onChange={(e) => onChange({ ...filters, sourceType: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, sourceType: val })}
           >
-            <option value="">全部</option>
-            <option value={SourceType.SEED}>种子</option>
-            <option value={SourceType.SEEDLING}>种苗</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value={SourceType.SEED}>种子</SelectItem>
+              <SelectItem value={SourceType.SEEDLING}>种苗</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 供应商 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-          <select
+          <Select
             value={filters.supplierName}
-            onChange={(e) => onChange({ ...filters, supplierName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, supplierName: val })}
           >
-            <option value="">全部</option>
-            {suppliers.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {suppliers.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
+          <Select
             value={filters.status}
-            onChange={(e) => onChange({ ...filters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, status: val })}
           >
-            <option value="">全部</option>
-            {statusOptions.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {statusOptions.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 入库方式（繁殖途径） */}
         <div className="min-w-[130px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">入库方式</label>
-          <select
+          <Select
             value={filters.propagationType || ''}
-            onChange={(e) => onChange({ ...filters, propagationType: e.target.value || undefined })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, propagationType: val || undefined })}
           >
-            <option value="">全部</option>
-            <option value={PropagationType.EXTERNAL}>外购入库</option>
-            <option value={PropagationType.BREEDING}>育种计划产出</option>
-            <option value={PropagationType.SEED_SAVING}>种植留种</option>
-            <option value={PropagationType.ASEXUAL}>无性繁殖</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value={PropagationType.EXTERNAL}>外购入库</SelectItem>
+              <SelectItem value={PropagationType.BREEDING}>育种计划产出</SelectItem>
+              <SelectItem value={PropagationType.SEED_SAVING}>种植留种</SelectItem>
+              <SelectItem value={PropagationType.ASEXUAL}>无性繁殖</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 繁殖阶段 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">繁殖阶段</label>
-          <select
+          <Select
             value={filters.propagationStatus || ''}
-            onChange={(e) => onChange({ ...filters, propagationStatus: e.target.value || undefined })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, propagationStatus: val || undefined })}
           >
-            <option value="">全部</option>
-            <option value={PropagationStatus.PLANNED}>已计划</option>
-            <option value={PropagationStatus.IN_PROGRESS}>进行中</option>
-            <option value={PropagationStatus.HARVESTED}>已采收</option>
-            <option value={PropagationStatus.QUALITY_CHECKED}>已质检</option>
-            <option value={PropagationStatus.COMPLETED}>已入库</option>
-            <option value={PropagationStatus.FAILED}>失败</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value={PropagationStatus.PLANNED}>已计划</SelectItem>
+              <SelectItem value={PropagationStatus.IN_PROGRESS}>进行中</SelectItem>
+              <SelectItem value={PropagationStatus.HARVESTED}>已采收</SelectItem>
+              <SelectItem value={PropagationStatus.QUALITY_CHECKED}>已质检</SelectItem>
+              <SelectItem value={PropagationStatus.COMPLETED}>已入库</SelectItem>
+              <SelectItem value={PropagationStatus.FAILED}>失败</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 采购/入库日期 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">采购/入库日期</label>
-          <input
+          <Input
             type="date"
             value={filters.startDate}
             onChange={(e) => onChange({ ...filters, startDate: e.target.value, endDate: e.target.value })}
@@ -202,7 +224,7 @@ export function SeedSourceFilter({
         {/* 创建人 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">创建人</label>
-          <input
+          <Input
             type="text"
             value={filters.createBy}
             onChange={(e) => onChange({ ...filters, createBy: e.target.value })}
@@ -263,23 +285,26 @@ export function SeedSourceFilter({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">作物类型</label>
-                      <select
+                      <Select
                         value={filters.cropType || ''}
-                        onChange={(e) => {
-                          // 切换作物类型时，清空作物名称（因为作物名称已由filters.cropName单独管理，这里作物类型主要用于级联提示）
-                          updateAdvanced({ cropType: e.target.value || undefined });
+                        onValueChange={(val) => {
+                          updateAdvanced({ cropType: val || undefined });
                         }}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
                       >
-                        <option value="">全部</option>
-                        {cropTypes.map((t: any) => (
-                          <option key={t.dictCode} value={t.dictCode}>{t.dictLabel}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                          <SelectValue placeholder="全部" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">全部</SelectItem>
+                          {cropTypes.map((t: any) => (
+                            <SelectItem key={t.dictCode} value={t.dictCode}>{t.dictLabel}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">作物名称</label>
-                      <input
+                      <Input
                         type="text"
                         value={filters.cropName}
                         onChange={(e) => updateAdvanced({ cropName: e.target.value })}
@@ -293,33 +318,40 @@ export function SeedSourceFilter({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">组织</label>
-                      <select
+                      <Select
                         value={filters.orgId || ''}
-                        onChange={(e) => {
-                          const orgId = e.target.value || undefined;
-                          // 切换组织时清空记录人
+                        onValueChange={(val) => {
+                          const orgId = val || undefined;
                           updateAdvanced({ orgId, recorderId: '' });
                         }}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
                       >
-                        <option value="">全部</option>
-                        {departments.map((d: any) => (
-                          <option key={d.oid || d.id} value={d.oid || d.id}>{d.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                          <SelectValue placeholder="全部" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">全部</SelectItem>
+                          {departments.map((d: any) => (
+                            <SelectItem key={d.oid || d.id} value={d.oid || d.id}>{d.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">记录人</label>
-                      <select
+                      <Select
                         value={filters.recorderId || ''}
-                        onChange={(e) => updateAdvanced({ recorderId: e.target.value || undefined })}
-                        className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
+                        onValueChange={(val) => updateAdvanced({ recorderId: val || undefined })}
                       >
-                        <option value="">全部</option>
-                        {filteredUsers.map((u: any) => (
-                          <option key={u.oid || u.id} value={u.oid || u.id}>{u.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                          <SelectValue placeholder="全部" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">全部</SelectItem>
+                          {filteredUsers.map((u: any) => (
+                            <SelectItem key={u.oid || u.id} value={u.oid || u.id}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -327,7 +359,7 @@ export function SeedSourceFilter({
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">剩余数量范围</label>
                     <div className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="number"
                         value={filters.surplusMin ?? ''}
                         onChange={(e) => updateAdvanced({
@@ -338,7 +370,7 @@ export function SeedSourceFilter({
                         className="w-full h-9 px-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500"
                       />
                       <span className="text-gray-400 text-xs">—</span>
-                      <input
+                      <Input
                         type="number"
                         value={filters.surplusMax ?? ''}
                         onChange={(e) => updateAdvanced({

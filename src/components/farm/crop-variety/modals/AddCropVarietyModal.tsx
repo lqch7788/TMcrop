@@ -6,6 +6,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { TextArea } from '@/components/ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -454,16 +457,19 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-bold text-blue-700 mb-1">
             类别 <span className="text-red-500">*</span>
           </label>
-          <select
+          <Select
             value={formData.categoryCode}
-            onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50"
+            onValueChange={(val) => handleCategoryChange(val)}
           >
-            <option value="">请选择类别</option>
-            {categoryOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50">
+              <SelectValue placeholder="请选择类别" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 类型 */}
@@ -471,17 +477,20 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-bold text-blue-700 mb-1">
             类型 <span className="text-red-500">*</span>
           </label>
-          <select
+          <Select
             value={formData.typeCode}
-            onChange={(e) => handleTypeChange(e.target.value)}
+            onValueChange={(val) => handleTypeChange(val)}
             disabled={!formData.categoryCode}
-            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300"
           >
-            <option value="">请选择类型</option>
-            {typeOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300">
+              <SelectValue placeholder="请选择类型" />
+            </SelectTrigger>
+            <SelectContent>
+              {typeOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 品种 */}
@@ -489,22 +498,25 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-bold text-blue-700 mb-1">
             品种 <span className="text-red-500">*</span>
           </label>
-          <select
+          <Select
             value={formData.varietyCode}
-            onChange={(e) => {
-              const opt = varietyOptions.find(v => v.value === e.target.value);
+            onValueChange={(val) => {
+              const opt = varietyOptions.find(v => v.value === val);
               if (opt) {
                 handleVarietyChange(opt.value, opt.label);
               }
             }}
             disabled={!formData.typeCode}
-            className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300"
           >
-            <option value="">请选择品种</option>
-            {varietyOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300">
+              <SelectValue placeholder="请选择品种" />
+            </SelectTrigger>
+            <SelectContent>
+              {varietyOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 子品种 */}
@@ -512,10 +524,10 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-medium text-gray-600 mb-1">
             子品种
           </label>
-          <select
+          <Select
             value={formData.subVariety1Code}
-            onChange={(e) => {
-              const opt = subVariety1Options.find(s => s.value === e.target.value);
+            onValueChange={(val) => {
+              const opt = subVariety1Options.find(s => s.value === val);
               if (opt) {
                 handleSubVariety1Change(opt.value, opt.label);
               } else {
@@ -523,13 +535,16 @@ export function AddCropVarietyModal({
               }
             }}
             disabled={!formData.varietyCode || subVariety1Options.length === 0}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
           >
-            <option value="">请选择子品种</option>
-            {subVariety1Options.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
+              <SelectValue placeholder="请选择子品种" />
+            </SelectTrigger>
+            <SelectContent>
+              {subVariety1Options.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {subVariety1Options.length === 0 && formData.varietyCode && (
             <p className="mt-1 text-xs text-gray-400">该品种暂无子品种分类</p>
           )}
@@ -540,7 +555,7 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-medium text-gray-600 mb-1">
             作物品种 <span className="text-xs text-gray-400">(可选，不填则使用子品种名称)</span>
           </label>
-          <input
+          <Input
             type="text"
             value={formData.detailVarietyName}
             onChange={(e) => handleDetailVarietyNameChange(e.target.value)}
@@ -561,7 +576,7 @@ export function AddCropVarietyModal({
             <span className="text-xs text-gray-400 ml-2">(点击生成按钮自动生成)</span>
           </label>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={cropCode}
               onChange={(e) => setCropCode(e.target.value.toUpperCase())}
@@ -623,7 +638,7 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-medium text-amber-700 mb-1">
             别名 <span className="text-xs text-gray-400">(多个用逗号分隔)</span>
           </label>
-          <input
+          <Input
             type="text"
             value={formData.alias}
             onChange={(e) => setFormData({ ...formData, alias: e.target.value })}
@@ -647,7 +662,7 @@ export function AddCropVarietyModal({
               <span className="text-amber-600">
                 {formData.image ? '更换图片' : '上传图片'}
               </span>
-              <input
+              <Input
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -681,7 +696,7 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-medium text-amber-700 mb-1">
             特性描述
           </label>
-          <textarea
+          <TextArea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={2}
@@ -698,7 +713,7 @@ export function AddCropVarietyModal({
           <div className="grid grid-cols-5 gap-3">
             <div>
               <label className="block text-xs text-amber-600 mb-1">发芽期(天)</label>
-              <input
+              <Input
                 type="number"
                 value={formData.germinationPeriod || ''}
                 onChange={(e) => setFormData({ ...formData, germinationPeriod: Number(e.target.value) || undefined })}
@@ -708,7 +723,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-amber-600 mb-1">育苗期(天)</label>
-              <input
+              <Input
                 type="number"
                 value={formData.seedlingPeriod || ''}
                 onChange={(e) => setFormData({ ...formData, seedlingPeriod: Number(e.target.value) || undefined })}
@@ -718,7 +733,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-amber-600 mb-1">开花期(天)</label>
-              <input
+              <Input
                 type="number"
                 value={formData.floweringPeriod || ''}
                 onChange={(e) => setFormData({ ...formData, floweringPeriod: Number(e.target.value) || undefined })}
@@ -728,7 +743,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-amber-600 mb-1">结果期(天)</label>
-              <input
+              <Input
                 type="number"
                 value={formData.fruitingPeriod || ''}
                 onChange={(e) => setFormData({ ...formData, fruitingPeriod: Number(e.target.value) || undefined })}
@@ -738,7 +753,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-amber-600 mb-1">摘收期(天)</label>
-              <input
+              <Input
                 type="number"
                 value={formData.harvestPeriod || ''}
                 onChange={(e) => setFormData({ ...formData, harvestPeriod: Number(e.target.value) || undefined })}
@@ -757,7 +772,7 @@ export function AddCropVarietyModal({
           <div className="grid grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-cyan-600 mb-1">空气温度(℃)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.airTemperature || ''}
@@ -768,7 +783,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">空气湿度(%)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.airHumidity || ''}
@@ -779,7 +794,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">CO₂含量(ppm)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.co2Content || ''}
@@ -790,7 +805,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">光照度(lx)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.lightIntensity || ''}
@@ -801,7 +816,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">土壤温度(℃)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.soilTemperature || ''}
@@ -812,7 +827,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">土壤湿度(%)</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.soilHumidity || ''}
@@ -823,7 +838,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">土壤PH值</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.soilPh || ''}
@@ -834,7 +849,7 @@ export function AddCropVarietyModal({
             </div>
             <div>
               <label className="block text-xs text-cyan-600 mb-1">土壤EC值</label>
-              <input
+              <Input
                 type="number"
                 step="0.01"
                 value={formData.soilEc || ''}
@@ -851,7 +866,7 @@ export function AddCropVarietyModal({
           <label className="block text-sm font-medium text-gray-500 mb-1">
             备注
           </label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}

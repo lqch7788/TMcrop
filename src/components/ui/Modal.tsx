@@ -1,6 +1,15 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input as UIInput } from './input';
+import { TextArea as UITextArea } from './TextArea';
+import {
+  Select as RadixSelect,
+  SelectContent,
+  SelectItem as RadixSelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select';
 
 interface ModalProps {
   isOpen: boolean;
@@ -393,11 +402,9 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export function Input({ error, className = '', type = 'text', ...props }: InputProps) {
   return (
     <div>
-      <input
+      <UIInput
         type={type}
-        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all ${
-          error ? 'border-red-500' : 'border-gray-400'
-        } ${className}`}
+        className={`${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''} ${className}`}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
@@ -410,21 +417,29 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   options: { value: string; label: string }[];
 }
 
-export function Select({ error, options, className = '', ...props }: SelectProps) {
+export function Select({ error, options, className = '', value, onChange, placeholder, disabled, ...props }: SelectProps) {
   return (
     <div>
-      <select
-        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white ${
-          error ? 'border-red-500' : 'border-gray-300'
-        } ${className}`}
-        {...props}
+      <RadixSelect
+        value={value as string}
+        disabled={disabled}
+        onValueChange={(val) => {
+          if (onChange) {
+            onChange({ target: { value: val } } as React.ChangeEvent<HTMLSelectElement>);
+          }
+        }}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={`${error ? 'border-red-500' : 'border-gray-300'} ${className}`}>
+          <SelectValue placeholder={placeholder || '请选择'} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <RadixSelectItem key={option.value} value={option.value}>
+              {option.label}
+            </RadixSelectItem>
+          ))}
+        </SelectContent>
+      </RadixSelect>
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>
   );
@@ -434,14 +449,12 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string;
 }
 
-export function Textarea({ error, className = '', ...props }: TextareaProps) {
+export function Textarea({ error, className = '', rows = 3, ...props }: TextareaProps) {
   return (
     <div>
-      <textarea
-        className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all resize-none ${
-          error ? 'border-red-500' : 'border-gray-300'
-        } ${className}`}
-        rows={3}
+      <UITextArea
+        className={`${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''} ${className}`}
+        minRows={rows}
         {...props}
       />
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}

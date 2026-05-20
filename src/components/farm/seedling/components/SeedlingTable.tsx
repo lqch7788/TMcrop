@@ -11,6 +11,8 @@ import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 // 操作模式类型（用于批量操作）
 type SeedlingOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -474,7 +476,7 @@ export function SeedlingTable({
                 <tr key={record.id} className="hover:bg-gray-50">
                   {showCheckbox && (
                     <td className="px-3 py-2 text-center">
-                      <input
+                      <Input
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
                         onChange={(e) => {
@@ -649,19 +651,23 @@ export function SeedlingTable({
         )}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => {
-              const newSize = Number(e.target.value);
+          <Select
+            value={String(pagination.pageSize)}
+            onValueChange={(val) => {
+              const newSize = Number(val);
               onPageSizeChange?.(newSize);
               onChange({ ...pagination, pageSize: newSize, current: 1 });
             }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 w-auto">
+              <SelectValue placeholder="20" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

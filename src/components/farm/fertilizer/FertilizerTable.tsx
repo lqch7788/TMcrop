@@ -11,6 +11,7 @@ import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 
 interface FertilizerTableProps {
   data: FertilizerData[];
@@ -174,7 +175,7 @@ export function FertilizerTable({
             <tr>
               {showCheckbox && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
+                  <Input
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.length === data.length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
@@ -215,7 +216,7 @@ export function FertilizerTable({
                   >
                     {showCheckbox && (
                       <td className="px-4 py-3">
-                        <input
+                        <Input
                           type="checkbox"
                           checked={selectedIds.includes(record.id)}
                           onChange={(e) => handleSelectRow(record.id, e.target.checked)}

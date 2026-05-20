@@ -6,6 +6,8 @@ import React from 'react';
 import { Send, Download, Trash2 } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface ProblemFilterToolbarProps {
   // 筛选状态
@@ -108,14 +110,14 @@ export function ProblemFilterToolbar({
         {/* 自定义时间段筛选 */}
         {timeFilter === 'custom' && (
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="date"
               value={dateRange.start}
               onChange={e => onDateRangeChange({ ...dateRange, start: e.target.value })}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-sm text-gray-400">至</span>
-            <input
+            <Input
               type="date"
               value={dateRange.end}
               onChange={e => onDateRangeChange({ ...dateRange, end: e.target.value })}
@@ -127,31 +129,39 @@ export function ProblemFilterToolbar({
         {/* 状态筛选 */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">状态：</span>
-          <select
+          <Select
             value={statusFilter}
-            onChange={e => onStatusFilterChange(e.target.value as typeof statusFilter)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onValueChange={(val) => onStatusFilterChange(val as typeof statusFilter)}
           >
-            <option value="all">全部</option>
-            <option value="pending">待分派</option>
-            <option value="dispatched">已分派</option>
-            <option value="handled">已处理</option>
-          </select>
+            <SelectTrigger className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-auto">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="pending">待分派</SelectItem>
+              <SelectItem value="dispatched">已分派</SelectItem>
+              <SelectItem value="handled">已处理</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 严重程度筛选 */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">严重程度：</span>
-          <select
+          <Select
             value={severityFilter}
-            onChange={e => onSeverityFilterChange(e.target.value as typeof severityFilter)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onValueChange={(val) => onSeverityFilterChange(val as typeof severityFilter)}
           >
-            <option value="all">全部</option>
-            <option value="轻微">轻微</option>
-            <option value="中等">中等</option>
-            <option value="严重">严重</option>
-          </select>
+            <SelectTrigger className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-auto">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="轻微">轻微</SelectItem>
+              <SelectItem value="中等">中等</SelectItem>
+              <SelectItem value="严重">严重</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 来源模块筛选 */}

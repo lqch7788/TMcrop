@@ -5,6 +5,7 @@
 import React from 'react';
 import { FileText, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
 import { OvertimeBadge } from './OvertimeBadge';
 
@@ -143,7 +144,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
       {/* 复选框 */}
       {showCheckbox && (
         <td className="px-3 py-3 text-center whitespace-nowrap">
-          <input
+          <Input
             type="checkbox"
             checked={isSelected}
             disabled={!isSelectable}

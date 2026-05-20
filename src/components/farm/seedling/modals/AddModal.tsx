@@ -20,6 +20,9 @@ import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -529,7 +532,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 育苗批次号 <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={formData.seedlingCode}
                   onChange={(e) => setFormData({ ...formData, seedlingCode: e.target.value })}
@@ -554,18 +557,21 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 关联生产计划批次号
               </label>
-              <select
-                value={formData.productionPlanId}
-                onChange={(e) => setFormData({ ...formData, productionPlanId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              <Select
+                value={formData.productionPlanId || '__none__'}
+                onValueChange={(val) => setFormData({ ...formData, productionPlanId: val === '__none__' ? '' : val })}
               >
-                <option value="">不关联（独立批次）</option>
-                {availableProductionPlans.map(plan => (
-                  <option key={plan.id} value={plan.batchCode}>
-                    [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.cropName}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="不关联（独立批次）" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProductionPlans.map(plan => (
+                    <SelectItem key={plan.id} value={plan.batchCode}>
+                      [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.cropName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -583,7 +589,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 关联种源 <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
+                <Input
                   type="text"
                   value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
                   placeholder="搜索种源批号或作物名称..."
@@ -662,7 +668,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 来源类型（只读自动带入） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">来源类型</label>
-              <input
+              <Input
                 type="text"
                 value={formData.sourceType || '请先选择种源'}
                 readOnly
@@ -673,7 +679,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 供应商（只读自动带入） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-              <input
+              <Input
                 type="text"
                 value={formData.supplierName || '请先选择种源'}
                 readOnly
@@ -697,7 +703,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 作物名称（只读显示） */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
-              <input
+              <Input
                 type="text"
                 value={formData.cropName ? `${formData.cropName} - ${formData.cropVariety}` : '请选择作物品种'}
                 readOnly
@@ -719,16 +725,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 育苗区域 <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.siteId}
-                onChange={(e) => handleSiteChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => handleSiteChange(val)}
               >
-                <option value="">请选择</option>
-                {sites.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 育苗方式 */}
@@ -750,7 +759,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   其他方式说明 <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   value={formData.seedlingTypeOther}
                   onChange={(e) => setFormData({ ...formData, seedlingTypeOther: e.target.value })}
@@ -765,15 +774,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 计划类型 <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.planType}
-                onChange={(e) => setFormData({ ...formData, planType: e.target.value as SeedlingPlanType })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setFormData({ ...formData, planType: val as SeedlingPlanType })}
               >
-                {seedlingPlanTypes.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择计划类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seedlingPlanTypes.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 开始日期 */}
@@ -781,7 +794,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 开始日期 <span className="text-red-500">*</span>
               </label>
-              <input
+              <Input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -792,7 +805,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 预计结束日期 */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">预计结束日期</label>
-              <input
+              <Input
                 type="date"
                 value={formData.expectedEndDate}
                 onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
@@ -803,7 +816,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 育苗周期（自动计算） */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">育苗周期（天）</label>
-              <input
+              <Input
                 type="text"
                 value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
                 readOnly
@@ -814,7 +827,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 方案2.6: 育苗工时 */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">工时（小时）</label>
-              <input
+              <Input
                 type="number"
                 value={formData.workHours || ''}
                 onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
@@ -855,7 +868,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   初始数量 <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="number"
                   value={formData.initialCount || ''}
                   onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
@@ -869,7 +882,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   目标成苗率（%）<span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="number"
                   min="0"
                   max="100"
@@ -890,7 +903,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               {/* 目标成苗数（自动计算） */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">目标成苗数</label>
-                <input
+                <Input
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
@@ -909,7 +922,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <label className="block text-sm font-medium text-gray-900 mb-1">
                     母株数量 <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.motherPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
@@ -923,16 +936,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <label className="block text-sm font-medium text-gray-900 mb-1">
                     扩繁倍数 <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.propagationMultiple}
-                    onChange={(e) => handlePropagationMultipleChange(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <Select
+                    value={String(formData.propagationMultiple)}
+                    onValueChange={(val) => handlePropagationMultipleChange(Number(val))}
                   >
-                    <option value={0}>请选择扩繁倍数</option>
-                    {propagationMultiples.map(p => (
-                      <option key={p.value} value={p.value}>{p.label} - {p.description}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <SelectValue placeholder="请选择扩繁倍数" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {propagationMultiples.map(p => (
+                        <SelectItem key={p.value} value={String(p.value)}>{p.label} - {p.description}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -942,7 +958,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <label className="block text-sm font-medium text-gray-900 mb-1">
                     自定义扩繁倍数 <span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.customMultiple || ''}
                     onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
@@ -956,7 +972,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">理论产量</label>
-                  <input
+                  <Input
                     type="text"
                     value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
                     readOnly
@@ -970,7 +986,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <label className="block text-sm font-medium text-gray-900 mb-1">
                     目标成苗率（%）<span className="text-red-500">*</span>
                   </label>
-                  <input
+                  <Input
                     type="number"
                     min="0"
                     max="100"
@@ -986,7 +1002,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               {/* 目标成苗数（自动计算） */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">目标成苗数</label>
-                <input
+                <Input
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
@@ -1002,16 +1018,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 负责人 */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">负责人</label>
-              <select
+              <Select
                 value={formData.chargePerson}
-                onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
               >
-                <option value="">请选择</option>
-                {OPERATORS.map(op => (
-                  <option key={op.value} value={op.value}>{op.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.map(op => (
+                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -1026,7 +1045,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 备注 */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={3}
@@ -1053,7 +1072,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   补录原因 <span className="text-red-500">*</span>
                 </label>
-                <textarea
+                <TextArea
                   value={formData.supplementaryReason}
                   onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
                   rows={2}
@@ -1094,7 +1113,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 rounded-lg py-4">
                   <Upload className="w-8 h-8 text-gray-400 mb-2" />
                   <span className="text-sm text-gray-500">点击上传图片</span>
-                  <input
+                  <Input
                     type="file"
                     accept="image/*"
                     multiple

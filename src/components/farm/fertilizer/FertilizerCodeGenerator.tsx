@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Copy, Check } from 'lucide-react';
 import { enhancedApiClient } from '@/lib/apiClient';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 
 interface FertilizerCodeGeneratorProps {
   value: string;
@@ -49,7 +50,7 @@ export default function FertilizerCodeGenerator({ value, onChange, disabled = fa
 
   return (
     <div className="flex items-center gap-2">
-      <input
+      <Input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}

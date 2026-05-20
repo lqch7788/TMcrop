@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, Eye, Edit, Trash2 } from 'lucide-react';
 import { Material } from './MaterialFilters';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface MaterialsTableProps {
   materials: Material[];
@@ -76,7 +78,7 @@ export function MaterialsTable({
             <tr>
               {(exportMode || batchEditMode || deleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
+                  <Input
                     type="checkbox"
                     checked={isAllSelected}
                     onChange={onSelectAll}
@@ -108,7 +110,7 @@ export function MaterialsTable({
               <tr key={item.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode || deleteMode) && (
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={selectedRows.includes(item.id)}
                       onChange={() => onSelectRow(item.id)}
@@ -158,15 +160,16 @@ export function MaterialsTable({
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+          <Select value={String(pageSize)} onValueChange={(val) => { onPageSizeChange(Number(val)); onPageChange(1); }}>
+            <SelectTrigger className="h-8 px-2 py-1 border border-gray-200 rounded text-sm">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

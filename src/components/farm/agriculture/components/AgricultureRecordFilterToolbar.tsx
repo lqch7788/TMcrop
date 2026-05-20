@@ -8,6 +8,8 @@ import { SOURCE_CONFIG, type FarmOperationRecord } from '../../../../hooks/useOp
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // 来源类型选项
 const SOURCE_OPTIONS = Object.entries(SOURCE_CONFIG).map(([value, config]) => ({
@@ -82,7 +84,7 @@ export function AgricultureRecordFilterToolbar({
         {/* 搜索框 */}
         <div className="flex-1 min-w-[180px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
-          <input
+          <Input
             type="text"
             value={filters.searchText}
             onChange={(e) => onFiltersChange({ ...filters, searchText: e.target.value })}
@@ -94,73 +96,91 @@ export function AgricultureRecordFilterToolbar({
         {/* 来源类型 */}
         <div className="min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">来源类型</label>
-          <select
+          <Select
             value={filters.sourceType}
-            onChange={(e) => onFiltersChange({ ...filters, sourceType: e.target.value as any })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, sourceType: val as any })}
           >
-            {SOURCE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {SOURCE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 操作类型 */}
         <div className="min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">操作类型</label>
-          <select
+          <Select
             value={filters.operationType}
-            onChange={(e) => onFiltersChange({ ...filters, operationType: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, operationType: val })}
           >
-            {TYPE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
+          <Select
             value={filters.status}
-            onChange={(e) => onFiltersChange({ ...filters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, status: val })}
           >
-            {STATUS_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 操作区域 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">操作区域</label>
-          <select
+          <Select
             value={filters.greenhouseId}
-            onChange={(e) => onFiltersChange({ ...filters, greenhouseId: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, greenhouseId: val })}
           >
-            <option value="">全部</option>
-            {greenhouseOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {greenhouseOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 操作人员 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
-          <select
+          <Select
             value={filters.operatorId}
-            onChange={(e) => onFiltersChange({ ...filters, operatorId: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, operatorId: val })}
           >
-            <option value="">全部</option>
-            {operatorOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {operatorOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 按钮组 */}

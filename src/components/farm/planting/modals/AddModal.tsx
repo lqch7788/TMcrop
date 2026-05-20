@@ -14,6 +14,9 @@ import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { useProductionPlanStore, usePlantingStore } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -254,25 +257,28 @@ export function AddModal({
         {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
-          <select
+          <Select
             value={formData.productionPlanId}
-            onChange={(e) => {
-              const plan = storePlans.find((b: any) => b.id === e.target.value);
+            onValueChange={(val) => {
+              const plan = storePlans.find((b: any) => b.id === val);
               setFormData(prev => ({
                 ...prev,
-                productionPlanId: e.target.value,
+                productionPlanId: val,
                 productionPlanCode: plan?.batchCode || ''
               }));
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">不关联</option>
-            {availableProductionPlans.map(plan => (
-              <option key={plan.id} value={plan.id}>
-                [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="不关联" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableProductionPlans.map(plan => (
+                <SelectItem key={plan.id} value={plan.id}>
+                  [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="mt-1 text-xs text-gray-400">只显示种植计划类型的生产批次</p>
         </div>
 
@@ -281,38 +287,41 @@ export function AddModal({
           <label className="block text-sm font-medium text-gray-900 mb-1">
             {formData.sourceType === SourceType.SEED ? '选择种源' : '选择育苗批次'}
           </label>
-          <select
+          <Select
             value={formData.sourceId}
-            onChange={(e) => {
+            onValueChange={(val) => {
               if (formData.sourceType === SourceType.SEED) {
-                handleSeedSourceChange(e.target.value);
+                handleSeedSourceChange(val);
               } else {
-                handleSeedlingChange(e.target.value);
+                handleSeedlingChange(val);
               }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">请选择</option>
-            {formData.sourceType === SourceType.SEED ? (
-              seedSources.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount}
-                </option>
-              ))
-            ) : (
-              seedlings.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {s.survivalCount - s.plantedCount}
-                </option>
-              ))
-            )}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {formData.sourceType === SourceType.SEED ? (
+                seedSources.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount}
+                  </SelectItem>
+                ))
+              ) : (
+                seedlings.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {s.survivalCount - s.plantedCount}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 作物品种 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
-          <input
+          <Input
             type="text"
             value={formData.cropName}
             readOnly
@@ -324,7 +333,7 @@ export function AddModal({
         {/* 品种 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
-          <input
+          <Input
             type="text"
             value={formData.cropVariety}
             readOnly
@@ -347,7 +356,7 @@ export function AddModal({
         {/* 种植数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植数量</label>
-          <input
+          <Input
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
@@ -358,7 +367,7 @@ export function AddModal({
         {/* 种植日期 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植日期</label>
-          <input
+          <Input
             type="date"
             value={formData.plantingDate}
             onChange={(e) => setFormData({ ...formData, plantingDate: e.target.value })}
@@ -369,7 +378,7 @@ export function AddModal({
         {/* 土壤PH值 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">土壤PH值</label>
-          <input
+          <Input
             type="number"
             step="0.1"
             value={formData.soilPH || ''}
@@ -382,7 +391,7 @@ export function AddModal({
         {/* 土壤EC值 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">土壤EC值</label>
-          <input
+          <Input
             type="number"
             step="0.1"
             value={formData.soilEC || ''}
@@ -395,7 +404,7 @@ export function AddModal({
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
@@ -435,7 +444,7 @@ export function AddModal({
             <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
               <Upload className="w-8 h-8 text-gray-400 mb-2" />
               <span className="text-sm text-gray-500">点击上传图片</span>
-              <input
+              <Input
                 type="file"
                 accept="image/*"
                 multiple

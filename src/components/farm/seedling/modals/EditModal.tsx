@@ -10,6 +10,9 @@ import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -210,7 +213,7 @@ export function EditModal({
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">关联种源</label>
           <div className="relative">
-            <input
+            <Input
               type="text"
               value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
               placeholder="搜索种源批号或作物名称..."
@@ -295,40 +298,46 @@ export function EditModal({
         {/* 育苗方式 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">育苗方式</label>
-          <select
+          <Select
             value={formData.seedlingType}
-            onChange={(e) => setFormData({ ...formData, seedlingType: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
           >
-            <option value="">请选择</option>
-            {seedlingTypes.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {seedlingTypes.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 温室场地 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">温室场地</label>
-          <select
+          <Select
             value={formData.siteId}
-            onChange={(e) => {
-              const site = sites.find(s => s.value === e.target.value);
-              setFormData({ ...formData, siteId: e.target.value, siteName: site?.label || '' });
+            onValueChange={(val) => {
+              const site = sites.find(s => s.value === val);
+              setFormData({ ...formData, siteId: val, siteName: site?.label || '' });
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">请选择</option>
-            {sites.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {sites.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 开始日期 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">开始日期</label>
-          <input
+          <Input
             type="date"
             value={formData.startDate}
             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
@@ -339,7 +348,7 @@ export function EditModal({
         {/* 预计结束日期 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">预计结束日期</label>
-          <input
+          <Input
             type="date"
             value={formData.expectedEndDate}
             onChange={(e) => setFormData({ ...formData, expectedEndDate: e.target.value })}
@@ -350,7 +359,7 @@ export function EditModal({
         {/* 初始数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">初始数量</label>
-          <input
+          <Input
             type="number"
             value={formData.initialCount || ''}
             onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
@@ -361,7 +370,7 @@ export function EditModal({
         {/* 成活数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">成活数量</label>
-          <input
+          <Input
             type="number"
             value={formData.survivalCount || ''}
             onChange={(e) => setFormData({ ...formData, survivalCount: Number(e.target.value) })}
@@ -372,7 +381,7 @@ export function EditModal({
         {/* 已定植数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">已定植数量</label>
-          <input
+          <Input
             type="number"
             value={formData.plantedCount || ''}
             onChange={(e) => setFormData({ ...formData, plantedCount: Number(e.target.value) })}
@@ -383,7 +392,7 @@ export function EditModal({
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
@@ -395,7 +404,7 @@ export function EditModal({
         {/* 负责人 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">负责人</label>
-          <input
+          <Input
             type="text"
             value={formData.chargePerson}
             onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
@@ -407,7 +416,7 @@ export function EditModal({
         {/* 目标成活数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">目标成活数量</label>
-          <input
+          <Input
             type="number"
             value={formData.targetSurvivalCount || ''}
             onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
@@ -419,7 +428,7 @@ export function EditModal({
         {/* 方案2.6: 育苗工时 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">工时（小时）</label>
-          <input
+          <Input
             type="number"
             value={formData.workHours || ''}
             onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
@@ -433,7 +442,7 @@ export function EditModal({
         {/* 品质等级 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">品质等级</label>
-          <input
+          <Input
             type="text"
             value={formData.qualityGrade}
             onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}

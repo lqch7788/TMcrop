@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { MaterialFilters, MaterialFiltersState, filterMaterials, Material } from './MaterialFilters';
 import { MaterialsTable } from './MaterialsTable';
 import { MaterialDetailModal } from './MaterialDetailModal';
@@ -788,44 +790,53 @@ export default function WarehouseMaterialsPage() {
           <div className="grid grid-cols-6 gap-4">
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-              <select
+              <Select
                 value={codeGen.bigCategory}
-                onChange={(e) => setCodeGen(prev => ({ ...prev, bigCategory: e.target.value, midCategory: '', subCategory: '', generatedCode: '' }))}
-                className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onValueChange={(val) => setCodeGen(prev => ({ ...prev, bigCategory: val, midCategory: '', subCategory: '', generatedCode: '' }))}
               >
-                <option value="">请选择</option>
-                {bigCategoriesList.map((cat) => (
-                  <option key={cat.code} value={cat.code}>{cat.code}-{cat.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bigCategoriesList.map((cat) => (
+                    <SelectItem key={cat.code} value={cat.code}>{cat.code}-{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
-              <select
+              <Select
                 value={codeGen.midCategory}
-                onChange={(e) => setCodeGen(prev => ({ ...prev, midCategory: e.target.value, subCategory: '', generatedCode: '' }))}
+                onValueChange={(val) => setCodeGen(prev => ({ ...prev, midCategory: val, subCategory: '', generatedCode: '' }))}
                 disabled={!codeGen.bigCategory}
-                className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
               >
-                <option value="">请选择</option>
-                {categoryConfig[codeGen.bigCategory]?.categories && Object.entries(categoryConfig[codeGen.bigCategory].categories).map(([code, cat]) => (
-                  <option key={code} value={code}>{code}-{cat.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryConfig[codeGen.bigCategory]?.categories && Object.entries(categoryConfig[codeGen.bigCategory].categories).map(([code, cat]) => (
+                    <SelectItem key={code} value={code}>{code}-{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
-              <select
+              <Select
                 value={codeGen.subCategory}
-                onChange={(e) => setCodeGen(prev => ({ ...prev, subCategory: e.target.value, generatedCode: '' }))}
+                onValueChange={(val) => setCodeGen(prev => ({ ...prev, subCategory: val, generatedCode: '' }))}
                 disabled={!codeGen.midCategory}
-                className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
               >
-                <option value="">请选择</option>
-                {codeGen.bigCategory && codeGen.midCategory && categoryConfig[codeGen.bigCategory]?.categories[codeGen.midCategory]?.subCategories && Object.entries(categoryConfig[codeGen.bigCategory].categories[codeGen.midCategory].subCategories).map(([code, sub]) => (
-                  <option key={code} value={code}>{code}-{sub.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {codeGen.bigCategory && codeGen.midCategory && categoryConfig[codeGen.bigCategory]?.categories[codeGen.midCategory]?.subCategories && Object.entries(categoryConfig[codeGen.bigCategory].categories[codeGen.midCategory].subCategories).map(([code, sub]) => (
+                    <SelectItem key={code} value={code}>{code}-{sub.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -838,7 +849,7 @@ export default function WarehouseMaterialsPage() {
                 )}
               </label>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={codeGen.generatedCode}
                   placeholder="点击生成"
