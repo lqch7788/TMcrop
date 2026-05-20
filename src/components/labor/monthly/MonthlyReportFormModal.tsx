@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal, NumberInput, DatePicker, Label } from '@/components/ui';
 import { MonthlyReport } from './types';
 
 interface MonthlyReportFormModalProps {
@@ -70,7 +70,7 @@ export function MonthlyReportFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 报表编号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">报表编号</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">报表编号</Label>
             <input
               type="text"
               value={formData.code}
@@ -82,7 +82,7 @@ export function MonthlyReportFormModal({
 
           {/* 月份 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月份</Label>
             <input
               type="month"
               value={formData.month.replace('年', '-').replace('月', '')}
@@ -93,7 +93,7 @@ export function MonthlyReportFormModal({
 
           {/* 部门 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
             <select
               value={formData.dept}
               onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
@@ -109,67 +109,62 @@ export function MonthlyReportFormModal({
 
           {/* 总工日数 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总工日数</label>
-            <input
-              type="number"
-              value={formData.totalWorkdays || ''}
-              onChange={(e) => setFormData({ ...formData, totalWorkdays: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总工日数</Label>
+            <NumberInput
+              value={formData.totalWorkdays}
+              onChange={(val) => setFormData({ ...formData, totalWorkdays: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 总工时 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总工时</label>
-            <input
-              type="number"
-              value={formData.totalWorkhours || ''}
-              onChange={(e) => setFormData({ ...formData, totalWorkhours: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总工时</Label>
+            <NumberInput
+              value={formData.totalWorkhours}
+              onChange={(val) => setFormData({ ...formData, totalWorkhours: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 平均人数 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">平均人数</label>
-            <input
-              type="number"
-              value={formData.avgDailyWorkers || ''}
-              onChange={(e) => setFormData({ ...formData, avgDailyWorkers: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">平均人数</Label>
+            <NumberInput
+              value={formData.avgDailyWorkers}
+              onChange={(val) => setFormData({ ...formData, avgDailyWorkers: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 已完成任务 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">已完成任务</label>
-            <input
-              type="number"
-              value={formData.completedTasks || ''}
-              onChange={(e) => setFormData({ ...formData, completedTasks: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">已完成任务</Label>
+            <NumberInput
+              value={formData.completedTasks}
+              onChange={(val) => setFormData({ ...formData, completedTasks: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 待办任务 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">待办任务</label>
-            <input
-              type="number"
-              value={formData.pendingTasks || ''}
-              onChange={(e) => setFormData({ ...formData, pendingTasks: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">待办任务</Label>
+            <NumberInput
+              value={formData.pendingTasks}
+              onChange={(val) => setFormData({ ...formData, pendingTasks: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 总产量 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总产量</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总产量</Label>
             <input
               type="text"
               value={formData.totalHarvest}
@@ -181,7 +176,7 @@ export function MonthlyReportFormModal({
 
           {/* 质量率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">质量率</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">质量率</Label>
             <input
               type="text"
               value={formData.qualityRate}
@@ -193,7 +188,7 @@ export function MonthlyReportFormModal({
 
           {/* 人工成本 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">人工成本</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">人工成本</Label>
             <input
               type="text"
               value={formData.laborCost}
@@ -205,7 +200,7 @@ export function MonthlyReportFormModal({
 
           {/* 物料成本 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">物料成本</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">物料成本</Label>
             <input
               type="text"
               value={formData.materialCost}
@@ -217,31 +212,29 @@ export function MonthlyReportFormModal({
 
           {/* 问题数 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">问题数</label>
-            <input
-              type="number"
-              value={formData.issuesCount || ''}
-              onChange={(e) => setFormData({ ...formData, issuesCount: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">问题数</Label>
+            <NumberInput
+              value={formData.issuesCount}
+              onChange={(val) => setFormData({ ...formData, issuesCount: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 已解决问题 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">已解决问题</label>
-            <input
-              type="number"
-              value={formData.resolvedIssues || ''}
-              onChange={(e) => setFormData({ ...formData, resolvedIssues: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">已解决问题</Label>
+            <NumberInput
+              value={formData.resolvedIssues}
+              onChange={(val) => setFormData({ ...formData, resolvedIssues: Number(val) })}
               placeholder="0"
+              decimals={0}
             />
           </div>
 
           {/* 考勤率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">考勤率</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">考勤率</Label>
             <input
               type="text"
               value={formData.attendanceRate}
@@ -253,7 +246,7 @@ export function MonthlyReportFormModal({
 
           {/* 发布人 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">发布人</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">发布人</Label>
             <input
               type="text"
               value={formData.publisher}
@@ -265,18 +258,17 @@ export function MonthlyReportFormModal({
 
           {/* 发布日期 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">发布日期</label>
-            <input
-              type="date"
-              value={formData.publishDate}
-              onChange={(e) => setFormData({ ...formData, publishDate: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">发布日期</Label>
+            <DatePicker
+              selected={formData.publishDate ? new Date(formData.publishDate) : undefined}
+              onChange={(date: Date) => setFormData({ ...formData, publishDate: date.toISOString().slice(0, 10) })}
+              placeholder="选择日期"
             />
           </div>
 
           {/* 状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({

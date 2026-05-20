@@ -29,6 +29,9 @@ import { TaskSopModal } from './TaskSopModal';
 import { TaskFilterType, FeedbackFormData, TaskWithExtras } from './types';
 import { formatDateShort, formatExpectedEndDate, STATUS_MAP } from './constants';
 
+// 导入 UI 组件
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+
 // 导入 Task 类型（从 useTasks）
 import { Task } from '../../../hooks/useTasks';
 
@@ -763,75 +766,75 @@ export function MyTasksPage() {
       {/* 任务列表 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1200px]">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table className="min-w-[1200px]">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {taskFilter === 'temp' ? (
                   <>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">任务编号</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">任务名称</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">类型</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">工作地点</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">负责人</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">开始时间</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">预计结束</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">人工</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">总工时</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">紧急程度</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">超时</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">任务编号</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">任务名称</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">类型</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">工作地点</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">负责人</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">开始时间</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">预计结束</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">人工</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">总工时</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">紧急程度</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">超时</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
                   </>
                 ) : taskFilter === 'problem' ? (
                   <>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查编号</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查类型</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">提交人</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">位置/对象</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查日期</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">巡查结果</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">问题分类</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">严重程度</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">问题照片</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈状态</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">反馈人员</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">处理进度</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查编号</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查类型</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">提交人</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">位置/对象</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查日期</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">巡查结果</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">问题分类</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">严重程度</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">问题照片</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">反馈状态</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">反馈人员</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">处理进度</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+                    <TableHead className="px-3 py-3 text-center text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
                   </>
                 ) : (
                   <>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务ID</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业标准</th>
-                    <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">任务ID</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">任务类型</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">任务区域</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">作物</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">负责人</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">计划开始</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">计划结束</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">任务工时</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">进度</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">优先级</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">作业标准</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
                   </>
                 )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {filteredTasks.length === 0 ? (
-                <tr>
-                  <td colSpan={taskFilter === 'temp' ? 13 : taskFilter === 'problem' ? 14 : 14} className="px-4 py-12 text-center text-gray-400">
+                <TableRow>
+                  <TableCell colSpan={taskFilter === 'temp' ? 13 : taskFilter === 'problem' ? 14 : 14} className="px-4 py-12 text-center text-gray-400">
                     暂无任务
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedTasks.map((task) => {
                   const taskWithExtras = task as TaskWithExtras;
                   const isTempTask = taskWithExtras.sourceType === 'tempTask';
                   return (
-                    <tr key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && taskWithExtras.urgency === 'critical' ? 'bg-red-50' : ''}`}>
+                    <TableRow key={task.id} className={`hover:bg-blue-50 transition-colors ${isTempTask && taskWithExtras.urgency === 'critical' ? 'bg-red-50' : ''}`}>
                       {taskFilter === 'temp' ? (
                         <TempTaskTableRow
                           task={task}
@@ -863,12 +866,12 @@ export function MyTasksPage() {
                           onOpenSopModal={openSopModal}
                         />
                       )}
-                    </tr>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}

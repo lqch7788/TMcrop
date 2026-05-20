@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { X, Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { Staff, SwapRequest } from './types';
+import { Label } from '@/components/ui/label';
 
 interface SwapRequestModalProps {
   staffList: Staff[];
@@ -70,9 +72,9 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
     <div className="space-y-4">
       {/* 申请人 */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
+        <Label className="block text-sm font-medium text-gray-600 mb-1">
           申请人
-        </label>
+        </Label>
         <select
           value={formData.requesterId}
           onChange={e => handleRequesterChange(e.target.value)}
@@ -89,25 +91,24 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
 
       {/* 原排班日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
+        <Label className="block text-sm font-medium text-gray-600 mb-1">
           原排班日期
-        </label>
+        </Label>
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="date"
-            value={formData.originalDate}
-            onChange={e => setFormData(prev => ({ ...prev, originalDate: e.target.value }))}
-            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10 pointer-events-none" />
+          <DatePicker
+            selected={formData.originalDate ? new Date(formData.originalDate) : undefined}
+            onChange={(date) => setFormData(prev => ({ ...prev, originalDate: date.toISOString().split('T')[0] }))}
+            className="w-full pl-9"
           />
         </div>
       </div>
 
       {/* 目标员工 */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
+        <Label className="block text-sm font-medium text-gray-600 mb-1">
           调班对象
-        </label>
+        </Label>
         <select
           value={formData.targetId}
           onChange={e => handleTargetChange(e.target.value)}
@@ -124,25 +125,24 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
 
       {/* 目标日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
+        <Label className="block text-sm font-medium text-gray-600 mb-1">
           目标日期
-        </label>
+        </Label>
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="date"
-            value={formData.targetDate}
-            onChange={e => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
-            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10 pointer-events-none" />
+          <DatePicker
+            selected={formData.targetDate ? new Date(formData.targetDate) : undefined}
+            onChange={(date) => setFormData(prev => ({ ...prev, targetDate: date.toISOString().split('T')[0] }))}
+            className="w-full pl-9"
           />
         </div>
       </div>
 
       {/* 调班原因 */}
       <div>
-        <label className="block text-sm font-medium text-gray-600 mb-1">
+        <Label className="block text-sm font-medium text-gray-600 mb-1">
           调班原因
-        </label>
+        </Label>
         <div className="relative">
           <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
           <textarea

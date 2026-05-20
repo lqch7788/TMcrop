@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, DatePicker, NumberInput, Label } from '@/components/ui';
 import type { ContractFormData, ContractType } from './types';
 
 interface ContractFormModalProps {
@@ -27,9 +27,9 @@ export function ContractFormModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工姓名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.staffName}
@@ -44,9 +44,9 @@ export function ContractFormModal({
 
         {/* 身份证号 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             身份证号 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.idCard}
@@ -61,9 +61,9 @@ export function ContractFormModal({
 
         {/* 合同类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             合同类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.contractType}
             onChange={(e) => onChange('contractType', e.target.value)}
@@ -83,43 +83,36 @@ export function ContractFormModal({
 
         {/* 签订日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">签订日期</label>
-          <input
-            type="date"
-            value={formData.signingDate || ''}
-            onChange={(e) => onChange('signingDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">签订日期</Label>
+          <DatePicker
+            selected={formData.signingDate ? new Date(formData.signingDate) : undefined}
+            onChange={(date: Date) => onChange('signingDate', date.toISOString().slice(0, 10))}
+            placeholder="选择日期"
           />
         </div>
 
         {/* 开始日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             开始日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => onChange('startDate', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.startDate ? 'border-red-500' : 'border-gray-300'
-            }`}
+          </Label>
+          <DatePicker
+            selected={formData.startDate ? new Date(formData.startDate) : undefined}
+            onChange={(date: Date) => onChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="选择日期"
           />
           {errors.startDate && <p className="mt-1 text-sm text-red-500">{errors.startDate}</p>}
         </div>
 
         {/* 结束日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             结束日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.endDate}
-            onChange={(e) => onChange('endDate', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.endDate ? 'border-red-500' : 'border-gray-300'
-            }`}
+          </Label>
+          <DatePicker
+            selected={formData.endDate ? new Date(formData.endDate) : undefined}
+            onChange={(date: Date) => onChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="选择日期"
           />
           {errors.endDate && <p className="mt-1 text-sm text-red-500">{errors.endDate}</p>}
         </div>
@@ -127,13 +120,12 @@ export function ContractFormModal({
         {/* 月薪（劳动合同） */}
         {formData.contractType === '劳动合同' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月薪</label>
-            <input
-              type="number"
-              value={formData.monthlySalary || ''}
-              onChange={(e) => onChange('monthlySalary', Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月薪</Label>
+            <NumberInput
+              value={formData.monthlySalary}
+              onChange={(val) => onChange('monthlySalary', Number(val))}
               placeholder="请输入月薪"
+              decimals={2}
             />
           </div>
         )}
@@ -141,13 +133,12 @@ export function ContractFormModal({
         {/* 日工资（劳务合同） */}
         {formData.contractType === '劳务合同' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">日工资</label>
-            <input
-              type="number"
-              value={formData.dailyWage || ''}
-              onChange={(e) => onChange('dailyWage', Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">日工资</Label>
+            <NumberInput
+              value={formData.dailyWage}
+              onChange={(val) => onChange('dailyWage', Number(val))}
               placeholder="请输入日工资"
+              decimals={2}
             />
           </div>
         )}
@@ -155,13 +146,12 @@ export function ContractFormModal({
         {/* 时工资（实习协议） */}
         {formData.contractType === '实习协议' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">时工资</label>
-            <input
-              type="number"
-              value={formData.hourlyWage || ''}
-              onChange={(e) => onChange('hourlyWage', Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">时工资</Label>
+            <NumberInput
+              value={formData.hourlyWage}
+              onChange={(val) => onChange('hourlyWage', Number(val))}
               placeholder="请输入时工资"
+              decimals={2}
             />
           </div>
         )}
@@ -169,7 +159,7 @@ export function ContractFormModal({
 
       {/* 备注 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
         <textarea
           value={formData.remarks || ''}
           onChange={(e) => onChange('remarks', e.target.value)}

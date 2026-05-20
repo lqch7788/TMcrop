@@ -10,6 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useSchedule } from './hooks/useSchedule';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleTable } from './ScheduleTable';
@@ -576,15 +577,19 @@ export function SchedulePage() {
       </div>
 
       {/* 模态框 */}
-      {showShiftEditor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <ShiftEditor
-            shiftConfigs={shiftConfigs}
-            onUpdateConfig={updateShiftConfig}
-            onClose={() => setShowShiftEditor(false)}
-          />
-        </div>
-      )}
+      <UnifiedModal
+        isOpen={showShiftEditor}
+        onClose={() => setShowShiftEditor(false)}
+        title="班次设置"
+        size="lg"
+        showFooter={false}
+      >
+        <ShiftEditor
+          shiftConfigs={shiftConfigs}
+          onUpdateConfig={updateShiftConfig}
+          onClose={() => setShowShiftEditor(false)}
+        />
+      </UnifiedModal>
 
       {showSwapModal && (
         <SwapRequestModal

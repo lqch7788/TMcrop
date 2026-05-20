@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput, Label } from '@/components/ui';
 import { MonthlyReport } from './types';
 
 interface MonthlyReportBatchEditModalProps {
@@ -82,7 +83,7 @@ export function MonthlyReportBatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的月报（按报表编号）</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的月报（按报表编号）</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
@@ -122,22 +123,22 @@ export function MonthlyReportBatchEditModal({
             {/* 已完成任务 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">已完成任务</div>
-              <input
-                type="number"
-                value={editedData.completedTasks ?? currentRecord.completedTasks ?? ''}
-                onChange={(e) => handleFieldChange('completedTasks', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              <NumberInput
+                value={editedData.completedTasks ?? currentRecord.completedTasks}
+                onChange={(val) => handleFieldChange('completedTasks', Number(val))}
+                placeholder="0"
+                decimals={0}
               />
             </div>
 
             {/* 待办任务 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">待办任务</div>
-              <input
-                type="number"
-                value={editedData.pendingTasks ?? currentRecord.pendingTasks ?? ''}
-                onChange={(e) => handleFieldChange('pendingTasks', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              <NumberInput
+                value={editedData.pendingTasks ?? currentRecord.pendingTasks}
+                onChange={(val) => handleFieldChange('pendingTasks', Number(val))}
+                placeholder="0"
+                decimals={0}
               />
             </div>
 

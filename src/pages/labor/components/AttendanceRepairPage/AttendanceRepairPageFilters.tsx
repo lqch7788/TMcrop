@@ -3,6 +3,7 @@
  */
 import { Search, RefreshCw, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { AttendanceRepairFilters, BatchMode } from './types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS, STATUS_OPTIONS } from './types/attendanceRepairPage.types';
 
@@ -47,7 +48,7 @@ export function AttendanceRepairPageFilters({
             placeholder="搜索员工姓名"
             value={filters.employeeName}
             onChange={(e) => onFilterChange('employeeName', e.target.value)}
-            className="h-9 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="h-10 w-40 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
@@ -55,7 +56,7 @@ export function AttendanceRepairPageFilters({
         <select
           value={filters.department}
           onChange={(e) => onFilterChange('department', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {departmentOptions.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -66,7 +67,7 @@ export function AttendanceRepairPageFilters({
         <select
           value={filters.reason}
           onChange={(e) => onFilterChange('reason', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           <option value="">全部原因</option>
           {REPAIR_REASON_OPTIONS.map(opt => (
@@ -78,7 +79,7 @@ export function AttendanceRepairPageFilters({
         <select
           value={filters.status}
           onChange={(e) => onFilterChange('status', e.target.value)}
-          className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
         >
           {STATUS_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -87,18 +88,16 @@ export function AttendanceRepairPageFilters({
 
         {/* 日期范围 */}
         <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFilterChange('startDate', e.target.value)}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFilterChange('startDate', date.toISOString().slice(0, 10))}
+            placeholder="开始日期"
           />
           <span className="text-gray-400">至</span>
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFilterChange('endDate', e.target.value)}
-            className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFilterChange('endDate', date.toISOString().slice(0, 10))}
+            placeholder="结束日期"
           />
         </div>
 

@@ -3,6 +3,7 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
+import { Label } from '@/components/ui/label';
 import { RecruitmentRecord } from '../../types/recruitment.types';
 import { Button } from '@/components/ui/button';
 
@@ -45,31 +46,31 @@ export function DetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">招聘编号</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">招聘编号</Label>
             <div className="text-sm text-gray-900">{record.recruitmentCode}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请部门</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请部门</Label>
             <div className="text-sm text-gray-900">{record.deptName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">招聘岗位</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">招聘岗位</Label>
             <div className="text-sm text-gray-900">{record.position}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">招聘人数</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">招聘人数</Label>
             <div className="text-sm text-gray-900">{record.headcount} 人</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">用工类型</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">用工类型</Label>
             <div className="text-sm text-gray-900">{record.employmentType}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">薪资范围</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">薪资范围</Label>
             <div className="text-sm text-gray-900">{record.salaryMin}-{record.salaryMax} 元/月</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">优先级</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">优先级</Label>
             <div className="mt-1">
               <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(record.priority)}`}>
                 {record.priority}
@@ -77,7 +78,7 @@ export function DetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -90,20 +91,20 @@ export function DetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请人</Label>
             <div className="text-sm text-gray-900">{record.applicantName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">申请日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">申请日期</Label>
             <div className="text-sm text-gray-900">{record.applyDate}</div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">招聘原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">招聘原因</Label>
             <div className="text-sm text-gray-900">{record.reason || '无'}</div>
           </div>
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

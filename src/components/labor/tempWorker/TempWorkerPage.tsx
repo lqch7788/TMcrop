@@ -8,6 +8,8 @@ import { TempWorkerDetailModal } from './TempWorkerDetailModal';
 import { TempWorkerFormModal } from './TempWorkerFormModal';
 import { TempWorkerBatchEditModal } from './TempWorkerBatchEditModal';
 import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Label } from '@/components/ui/label';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -20,56 +22,49 @@ interface ExportFormatModalProps {
 }
 
 function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange, onClose, onConfirm }: ExportFormatModalProps) {
-  if (!isOpen) return null;
-
   const exportFormats = [
     { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
     { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
     { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
   ];
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>×</Button>
-          </div>
-          <div className="p-6">
-            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
-            <div className="space-y-3">
-              {exportFormats.map((format) => (
-                <label
-                  key={format.value}
-                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                    exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={format.value}
-                    checked={exportFormat === format.value}
-                    onChange={(e) => onFormatChange(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                    <p className="text-xs text-gray-500">{format.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button onClick={onConfirm}>导出</Button>
-          </div>
-        </div>
-      </div>
+  const footer = (
+    <div className="flex justify-end gap-3">
+      <Button variant="secondary" onClick={onClose}>取消</Button>
+      <Button onClick={onConfirm}>导出</Button>
     </div>
+  );
+
+  return (
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="选择导出格式"
+      size="md"
+      showFooter={true}
+      footer={footer}
+    >
+      <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
+      <div className="space-y-3">
+        {exportFormats.map((format) => (
+          <Label
+            key={format.value}
+            onClick={() => onFormatChange(format.value)}
+            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+              {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">{format.label}</p>
+              <p className="text-xs text-gray-500">{format.desc}</p>
+            </div>
+          </Label>
+        ))}
+      </div>
+    </UnifiedModal>
   );
 }
 
@@ -82,31 +77,35 @@ interface DeleteWarningModalProps {
 }
 
 function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
-  if (!isOpen) return null;
+  const footer = (
+    <div className="flex gap-3">
+      <Button variant="secondary" onClick={onClose}>取消</Button>
+      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-red-600 text-2xl">!</span>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">删除临时工警告</h3>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600 space-y-3 mb-6">
-            <p>确定要删除选中的 <strong>{selectedCount}</strong> 个临时工吗？</p>
-            <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
-          </div>
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="删除临时工警告"
+      size="md"
+      showFooter={true}
+      footer={footer}
+    >
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+          <span className="text-red-600 text-2xl">!</span>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">删除临时工警告</h3>
         </div>
       </div>
-    </div>
+      <div className="text-sm text-gray-600 space-y-3">
+        <p>确定要删除选中的 <strong>{selectedCount}</strong> 个临时工吗？</p>
+        <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
+      </div>
+    </UnifiedModal>
   );
 }
 

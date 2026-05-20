@@ -4,6 +4,8 @@
 
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 import { EfficiencyMetrics } from './types';
 
 interface EfficiencyFormModalProps {
@@ -79,7 +81,7 @@ export function EfficiencyFormModal({
         <div className="grid grid-cols-2 gap-4">
           {/* 月份 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月份</Label>
             <input
               type="month"
               value={formData.date}
@@ -90,7 +92,7 @@ export function EfficiencyFormModal({
 
           {/* 部门 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
@@ -106,103 +108,91 @@ export function EfficiencyFormModal({
 
           {/* 总人数 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总人数</label>
-            <input
-              type="number"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总人数</Label>
+            <NumberInput
               value={formData.totalWorkers || ''}
-              onChange={(e) => setFormData({ ...formData, totalWorkers: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, totalWorkers: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 总产出 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总产出</label>
-            <input
-              type="number"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总产出</Label>
+            <NumberInput
               value={formData.totalOutput || ''}
-              onChange={(e) => setFormData({ ...formData, totalOutput: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, totalOutput: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 总工时 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">总工时</label>
-            <input
-              type="number"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">总工时</Label>
+            <NumberInput
               value={formData.totalHours || ''}
-              onChange={(e) => setFormData({ ...formData, totalHours: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, totalHours: Number(val) })}
               placeholder="0"
+              decimals={0}
+              className="w-full"
             />
           </div>
 
           {/* 任务达成率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">任务达成率</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">任务达成率</Label>
+            <NumberInput
               value={formData.taskCompletionRate || ''}
-              onChange={(e) => setFormData({ ...formData, taskCompletionRate: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, taskCompletionRate: Number(val) })}
               placeholder="0.00"
+              decimals={2}
+              className="w-full"
             />
           </div>
 
           {/* 出勤率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">出勤率</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">出勤率</Label>
+            <NumberInput
               value={formData.attendanceRate || ''}
-              onChange={(e) => setFormData({ ...formData, attendanceRate: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, attendanceRate: Number(val) })}
               placeholder="0.00"
+              decimals={2}
+              className="w-full"
             />
           </div>
 
           {/* 人工成本率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">人工成本率</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">人工成本率</Label>
+            <NumberInput
               value={formData.laborCostRate || ''}
-              onChange={(e) => setFormData({ ...formData, laborCostRate: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, laborCostRate: Number(val) })}
               placeholder="0.00"
+              decimals={2}
+              className="w-full"
             />
           </div>
 
           {/* 技能覆盖率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">技能覆盖率</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              max="1"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">技能覆盖率</Label>
+            <NumberInput
               value={formData.skillCoverage || ''}
-              onChange={(e) => setFormData({ ...formData, skillCoverage: Number(e.target.value) })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onChange={(val) => setFormData({ ...formData, skillCoverage: Number(val) })}
               placeholder="0.00"
+              decimals={2}
+              className="w-full"
             />
           </div>
 
           {/* 计算得出字段 - 人均产出 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">人均产出（计算）</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">人均产出（计算）</Label>
             <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateAvgOutput()}
             </div>
@@ -210,7 +200,7 @@ export function EfficiencyFormModal({
 
           {/* 计算得出字段 - 工时效率 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">工时效率（计算）</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">工时效率（计算）</Label>
             <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateEfficiency()}
             </div>

@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import type { WorkLogDetailModalProps } from './types';
+import { Label } from '@/components/ui/label';
 
 /**
  * 工作日志详情弹窗组件
@@ -13,35 +14,35 @@ export function WorkLogDetailModal({ log, open, onClose }: WorkLogDetailModalPro
     <div className="overflow-y-auto max-h-[calc(80vh-120px)]">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">日志编号</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">日志编号</Label>
           <p className="text-sm text-gray-900">{log.code}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">日期</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">日期</Label>
           <p className="text-sm text-gray-900">{log.date}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">工人姓名</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">工人姓名</Label>
           <p className="text-sm text-gray-900">{log.worker}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">天气</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">天气</Label>
           <p className="text-sm text-gray-900">{log.weather}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">温度</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">温度</Label>
           <p className="text-sm text-gray-900">{log.temperature}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">作物</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">作物</Label>
           <p className="text-sm text-gray-900">{log.crop}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">大棚</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">大棚</Label>
           <p className="text-sm text-gray-900">{log.greenhouse}</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-500 mb-1">生长状况</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">生长状况</Label>
           <span
             className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
               log.growthStatus === '良好'
@@ -53,15 +54,15 @@ export function WorkLogDetailModal({ log, open, onClose }: WorkLogDetailModalPro
           </span>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-500 mb-1">工作内容</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">工作内容</Label>
           <p className="text-sm text-gray-900">{log.tasks}</p>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-500 mb-1">问题描述</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">问题描述</Label>
           <p className="text-sm text-gray-900">{log.problems}</p>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-500 mb-1">处理措施</label>
+          <Label className="block text-sm font-medium text-gray-500 mb-1">处理措施</Label>
           <p className="text-sm text-gray-900">{log.solutions}</p>
         </div>
       </div>

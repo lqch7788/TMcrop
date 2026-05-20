@@ -12,12 +12,16 @@ import { Modal } from '@/components/ui/Modal';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../hooks/useTempTasks';
 
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../types/task';
+import { Label } from '@/components/ui/label';
 
 // 状态映射
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
@@ -86,56 +90,44 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
     { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
   ];
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">选择导出格式</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              ×
-            </Button>
-          </div>
-          <div className="p-6">
-            <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
-            <div className="space-y-3">
-              {exportFormats.map((format) => (
-                <label
-                  key={format.value}
-                  className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                    exportFormat === format.value
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={format.value}
-                    checked={exportFormat === format.value}
-                    onChange={(e) => onFormatChange(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                    <p className="text-xs text-gray-500">{format.desc}</p>
-                  </div>
-                </label>
-              ))}
+  const content = (
+    <>
+      <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
+      <div className="space-y-3">
+        {exportFormats.map((format) => (
+          <Label
+            key={format.value}
+            onClick={() => onFormatChange(format.value)}
+            className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+              exportFormat === format.value
+                ? 'border-emerald-500 bg-emerald-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+              {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
             </div>
-          </div>
-          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-            <Button variant="secondary" onClick={onClose}>
-              取消
-            </Button>
-            <Button onClick={onConfirm}>
-              导出
-            </Button>
-          </div>
-        </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">{format.label}</p>
+              <p className="text-xs text-gray-500">{format.desc}</p>
+            </div>
+          </Label>
+        ))}
       </div>
-    </div>
+    </>
+  );
+
+  const footer = (
+    <>
+      <Button variant="secondary" onClick={onClose}>取消</Button>
+      <Button onClick={onConfirm}>导出</Button>
+    </>
+  );
+
+  return (
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="选择导出格式" size="md" showFooter={true} footer={footer}>
+      {content}
+    </UnifiedModal>
   );
 }
 
@@ -150,33 +142,28 @@ interface DeleteWarningModalProps {
 function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
   if (!isOpen) return null;
 
+  const footer = (
+    <>
+      <Button variant="secondary" onClick={onClose}>取消</Button>
+      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+    </>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Trash2 className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">删除临时任务警告</h3>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600 space-y-3 mb-6">
-            <p>确定要删除选中的 <strong>{selectedCount}</strong> 个临时任务吗？</p>
-            <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={onConfirm}>
-              确认删除
-            </Button>
-          </div>
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="删除临时任务警告" size="sm" showFooter={true} footer={footer}>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+          <Trash2 className="w-6 h-6 text-red-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">删除临时任务警告</h3>
         </div>
       </div>
-    </div>
+      <div className="text-sm text-gray-600 space-y-3">
+        <p>确定要删除选中的 <strong>{selectedCount}</strong> 个临时任务吗？</p>
+        <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
+      </div>
+    </UnifiedModal>
   );
 }
 
@@ -210,7 +197,6 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
 
   // 确认（下一个）- 仅切换到下一个任务，不做任何标记
   const handleConfirmNext = () => {
-    // Move to next task
     const currentIndex = selectedTaskList.findIndex(t => t.taskCode === selectedTaskCode);
     if (currentIndex < selectedTaskList.length - 1) {
       setSelectedTaskCode(selectedTaskList[currentIndex + 1].taskCode);
@@ -233,227 +219,136 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-white">批量编辑临时任务</h3>
-            <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded">
-              已选择 {selectedRows.length} 条
+  const content = (
+    <div>
+      <div className="bg-blue-50 rounded-lg p-3 mb-3">
+        <p className="text-sm text-blue-800">
+          已选择 <strong>{selectedRows.length}</strong> 个临时任务进行批量编辑，
+          已编辑 <strong>{Object.keys(editedTasks).length}</strong> 个
+        </p>
+      </div>
+
+      <div className="mb-3">
+        <Label className="block text-xs font-medium text-gray-600 mb-1">选择任务编号</Label>
+        <SearchableSelect
+          value={selectedTaskCode}
+          options={selectedTaskList.map(task => ({
+            value: task.taskCode,
+            label: `${task.taskCode} - ${task.title}${editedTasks[task.taskCode] ? ' ✅ 已编辑' : ''}`
+          }))}
+          onChange={setSelectedTaskCode}
+          placeholder="请选择任务编号"
+          className="w-full"
+        />
+      </div>
+
+      {selectedTaskCode && currentTask && (
+        <div className="grid grid-cols-4 gap-3">
+          <div className="bg-gray-100 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">任务编号</div>
+            <div className="text-sm font-medium text-gray-900">{currentTask.taskCode}</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">任务名称</div>
+            <input type="text" value={editedData.title ?? currentTask.title} onChange={(e) => handleFieldChange('title', e.target.value)} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">任务类型</div>
+            <select value={editedData.tempTaskType ?? currentTask.tempTaskType} onChange={(e) => handleFieldChange('tempTaskType', e.target.value)} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500">
+              <option value="其他">其他</option>
+              <option value="病虫害防治">病虫害防治</option>
+              <option value="施肥">施肥</option>
+              <option value="浇水">浇水</option>
+              <option value="除草">除草</option>
+              <option value="修剪">修剪</option>
+              <option value="采收">采收</option>
+            </select>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">工作地点</div>
+            <input type="text" value={editedData.workLocation ?? currentTask.workLocation} onChange={(e) => handleFieldChange('workLocation', e.target.value)} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">执行人</div>
+            <select value={editedData.assigneeId ?? currentTask.assigneeId} onChange={(e) => { const user = users.find(u => u.id === e.target.value); handleFieldChange('assigneeId', e.target.value); handleFieldChange('assigneeName', user?.name || '待分配'); }} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500">
+              <option value="">待分配</option>
+              {users.map(user => (<option key={user.id} value={user.id}>{user.name}</option>))}
+            </select>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">截止日期</div>
+            <DatePicker
+              selected={(editedData.dueDate ?? currentTask.dueDate) ? new Date(editedData.dueDate ?? currentTask.dueDate) : undefined}
+              onChange={(date) => handleFieldChange('dueDate', date.toISOString().split('T')[0])}
+              className="w-full h-7"
+            />
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">预估时长(小时)</div>
+            <NumberInput
+              value={editedData.estimatedHours ?? currentTask.estimatedHours ?? 0}
+              onChange={(value) => handleFieldChange('estimatedHours', Number(value))}
+              min={0.5}
+              decimals={1}
+              className="w-full h-7"
+            />
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">优先级</div>
+            <select value={editedData.priority ?? currentTask.priority} onChange={(e) => handleFieldChange('priority', e.target.value)} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500">
+              <option value="low">低</option>
+              <option value="medium">中</option>
+              <option value="high">高</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {selectedTaskCode && currentTask && (
+        <div className="grid grid-cols-4 gap-3 mt-3">
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">紧急程度</div>
+            <select value={editedData.urgency ?? currentTask.urgency} onChange={(e) => handleFieldChange('urgency', e.target.value)} className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500">
+              <option value="normal">普通</option>
+              <option value="urgent">紧急</option>
+              <option value="critical">非常紧急</option>
+            </select>
+          </div>
+          <div className="bg-gray-100 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">状态</div>
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${currentTask.status === 'pending' ? 'bg-amber-100 text-amber-700' : currentTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : currentTask.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+              {currentTask.status === 'pending' ? '待执行' : currentTask.status === 'in_progress' ? '进行中' : currentTask.status === 'completed' ? '已完成' : '已取消'}
             </span>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
-            ×
-          </Button>
-        </div>
-
-        {/* Info Banner */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-          <div className="bg-blue-50 rounded-lg p-3 mb-3">
-            <p className="text-sm text-blue-800">
-              已选择 <strong>{selectedRows.length}</strong> 个临时任务进行批量编辑，
-              已编辑 <strong>{Object.keys(editedTasks).length}</strong> 个
-            </p>
+          <div className="bg-gray-100 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">发布人</div>
+            <div className="text-sm text-gray-700">{currentTask.assignerName}</div>
           </div>
-
-          {/* Task Selector */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">选择任务编号</label>
-              <SearchableSelect
-                value={selectedTaskCode}
-                options={selectedTaskList.map(task => ({
-                  value: task.taskCode,
-                  label: `${task.taskCode} - ${task.title}${editedTasks[task.taskCode] ? ' ✅ 已编辑' : ''}`
-                }))}
-                onChange={setSelectedTaskCode}
-                placeholder="请选择任务编号"
-                className="w-full"
-              />
-            </div>
+          <div></div>
+          <div className="col-span-2 bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">任务描述</div>
+            <textarea value={editedData.description ?? currentTask.description ?? ''} onChange={(e) => handleFieldChange('description', e.target.value)} className="w-full h-12 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500 resize-none" />
+          </div>
+          <div className="col-span-2 bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-gray-500 mb-1">备注</div>
+            <textarea value={editedData.notes ?? currentTask.notes ?? ''} onChange={(e) => handleFieldChange('notes', e.target.value)} className="w-full h-12 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500 resize-none" />
           </div>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-hidden p-4 flex flex-col">
-          {selectedTaskCode && currentTask && (
-            <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-              {/* 任务编号 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">任务编号</div>
-                <div className="text-sm font-medium text-gray-900">{currentTask.taskCode}</div>
-              </div>
-
-              {/* 任务名称 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">任务名称</div>
-                <input
-                  type="text"
-                  value={editedData.title ?? currentTask.title}
-                  onChange={(e) => handleFieldChange('title', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 任务类型 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">任务类型</div>
-                <select
-                  value={editedData.tempTaskType ?? currentTask.tempTaskType}
-                  onChange={(e) => handleFieldChange('tempTaskType', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="其他">其他</option>
-                  <option value="病虫害防治">病虫害防治</option>
-                  <option value="施肥">施肥</option>
-                  <option value="浇水">浇水</option>
-                  <option value="除草">除草</option>
-                  <option value="修剪">修剪</option>
-                  <option value="采收">采收</option>
-                </select>
-              </div>
-
-              {/* 工作地点 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">工作地点</div>
-                <input
-                  type="text"
-                  value={editedData.workLocation ?? currentTask.workLocation}
-                  onChange={(e) => handleFieldChange('workLocation', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 执行人 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">执行人</div>
-                <select
-                  value={editedData.assigneeId ?? currentTask.assigneeId}
-                  onChange={(e) => {
-                    const user = users.find(u => u.id === e.target.value);
-                    handleFieldChange('assigneeId', e.target.value);
-                    handleFieldChange('assigneeName', user?.name || '待分配');
-                  }}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">待分配</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>{user.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 截止日期 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">截止日期</div>
-                <input
-                  type="date"
-                  value={editedData.dueDate ?? currentTask.dueDate}
-                  onChange={(e) => handleFieldChange('dueDate', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 预估时长 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">预估时长(小时)</div>
-                <input
-                  type="number"
-                  min="0.5"
-                  step="0.5"
-                  value={editedData.estimatedHours ?? currentTask.estimatedHours}
-                  onChange={(e) => handleFieldChange('estimatedHours', Number(e.target.value))}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* 优先级 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">优先级</div>
-                <select
-                  value={editedData.priority ?? currentTask.priority}
-                  onChange={(e) => handleFieldChange('priority', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="low">低</option>
-                  <option value="medium">中</option>
-                  <option value="high">高</option>
-                </select>
-              </div>
-
-              {/* 紧急程度 - 可编辑 */}
-              <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">紧急程度</div>
-                <select
-                  value={editedData.urgency ?? currentTask.urgency}
-                  onChange={(e) => handleFieldChange('urgency', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="normal">普通</option>
-                  <option value="urgent">紧急</option>
-                  <option value="critical">非常紧急</option>
-                </select>
-              </div>
-
-              {/* 状态 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">状态</div>
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                  currentTask.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                  currentTask.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                  currentTask.status === 'completed' ? 'bg-green-100 text-green-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {currentTask.status === 'pending' ? '待执行' :
-                   currentTask.status === 'in_progress' ? '进行中' :
-                   currentTask.status === 'completed' ? '已完成' : '已取消'}
-                </span>
-              </div>
-
-              {/* 发布人 - 不可编辑 */}
-              <div className="bg-gray-100 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">发布人</div>
-                <div className="text-sm text-gray-700">{currentTask.assignerName}</div>
-              </div>
-
-              {/* 任务描述 - 可编辑 */}
-              <div className="col-span-2 bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">任务描述</div>
-                <textarea
-                  value={editedData.description ?? currentTask.description ?? ''}
-                  onChange={(e) => handleFieldChange('description', e.target.value)}
-                  className="w-full h-12 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500 resize-none"
-                />
-              </div>
-
-              {/* 备注 - 可编辑 */}
-              <div className="col-span-2 bg-gray-50 rounded-lg p-2">
-                <div className="text-xs text-gray-500 mb-1">备注</div>
-                <textarea
-                  value={editedData.notes ?? currentTask.notes ?? ''}
-                  onChange={(e) => handleFieldChange('notes', e.target.value)}
-                  className="w-full h-12 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500 resize-none"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
-          <div className="flex gap-3">
-            <Button variant="blue" onClick={handleConfirmNext}>
-              确认（下一个）
-            </Button>
-            <Button onClick={handlePublish}>
-              发布
-            </Button>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
+  );
+
+  const footer = (
+    <>
+      <Button variant="blue" onClick={handleConfirmNext}>确认（下一个）</Button>
+      <Button onClick={handlePublish}>发布</Button>
+    </>
+  );
+
+  return (
+    <UnifiedModal isOpen={isOpen} onClose={handleClose} title="批量编辑临时任务" size="xxl" showFooter={true} footer={footer} showMaximize={true}>
+      {content}
+    </UnifiedModal>
   );
 }
 
@@ -474,7 +369,6 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
   const isWithdraw = type === 'withdraw';
   const title = isWithdraw ? '撤回任务' : '取消任务';
   const colorClass = isWithdraw ? 'text-blue-600 bg-blue-50' : 'text-red-600 bg-red-50';
-  const buttonClass = isWithdraw ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600';
 
   const handleSubmit = () => {
     if (reason.trim()) {
@@ -483,76 +377,70 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              ×
-            </Button>
-          </div>
-          <div className="p-6 space-y-5">
-            {/* 警示信息 */}
-            <div className={`flex items-start gap-3 p-4 rounded-lg border ${colorClass}`}>
-              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium">
-                  {isWithdraw ? '撤回后将取消该任务的派发，执行人将无法再接受此任务' : '取消后任务将终止，执行人将无法继续执行'}
-                </p>
-                <p className="text-sm mt-1 opacity-80">
-                  此操作需要填写原因
-                </p>
-              </div>
-            </div>
-
-            {/* 任务信息 */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="font-medium text-gray-900">{task.title}</p>
-              <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
-                <p>任务编号：{task.taskCode}</p>
-                <p>执行人：{task.assigneeName}</p>
-                <p>当前状态：{isWithdraw ? '待接受' : '处理中'}</p>
-                <p>派发人：{task.assignerName}</p>
-              </div>
-            </div>
-
-            {/* 原因输入 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                操作原因 <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder={`请输入${isWithdraw ? '撤回' : '取消'}原因...`}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                rows={3}
-              />
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="flex gap-3 justify-end pt-2">
-              <Button variant="secondary" onClick={() => {
-                  setReason('');
-                  onClose();
-                }}>
-                取消
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!reason.trim()}
-                className={buttonClass}
-              >
-                确认{title}
-              </Button>
-            </div>
-          </div>
+  const content = (
+    <div className="space-y-5">
+      {/* 警示信息 */}
+      <div className={`flex items-start gap-3 p-4 rounded-lg border ${colorClass}`}>
+        <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="font-medium">
+            {isWithdraw ? '撤回后将取消该任务的派发，执行人将无法再接受此任务' : '取消后任务将终止，执行人将无法继续执行'}
+          </p>
+          <p className="text-sm mt-1 opacity-80">
+            此操作需要填写原因
+          </p>
         </div>
       </div>
+
+      {/* 任务信息 */}
+      <div className="bg-gray-50 rounded-lg p-3">
+        <p className="font-medium text-gray-900">{task.title}</p>
+        <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
+          <p>任务编号：{task.taskCode}</p>
+          <p>执行人：{task.assigneeName}</p>
+          <p>当前状态：{isWithdraw ? '待接受' : '处理中'}</p>
+          <p>派发人：{task.assignerName}</p>
+        </div>
+      </div>
+
+      {/* 原因输入 */}
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
+          操作原因 <span className="text-red-500">*</span>
+        </Label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={`请输入${isWithdraw ? '撤回' : '取消'}原因...`}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          rows={3}
+        />
+      </div>
     </div>
+  );
+
+  const footer = (
+    <>
+      <Button variant="secondary" onClick={() => {
+          setReason('');
+          onClose();
+        }}>
+        取消
+      </Button>
+      <Button
+        onClick={handleSubmit}
+        disabled={!reason.trim()}
+        variant={isWithdraw ? 'default' : 'destructive'}
+      >
+        确认{title}
+      </Button>
+    </>
+  );
+
+  return (
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title={title} size="md" showFooter={true} footer={footer}>
+      {content}
+    </UnifiedModal>
   );
 }
 
@@ -580,95 +468,89 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">重新派发任务</h2>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              ×
-            </Button>
-          </div>
-          <div className="p-6 space-y-5">
-            {/* 警示信息 */}
-            <div className="flex items-start gap-3 p-4 rounded-lg border border-orange-100 bg-orange-50">
-              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-orange-600" />
-              <div>
-                <p className="font-medium text-orange-900">
-                  任务 "{task.title}" 需要重新派发
-                </p>
-                <p className="text-sm mt-1 text-orange-700">
-                  请选择新的执行人。原执行人：{task.assigneeName || '(已清空)'}
-                </p>
-              </div>
-            </div>
-
-            {/* 任务信息 */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
-                <p>任务编号：{task.taskCode}</p>
-                <p>执行人：{task.assigneeName || '(已清空)'}</p>
-                <p>任务类型：{task.tempTaskType || '其他'}</p>
-                <p>当前状态：
-                  <span className="text-red-600 font-medium">
-                    {task.status === 'rejected' ? '已拒绝' : task.status === 'pending_reassign' ? '待重新派发' : '进行中'}
-                  </span>
-                </p>
-                {task.rejectReason && (
-                  <p className="col-span-2 text-red-600">拒绝原因：{task.rejectReason}</p>
-                )}
-              </div>
-            </div>
-
-            {/* 执行人选择 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                选择新执行人
-              </label>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">请选择执行人</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} {user.role ? `(${user.role})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 确认提示 */}
-            {selectedAssignee && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                <p className="text-sm text-emerald-800">
-                  确认将任务派发给：
-                  <span className="font-medium">
-                    {users.find(u => u.id === selectedAssignee)?.name}
-                  </span>
-                </p>
-              </div>
-            )}
-
-            {/* 操作按钮 */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-              <Button variant="secondary" onClick={onClose}>
-                取消
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!selectedAssignee}
-              >
-                确认派发
-              </Button>
-            </div>
-          </div>
+  const content = (
+    <div className="space-y-5">
+      {/* 警示信息 */}
+      <div className="flex items-start gap-3 p-4 rounded-lg border border-orange-100 bg-orange-50">
+        <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-orange-600" />
+        <div>
+          <p className="font-medium text-orange-900">
+            任务 "{task.title}" 需要重新派发
+          </p>
+          <p className="text-sm mt-1 text-orange-700">
+            请选择新的执行人。原执行人：{task.assigneeName || '(已清空)'}
+          </p>
         </div>
       </div>
+
+      {/* 任务信息 */}
+      <div className="bg-gray-50 rounded-lg p-3">
+        <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+          <p>任务编号：{task.taskCode}</p>
+          <p>执行人：{task.assigneeName || '(已清空)'}</p>
+          <p>任务类型：{task.tempTaskType || '其他'}</p>
+          <p>当前状态：
+            <span className="text-red-600 font-medium">
+              {task.status === 'rejected' ? '已拒绝' : task.status === 'pending_reassign' ? '待重新派发' : '进行中'}
+            </span>
+          </p>
+          {task.rejectReason && (
+            <p className="col-span-2 text-red-600">拒绝原因：{task.rejectReason}</p>
+          )}
+        </div>
+      </div>
+
+      {/* 执行人选择 */}
+      <div>
+        <Label className="block text-sm font-medium text-gray-700 mb-2">
+          选择新执行人
+        </Label>
+        <select
+          value={selectedAssignee}
+          onChange={(e) => setSelectedAssignee(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          <option value="">请选择执行人</option>
+          {users.map(user => (
+            <option key={user.id} value={user.id}>
+              {user.name} {user.role ? `(${user.role})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 确认提示 */}
+      {selectedAssignee && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+          <p className="text-sm text-emerald-800">
+            确认将任务派发给：
+            <span className="font-medium">
+              {users.find(u => u.id === selectedAssignee)?.name}
+            </span>
+          </p>
+        </div>
+      )}
     </div>
+  );
+
+  const footer = (
+    <>
+      <Button variant="secondary" onClick={onClose}>
+        取消
+      </Button>
+      <Button
+        onClick={handleSubmit}
+        disabled={!selectedAssignee}
+      >
+        确认派发
+      </Button>
+    </>
+  );
+
+  return (
+    <UnifiedModal isOpen={isOpen} onClose={onClose} title="重新派发任务" size="md" showFooter={true} footer={footer}>
+      {content}
+    </UnifiedModal>
   );
 }
 
@@ -1384,19 +1266,19 @@ export function TempTaskPage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">任务名称</label>
+                  <Label className="text-xs text-gray-500">任务名称</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.title || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">任务区域</label>
+                  <Label className="text-xs text-gray-500">任务区域</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">执行人</label>
+                  <Label className="text-xs text-gray-500">执行人</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.assigneeName || '待分配'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">优先级</label>
+                  <Label className="text-xs text-gray-500">优先级</Label>
                   <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
                     {priorityMap[selectedTask.priority]?.label || selectedTask.priority || '普通'}
                   </p>
@@ -1444,15 +1326,15 @@ export function TempTaskPage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">派发时间</label>
+                  <Label className="text-xs text-gray-500">派发时间</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString('zh-CN') : '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">截止日期</label>
+                  <Label className="text-xs text-gray-500">截止日期</Label>
                   <p className="font-semibold text-gray-900">{selectedTask.dueDate || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">状态</label>
+                  <Label className="text-xs text-gray-500">状态</Label>
                   <p>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || 'bg-gray-100'} ${statusMap[selectedTask.status]?.color || 'text-gray-600'}`}>
                       {statusMap[selectedTask.status]?.label || selectedTask.status}
@@ -1460,7 +1342,7 @@ export function TempTaskPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">预估时长</label>
+                  <Label className="text-xs text-gray-500">预估时长</Label>
                   <p className="font-semibold text-gray-900">
                     {selectedTask.estimatedHours ? `${selectedTask.estimatedHours}小时` : '-'}
                   </p>

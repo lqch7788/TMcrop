@@ -1,7 +1,8 @@
 /**
  * 工资预算创建/编辑弹窗组件
  */
-import { Button } from '@/components/ui';
+import { Label } from '@/components/ui/label';
+import { Button, NumberInput } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryBudgetFormData } from '../../types/salaryBudget.types';
 import { getMonthOptions } from '../../hooks/useSalaryBudget';
@@ -44,9 +45,9 @@ export function CreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 部门选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             部门 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.deptId}
             onChange={(e) => {
@@ -64,9 +65,9 @@ export function CreateModal({
 
         {/* 月份选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             预算月份 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.budgetMonth}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, budgetMonth: e.target.value }))}
@@ -80,57 +81,51 @@ export function CreateModal({
 
         {/* 基本工资总额 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             基本工资总额 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            value={formData.totalBaseSalary || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, totalBaseSalary: parseFloat(e.target.value) || 0 }))}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <NumberInput
+            value={formData.totalBaseSalary ?? 0}
+            onChange={(val: string) => onFormDataChange(prev => ({ ...prev, totalBaseSalary: parseFloat(val) || 0 }))}
+            decimals={2}
             placeholder="请输入金额"
-            min="0"
-            step="0.01"
+            className="w-full"
           />
         </div>
 
         {/* 加班费总额 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             加班费总额
-          </label>
-          <input
-            type="number"
-            value={formData.totalOvertimePay || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, totalOvertimePay: parseFloat(e.target.value) || 0 }))}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <NumberInput
+            value={formData.totalOvertimePay ?? 0}
+            onChange={(val: string) => onFormDataChange(prev => ({ ...prev, totalOvertimePay: parseFloat(val) || 0 }))}
+            decimals={2}
             placeholder="请输入金额"
-            min="0"
-            step="0.01"
+            className="w-full"
           />
         </div>
 
         {/* 奖金总额 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             奖金总额
-          </label>
-          <input
-            type="number"
-            value={formData.totalBonus || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, totalBonus: parseFloat(e.target.value) || 0 }))}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <NumberInput
+            value={formData.totalBonus ?? 0}
+            onChange={(val: string) => onFormDataChange(prev => ({ ...prev, totalBonus: parseFloat(val) || 0 }))}
+            decimals={2}
             placeholder="请输入金额"
-            min="0"
-            step="0.01"
+            className="w-full"
           />
         </div>
 
         {/* 总计显示 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             总计
-          </label>
+          </Label>
           <div className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 flex items-center">
             <span className="font-medium text-emerald-600">
               ¥{grandTotal.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
@@ -140,9 +135,9 @@ export function CreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             备注
-          </label>
+          </Label>
           <textarea
             value={formData.remark}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, remark: e.target.value }))}

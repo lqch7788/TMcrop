@@ -2,7 +2,8 @@
  * 合同续签创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui';
+import { Button, DatePicker, NumberInput } from '@/components/ui';
+import { Label } from '@/components/ui/label';
 import { ContractRenewalFormData, CONTRACT_PERIOD_OPTIONS } from '../../types/contractRenewal.types';
 
 export interface CreateModalProps {
@@ -45,9 +46,9 @@ export function CreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.employeeId}
             onChange={(e) => {
@@ -73,7 +74,7 @@ export function CreateModal({
 
         {/* 部门 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">部门</Label>
           <input
             type="text"
             value={formData.department}
@@ -85,7 +86,7 @@ export function CreateModal({
 
         {/* 岗位 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">岗位</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">岗位</Label>
           <input
             type="text"
             value={formData.position}
@@ -97,34 +98,33 @@ export function CreateModal({
 
         {/* 当前合同到期日 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">当前合同到期日</label>
-          <input
-            type="date"
-            value={formData.currentContractEnd}
-            readOnly
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">当前合同到期日</Label>
+          <DatePicker
+            selected={formData.currentContractEnd ? new Date(formData.currentContractEnd) : undefined}
             placeholder="选择员工后自动填充"
+            disabled
+            className="w-full"
           />
         </div>
 
         {/* 新合同开始日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             新合同开始日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.newContractStart}
-            onChange={(e) => onNewStartDateChange(e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.newContractStart ? new Date(formData.newContractStart) : undefined}
+            onChange={(date: Date) => onNewStartDateChange(date.toISOString().slice(0, 10))}
+            placeholder="选择日期"
+            className="w-full"
           />
         </div>
 
         {/* 续签期限 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             续签期限 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.renewalPeriod}
             onChange={(e) => onPeriodChange(Number(e.target.value))}
@@ -138,33 +138,32 @@ export function CreateModal({
 
         {/* 新合同到期日 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             新合同到期日 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.newContractEnd}
-            readOnly
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+          </Label>
+          <DatePicker
+            selected={formData.newContractEnd ? new Date(formData.newContractEnd) : undefined}
             placeholder="根据期限自动计算"
+            disabled
+            className="w-full"
           />
         </div>
 
         {/* 新薪资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">新薪资</label>
-          <input
-            type="number"
-            value={formData.newSalary || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, newSalary: e.target.value ? Number(e.target.value) : undefined }))}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">新薪资</Label>
+          <NumberInput
+            value={formData.newSalary ?? 0}
+            onChange={(val: string) => onFormDataChange(prev => ({ ...prev, newSalary: val ? Number(val) : undefined }))}
+            decimals={2}
             placeholder="选填"
+            className="w-full"
           />
         </div>
 
         {/* 条款变更 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">条款变更说明</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">条款变更说明</Label>
           <textarea
             value={formData.termsChange}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, termsChange: e.target.value }))}
@@ -176,7 +175,7 @@ export function CreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, remarks: e.target.value }))}

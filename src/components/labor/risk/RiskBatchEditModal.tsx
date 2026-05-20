@@ -5,6 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { RiskAlert } from './types';
+import { Label } from '@/components/ui/label';
 
 interface RiskBatchEditModalProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export function RiskBatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的预警（按预警编号）</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的预警（按预警编号）</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}

@@ -4,6 +4,8 @@
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { RecruitmentFormData, EMPLOYMENT_TYPE_OPTIONS, PRIORITY_OPTIONS } from '../../types/recruitment.types';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 
 export interface CreateModalProps {
   isOpen: boolean;
@@ -43,9 +45,9 @@ export function CreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 部门选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             申请部门 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.deptId}
             onChange={(e) => onDeptChange(e.target.value)}
@@ -60,9 +62,9 @@ export function CreateModal({
 
         {/* 岗位选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             招聘岗位 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.positionId}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, positionId: e.target.value }))}
@@ -78,14 +80,13 @@ export function CreateModal({
 
         {/* 招聘人数 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             招聘人数 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.headcount}
-            onChange={(e) => onHeadcountChange(parseInt(e.target.value) || 1)}
-            min={1}
+            onChange={(val) => onHeadcountChange(parseInt(val) || 1)}
+            decimals={0}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="输入招聘人数"
           />
@@ -93,9 +94,9 @@ export function CreateModal({
 
         {/* 用工类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             用工类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.employmentType}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, employmentType: e.target.value }))}
@@ -109,14 +110,13 @@ export function CreateModal({
 
         {/* 最低薪资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             最低薪资 (元/月)
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.salaryMin || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, salaryMin: parseInt(e.target.value) || 0 }))}
-            min={0}
+            onChange={(val) => onFormDataChange(prev => ({ ...prev, salaryMin: parseInt(val) || 0 }))}
+            decimals={0}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="输入最低薪资"
           />
@@ -124,14 +124,13 @@ export function CreateModal({
 
         {/* 最高薪资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             最高薪资 (元/月)
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.salaryMax || ''}
-            onChange={(e) => onFormDataChange(prev => ({ ...prev, salaryMax: parseInt(e.target.value) || 0 }))}
-            min={0}
+            onChange={(val) => onFormDataChange(prev => ({ ...prev, salaryMax: parseInt(val) || 0 }))}
+            decimals={0}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="输入最高薪资"
           />
@@ -139,7 +138,7 @@ export function CreateModal({
 
         {/* 优先级 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">优先级</Label>
           <select
             value={formData.priority}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, priority: e.target.value }))}
@@ -162,9 +161,9 @@ export function CreateModal({
 
         {/* 招聘原因 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             招聘原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <textarea
             value={formData.reason}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, reason: e.target.value }))}
@@ -176,7 +175,7 @@ export function CreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange(prev => ({ ...prev, remarks: e.target.value }))}

@@ -4,6 +4,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 import { EfficiencyMetrics } from './types';
 
 interface EfficiencyBatchEditModalProps {
@@ -95,7 +97,7 @@ export function EfficiencyBatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
@@ -129,89 +131,77 @@ export function EfficiencyBatchEditModal({
             {/* 总人数 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">总人数</div>
-              <input
-                type="number"
+              <NumberInput
                 value={editedData.totalWorkers ?? currentRecord.totalWorkers ?? ''}
-                onChange={(e) => handleFieldChange('totalWorkers', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('totalWorkers', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 总产出 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">总产出</div>
-              <input
-                type="number"
+              <NumberInput
                 value={editedData.totalOutput ?? currentRecord.totalOutput ?? ''}
-                onChange={(e) => handleFieldChange('totalOutput', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('totalOutput', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 总工时 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">总工时</div>
-              <input
-                type="number"
+              <NumberInput
                 value={editedData.totalHours ?? currentRecord.totalHours ?? ''}
-                onChange={(e) => handleFieldChange('totalHours', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('totalHours', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 任务达成率 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">任务达成率</div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
                 value={editedData.taskCompletionRate ?? currentRecord.taskCompletionRate ?? ''}
-                onChange={(e) => handleFieldChange('taskCompletionRate', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('taskCompletionRate', Number(val))}
+                decimals={2}
+                className="w-full"
               />
             </div>
 
             {/* 出勤率 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">出勤率</div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
                 value={editedData.attendanceRate ?? currentRecord.attendanceRate ?? ''}
-                onChange={(e) => handleFieldChange('attendanceRate', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('attendanceRate', Number(val))}
+                decimals={2}
+                className="w-full"
               />
             </div>
 
             {/* 人工成本率 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">人工成本率</div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
                 value={editedData.laborCostRate ?? currentRecord.laborCostRate ?? ''}
-                onChange={(e) => handleFieldChange('laborCostRate', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('laborCostRate', Number(val))}
+                decimals={2}
+                className="w-full"
               />
             </div>
 
             {/* 技能覆盖率 - 可编辑 */}
             <div className="bg-white rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">技能覆盖率</div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="1"
+              <NumberInput
                 value={editedData.skillCoverage ?? currentRecord.skillCoverage ?? ''}
-                onChange={(e) => handleFieldChange('skillCoverage', Number(e.target.value))}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                onChange={(val) => handleFieldChange('skillCoverage', Number(val))}
+                decimals={2}
+                className="w-full"
               />
             </div>
           </div>

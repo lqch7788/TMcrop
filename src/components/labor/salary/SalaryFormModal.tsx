@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal, NumberInput, Label } from '@/components/ui';
 import type { SalaryRecord, SalaryCalcType, SalaryStatus } from './types';
 
 interface SalaryFormModalProps {
@@ -109,7 +109,7 @@ export function SalaryFormModal({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 员工选择 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">员工</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">员工</Label>
             <select
               value={formData.staffId}
               onChange={(e) => handleStaffChange(e.target.value)}
@@ -124,7 +124,7 @@ export function SalaryFormModal({
 
           {/* 月份 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">月份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">月份</Label>
             <input
               type="month"
               value={formData.month}
@@ -135,7 +135,7 @@ export function SalaryFormModal({
 
           {/* 计算方式 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">计算方式</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">计算方式</Label>
             <select
               value={formData.calcType}
               onChange={(e) => setFormData(prev => ({ ...prev, calcType: e.target.value as SalaryCalcType }))}
@@ -149,7 +149,7 @@ export function SalaryFormModal({
 
           {/* 状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
             <select
               value={formData.status}
               onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SalaryStatus }))}
@@ -163,115 +163,106 @@ export function SalaryFormModal({
 
           {/* 基本工资 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">基本工资</label>
-            <input
-              type="number"
-              value={formData.baseSalary || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, baseSalary: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">基本工资</Label>
+            <NumberInput
+              value={formData.baseSalary}
+              onChange={(val) => setFormData(prev => ({ ...prev, baseSalary: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 加班费 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">加班费</label>
-            <input
-              type="number"
-              value={formData.overtimePay || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, overtimePay: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">加班费</Label>
+            <NumberInput
+              value={formData.overtimePay}
+              onChange={(val) => setFormData(prev => ({ ...prev, overtimePay: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 奖金 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">奖金</label>
-            <input
-              type="number"
-              value={formData.bonuses || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, bonuses: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">奖金</Label>
+            <NumberInput
+              value={formData.bonuses}
+              onChange={(val) => setFormData(prev => ({ ...prev, bonuses: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 扣款 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">扣款</label>
-            <input
-              type="number"
-              value={formData.deductions || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, deductions: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">扣款</Label>
+            <NumberInput
+              value={formData.deductions}
+              onChange={(val) => setFormData(prev => ({ ...prev, deductions: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 迟到扣款 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">迟到扣款</label>
-            <input
-              type="number"
-              value={formData.lateDeductions || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, lateDeductions: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">迟到扣款</Label>
+            <NumberInput
+              value={formData.lateDeductions}
+              onChange={(val) => setFormData(prev => ({ ...prev, lateDeductions: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 缺勤扣款 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">缺勤扣款</label>
-            <input
-              type="number"
-              value={formData.absenceDeductions || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, absenceDeductions: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">缺勤扣款</Label>
+            <NumberInput
+              value={formData.absenceDeductions}
+              onChange={(val) => setFormData(prev => ({ ...prev, absenceDeductions: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 社保 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">社保</label>
-            <input
-              type="number"
-              value={formData.socialSecurity || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, socialSecurity: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">社保</Label>
+            <NumberInput
+              value={formData.socialSecurity}
+              onChange={(val) => setFormData(prev => ({ ...prev, socialSecurity: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 公积金 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">公积金</label>
-            <input
-              type="number"
-              value={formData.housingFund || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, housingFund: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">公积金</Label>
+            <NumberInput
+              value={formData.housingFund}
+              onChange={(val) => setFormData(prev => ({ ...prev, housingFund: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 个税 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">个税</label>
-            <input
-              type="number"
-              value={formData.personalTax || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, personalTax: Number(e.target.value) }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">个税</Label>
+            <NumberInput
+              value={formData.personalTax}
+              onChange={(val) => setFormData(prev => ({ ...prev, personalTax: Number(val) }))}
               placeholder="0"
+              decimals={2}
             />
           </div>
 
           {/* 实发工资（只读） */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">实发工资</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">实发工资</Label>
             <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               ¥{calculateNetSalary().toLocaleString()}
             </div>

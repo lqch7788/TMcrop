@@ -3,6 +3,7 @@
  */
 import { Eye, ChevronLeft, ChevronRight, Edit2, Trash2, Download, Plus, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { PerformanceRecord } from './types';
 
 interface PerformanceTableProps {
@@ -193,11 +194,11 @@ export function PerformanceTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap w-12">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -206,30 +207,30 @@ export function PerformanceTable({
                   >
                     {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                   </Button>
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">月份</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务完成率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出勤率</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作质量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">安全规范</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">协作态度</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">综合得分</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">排名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">工号</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">姓名</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">部门</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">月份</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">任务完成率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">出勤率</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">工作质量</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">安全规范</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">协作态度</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">综合得分</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">排名</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">状态</TableHead>
               {!showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>
               )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {records.map((record) => (
-              <tr key={record.id} className={`hover:bg-gray-50 ${selectedRows.includes(record.id) ? 'bg-emerald-50' : ''}`}>
+              <TableRow key={record.id} className={`hover:bg-gray-50 ${selectedRows.includes(record.id) ? 'bg-emerald-50' : ''}`}>
                 {showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -238,26 +239,26 @@ export function PerformanceTable({
                     >
                       {selectedRows.includes(record.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                     </Button>
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffId}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.staffName}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.department}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.taskCompletionRate}%</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.attendanceRate}%</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.workQuality}%</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.safetyCompliance}%</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.teamworkAttitude}%</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold whitespace-nowrap text-gray-900">
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{record.staffId}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.staffName}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.department}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.month}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.taskCompletionRate}%</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.attendanceRate}%</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.workQuality}%</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.safetyCompliance}%</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{record.teamworkAttitude}%</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
                   <span className={getScoreColor(record.totalScore)}>{record.totalScore}</span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">{getRankBadge(record.rank)}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">{getRankBadge(record.rank)}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <StatusBadge status={record.status} />
-                </td>
+                </TableCell>
                 {!showCheckbox && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
@@ -288,12 +289,12 @@ export function PerformanceTable({
                         </Button>
                       )}
                     </div>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 选择栏 */}

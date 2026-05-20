@@ -4,6 +4,7 @@
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
+import { Label } from '@/components/ui/label';
 import { LeaveRecord } from '../../../../components/labor/leave/types';
 
 export interface DetailModalProps {
@@ -36,27 +37,27 @@ export function DetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</Label>
             <div className="text-sm text-gray-900">{record.staffName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">请假类型</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">请假类型</Label>
             <div className="text-sm text-gray-900">{record.leaveType}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">开始日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">开始日期</Label>
             <div className="text-sm text-gray-900">{record.startDate}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">结束日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">结束日期</Label>
             <div className="text-sm text-gray-900">{record.endDate}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">请假天数</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">请假天数</Label>
             <div className="text-sm text-gray-900">{record.days} 天</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -69,12 +70,12 @@ export function DetailModal({
             </div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">请假原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">请假原因</Label>
             <div className="text-sm text-gray-900">{record.reason || '无'}</div>
           </div>
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

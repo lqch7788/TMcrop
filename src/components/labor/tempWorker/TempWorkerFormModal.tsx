@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 import {
   TempWorkerFormModalProps,
   TempWorker,
@@ -140,9 +141,9 @@ export function TempWorkerFormModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 姓名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.name || ''}
@@ -154,9 +155,9 @@ export function TempWorkerFormModal({
 
         {/* 联系电话 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             联系电话 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="tel"
             value={formData.phone || ''}
@@ -168,9 +169,9 @@ export function TempWorkerFormModal({
 
         {/* 身份证号 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             身份证号 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.idCard || ''}
@@ -183,9 +184,9 @@ export function TempWorkerFormModal({
 
         {/* 工人类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             工人类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.workerType || ''}
             onChange={(e) => handleChange('workerType', e.target.value)}
@@ -199,9 +200,9 @@ export function TempWorkerFormModal({
 
         {/* 合同类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             合同类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.contractType || ''}
             onChange={(e) => handleChange('contractType', e.target.value)}
@@ -215,41 +216,39 @@ export function TempWorkerFormModal({
 
         {/* 日工资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             日工资 (元/天)
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.dailyWage || ''}
-            onChange={(e) =>
-              handleChange('dailyWage', e.target.value ? Number(e.target.value) : undefined)
+            onChange={(val) =>
+              handleChange('dailyWage', val ? Number(val) : undefined)
             }
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="请输入日工资"
+            className="w-full"
           />
         </div>
 
         {/* 时工资 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             时工资 (元/时)
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.hourlyWage || ''}
-            onChange={(e) =>
-              handleChange('hourlyWage', e.target.value ? Number(e.target.value) : undefined)
+            onChange={(val) =>
+              handleChange('hourlyWage', val ? Number(val) : undefined)
             }
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="请输入时工资"
+            className="w-full"
           />
         </div>
 
         {/* 保险类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             保险类型
-          </label>
+          </Label>
           <select
             value={formData.insuranceType || ''}
             onChange={(e) => handleChange('insuranceType', e.target.value)}
@@ -264,9 +263,9 @@ export function TempWorkerFormModal({
 
         {/* 来源 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             来源
-          </label>
+          </Label>
           <select
             value={formData.source || ''}
             onChange={(e) => handleChange('source', e.target.value)}
@@ -281,26 +280,26 @@ export function TempWorkerFormModal({
 
         {/* 最大用工天数 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             本批次最大用工天数
-          </label>
-          <input
-            type="number"
+          </Label>
+          <NumberInput
             value={formData.maxWorkDays || ''}
-            onChange={(e) =>
-              handleChange('maxWorkDays', e.target.value ? Number(e.target.value) : undefined)
+            onChange={(val) =>
+              handleChange('maxWorkDays', val ? Number(val) : undefined)
             }
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="请输入天数"
+            decimals={0}
+            className="w-full"
           />
         </div>
 
         {/* 状态（编辑时显示） */}
         {record && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               状态
-            </label>
+            </Label>
             <select
               value={formData.status || ''}
               onChange={(e) => handleChange('status', e.target.value)}
@@ -317,9 +316,9 @@ export function TempWorkerFormModal({
 
       {/* 作业区域 */}
       <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <Label className="block text-sm font-medium text-gray-700 mb-2">
           作业区域 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <div className="flex flex-wrap gap-2">
           {workZoneOptions.map((zone) => (
             <Button
@@ -336,9 +335,9 @@ export function TempWorkerFormModal({
 
       {/* 技能标签 */}
       <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <Label className="block text-sm font-medium text-gray-700 mb-2">
           技能标签 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <div className="space-y-3">
           {Object.entries(SKILL_TAG_GROUPS).map(([groupName, tags]) => (
             <div key={groupName}>

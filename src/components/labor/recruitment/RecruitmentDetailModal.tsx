@@ -2,6 +2,7 @@ import { XCircle, CheckCircle, Clock, User, Calendar, Users, Briefcase } from 'l
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
+import { Label } from '@/components/ui/label';
 
 interface RecruitmentDetailModalProps {
   recruitment: RecruitmentRequest | null;
@@ -37,44 +38,44 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
         <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">基本信息</h4>
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="text-xs text-gray-500">招聘编号</label>
+            <Label className="text-xs text-gray-500">招聘编号</Label>
             <p className="text-sm font-medium text-gray-900 mt-1">{recruitment.requestCode}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">申请日期</label>
+            <Label className="text-xs text-gray-500">申请日期</Label>
             <p className="text-sm font-medium text-gray-900 mt-1">{recruitment.applyDate}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">招聘岗位</label>
+            <Label className="text-xs text-gray-500">招聘岗位</Label>
             <div className="flex items-center gap-2 mt-1">
               <Briefcase className="w-4 h-4 text-gray-400" />
               <p className="text-sm font-medium text-gray-900">{recruitment.position}</p>
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500">需求部门</label>
+            <Label className="text-xs text-gray-500">需求部门</Label>
             <p className="text-sm font-medium text-gray-900 mt-1">{recruitment.department}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">招聘人数</label>
+            <Label className="text-xs text-gray-500">招聘人数</Label>
             <div className="flex items-center gap-2 mt-1">
               <Users className="w-4 h-4 text-gray-400" />
               <p className="text-sm font-medium text-gray-900">{recruitment.quantity}人</p>
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500">招聘来源</label>
+            <Label className="text-xs text-gray-500">招聘来源</Label>
             <p className="text-sm font-medium text-gray-900 mt-1">{sourceLabels[recruitment.source]}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">期望到岗日期</label>
+            <Label className="text-xs text-gray-500">期望到岗日期</Label>
             <div className="flex items-center gap-2 mt-1">
               <Calendar className="w-4 h-4 text-gray-400" />
               <p className="text-sm font-medium text-gray-900">{recruitment.expectedDate}</p>
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500">申请人</label>
+            <Label className="text-xs text-gray-500">申请人</Label>
             <div className="flex items-center gap-2 mt-1">
               <User className="w-4 h-4 text-gray-400" />
               <p className="text-sm font-medium text-gray-900">{recruitment.applicantName}</p>
@@ -88,16 +89,16 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
         <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">招聘详情</h4>
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-gray-500">招聘原因</label>
+            <Label className="text-xs text-gray-500">招聘原因</Label>
             <p className="text-sm text-gray-700 mt-1">{recruitment.reason}</p>
           </div>
           <div>
-            <label className="text-xs text-gray-500">岗位要求</label>
+            <Label className="text-xs text-gray-500">岗位要求</Label>
             <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{recruitment.requirements}</p>
           </div>
           {recruitment.remarks && (
             <div>
-              <label className="text-xs text-gray-500">备注</label>
+              <Label className="text-xs text-gray-500">备注</Label>
               <p className="text-sm text-gray-700 mt-1">{recruitment.remarks}</p>
             </div>
           )}
@@ -110,11 +111,11 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
           <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">审批信息</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-gray-500">审批人</label>
+              <Label className="text-xs text-gray-500">审批人</Label>
               <p className="text-sm font-medium text-gray-900 mt-1">{recruitment.approverName || '-'}</p>
             </div>
             <div>
-              <label className="text-xs text-gray-500">审批日期</label>
+              <Label className="text-xs text-gray-500">审批日期</Label>
               <p className="text-sm font-medium text-gray-900 mt-1">{recruitment.approveDate || '-'}</p>
             </div>
           </div>

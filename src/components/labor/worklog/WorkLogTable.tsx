@@ -1,6 +1,8 @@
 import { Eye, Plus, Edit, Trash2, Download } from 'lucide-react';
 import type { WorkLog, WorkLogTableProps } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 /**
  * 工作日志表格组件
@@ -87,72 +89,69 @@ export function WorkLogTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-        <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <tr>
+        <Table>
+        <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <TableRow>
             {(exportMode || batchEditMode || batchDeleteMode) && (
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                <input
-                  type="checkbox"
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                <Checkbox
                   checked={allSelected}
-                  onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  onCheckedChange={() => onSelectAll?.()}
+                  className="border-white data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-600"
                 />
-              </th>
+              </TableHead>
             )}
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日志编号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作量</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">进度</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作区域</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作内容</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">问题描述</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">处理措施</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">提交时间</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-300">
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">日志编号</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">任务编号</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">任务类型</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">工作量</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">进度</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">工作区域</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">工作内容</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">问题描述</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">处理措施</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">提交时间</TableHead>
+            <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="bg-white divide-y divide-gray-300">
           {data.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((log) => (
-            <tr key={log.id} className="hover:bg-blue-100 transition-colors">
+            <TableRow key={log.id} className="hover:bg-blue-100 transition-colors">
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
+                <TableCell className="px-4 py-3" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                  <Checkbox
                     checked={selectedRows.includes(log.id)}
-                    onChange={() => onSelectRow?.(log.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectRow?.(log.id)}
                   />
-                </td>
+                </TableCell>
               )}
-              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{log.code}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskCode || '-'}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskTypeName || '-'}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{log.code}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskCode || '-'}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.taskTypeName || '-'}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                 {log.workloadDays || log.workloadHours ? (
                   `${log.workloadDays ? `${log.workloadDays}天` : ''}${log.workloadHours ? `${log.workloadHours}小时` : ''}${log.workers ? `，${log.workers}人` : ''}`
                 ) : '-'}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                 {log.progress !== undefined ? `${log.progress}%` : '-'}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.greenhouse}</td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[150px] truncate">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.crop}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{log.greenhouse}</TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[150px] truncate">
                 {log.tasks}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate">
                 {log.problems}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 max-w-[120px] truncate">
                 {log.solutions}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                 {log.submitTime ? new Date(log.submitTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
+              </TableCell>
+              <TableCell className="px-4 py-3 whitespace-nowrap">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -161,11 +160,11 @@ export function WorkLogTable({
                 >
                   <Eye className="w-4 h-4" />
                 </Button>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       </div>
 
       {/* 分页 */}

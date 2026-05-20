@@ -5,6 +5,7 @@
 import React from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { EfficiencyFilters as FiltersType } from './types';
 
 interface EfficiencyFiltersProps {
@@ -30,7 +31,7 @@ export const EfficiencyFilters: React.FC<EfficiencyFiltersProps> = ({
 
         {/* 日期范围 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">日期范围</label>
+          <Label className="text-sm text-gray-500">日期范围</Label>
           <select
             value={filters.startDate}
             onChange={(e) => onFilterChange({ startDate: e.target.value })}
@@ -72,7 +73,7 @@ export const EfficiencyFilters: React.FC<EfficiencyFiltersProps> = ({
 
         {/* 部门筛选 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">部门</label>
+          <Label className="text-sm text-gray-500">部门</Label>
           <select
             value={filters.department}
             onChange={(e) => onFilterChange({ department: e.target.value })}

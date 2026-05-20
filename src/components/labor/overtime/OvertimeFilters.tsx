@@ -1,6 +1,7 @@
 import { Search, Plus } from 'lucide-react';
 import type { OvertimeFilters as OvertimeFiltersType, OvertimeType, OvertimeStatus } from './types';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 /**
  * 加班筛选栏组件
@@ -60,21 +61,19 @@ export function OvertimeFilters({ filters, onFiltersChange, onSearch, onAdd }: O
 
         {/* 开始日期 */}
         <div className="flex-shrink-0">
-          <input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onFiltersChange({ ...filters, startDate: e.target.value })}
-            className="w-36 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date: Date) => onFiltersChange({ ...filters, startDate: date.toISOString().slice(0, 10) })}
+            placeholder="开始日期"
           />
         </div>
 
         {/* 结束日期 */}
         <div className="flex-shrink-0">
-          <input
-            type="date"
-            value={filters.endDate}
-            onChange={(e) => onFiltersChange({ ...filters, endDate: e.target.value })}
-            className="w-36 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date: Date) => onFiltersChange({ ...filters, endDate: date.toISOString().slice(0, 10) })}
+            placeholder="结束日期"
           />
         </div>
 

@@ -6,6 +6,8 @@ import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import type { OvertimeFormData, OvertimeFeePreview } from '../types/overtimePage.types';
 import { OVERTIME_TYPE_OPTIONS } from '../types/overtimePage.types';
+import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui';
 import { useWorkerStore } from '../../../../../stores';
 
 interface CreateModalProps {
@@ -49,9 +51,9 @@ export function OvertimePageCreateModal({
       <div className="grid grid-cols-2 gap-4">
         {/* 员工选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             员工姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.staffId}
             onChange={(e) => onStaffChange(e.target.value)}
@@ -66,9 +68,9 @@ export function OvertimePageCreateModal({
 
         {/* 加班类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             加班类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.overtimeType}
             onChange={(e) => onFormDataChange({ ...formData, overtimeType: e.target.value })}
@@ -82,33 +84,33 @@ export function OvertimePageCreateModal({
 
         {/* 开始时间 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             开始时间 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={formData.startTime}
-            onChange={(e) => onTimeChange('startTime', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.startTime ? new Date(formData.startTime) : undefined}
+            onChange={(date: Date) => onTimeChange('startTime', date.toISOString())}
+            placeholder="选择日期时间"
+            className="w-full"
           />
         </div>
 
         {/* 结束时间 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             结束时间 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={formData.endTime}
-            onChange={(e) => onTimeChange('endTime', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          </Label>
+          <DatePicker
+            selected={formData.endTime ? new Date(formData.endTime) : undefined}
+            onChange={(date: Date) => onTimeChange('endTime', date.toISOString())}
+            placeholder="选择日期时间"
+            className="w-full"
           />
         </div>
 
         {/* 时长显示 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">加班时长</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">加班时长</Label>
           <div className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 flex items-center">
             {formData.hours > 0 ? (
               <span className="text-emerald-600">{formData.hours} 小时</span>
@@ -121,7 +123,7 @@ export function OvertimePageCreateModal({
         {/* 加班费预览 */}
         {overtimeFeePreview && (
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">加班费预览</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">加班费预览</Label>
             <div className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm bg-emerald-50">
               <div className="flex items-center gap-4">
                 <span className="text-gray-600">
@@ -143,9 +145,9 @@ export function OvertimePageCreateModal({
 
         {/* 加班原因 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             加班原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <textarea
             value={formData.reason}
             onChange={(e) => onFormDataChange({ ...formData, reason: e.target.value })}
@@ -157,7 +159,7 @@ export function OvertimePageCreateModal({
 
         {/* 备注 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
           <textarea
             value={formData.remarks}
             onChange={(e) => onFormDataChange({ ...formData, remarks: e.target.value })}

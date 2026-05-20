@@ -1,6 +1,8 @@
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PersonnelTableProps {
   workers: Worker[];
@@ -53,47 +55,43 @@ export function PersonnelTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1600px]">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full min-w-[1600px]">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showBatchSelect && (
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={selectedRows.length === workers.length && workers.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={onSelectAll}
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班组</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能等级</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">联系方式</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入职日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班组</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">技能等级</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">联系方式</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">合同状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入职日期</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {workers.map((worker, index) => (
-              <tr key={worker.id} className="hover:bg-blue-100 transition-colors">
+              <TableRow key={worker.id} className="hover:bg-blue-100 transition-colors">
                 {showBatchSelect && (
-                  <td className="px-4 py-3 text-center">
-                    <input
-                      type="checkbox"
+                  <TableCell className="px-4 py-3 text-center">
+                    <Checkbox
                       checked={selectedRows.includes(index)}
-                      onChange={() => onSelectRow?.(index)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={() => onSelectRow?.(index)}
                     />
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{worker.workerId}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{worker.workerId}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium">
                       {worker.name.charAt(0)}
@@ -103,17 +101,17 @@ export function PersonnelTable({
                       <p className="text-xs text-gray-500">{worker.gender} {worker.age}岁</p>
                     </div>
                   </div>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.department}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.team}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.position}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.department}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.team}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.position}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${SKILL_LEVEL_CONFIG[worker.skillLevel].badge}`}>
                     {SKILL_LEVEL_CONFIG[worker.skillLevel].label}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.phone}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.phone}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     worker.contractStatus === '新签' ? 'bg-blue-100 text-blue-700' :
                     worker.contractStatus === '续签' ? 'bg-green-100 text-green-700' :
@@ -122,14 +120,14 @@ export function PersonnelTable({
                   }`}>
                     {worker.contractStatus}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.hireDate}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.hireDate}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${WORKER_STATUS_CONFIG[worker.status].badge}`}>
                     {WORKER_STATUS_CONFIG[worker.status].label}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
@@ -160,11 +158,11 @@ export function PersonnelTable({
                       </Button>
                     )}
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {workers.length === 0 && (
           <div className="p-8 text-center text-gray-500">
             没有找到符合条件的员工信息

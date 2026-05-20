@@ -1,6 +1,8 @@
-import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { OnboardingFormData, ContractType } from './types';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface OnboardingFormProps {
   formData: OnboardingFormData;
@@ -26,9 +28,9 @@ export function OnboardingForm({
       <div className="grid grid-cols-2 gap-4">
         {/* 姓名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             姓名 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.name}
@@ -43,9 +45,9 @@ export function OnboardingForm({
 
         {/* 身份证号 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             身份证号 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.idCard}
@@ -60,9 +62,9 @@ export function OnboardingForm({
 
         {/* 联系电话 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             联系电话 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="tel"
             value={formData.phone}
@@ -77,25 +79,22 @@ export function OnboardingForm({
 
         {/* 入职日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             入职日期 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.joinDate}
-            onChange={(e) => onChange('joinDate', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.joinDate ? 'border-red-500' : 'border-gray-300'
-            }`}
+          </Label>
+          <DatePicker
+            selected={formData.joinDate ? new Date(formData.joinDate) : undefined}
+            onChange={(date) => onChange('joinDate', date.toISOString().slice(0, 10))}
+            className="w-full"
           />
           {errors.joinDate && <p className="mt-1 text-sm text-red-500">{errors.joinDate}</p>}
         </div>
 
         {/* 岗位 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             岗位 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.position}
@@ -110,9 +109,9 @@ export function OnboardingForm({
 
         {/* 部门 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             部门 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.department}
@@ -127,9 +126,9 @@ export function OnboardingForm({
 
         {/* 合同类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             合同类型 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <select
             value={formData.contractType}
             onChange={(e) => onChange('contractType', e.target.value)}
@@ -150,12 +149,11 @@ export function OnboardingForm({
         {/* 日工资（临时工） */}
         {formData.contractType === '劳务合同' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">日工资</label>
-            <input
-              type="number"
-              value={formData.dailyWage || ''}
-              onChange={(e) => onChange('dailyWage', Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">日工资</Label>
+            <NumberInput
+              value={formData.dailyWage}
+              onChange={(val) => onChange('dailyWage', Number(val))}
+              decimals={0}
               placeholder="请输入日工资"
             />
           </div>
@@ -164,12 +162,11 @@ export function OnboardingForm({
         {/* 时工资 */}
         {formData.contractType === '实习协议' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">时工资</label>
-            <input
-              type="number"
-              value={formData.hourlyWage || ''}
-              onChange={(e) => onChange('hourlyWage', Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">时工资</Label>
+            <NumberInput
+              value={formData.hourlyWage}
+              onChange={(val) => onChange('hourlyWage', Number(val))}
+              decimals={0}
               placeholder="请输入时工资"
             />
           </div>

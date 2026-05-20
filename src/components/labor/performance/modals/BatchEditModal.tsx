@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui/label';
 import { PerformanceRecord } from '../types';
 
 interface BatchEditModalProps {
@@ -102,7 +104,7 @@ export function BatchEditModal({
 
         {/* 选择要编辑的记录 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-2">选择要编辑的记录</Label>
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
@@ -141,66 +143,56 @@ export function BatchEditModal({
 
             {/* 任务完成率 */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">任务完成率</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
+              <Label className="block text-xs text-gray-500 mb-1">任务完成率</Label>
+              <NumberInput
                 value={editedData.taskCompletionRate ?? currentRecord.taskCompletionRate ?? ''}
-                onChange={(e) => handleFieldChange('taskCompletionRate', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleFieldChange('taskCompletionRate', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 出勤率 */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">出勤率</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
+              <Label className="block text-xs text-gray-500 mb-1">出勤率</Label>
+              <NumberInput
                 value={editedData.attendanceRate ?? currentRecord.attendanceRate ?? ''}
-                onChange={(e) => handleFieldChange('attendanceRate', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleFieldChange('attendanceRate', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 工作质量 */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">工作质量</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
+              <Label className="block text-xs text-gray-500 mb-1">工作质量</Label>
+              <NumberInput
                 value={editedData.workQuality ?? currentRecord.workQuality ?? ''}
-                onChange={(e) => handleFieldChange('workQuality', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleFieldChange('workQuality', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 安全规范 */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">安全规范</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
+              <Label className="block text-xs text-gray-500 mb-1">安全规范</Label>
+              <NumberInput
                 value={editedData.safetyCompliance ?? currentRecord.safetyCompliance ?? ''}
-                onChange={(e) => handleFieldChange('safetyCompliance', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleFieldChange('safetyCompliance', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 
             {/* 协作态度 */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">协作态度</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
+              <Label className="block text-xs text-gray-500 mb-1">协作态度</Label>
+              <NumberInput
                 value={editedData.teamworkAttitude ?? currentRecord.teamworkAttitude ?? ''}
-                onChange={(e) => handleFieldChange('teamworkAttitude', Number(e.target.value))}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                onChange={(val) => handleFieldChange('teamworkAttitude', Number(val))}
+                decimals={0}
+                className="w-full"
               />
             </div>
 

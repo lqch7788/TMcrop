@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { OvertimeFormModalProps, OvertimeType, OvertimeFormData } from './types';
 import { getWorkerSelectList } from '../../../services/apiWorkerService';
+import { Label } from '@/components/ui/label';
 
 // 员工选择列表状态
 interface StaffOption {
@@ -81,9 +84,9 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
     <div className="space-y-4">
       {/* 员工选择 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           员工姓名 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <select
           value={formData.staffId}
           onChange={(e) => handleStaffChange(e.target.value)}
@@ -98,22 +101,21 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
 
       {/* 日期 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           加班日期 <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        </Label>
+        <DatePicker
+          selected={formData.date ? new Date(formData.date) : undefined}
+          onChange={(date: Date) => setFormData({ ...formData, date: date.toISOString().slice(0, 10) })}
+          placeholder="选择加班日期"
         />
       </div>
 
       {/* 加班类型 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           加班类型 <span className="text-red-500">*</span>
-        </label>
+        </Label>
         <div className="grid grid-cols-3 gap-2">
           {overtimeTypes.map((type) => (
             <Button
@@ -132,26 +134,22 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
 
       {/* 时长 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           加班时长(小时) <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          min="0.5"
-          max="24"
-          step="0.5"
-          value={formData.hours || ''}
-          onChange={(e) => setFormData({ ...formData, hours: parseFloat(e.target.value) || 0 })}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        </Label>
+        <NumberInput
+          value={formData.hours}
+          onChange={(val: string) => setFormData({ ...formData, hours: parseFloat(val) || 0 })}
           placeholder="请输入加班时长"
+          decimals={1}
         />
       </div>
 
       {/* 加班原因 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-gray-700 mb-1">
           加班原因
-        </label>
+        </Label>
         <textarea
           value={formData.reason}
           onChange={(e) => setFormData({ ...formData, reason: e.target.value })}

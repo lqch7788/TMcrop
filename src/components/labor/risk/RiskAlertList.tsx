@@ -149,33 +149,33 @@ export function RiskAlertList({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap w-12">
                   <Button variant="ghost" size="icon" onClick={onSelectAll} className="text-white hover:text-blue-200">
                     {isAllSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                   </Button>
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预警编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预警等级</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预警类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预警标题</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门/人员</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建时间</th>
-              {!showCheckbox && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">预警编号</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">预警等级</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">预警类型</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">预警标题</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">部门/人员</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">创建时间</TableHead>
+              {!showCheckbox && <TableHead className="px-4 py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-100">
             {paginatedAlerts.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 9 : 8} className="px-4 py-8 text-center text-gray-500">
                   暂无预警数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedAlerts.map((alert, index) => {
                 const style = levelStyles[alert.level];
@@ -183,41 +183,41 @@ export function RiskAlertList({
                 const baseDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
                 const alertNumber = `${baseDate}${String((currentPage - 1) * pageSize + index + 1).padStart(3, '0')}`;
                 return (
-                  <tr
+                  <TableRow
                     key={alert.id}
                     className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedRows.includes(alert.id) ? 'bg-emerald-50' : ''}`}
                     onClick={() => !showCheckbox && onSelectAlert(alert)}
                   >
                     {showCheckbox && (
-                      <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" onClick={() => onSelectRow?.(alert.id)}>
                           {selectedRows.includes(alert.id) ? <CheckSquare className="w-4 h-4 text-emerald-600" /> : <Square className="w-4 h-4" />}
                         </Button>
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{alertNumber}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{alertNumber}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <Badge variant={style.variant} className={style.className}>
                         <span className="flex items-center gap-1">
                           {style.icon}
                           {AlertLevelNames[alert.level]}
                         </span>
                       </Badge>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{alert.alertTypeName}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{alert.alertTypeName}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="max-w-md">
                         <p className="font-medium text-gray-900 truncate">{alert.title}</p>
                         <p className="text-sm text-gray-500 truncate">{alert.content}</p>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       <div>
                         {alert.department && <p>{alert.department}</p>}
                         {alert.staffName && <p className="text-gray-500">{alert.staffName}</p>}
                       </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       {alert.status === 'pending' ? (
                         <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
                           <Clock className="w-3 h-3 mr-1" />
@@ -229,10 +229,10 @@ export function RiskAlertList({
                           已处理
                         </Badge>
                       )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{alert.createTime}</td>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{alert.createTime}</TableCell>
                     {!showCheckbox && (
-                      <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => onSelectAlert(alert)} title="查看详情">
                             <CheckCircle className="w-4 h-4" />
@@ -254,14 +254,14 @@ export function RiskAlertList({
                             </Button>
                           )}
                         </div>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

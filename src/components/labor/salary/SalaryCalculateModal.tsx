@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calculator } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Input } from '@/components/ui/input';
+import { NumberInput, Label } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import type { SalaryCalculateModalProps, SalaryCalculateData } from './types';
 
@@ -71,37 +71,35 @@ export function SalaryCalculateModal({
       {record.calcType === '日薪制' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               出勤天数
-            </label>
-            <Input
-              type="number"
-              min="0"
-              placeholder="请输入出勤天数"
-              value={formData.daysWorked || ''}
-              onChange={(e) =>
+            </Label>
+            <NumberInput
+              value={formData.daysWorked}
+              onChange={(val) =>
                 setFormData({
                   ...formData,
-                  daysWorked: e.target.value ? Number(e.target.value) : undefined,
+                  daysWorked: val ? Number(val) : undefined,
                 })
               }
+              placeholder="请输入出勤天数"
+              decimals={0}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               日工资 (元/天)
-            </label>
-            <Input
-              type="number"
-              min="0"
-              placeholder="请输入日工资"
-              value={formData.dailyRate || ''}
-              onChange={(e) =>
+            </Label>
+            <NumberInput
+              value={formData.dailyRate}
+              onChange={(val) =>
                 setFormData({
                   ...formData,
-                  dailyRate: e.target.value ? Number(e.target.value) : undefined,
+                  dailyRate: val ? Number(val) : undefined,
                 })
               }
+              placeholder="请输入日工资"
+              decimals={2}
             />
           </div>
         </div>
@@ -110,38 +108,35 @@ export function SalaryCalculateModal({
       {record.calcType === '时薪制' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               实际工时
-            </label>
-            <Input
-              type="number"
-              min="0"
-              step="0.5"
-              placeholder="请输入实际工时"
-              value={formData.hoursWorked || ''}
-              onChange={(e) =>
+            </Label>
+            <NumberInput
+              value={formData.hoursWorked}
+              onChange={(val) =>
                 setFormData({
                   ...formData,
-                  hoursWorked: e.target.value ? Number(e.target.value) : undefined,
+                  hoursWorked: val ? Number(val) : undefined,
                 })
               }
+              placeholder="请输入实际工时"
+              decimals={1}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               时工资 (元/小时)
-            </label>
-            <Input
-              type="number"
-              min="0"
-              placeholder="请输入时工资"
-              value={formData.hourlyRate || ''}
-              onChange={(e) =>
+            </Label>
+            <NumberInput
+              value={formData.hourlyRate}
+              onChange={(val) =>
                 setFormData({
                   ...formData,
-                  hourlyRate: e.target.value ? Number(e.target.value) : undefined,
+                  hourlyRate: val ? Number(val) : undefined,
                 })
               }
+              placeholder="请输入时工资"
+              decimals={2}
             />
           </div>
         </div>

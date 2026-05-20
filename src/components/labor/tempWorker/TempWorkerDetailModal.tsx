@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { TempWorkerDetailModalProps, StaffStatus } from './types';
+import { Label } from '@/components/ui/label';
 
 /**
  * 获取状态对应的样式
@@ -38,39 +39,39 @@ export function TempWorkerDetailModal({
         <h3 className="text-sm font-medium text-gray-500 mb-3">基本信息</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">工号</label>
+            <Label className="block text-xs text-gray-400 mb-1">工号</Label>
             <div className="text-sm text-gray-900 font-mono">
               {record.employeeCode}
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">姓名</label>
+            <Label className="block text-xs text-gray-400 mb-1">姓名</Label>
             <div className="text-sm text-gray-900">{record.name}</div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">身份证号</label>
+            <Label className="block text-xs text-gray-400 mb-1">身份证号</Label>
             <div className="text-sm text-gray-900 font-mono">
               {record.idCard}
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">联系电话</label>
+            <Label className="block text-xs text-gray-400 mb-1">联系电话</Label>
             <div className="text-sm text-gray-900">{record.phone}</div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">工人类型</label>
+            <Label className="block text-xs text-gray-400 mb-1">工人类型</Label>
             <div className="text-sm text-gray-900">{record.workerType}</div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">合同类型</label>
+            <Label className="block text-xs text-gray-400 mb-1">合同类型</Label>
             <div className="text-sm text-gray-900">{record.contractType}</div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">入职日期</label>
+            <Label className="block text-xs text-gray-400 mb-1">入职日期</Label>
             <div className="text-sm text-gray-900">{record.joinDate}</div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">状态</label>
+            <Label className="block text-xs text-gray-400 mb-1">状态</Label>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(
                 record.status
@@ -88,7 +89,7 @@ export function TempWorkerDetailModal({
         <div className="grid grid-cols-2 gap-4">
           {record.dailyWage && (
             <div>
-              <label className="block text-xs text-gray-400 mb-1">日工资</label>
+              <Label className="block text-xs text-gray-400 mb-1">日工资</Label>
               <div className="text-sm text-gray-900">
                 ¥{record.dailyWage}/天
               </div>
@@ -96,7 +97,7 @@ export function TempWorkerDetailModal({
           )}
           {record.hourlyWage && (
             <div>
-              <label className="block text-xs text-gray-400 mb-1">时工资</label>
+              <Label className="block text-xs text-gray-400 mb-1">时工资</Label>
               <div className="text-sm text-gray-900">
                 ¥{record.hourlyWage}/时
               </div>
@@ -142,21 +143,21 @@ export function TempWorkerDetailModal({
           <div className="grid grid-cols-2 gap-4">
             {record.insuranceType && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">保险类型</label>
+                <Label className="block text-xs text-gray-400 mb-1">保险类型</Label>
                 <div className="text-sm text-gray-900">{record.insuranceType}</div>
               </div>
             )}
             {record.source && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">来源</label>
+                <Label className="block text-xs text-gray-400 mb-1">来源</Label>
                 <div className="text-sm text-gray-900">{record.source}</div>
               </div>
             )}
             {record.maxWorkDays && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">
+                <Label className="block text-xs text-gray-400 mb-1">
                   本批次最大用工天数
-                </label>
+                </Label>
                 <div className="text-sm text-gray-900">
                   {record.maxWorkDays} 天
                 </div>

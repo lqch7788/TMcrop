@@ -4,6 +4,8 @@ import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { TaskModeBadge } from './TaskModeBadge';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -83,61 +85,58 @@ export function TasksTable({
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="overflow-x-auto overflow-y-auto max-h-[65vh]">
-        <table className="w-full min-w-[1400px]">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
-            <tr>
+        <Table className="min-w-[1400px]">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+            <TableRow>
               {showCheckbox && (
-                <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={getAllSelectedForMode()}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll?.()}
+                    className="border-white data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-600"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务编号</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务标题</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">类型备注</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作业区域</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">作物备注</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">执行人</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划开始</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">计划结束</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计天数</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">预计小时</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">工作制</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需物资</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">所需工具</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">任务编号</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">任务标题</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">任务类型</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">类型备注</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">作业区域</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">作物</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">作物备注</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">执行人</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">计划开始</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">计划结束</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">预计天数</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">预计小时</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">工作制</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">优先级</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">所需物资</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">所需工具</TableHead>
+              <TableHead className="px-3 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedTasks.map((task) => (
-              <tr
+              <TableRow
                 key={task.id}
                 className={`hover:bg-blue-100 transition-colors ${showCheckbox && !getRowSelectable(task) ? 'bg-gray-50' : ''}`}
               >
                 {showCheckbox && (
-                  <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
+                  <TableCell className="px-3 py-3" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                    <Checkbox
                       checked={selectedRows.includes(task.id)}
-                      onChange={() => {
+                      onCheckedChange={() => {
                         if (getRowSelectable(task)) {
                           onSelectRow?.(task.id);
                         }
                       }}
                       disabled={!getRowSelectable(task)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
                     />
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-3 py-3 whitespace-nowrap">
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <Button
                     variant="ghost"
                     onClick={() => onViewTask(task)}
@@ -146,73 +145,73 @@ export function TasksTable({
                   >
                     {task.taskCode}
                   </Button>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-start gap-2">
                     <TaskModeBadge mode={task.mode} />
                     <div className="max-w-[150px]">
                       <p className="font-medium text-gray-900 text-sm truncate" title={task.title}>{task.title}</p>
                     </div>
                   </div>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.typeName}>{task.typeName}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-500 truncate max-w-[100px] block" title={(task as any).typeRemarks || '-'}>{(task as any).typeRemarks || '-'}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.greenhouseName}>{task.greenhouseName}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={(task as any).crop || '-'}>{((task as any).crop as string) || '-'}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-500 truncate max-w-[100px] block" title={(task as any).cropRemarks || '-'}>{((task as any).cropRemarks as string) || '-'}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-medium flex-shrink-0">
                       {(task.assigneeName || task.assignee || '-').charAt(0)}
                     </div>
                     <span className="text-sm text-gray-700 truncate max-w-[80px] block" title={task.assigneeName || task.assignee || '-'}>{task.assigneeName || task.assignee || '-'}</span>
                   </div>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600 truncate max-w-[90px] block" title={(task as any).planStart || '-'}>{((task as any).planStart as string) || '-'}</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <Calendar className="w-3 h-3 flex-shrink-0" />
                     <span className="truncate max-w-[90px] block" title={task.dueDate}>{task.dueDate}</span>
                   </div>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600">{(task as any).estimatedDays || 0}天</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600">{(task as any).estimatedHours || task.workDuration}小时</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600">{(task as any).workHoursPerDay || 8}时/天</span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <TaskPriorityBadge priority={task.priority} />
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <TaskStatusBadge status={task.status} />
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600 truncate max-w-[120px] block" title={(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}>
                     {(task as any).materials?.length > 0 ? (task as any).materials.map((m: any) => m.name).join(', ') : '-'}
                   </span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap">
                   <span className="text-sm text-gray-600 truncate max-w-[120px] block" title={(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}>
                     {(task as any).tools?.length > 0 ? (task as any).tools.map((t: any) => t.name).join(', ') : '-'}
                   </span>
-                </td>
-                <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                </TableCell>
+                <TableCell className="px-3 py-3 whitespace-nowrap" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
@@ -231,11 +230,11 @@ export function TasksTable({
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 空状态 */}

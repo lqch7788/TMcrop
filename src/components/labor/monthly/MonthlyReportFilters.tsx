@@ -5,6 +5,7 @@
 import { Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MONTH_OPTIONS, DEPT_OPTIONS } from './types';
+import { Label } from '@/components/ui/label';
 
 interface MonthlyReportFiltersProps {
   month: string;
@@ -28,9 +29,9 @@ export function MonthlyReportFilters({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 月份筛选 */}
         <div className="min-w-[180px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             月份
-          </label>
+          </Label>
           <select
             value={month}
             onChange={(e) => onMonthChange(e.target.value)}
@@ -46,9 +47,9 @@ export function MonthlyReportFilters({
 
         {/* 部门筛选 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             部门
-          </label>
+          </Label>
           <select
             value={dept}
             onChange={(e) => onDeptChange(e.target.value)}

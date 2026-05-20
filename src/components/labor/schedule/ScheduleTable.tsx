@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, Download, ChevronLeft, ChevronRight, Plus, Edit, Trash2 } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 interface ScheduleTableProps {
   scheduleList: ScheduleRecord[];
@@ -260,24 +263,22 @@ export function ScheduleTable({
           {/* 日期范围 */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={e => {
-                setDateRange(prev => ({ ...prev, start: e.target.value }));
+            <DatePicker
+              selected={dateRange.start ? new Date(dateRange.start) : undefined}
+              onChange={(date) => {
+                setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-[140px]"
             />
             <span className="text-gray-400">至</span>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={e => {
-                setDateRange(prev => ({ ...prev, end: e.target.value }));
+            <DatePicker
+              selected={dateRange.end ? new Date(dateRange.end) : undefined}
+              onChange={(date) => {
+                setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-[140px]"
             />
           </div>
 
@@ -328,91 +329,88 @@ export function ScheduleTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || batchDeleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={allSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll?.()}
+                    className="border-white data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-blue-600"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 日期
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 员工
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 班次
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 工作区域
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 时间
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 状态
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
                 签到/签退
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-300">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="bg-white divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 8 : 7} className="px-4 py-8 text-center text-gray-400">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 8 : 7} className="px-4 py-8 text-center text-gray-400">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedData.map(record => {
                 const shiftConfig = shiftConfigs.find(c => c.name === record.shift);
                 return (
-                  <tr
+                  <TableRow
                     key={record.id}
                     onClick={() => (exportMode || batchEditMode || batchDeleteMode) ? onSelectRow?.(record.id) : onScheduleClick?.(record)}
-                    className={`hover:bg-blue-100 cursor-pointer transition-colors ${(exportMode || batchEditMode || batchDeleteMode) ? '' : ''}`}
+                    className="hover:bg-blue-100 cursor-pointer transition-colors"
                   >
                     {(exportMode || batchEditMode || batchDeleteMode) && (
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <input
-                          type="checkbox"
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        <Checkbox
                           checked={selectedRows.includes(record.id)}
-                          onChange={() => onSelectRow?.(record.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                          onClick={(e) => e.stopPropagation()}
+                          onCheckedChange={() => onSelectRow?.(record.id)}
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.date}</div>
                       <div className="text-xs text-gray-500">{getWeekday(record.date)}</div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{record.staffName}</div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded text-xs font-medium text-white
                         ${getShiftColor(record.shift, shiftConfigs)}
                       `}>
                         {record.shift}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.workZone}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {shiftConfig?.startTime} - {shiftConfig?.endTime}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`
                         inline-flex items-center px-2 py-1 rounded text-xs font-medium
                         ${record.status === '已排班' ? 'bg-blue-100 text-blue-700' : ''}
@@ -421,16 +419,16 @@ export function ScheduleTable({
                       `}>
                         {record.status}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {record.checkIn || '-'} / {record.checkOut || '-'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

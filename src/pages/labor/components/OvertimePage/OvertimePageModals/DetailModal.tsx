@@ -4,6 +4,7 @@
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import type { OvertimeRecord } from '../types/overtimePage.types';
 
 interface DetailModalProps {
@@ -34,27 +35,27 @@ export function OvertimePageDetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</Label>
             <div className="text-sm text-gray-900">{record.staffName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">加班类型</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">加班类型</Label>
             <div className="text-sm text-gray-900">{record.overtimeType}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">开始时间</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">开始时间</Label>
             <div className="text-sm text-gray-900">{record.startTime}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">结束时间</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">结束时间</Label>
             <div className="text-sm text-gray-900">{record.endTime}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">加班时长</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">加班时长</Label>
             <div className="text-sm text-gray-900">{record.hours} 小时</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -67,12 +68,12 @@ export function OvertimePageDetailModal({
             </div>
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">加班原因</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">加班原因</Label>
             <div className="text-sm text-gray-900">{record.reason || '无'}</div>
           </div>
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/DatePicker';
 import type { WorkLogFormModalProps, WorkLog } from './types';
+import { Label } from '@/components/ui/label';
 
 /**
  * 工作日志表单弹窗组件（新建/编辑）
@@ -61,9 +63,9 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
       <div className="grid grid-cols-2 gap-4">
         {/* 日志编号 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             日志编号
-          </label>
+          </Label>
           <input
             type="text"
             value={formData.code || ''}
@@ -75,18 +77,17 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">日期</label>
-          <input
-            type="date"
-            value={formData.date || ''}
-            onChange={(e) => handleChange('date', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          <Label className="block text-sm font-medium text-gray-700 mb-1">日期</Label>
+          <DatePicker
+            selected={formData.date ? new Date(formData.date) : undefined}
+            onChange={(date) => handleChange('date', date.toISOString().split('T')[0])}
+            className="w-full"
           />
         </div>
 
         {/* 工人姓名 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">工人姓名</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">工人姓名</Label>
           <input
             type="text"
             value={formData.worker || ''}
@@ -98,7 +99,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 天气 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">天气</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">天气</Label>
           <select
             value={formData.weather || ''}
             onChange={(e) => handleChange('weather', e.target.value)}
@@ -114,7 +115,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 温度 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">温度</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">温度</Label>
           <input
             type="text"
             value={formData.temperature || ''}
@@ -126,7 +127,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 作物 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">作物</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">作物</Label>
           <input
             type="text"
             value={formData.crop || ''}
@@ -138,7 +139,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 大棚 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">大棚</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">大棚</Label>
           <select
             value={formData.greenhouse || ''}
             onChange={(e) => handleChange('greenhouse', e.target.value)}
@@ -154,7 +155,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 生长状况 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">生长状况</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">生长状况</Label>
           <select
             value={formData.growthStatus || '良好'}
             onChange={(e) => handleChange('growthStatus', e.target.value)}
@@ -167,7 +168,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 工作内容 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">工作内容</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">工作内容</Label>
           <textarea
             value={formData.tasks || ''}
             onChange={(e) => handleChange('tasks', e.target.value)}
@@ -179,7 +180,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 问题描述 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">问题描述</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">问题描述</Label>
           <textarea
             value={formData.problems || ''}
             onChange={(e) => handleChange('problems', e.target.value)}
@@ -191,7 +192,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
 
         {/* 处理措施 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">处理措施</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">处理措施</Label>
           <textarea
             value={formData.solutions || ''}
             onChange={(e) => handleChange('solutions', e.target.value)}

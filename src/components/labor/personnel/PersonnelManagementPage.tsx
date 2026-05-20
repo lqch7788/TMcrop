@@ -6,6 +6,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePositionStore } from '@/stores/usePositionStore';
 import type { Position } from '@/services/apiBasicDataService';
 
@@ -483,68 +485,64 @@ export function PersonnelManagementPage() {
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {(batchEditMode || batchDeleteMode || exportMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
-                      type="checkbox"
+                  <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                    <Checkbox
                       checked={selectedRows.length === paginatedPositions.length && paginatedPositions.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={handleSelectAll}
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务级别</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资(元)</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">岗位人数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职责描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务编号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务名称</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务级别</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">基本工资(元)</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">岗位人数</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职责描述</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
                 {!(batchEditMode || batchDeleteMode || exportMode) && (
-                  <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
+                  <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
                 )}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-300">
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white divide-y divide-gray-300">
               {paginatedPositions.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={10} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedPositions.map((pos) => (
-                  <tr key={pos.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={pos.id} className="hover:bg-blue-100 transition-colors">
                     {(batchEditMode || batchDeleteMode || exportMode) && (
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <input
-                          type="checkbox"
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
+                        <Checkbox
                           checked={selectedRows.includes(pos.id)}
-                          onChange={() => handleSelectRow(pos.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onCheckedChange={() => handleSelectRow(pos.id)}
                         />
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{pos.code}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">-</td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">-</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{pos.code}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">-</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-right whitespace-nowrap">-</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                         pos.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                       }`}>
                         {pos.status}
                       </span>
-                    </td>
+                    </TableCell>
                     {!(batchEditMode || batchDeleteMode || exportMode) && (
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <TableCell className="px-4 py-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
@@ -558,13 +556,13 @@ export function PersonnelManagementPage() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         </div>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {/* 分页 */}
         <div className="flex items-center justify-between mt-4 px-4 pb-4">

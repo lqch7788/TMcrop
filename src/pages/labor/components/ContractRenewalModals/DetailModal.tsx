@@ -3,6 +3,7 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui';
 import { ContractRenewalRecord } from '../../types/contractRenewal.types';
 
@@ -37,39 +38,39 @@ export function DetailModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">员工姓名</Label>
             <div className="text-sm text-gray-900">{record.employeeName}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">部门</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">部门</Label>
             <div className="text-sm text-gray-900">{record.department}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">岗位</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">岗位</Label>
             <div className="text-sm text-gray-900">{record.position}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">续签期限</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">续签期限</Label>
             <div className="text-sm text-gray-900">{record.renewalPeriod}个月</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">当前合同到期日</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">当前合同到期日</Label>
             <div className="text-sm text-gray-900">{record.currentContractEnd}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">新合同开始日期</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">新合同开始日期</Label>
             <div className="text-sm text-emerald-600 font-medium">{record.newContractStart}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">新合同到期日</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">新合同到期日</Label>
             <div className="text-sm text-emerald-600 font-medium">{record.newContractEnd}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">新薪资</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">新薪资</Label>
             <div className="text-sm text-gray-900">{record.newSalary ? `¥${record.newSalary.toLocaleString()}` : '未填写'}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">状态</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">状态</Label>
             <div className="mt-1">
               <LaborStatusBadge
                 status={
@@ -82,18 +83,18 @@ export function DetailModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">审批人</label>
+            <Label className="block text-sm font-medium text-gray-500 mb-1">审批人</Label>
             <div className="text-sm text-gray-900">{record.approver || '未审批'}</div>
           </div>
           {record.termsChange && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">条款变更说明</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">条款变更说明</Label>
               <div className="text-sm text-gray-900">{record.termsChange}</div>
             </div>
           )}
           {record.remarks && (
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-500 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-500 mb-1">备注</Label>
               <div className="text-sm text-gray-900">{record.remarks}</div>
             </div>
           )}

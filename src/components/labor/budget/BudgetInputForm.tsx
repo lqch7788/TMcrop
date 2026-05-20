@@ -1,6 +1,6 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, NumberInput, Label } from '@/components/ui';
 import type { BudgetInput } from './types';
 
 interface BudgetInputFormProps {
@@ -47,30 +47,27 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">种植批次计划</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">种植批次数量</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">种植批次数量</Label>
+              <NumberInput
                 value={input.batchCount}
-                onChange={(e) => onUpdate({ batchCount: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ batchCount: Number(val) })}
+                decimals={0}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">预期采收量(斤)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">预期采收量(斤)</Label>
+              <NumberInput
                 value={input.expectedYield}
-                onChange={(e) => onUpdate({ expectedYield: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ expectedYield: Number(val) })}
+                decimals={0}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">历史人工成本占比(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">历史人工成本占比(%)</Label>
+              <NumberInput
                 value={input.laborCostRatio}
-                onChange={(e) => onUpdate({ laborCostRatio: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ laborCostRatio: Number(val) })}
+                decimals={2}
               />
             </div>
           </div>
@@ -81,16 +78,15 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">季节性参数</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">季节性波动系数(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">季节性波动系数(%)</Label>
+              <NumberInput
                 value={input.seasonFactor}
-                onChange={(e) => onUpdate({ seasonFactor: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ seasonFactor: Number(val) })}
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">是否旺季</label>
+              <Label className="block text-xs text-gray-500 mb-1">是否旺季</Label>
               <select
                 value={input.isPeakSeason ? '是' : '否'}
                 onChange={(e) => onUpdate({ isPeakSeason: e.target.value === '是' })}
@@ -108,21 +104,19 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">临时工参数</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">临时工比例(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">临时工比例(%)</Label>
+              <NumberInput
                 value={input.tempWorkerRatio}
-                onChange={(e) => onUpdate({ tempWorkerRatio: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ tempWorkerRatio: Number(val) })}
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">临时工日均工资(元)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">临时工日均工资(元)</Label>
+              <NumberInput
                 value={input.tempWorkerDailyRate}
-                onChange={(e) => onUpdate({ tempWorkerDailyRate: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ tempWorkerDailyRate: Number(val) })}
+                decimals={2}
               />
             </div>
           </div>
@@ -133,21 +127,19 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">正式工参数</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">正式工人数</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">正式工人数</Label>
+              <NumberInput
                 value={input.formalWorkerCount}
-                onChange={(e) => onUpdate({ formalWorkerCount: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ formalWorkerCount: Number(val) })}
+                decimals={0}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">正式工人均月工资(元)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">正式工人均月工资(元)</Label>
+              <NumberInput
                 value={input.formalWorkerAvgSalary}
-                onChange={(e) => onUpdate({ formalWorkerAvgSalary: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ formalWorkerAvgSalary: Number(val) })}
+                decimals={2}
               />
             </div>
           </div>
@@ -158,21 +150,19 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">福利保险</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">社保公积金比例(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">社保公积金比例(%)</Label>
+              <NumberInput
                 value={input.socialSecurityRate}
-                onChange={(e) => onUpdate({ socialSecurityRate: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ socialSecurityRate: Number(val) })}
+                decimals={2}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">福利补贴比例(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">福利补贴比例(%)</Label>
+              <NumberInput
                 value={input.benefitsRate}
-                onChange={(e) => onUpdate({ benefitsRate: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ benefitsRate: Number(val) })}
+                decimals={2}
               />
             </div>
           </div>
@@ -183,12 +173,11 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">超预算预警</h4>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">预警阈值(%)</label>
-              <input
-                type="number"
+              <Label className="block text-xs text-gray-500 mb-1">预警阈值(%)</Label>
+              <NumberInput
                 value={input.warningThreshold}
-                onChange={(e) => onUpdate({ warningThreshold: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                onChange={(val) => onUpdate({ warningThreshold: Number(val) })}
+                decimals={2}
               />
             </div>
           </div>

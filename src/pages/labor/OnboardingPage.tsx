@@ -76,7 +76,7 @@ export default function OnboardingPage() {
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
           <button
             onClick={handleOpenFormModal}
-            className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             新增入职
@@ -86,19 +86,19 @@ export default function OnboardingPage() {
             <>
               <button
                 onClick={() => setBatchMode('approve')}
-                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
               >
                 批量通过
               </button>
               <button
                 onClick={() => setBatchMode('reject')}
-                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
               >
                 批量驳回
               </button>
               <button
                 onClick={() => setBatchMode('export')}
-                className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
+                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
               >
                 <Download className="w-4 h-4" />
                 导出
@@ -112,7 +112,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleBatchApprove}
                   disabled={selectedRowKeys.length === 0}
-                  className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                  className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
                   确认通过 ({selectedRowKeys.length})
                 </button>
@@ -121,7 +121,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleBatchReject}
                   disabled={selectedRowKeys.length === 0}
-                  className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                  className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                 >
                   确认驳回 ({selectedRowKeys.length})
                 </button>
@@ -129,14 +129,14 @@ export default function OnboardingPage() {
               {batchMode === 'export' && (
                 <button
                   onClick={handleExport}
-                  className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+                  className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
                 >
                   确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
                 </button>
               )}
               <button
                 onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
-                className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
               >
                 取消
               </button>
