@@ -1,9 +1,11 @@
 /**
  * 汇总表日期筛选器组件
  * 支持月份/季度/年度/自定义四种模式切换
+ * V2.1: 替换原生 input[type="date"] 为 DatePicker 组件
  */
 
-import { CalendarDays, CalendarRange } from 'lucide-react';
+import { CalendarRange } from 'lucide-react';
+import { DatePicker } from '@/components/ui/DatePicker';
 
 export interface SummaryDateFilterProps {
   /** 当前筛选模式 */
@@ -25,6 +27,22 @@ const MODE_OPTIONS: { value: 'month' | 'quarter' | 'year' | 'custom'; label: str
   { value: 'year', label: '本年度' },
   { value: 'custom', label: '自定义' },
 ];
+
+/** 将日期字符串 (YYYY-MM-DD) 转换为 Date 对象 */
+function toDate(dateStr: string): Date | undefined {
+  if (!dateStr) return undefined;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return undefined;
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+/** 将 Date 对象转换为日期字符串 (YYYY-MM-DD) */
+function toDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 export function SummaryDateFilter({ mode, onModeChange, startDate, endDate, onDateChange }: SummaryDateFilterProps) {
   return (
@@ -51,19 +69,16 @@ export function SummaryDateFilter({ mode, onModeChange, startDate, endDate, onDa
       {/* 自定义日期范围输入（仅自定义模式显示） */}
       {mode === 'custom' && (
         <div className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-gray-400" />
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => onDateChange(e.target.value, endDate)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          <DatePicker
+            selected={startDate ? toDate(startDate) : undefined}
+            onChange={(date) => onDateChange(toDateStr(date), endDate)}
+            placeholder="开始日期"
           />
           <span className="text-gray-400 text-sm">至</span>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => onDateChange(startDate, e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          <DatePicker
+            selected={endDate ? toDate(endDate) : undefined}
+            onChange={(date) => onDateChange(startDate, toDateStr(date))}
+            placeholder="结束日期"
           />
           <CalendarRange className="w-4 h-4 text-gray-400" />
         </div>

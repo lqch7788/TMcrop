@@ -4,6 +4,7 @@
 
 import { ExportFormat, EXPORT_FORMATS } from './types';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { Label } from '../ui/label';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -37,29 +38,28 @@ export function ExportModal({
     >
       <p className="text-sm text-gray-500 mb-4">已选择 {selectedCount} 条数据</p>
       <div className="space-y-3">
-        {EXPORT_FORMATS.map((format) => (
-          <label
+        {EXPORT_FORMATS.map((format) => {
+          const selected = exportFormat === format.value;
+          return (
+          <Label
             key={format.value}
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-              exportFormat === format.value
+              selected
                 ? 'border-emerald-500 bg-emerald-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
+            onClick={() => onFormatChange(format.value)}
           >
-            <input
-              type="radio"
-              name="exportFormat"
-              value={format.value}
-              checked={exportFormat === format.value}
-              onChange={(e) => onFormatChange(e.target.value as ExportFormat)}
-              className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-            />
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'border-emerald-600' : 'border-gray-300'}`}>
+              {selected && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+            </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-900">{format.label}</p>
               <p className="text-xs text-gray-500">{format.desc}</p>
             </div>
-          </label>
-        ))}
+          </Label>
+        );
+        })}
       </div>
     </UnifiedModal>
   );

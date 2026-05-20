@@ -14,7 +14,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip
 } from 'recharts';
 import { PageHeader, GaugeChart } from '../../components/summary';
-import { Button } from '../../components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui';
 import { useSummaryDataStore } from '../../stores';
 
 // ========== 颜色常量 ==========
@@ -473,36 +473,36 @@ export default function SummaryIndicators() {
           </h3>
           {detailTableData.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">指标名称</th>
-                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">目标值</th>
-                    <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">实际值</th>
-                    <th className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">达成率</th>
-                    <th className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">评分</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full text-sm">
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">指标名称</TableHead>
+                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">目标值</TableHead>
+                    <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">实际值</TableHead>
+                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">达成率</TableHead>
+                    <TableHead className="text-center px-4 py-3 text-sm font-semibold whitespace-nowrap">评分</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {detailTableData.map((row, index) => (
-                    <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-2 font-medium text-gray-800">{row.name}</td>
-                      <td className="py-3 px-2 text-gray-600">{row.target}</td>
-                      <td className="py-3 px-2 text-gray-600">{row.actual}</td>
-                      <td className="py-3 px-2 text-center">
+                    <TableRow key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <TableCell className="py-3 px-2 font-medium text-gray-800">{row.name}</TableCell>
+                      <TableCell className="py-3 px-2 text-gray-600">{row.target}</TableCell>
+                      <TableCell className="py-3 px-2 text-gray-600">{row.actual}</TableCell>
+                      <TableCell className="py-3 px-2 text-center">
                         <span className={`font-medium ${scoreColor(Number(row.rate.replace('%', '')))}`}>
                           {row.rate}
                         </span>
-                      </td>
-                      <td className="py-3 px-2 text-center">
+                      </TableCell>
+                      <TableCell className="py-3 px-2 text-center">
                         <span className={`inline-flex items-center justify-center w-10 h-8 rounded-md text-xs font-bold ${scoreBgColor(row.score)} ${scoreColor(row.score)}`}>
                           {row.score}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-400">暂无明细数据</div>

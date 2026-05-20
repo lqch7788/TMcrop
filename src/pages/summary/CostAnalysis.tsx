@@ -27,6 +27,7 @@ import {
   Legend,
 } from 'recharts';
 import { PageHeader, KpiCard, KpiCardGrid, SummaryDateFilter } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useSummaryDataStore, type CostDetailItem, type CostSummary } from '../../stores/useSummaryDataStore';
 
 // ========== 图表颜色常量 ==========
@@ -289,48 +290,48 @@ function CostDetailTable({ items, summary }: { items: CostDetailItem[]; summary:
               {/* 明细行 */}
               {isExpanded && (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                        <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">成本类型</th>
-                        <th className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">月份</th>
-                        <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">金额</th>
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                        <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">成本类型</TableHead>
+                        <TableHead className="text-left px-4 py-3 text-sm font-semibold whitespace-nowrap">月份</TableHead>
+                        <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">金额</TableHead>
                         {meta.key === 'labor' && (
                           <>
-                            <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">工时(h)</th>
-                            <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">人数</th>
+                            <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">工时(h)</TableHead>
+                            <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">人数</TableHead>
                           </>
                         )}
-                        <th className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">记录数</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        <TableHead className="text-right px-4 py-3 text-sm font-semibold whitespace-nowrap">记录数</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {catItems.map((item, idx) => (
-                        <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-2.5 text-sm text-gray-700">
+                        <TableRow key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                          <TableCell className="px-6 py-2.5 text-sm text-gray-700">
                             {item.costType || item.costName || '-'}
-                          </td>
-                          <td className="px-6 py-2.5 text-sm text-gray-500">{item.month || '-'}</td>
-                          <td className="px-6 py-2.5 text-sm text-gray-900 text-right font-medium">
+                          </TableCell>
+                          <TableCell className="px-6 py-2.5 text-sm text-gray-500">{item.month || '-'}</TableCell>
+                          <TableCell className="px-6 py-2.5 text-sm text-gray-900 text-right font-medium">
                             {formatMoney(Number(item.totalAmount) || 0)}
-                          </td>
+                          </TableCell>
                           {meta.key === 'labor' && (
                             <>
-                              <td className="px-6 py-2.5 text-sm text-gray-500 text-right">
+                              <TableCell className="px-6 py-2.5 text-sm text-gray-500 text-right">
                                 {item.workHours != null ? Number(item.workHours).toFixed(1) : '-'}
-                              </td>
-                              <td className="px-6 py-2.5 text-sm text-gray-500 text-right">
+                              </TableCell>
+                              <TableCell className="px-6 py-2.5 text-sm text-gray-500 text-right">
                                 {item.workerCount ?? '-'}
-                              </td>
+                              </TableCell>
                             </>
                           )}
-                          <td className="px-6 py-2.5 text-sm text-gray-400 text-right">
+                          <TableCell className="px-6 py-2.5 text-sm text-gray-400 text-right">
                             {item.recordCount ?? '-'}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

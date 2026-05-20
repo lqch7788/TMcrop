@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BarChart3, Table2, LineChart, PieChart, RefreshCw, Download, Camera } from 'lucide-react';
-import { Button, Card, Select, DateRangePicker, EmptyState, Skeleton } from '@/components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, DateRangePicker, EmptyState, Skeleton, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Label } from '@/components/ui';
 import { useSummaryDataStore } from '@/stores';
 import { BarChart, Bar, LineChart as RLineChart, Line, PieChart as RPieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -187,22 +187,22 @@ export default function ComparisonPanel() {
         );
       case 'table':
         return (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-3">分组</th>
-                <th className="text-right py-2 px-3">数值</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b">
+                <TableHead className="text-left py-2 px-3">分组</TableHead>
+                <TableHead className="text-right py-2 px-3">数值</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.map((item, i) => (
-                <tr key={i} className="border-b hover:bg-gray-50">
-                  <td className="py-2 px-3">{item.label}</td>
-                  <td className="py-2 px-3 text-right font-mono">{Number(item.value).toLocaleString()}</td>
-                </tr>
+                <TableRow key={i} className="border-b hover:bg-gray-50">
+                  <TableCell className="py-2 px-3">{item.label}</TableCell>
+                  <TableCell className="py-2 px-3 text-right font-mono">{Number(item.value).toLocaleString()}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         );
       default: return null;
     }
@@ -212,33 +212,43 @@ export default function ComparisonPanel() {
     <div className="space-y-4">
       {/* 筛选条件 */}
       <Card>
-        <Card.Content className="flex flex-wrap items-end gap-3">
+        <CardContent className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[160px]">
-            <label className="text-xs text-gray-500 mb-1 block">主参数</label>
-            <Select value={mainParam} onChange={setMainParam}>
-              {flatParams.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            <Label className="text-xs text-gray-500">主参数</Label>
+            <Select value={mainParam} onValueChange={setMainParam}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {flatParams.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
           <div className="flex-1 min-w-[160px]">
-            <label className="text-xs text-gray-500 mb-1 block">对比参数1</label>
-            <Select value={compareParam1} onChange={setCompareParam1}>
-              <option value="">-- 不选择 --</option>
-              {availableCompare1.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            <Label className="text-xs text-gray-500">对比参数1</Label>
+            <Select value={compareParam1} onValueChange={setCompareParam1}>
+              <SelectTrigger><SelectValue placeholder="-- 不选择 --" /></SelectTrigger>
+              <SelectContent>
+                {availableCompare1.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
           <div className="flex-1 min-w-[160px]">
-            <label className="text-xs text-gray-500 mb-1 block">对比参数2</label>
-            <Select value={compareParam2} onChange={setCompareParam2}>
-              <option value="">-- 不选择 --</option>
-              {availableCompare2.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            <Label className="text-xs text-gray-500">对比参数2</Label>
+            <Select value={compareParam2} onValueChange={setCompareParam2}>
+              <SelectTrigger><SelectValue placeholder="-- 不选择 --" /></SelectTrigger>
+              <SelectContent>
+                {availableCompare2.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
           <div className="w-[180px]">
-            <label className="text-xs text-gray-500 mb-1 block">采样粒度</label>
-            <Select value={sampling} onChange={setSampling}>
-              <option value="day">日</option>
-              <option value="month">月</option>
-              <option value="year">年</option>
+            <Label className="text-xs text-gray-500">采样粒度</Label>
+            <Select value={sampling} onValueChange={setSampling}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">日</SelectItem>
+                <SelectItem value="month">月</SelectItem>
+                <SelectItem value="year">年</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">
@@ -253,7 +263,7 @@ export default function ComparisonPanel() {
             <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
             查询
           </Button>
-        </Card.Content>
+        </CardContent>
       </Card>
 
       {/* 图表区 */}
@@ -283,37 +293,37 @@ export default function ComparisonPanel() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {comparisonData.main && (
             <Card className={`relative ${!compareParam1 && !compareParam2 ? 'lg:col-span-2 xl:col-span-3' : ''}`}>
-              <Card.Header className="flex items-center justify-between">
-                <Card.Title className="text-emerald-600">主参数 · {flatParams.find(p=>p.key===mainParam)?.label}</Card.Title>
-              </Card.Header>
-              <Card.Content>
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle className="text-emerald-600">主参数 · {flatParams.find(p=>p.key===mainParam)?.label}</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div ref={setChartRef('main')}>
                   <ExportMenu chartKey="main" />
                   {renderChart(comparisonData.main.data, '主参数', '#10b981')}
                 </div>
-              </Card.Content>
+              </CardContent>
             </Card>
           )}
           {comparisonData.compare1 && (
             <Card className="relative">
-              <Card.Header><Card.Title className="text-blue-600">对比参数1 · {flatParams.find(p=>p.key===compareParam1)?.label}</Card.Title></Card.Header>
-              <Card.Content>
+              <CardHeader><CardTitle className="text-blue-600">对比参数1 · {flatParams.find(p=>p.key===compareParam1)?.label}</CardTitle></CardHeader>
+              <CardContent>
                 <div ref={setChartRef('compare1')}>
                   <ExportMenu chartKey="compare1" />
                   {renderChart(comparisonData.compare1.data, '对比1', '#3b82f6')}
                 </div>
-              </Card.Content>
+              </CardContent>
             </Card>
           )}
           {comparisonData.compare2 && (
             <Card className="relative">
-              <Card.Header><Card.Title className="text-amber-600">对比参数2 · {flatParams.find(p=>p.key===compareParam2)?.label}</Card.Title></Card.Header>
-              <Card.Content>
+              <CardHeader><CardTitle className="text-amber-600">对比参数2 · {flatParams.find(p=>p.key===compareParam2)?.label}</CardTitle></CardHeader>
+              <CardContent>
                 <div ref={setChartRef('compare2')}>
                   <ExportMenu chartKey="compare2" />
                   {renderChart(comparisonData.compare2.data, '对比2', '#f59e0b')}
                 </div>
-              </Card.Content>
+              </CardContent>
             </Card>
           )}
           </div>

@@ -32,6 +32,7 @@ import {
   Area,
 } from 'recharts';
 import { PageHeader, KpiCard, KpiCardGrid, SummaryDateFilter } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useSummaryDataStore, type YieldStatItem } from '../../stores/useSummaryDataStore';
 
 // ========== 常量 ==========
@@ -330,36 +331,36 @@ function YieldDetailTable({ items }: { items: YieldStatItem[] }) {
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">名称</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产量(kg)</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">采收次数</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">平均单价</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产值</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+        <Table className="w-full">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">名称</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产量(kg)</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">采收次数</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">平均单价</TableHead>
+              <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">产值</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {sortedItems.map((item, idx) => (
-              <tr key={`${item.name}-${idx}`} className="hover:bg-emerald-50/50 transition-colors">
-                <td className="px-4 py-2.5 text-sm text-gray-800 font-medium">{item.name || '-'}</td>
-                <td className="px-4 py-2.5 text-sm text-gray-900 text-right tabular-nums">
+              <TableRow key={`${item.name}-${idx}`} className="hover:bg-emerald-50/50 transition-colors">
+                <TableCell className="px-4 py-2.5 text-sm text-gray-800 font-medium">{item.name || '-'}</TableCell>
+                <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right tabular-nums">
                   {formatWeight(Number(item.value) || 0)}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 text-right">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 text-sm text-gray-500 text-right">
                   {item.count ?? '-'}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-900 text-right">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right">
                   {item.avgPrice ? formatMoney(item.avgPrice) : '-'}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-900 text-right font-medium">
+                </TableCell>
+                <TableCell className="px-4 py-2.5 text-sm text-gray-900 text-right font-medium">
                   {formatMoney(Number(item.totalAmount) || 0)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <div className="px-6 py-3 bg-emerald-50/50 border-t border-emerald-100 flex flex-wrap items-center gap-x-6 gap-y-1">
         <span className="text-sm text-gray-600">
