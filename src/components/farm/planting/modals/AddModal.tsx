@@ -4,6 +4,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
@@ -245,7 +246,7 @@ export function AddModal({
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         {/* 来源类型 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">来源类型</label>
+          <Label className="text-gray-900">来源类型</Label>
           <DictSelect
             category="planting_source_type"
             value={formData.sourceType}
@@ -256,7 +257,7 @@ export function AddModal({
 
         {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">关联生产计划</label>
+          <Label className="text-gray-900">关联生产计划</Label>
           <Select
             value={formData.productionPlanId}
             onValueChange={(val) => {
@@ -284,9 +285,9 @@ export function AddModal({
 
         {/* 来源选择（种源或育苗） */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <Label className="text-gray-900">
             {formData.sourceType === SourceType.SEED ? '选择种源' : '选择育苗批次'}
-          </label>
+          </Label>
           <Select
             value={formData.sourceId}
             onValueChange={(val) => {
@@ -320,7 +321,7 @@ export function AddModal({
 
         {/* 作物品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">作物品种</label>
+          <Label className="text-gray-900">作物品种</Label>
           <Input
             type="text"
             value={formData.cropName}
@@ -332,7 +333,7 @@ export function AddModal({
 
         {/* 品种 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">品种</label>
+          <Label className="text-gray-900">品种</Label>
           <Input
             type="text"
             value={formData.cropVariety}
@@ -344,7 +345,7 @@ export function AddModal({
 
         {/* 种植区域 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植区域</label>
+          <Label className="text-gray-900">种植区域</Label>
           <DictSelect
             category="planting_area"
             value={formData.areaId}
@@ -355,7 +356,7 @@ export function AddModal({
 
         {/* 种植数量 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植数量</label>
+          <Label className="text-gray-900">种植数量</Label>
           <Input
             type="number"
             value={formData.plantingCount || ''}
@@ -366,7 +367,7 @@ export function AddModal({
 
         {/* 种植日期 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">种植日期</label>
+          <Label className="text-gray-900">种植日期</Label>
           <Input
             type="date"
             value={formData.plantingDate}
@@ -377,7 +378,7 @@ export function AddModal({
 
         {/* 土壤PH值 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">土壤PH值</label>
+          <Label className="text-gray-900">土壤PH值</Label>
           <Input
             type="number"
             step="0.1"
@@ -390,7 +391,7 @@ export function AddModal({
 
         {/* 土壤EC值 */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">土壤EC值</label>
+          <Label className="text-gray-900">土壤EC值</Label>
           <Input
             type="number"
             step="0.1"
@@ -403,7 +404,7 @@ export function AddModal({
 
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
+          <Label className="text-gray-900">备注</Label>
           <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
@@ -415,7 +416,7 @@ export function AddModal({
 
         {/* 图片上传 - 占两列 */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-900 mb-1">图片上传</label>
+          <Label className="text-gray-900">图片上传</Label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
             {/* 已上传的图片预览 */}
             {pictures.length > 0 && (
@@ -441,7 +442,7 @@ export function AddModal({
               </div>
             )}
             {/* 上传按钮 */}
-            <label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
+            <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
               <Upload className="w-8 h-8 text-gray-400 mb-2" />
               <span className="text-sm text-gray-500">点击上传图片</span>
               <Input
@@ -464,7 +465,7 @@ export function AddModal({
                   e.target.value = '';
                 }}
               />
-            </label>
+            </Label>
           </div>
         </div>
       </div>
