@@ -6,6 +6,8 @@ import { Eye } from 'lucide-react';
 import { TableColumn } from './types';
 import { Pagination } from './Pagination';
 import { Button } from '../ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
+import { Checkbox } from '../ui/checkbox';
 
 interface SummaryTableProps<T extends { id: number | string }> {
   title?: string;
@@ -47,58 +49,54 @@ export function SummaryTable<T extends { id: number | string }>({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {exportMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                <TableHead className="py-3 text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={selectedRows.length === data.length && data.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
-                </th>
+                </TableHead>
               )}
               {columns.map((col) => (
-                <th key={col.key as string} className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+                <TableHead key={col.key as string} className="py-3 text-sm font-semibold whitespace-nowrap">
                   {col.label}
-                </th>
+                </TableHead>
               ))}
-              {!exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+              {!exportMode && <TableHead className="py-3 text-sm font-semibold whitespace-nowrap">操作</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {paginatedData.map((record) => (
-              <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+              <TableRow key={record.id} className="hover:bg-blue-100 transition-colors">
                 {exportMode && (
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <input
-                      type="checkbox"
+                  <TableCell className="py-3 whitespace-nowrap">
+                    <Checkbox
                       checked={selectedRows.includes(record.id)}
-                      onChange={() => onSelectRow(record.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={() => onSelectRow(record.id)}
                     />
-                  </td>
+                  </TableCell>
                 )}
                 {columns.map((col) => (
-                  <td key={col.key as string} className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell key={col.key as string} className="py-3 text-sm text-gray-600 whitespace-nowrap">
                     {col.render
                       ? col.render((record as Record<string, unknown>)[col.key as string], record)
                       : String((record as Record<string, unknown>)[col.key as string] ?? '')}
-                  </td>
+                  </TableCell>
                 ))}
                 {!exportMode && (
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="py-3 whitespace-nowrap">
                     <Button variant="ghost" size="icon" onClick={() => onView?.(record)} title="查看">
                       <Eye className="w-4 h-4" />
                     </Button>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {exportMode && selectedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <div className="flex items-center gap-4">

@@ -20,6 +20,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useSummaryDataStore, type BatchStatItem, type ChainStageStat } from '../../stores/useSummaryDataStore';
 
 // ========== 常量 ==========
@@ -330,53 +331,53 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
           <p className="text-xs text-gray-400 mt-1">所有批次按环节归类，点击查看批次详情</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前环节</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">完成率</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前环节</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">完成率</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {batchItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                <TableRow>
+                  <TableCell colSpan={8} className="px-4 py-12 text-center text-gray-400">
                     {isLoading ? '加载中...' : '暂无批次数据'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 batchItems.map((batch) => {
                   const stage = CHAIN_STAGES.find((s) => s.key === getBatchStage(batch));
                   return (
-                    <tr
+                    <TableRow
                       key={batch.id}
                       className="hover:bg-teal-50/50 transition-colors cursor-pointer"
                       onClick={() => handleViewBatch(batch)}
                     >
-                      <td className="px-4 py-2.5 text-sm text-gray-900 font-medium whitespace-nowrap">{batch.batchCode}</td>
-                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.batchName}</td>
-                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.cropName}</td>
-                      <td className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.greenhouse}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <TableCell className="px-4 py-2.5 text-sm text-gray-900 font-medium whitespace-nowrap">{batch.batchCode}</TableCell>
+                      <TableCell className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.batchName}</TableCell>
+                      <TableCell className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.cropName}</TableCell>
+                      <TableCell className="px-4 py-2.5 text-sm text-gray-700 whitespace-nowrap">{batch.greenhouse}</TableCell>
+                      <TableCell className="px-4 py-2.5 whitespace-nowrap">
                         {stage && (
                           <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${stage.bgColor} ${stage.textColor}`}>
                             <span className="scale-75">{stage.icon}</span>
                             {stage.label}
                           </div>
                         )}
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5 whitespace-nowrap">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLE[batch.status] || 'bg-gray-100 text-gray-700'}`}>
                           {STATUS_LABEL[batch.status] || batch.status}
                         </span>
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[50px]">
                             <div
@@ -386,16 +387,16 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
                           </div>
                           <span className="text-xs text-gray-500 w-9 text-right">{(batch.completionRate || 0).toFixed(0)}%</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5 text-center">
                         <span className="text-xs text-teal-600 font-medium cursor-pointer hover:text-teal-800">追溯详情</span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

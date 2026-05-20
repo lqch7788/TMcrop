@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { useSummaryDataStore } from '../../stores';
 import type { BatchStatItem } from '../../stores';
 
@@ -359,43 +360,43 @@ export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
           <h2 className="text-lg font-semibold text-gray-900">批次明细数据</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">目标产量(kg)</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实际产量(kg)</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">完成率</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总工时(h)</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人工成本(元)</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次编号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">批次名称</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">温室</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">目标产量(kg)</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">实际产量(kg)</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">完成率</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">总工时(h)</TableHead>
+                <TableHead className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">人工成本(元)</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {filteredBatches.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="px-4 py-12 text-center text-gray-400">
+                <TableRow>
+                  <TableCell colSpan={11} className="px-4 py-12 text-center text-gray-400">
                     {isLoading ? '加载中...' : '暂无批次数据'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredBatches.map((batch) => (
-                  <tr
+                  <TableRow
                     key={batch.id}
                     className="hover:bg-purple-50 transition-colors cursor-pointer"
                     onClick={() => handleViewDetail(batch)}
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">
                       {batch.batchCode}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.batchName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.cropName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.greenhouse}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.batchName}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.cropName}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{batch.greenhouse}</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           STATUS_BADGE[batch.status] || 'bg-gray-100 text-gray-700'
@@ -403,14 +404,14 @@ export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
                       >
                         {STATUS_LABEL[batch.status] || batch.status}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
                       {formatNumber(batch.targetYield)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
                       {formatNumber(batch.actualQuantity)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[60px]">
                           <div
@@ -430,21 +431,21 @@ export default function BatchSummary({ hideHeader }: BatchSummaryProps) {
                           {(batch.completionRate || 0).toFixed(0)}%
                         </span>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
                       {batch.totalWorkHours?.toFixed(1) || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 text-right whitespace-nowrap">
                       {batch.laborCost ? formatCurrency(batch.laborCost) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-center whitespace-nowrap">
                       <span className="text-xs text-purple-600 hover:text-purple-800 font-medium">查看详情</span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

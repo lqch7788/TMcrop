@@ -1,9 +1,11 @@
 /**
  * 分页组件
+ * V2.1: 替换原生 select 为 Select 组件
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface PaginationProps {
   currentPage: number;
@@ -11,6 +13,12 @@ interface PaginationProps {
   totalCount: number;
   onPageChange: (page: number) => void;
 }
+
+const PAGE_SIZE_OPTIONS = [
+  { value: '10', label: '10' },
+  { value: '20', label: '20' },
+  { value: '50', label: '50' },
+];
 
 export function Pagination({
   currentPage,
@@ -22,15 +30,18 @@ export function Pagination({
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">每页</span>
-        <select
-          value={10}
-          onChange={(e) => onPageChange(1)}
-          className="px-2 py-1 border border-gray-200 rounded text-sm"
-        >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
+        <Select value="10" onValueChange={() => onPageChange(1)}>
+          <SelectTrigger className="w-[80px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-sm text-gray-500">条</span>
       </div>
       <div className="flex items-center gap-2">

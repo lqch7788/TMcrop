@@ -1,9 +1,29 @@
 /**
  * 筛选工具栏组件 - 支持日期、下拉筛选和操作按钮
+ * V2.1: 替换原生 input[date]、select、label 为 UI 组件库对应组件
  */
 
 import { Search, Download } from 'lucide-react';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { FilterSelectConfig } from './types';
+
+/** 将日期字符串 (YYYY-MM-DD) 转换为 Date 对象 */
+function toDate(dateStr: string): Date | undefined {
+  if (!dateStr) return undefined;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return undefined;
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+/** 将 Date 对象转换为日期字符串 (YYYY-MM-DD) */
+function toDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 interface FiltersProps {
   filters: {
@@ -36,14 +56,12 @@ export function Filters({
         {/* 日期筛选 */}
         {filters.date && (
           <div className="min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               {filters.date.label}
-            </label>
-            <input
-              type="date"
-              value={filters.date.value}
-              onChange={(e) => filters.date?.onChange(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            </Label>
+            <DatePicker
+              selected={filters.date.value ? toDate(filters.date.value) : undefined}
+              onChange={(date) => filters.date?.onChange(toDateStr(date))}
             />
           </div>
         )}
@@ -51,20 +69,21 @@ export function Filters({
         {/* 下拉筛选 */}
         {filters.selects?.map((select) => (
           <div key={select.key} className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
               {select.label}
-            </label>
-            <select
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              value={select.value}
-              onChange={(e) => select.onChange(e.target.value)}
-            >
-              {select.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            </Label>
+            <Select value={select.value} onValueChange={select.onChange}>
+              <SelectTrigger className="w-full h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {select.options.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ))}
 
