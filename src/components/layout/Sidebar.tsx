@@ -137,7 +137,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
 
       <aside
         className={`
-          fixed top-12 left-0 z-40 h-[calc(100vh-3rem)] bg-[#F2F6FA] text-gray-900 transition-all duration-300 ease-in-out border-r border-gray-200 flex flex-col
+          fixed top-12 left-0 z-40 h-[calc(100vh-3rem)] bg-[var(--sidebar-bg)] text-gray-900 transition-all duration-300 ease-in-out border-r border-gray-200 flex flex-col
           ${collapsed ? 'w-16' : 'w-52'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
@@ -172,7 +172,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                   flex items-center rounded-lg transition-all duration-200
                   ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                   ${isActive('/park-archive')
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                     : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
@@ -195,7 +195,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                   flex items-center rounded-lg transition-all duration-200
                   ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                   ${isActive('/dashboard')
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                     : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
@@ -218,7 +218,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                   flex items-center rounded-lg transition-all duration-200
                   ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                   ${isActive('/indicators')
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                     : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
@@ -241,7 +241,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                   flex items-center rounded-lg transition-all duration-200
                   ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                   ${isActive('/announcement')
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                     : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
@@ -266,12 +266,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredCropSubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -289,12 +289,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -312,12 +312,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredMaterialsSubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -335,12 +335,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -358,12 +358,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive('/labor/')
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <Users className={`flex-shrink-0 w-5 h-5 ${isActive('/labor/') ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <Users className={`flex-shrink-0 w-5 h-5 ${isActive('/labor/') ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -381,12 +381,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -404,12 +404,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredSummarySubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -427,12 +427,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -450,12 +450,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredProductionSubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -473,12 +473,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -496,12 +496,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredFarmSubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -519,12 +519,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -542,12 +542,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                         flex items-center rounded-lg transition-all duration-200 w-full
                         ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                         ${isActive(item.path) || filteredApprovalSubItems.some(sub => isActive(sub.path))
-                          ? 'bg-blue-100 text-blue-700 font-semibold'
+                          ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                           : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-blue-700' : 'text-gray-500'}`} />
+                      <item.icon className={`flex-shrink-0 w-5 h-5 ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-500'}`} />
                       {!collapsed && (
                         <>
                           <span className="text-sm font-medium">{item.label}</span>
@@ -565,12 +565,12 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                               className={`
                                 flex items-center rounded-lg transition-all duration-200 gap-3 px-3 py-2
                                 ${isActive(subItem.path)
-                                  ? 'bg-blue-100 text-blue-700 font-semibold'
+                                  ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                                   : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                                 }
                               `}
                             >
-                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-blue-700' : 'text-gray-400'}`} />
+                              <subItem.icon className={`flex-shrink-0 w-4 h-4 ${isActive(subItem.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-400'}`} />
                               <span className="text-sm">{subItem.label}</span>
                             </Link>
                           </li>
@@ -587,13 +587,13 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                       flex items-center rounded-lg transition-all duration-200
                       ${collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'}
                       ${isActive(item.path)
-                        ? 'bg-blue-100 text-blue-700 font-semibold'
+                        ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold'
                         : 'text-gray-900 hover:bg-gray-100 hover:text-gray-900'
                       }
                     `}
                   >
-                    <item.icon className={`flex-shrink-0 ${collapsed ? 'w-5 h-5' : 'w-5 h-5'} ${isActive(item.path) ? 'text-blue-700' : 'text-gray-900'}`} />
-                    {!collapsed && <span className={`text-sm font-medium ${isActive(item.path) ? 'text-blue-700' : 'text-gray-900'}`}>{item.label}</span>}
+                    <item.icon className={`flex-shrink-0 ${collapsed ? 'w-5 h-5' : 'w-5 h-5'} ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-900'}`} />
+                    {!collapsed && <span className={`text-sm font-medium ${isActive(item.path) ? 'text-[var(--sidebar-active-text)]' : 'text-gray-900'}`}>{item.label}</span>}
                   </Link>
                 )}
               </li>

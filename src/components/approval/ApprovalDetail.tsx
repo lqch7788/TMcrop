@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, Clock, User, Calendar, FileText, MessageSquare } from 'lucide-react';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Approval, ApprovalStatus, ApprovalAction } from '../../types/approval';
 import { BusinessPreview } from './BusinessPreview';
 
@@ -205,32 +206,32 @@ export function ApprovalDetail({
       {approval.materials && approval.materials.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">物料明细</h3>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料编码</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">申请数量</th>
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="text-xs font-medium text-gray-500">物料编码</TableHead>
+                <TableHead className="text-xs font-medium text-gray-500">物料名称</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">申请数量</TableHead>
                 {approval.status === ApprovalStatus.PARTIALLY_APPROVED && (
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">批准数量</th>
+                  <TableHead className="text-right text-xs font-medium text-gray-500">批准数量</TableHead>
                 )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {approval.materials.map((mat) => (
-                <tr key={mat.materialId}>
-                  <td className="px-3 py-2 text-gray-900">{mat.materialCode}</td>
-                  <td className="px-3 py-2 text-gray-900">{mat.materialName}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">{mat.requestedQuantity} {mat.unit}</td>
+                <TableRow key={mat.materialId}>
+                  <TableCell>{mat.materialCode}</TableCell>
+                  <TableCell>{mat.materialName}</TableCell>
+                  <TableCell className="text-right">{mat.requestedQuantity} {mat.unit}</TableCell>
                   {approval.status === ApprovalStatus.PARTIALLY_APPROVED && (
-                    <td className="px-3 py-2 text-right text-gray-900">
+                    <TableCell className="text-right">
                       {mat.approvedQuantity ?? mat.requestedQuantity} {mat.unit}
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

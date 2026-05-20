@@ -10,7 +10,12 @@ import { useApproval, useApprovedApprovals } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, Approval } from '../types/approval';
 import { ApprovalDetail } from '../components/approval/ApprovalDetail';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Label,
+} from '../components/ui';
 import { Button } from '../components/ui/button';
 
 export default function Approved() {
@@ -103,7 +108,7 @@ export default function Approved() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
+            <Label className="text-gray-700">搜索</Label>
             <input
               type="text"
               placeholder="搜索审批单标题、申请人..."
@@ -113,16 +118,17 @@ export default function Approved() {
             />
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批结果</label>
-            <select
-              value={resultFilter}
-              onChange={(e) => setResultFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>已通过</option>
-              <option>已拒绝</option>
-            </select>
+            <Label className="text-gray-700">审批结果</Label>
+            <Select value={resultFilter} onValueChange={setResultFilter}>
+              <SelectTrigger className="w-full h-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="已通过">已通过</SelectItem>
+                <SelectItem value="已拒绝">已拒绝</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
         </div>
@@ -132,50 +138,48 @@ export default function Approved() {
         <div className="p-4 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">已审批列表</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">金额</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批结果</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedList.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.typeName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{item.title}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.applyDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.updatedAt?.substring(0, 10) || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.amount || '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      item.status === ApprovalStatus.APPROVED
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}>
-                      {item.status === ApprovalStatus.APPROVED ? '已通过' : '已拒绝'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看" onClick={() => setDetailApproval(approval)}>
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">审批单号</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">类型</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">标题</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">申请人</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">申请时间</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">审批时间</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">金额</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">审批结果</TableHead>
+              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedList.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="px-4 py-3 text-sm font-medium text-gray-900">{item.code}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{item.typeName}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{item.title}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{item.applicantName}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{item.applyDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{item.updatedAt?.substring(0, 10) || '-'}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600">{item.amount || '-'}</TableCell>
+                <TableCell className="px-4 py-3">
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                    item.status === ApprovalStatus.APPROVED
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {item.status === ApprovalStatus.APPROVED ? '已通过' : '已拒绝'}
+                  </span>
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <button className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded" title="查看" onClick={() => setDetailApproval(item)}>
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         {filteredList.length === 0 && (
           <div className="p-8 text-center text-gray-500">暂无已审批记录</div>
         )}

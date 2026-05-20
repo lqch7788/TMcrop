@@ -1,20 +1,12 @@
 // ============================================================
-// 审批超时与委托配置
+// 审批超时与委托配置 — V3.0 Store化
 // 文件路径：src/config/approvalTimeout.ts
-// 功能：配置审批超时时间、自动升级规则和委托机制
-// 所有配置从数据字典加载，禁止硬编码
+// V3.0改造：localStorage读取 → getSystemConfigValue()从Store/API读取
+// 所有配置优先从Store（API→IndexedDB→localStorage三级降级），硬编码兜底
 // ============================================================
 
 import { ApprovalType } from '../types/approval';
-import { Dictionary } from '../services/dictionaryService';
-
-// ============================================================
-// 数据字典存储键（与 dictionaryService.ts 保持一致）
-// ============================================================
-
-const DICTIONARY_STORAGE_KEY = 'yuanxingtu_dictionaries';
-const TIMEOUT_CONFIG_CACHE_KEY = 'approval_timeout_config';
-const DELEGATION_RULES_CACHE_KEY = 'approval_delegation_rules';
+import { getSystemConfigValue, getSystemConfigValueNumber } from './systemConfigReader';
 
 // ============================================================
 // 超时阈值配置（单位：小时）
@@ -32,10 +24,10 @@ export interface TimeoutConfig {
 }
 
 // ============================================================
-// 默认超时配置（仅作为兜底，数据字典优先）
+// 默认超时配置（兜底值，Store未加载时使用）
 // ============================================================
 
-const DEFAULT_TIMEOUT_CONFIGS: Record<string, TimeoutConfig> = {
+export const TIMEOUT_DEFAULTS: Record<string, TimeoutConfig> = {
   urgent: {
     timeoutHours: 4,
     escalationHours: 2,
@@ -68,7 +60,7 @@ const DEFAULT_TIMEOUT_CONFIGS: Record<string, TimeoutConfig> = {
 };
 
 // ============================================================
-// 从数据字典加载超时配置
+// 加载配置类型
 // ============================================================
 
 export interface LoadedTimeoutConfig {
@@ -81,94 +73,82 @@ export interface LoadedTimeoutConfig {
   ultimateAction: 'auto_approve' | 'auto_reject';
 }
 
-function loadTimeoutConfigFromDictionary(): LoadedTimeoutConfig {
+// ============================================================
+// ★ V3.0: 从Store读取超时配置（替代原 localStorage 读取）
+// ============================================================
+
+function loadTimeoutConfigFromStore(): LoadedTimeoutConfig {
   try {
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (!stored) {
-      console.warn('【超时配置】数据字典未初始化，使用默认配置');
-      return getDefaultTimeoutConfig();
-    }
-
-    const dictionaries = JSON.parse(stored);
-    // 统一使用 category 字段（与 dictionaryService.ts 保持一致）
-    const timeoutItems = dictionaries.filter((d: Dictionary) => d.category === 'timeout_config');
-
-    if (timeoutItems.length === 0) {
-      console.warn('【超时配置】数据字典中没有超时配置，使用默认配置');
-      return getDefaultTimeoutConfig();
-    }
-
-    // 转换为配置对象（统一使用 code 字段作为键，name 字段作为值）
-    const configMap: Record<string, string> = {};
-    timeoutItems.forEach((item: Dictionary) => {
-      configMap[item.code] = item.name;
-    });
-
     return {
       urgent: {
-        timeoutHours: parseInt(configMap['urgent_timeout'] || '4', 10),
-        escalationHours: parseInt(configMap['urgent_escalation'] || '2', 10),
+        timeoutHours: getSystemConfigValueNumber('approval.timeout.urgent-hours', TIMEOUT_DEFAULTS.urgent.timeoutHours),
+        escalationHours: getSystemConfigValueNumber('approval.timeout.urgent-escalation', TIMEOUT_DEFAULTS.urgent.escalationHours ?? 2),
         autoEscalation: true,
         escalationType: 'urgent',
       },
       normal: {
-        timeoutHours: parseInt(configMap['normal_timeout'] || '48', 10),
-        escalationHours: parseInt(configMap['normal_escalation'] || '24', 10),
+        timeoutHours: getSystemConfigValueNumber('approval.timeout.normal-hours', TIMEOUT_DEFAULTS.normal.timeoutHours),
+        escalationHours: getSystemConfigValueNumber('approval.timeout.normal-escalation', TIMEOUT_DEFAULTS.normal.escalationHours ?? 24),
         autoEscalation: true,
         escalationType: 'notify_manager',
       },
       hr: {
-        timeoutHours: parseInt(configMap['hr_timeout'] || '24', 10),
-        escalationHours: parseInt(configMap['hr_escalation'] || '12', 10),
+        timeoutHours: getSystemConfigValueNumber('approval.timeout.hr-hours', TIMEOUT_DEFAULTS.hr.timeoutHours),
+        escalationHours: getSystemConfigValueNumber('approval.timeout.hr-escalation', TIMEOUT_DEFAULTS.hr.escalationHours ?? 12),
         autoEscalation: true,
         escalationType: 'urgent',
       },
       finance: {
-        timeoutHours: parseInt(configMap['finance_timeout'] || '72', 10),
-        escalationHours: parseInt(configMap['finance_escalation'] || '48', 10),
+        timeoutHours: getSystemConfigValueNumber('approval.timeout.finance-hours', TIMEOUT_DEFAULTS.finance.timeoutHours),
+        escalationHours: getSystemConfigValueNumber('approval.timeout.finance-escalation', TIMEOUT_DEFAULTS.finance.escalationHours ?? 48),
         autoEscalation: true,
         escalationType: 'notify_manager',
       },
       exempt: {
-        timeoutHours: 1,
+        timeoutHours: getSystemConfigValueNumber('approval.timeout.exempt-hours', TIMEOUT_DEFAULTS.exempt.timeoutHours),
         escalationHours: 0.5,
         autoEscalation: false,
       },
-      ultimateTimeoutHours: parseInt(configMap['ultimate_timeout'] || '168', 10),
-      ultimateAction: (configMap['ultimate_action'] as 'auto_approve' | 'auto_reject') || 'auto_approve',
+      ultimateTimeoutHours: getSystemConfigValueNumber('approval.timeout.ultimate-hours', 168),
+      ultimateAction: (getSystemConfigValue('approval.timeout.ultimate-action', 'auto_approve') as 'auto_approve' | 'auto_reject') || 'auto_approve',
     };
   } catch (error) {
-    console.error('【超时配置】加载超时配置失败，使用默认配置', error);
+    console.error('【超时配置】读取Store失败，使用默认配置', error);
     return getDefaultTimeoutConfig();
   }
 }
 
 function getDefaultTimeoutConfig(): LoadedTimeoutConfig {
   return {
-    ...DEFAULT_TIMEOUT_CONFIGS,
+    ...TIMEOUT_DEFAULTS,
     ultimateTimeoutHours: 168,
     ultimateAction: 'auto_approve',
   } as LoadedTimeoutConfig;
 }
 
 // ============================================================
-// 获取超时配置（带缓存）
+// 获取超时配置（带缓存，CustomEvent自动清除）
 // ============================================================
 
 let cachedTimeoutConfig: LoadedTimeoutConfig | null = null;
 
+// ★ V3.0: 监听Store变更事件自动清除缓存
+if (typeof window !== 'undefined') {
+  window.addEventListener('system-config-changed', () => {
+    cachedTimeoutConfig = null;
+  });
+}
+
 export function getTimeoutConfig(): LoadedTimeoutConfig {
   if (!cachedTimeoutConfig) {
-    cachedTimeoutConfig = loadTimeoutConfigFromDictionary();
+    cachedTimeoutConfig = loadTimeoutConfigFromStore();
   }
   return cachedTimeoutConfig;
 }
 
-/**
- * 刷新超时配置缓存
- */
+/** 刷新超时配置缓存 */
 export function refreshTimeoutConfig(): void {
-  cachedTimeoutConfig = loadTimeoutConfigFromDictionary();
+  cachedTimeoutConfig = loadTimeoutConfigFromStore();
 }
 
 // ============================================================
@@ -220,10 +200,10 @@ export function getUltimateTimeoutConfig(): {
 // ============================================================
 
 export enum TimeoutLevel {
-  NORMAL = 'normal',           // 正常
-  WARNING = 'warning',         // 警告（超过升级时间）
-  OVERDUE = 'overdue',        // 超时（超过总超时时间）
-  ULTIMATE = 'ultimate',       // 最终超时（超过7天直接通过）
+  NORMAL = 'normal',
+  WARNING = 'warning',
+  OVERDUE = 'overdue',
+  ULTIMATE = 'ultimate',
 }
 
 // ============================================================
@@ -231,17 +211,11 @@ export enum TimeoutLevel {
 // ============================================================
 
 export interface TimeoutCheckResult {
-  /** 是否超时 */
   isTimeout: boolean;
-  /** 超时级别 */
   level: TimeoutLevel;
-  /** 剩余时间（小时） */
   remainingHours: number;
-  /** 已等待时间（小时） */
   waitedHours: number;
-  /** 是否已升级 */
   escalated: boolean;
-  /** 升级原因 */
   escalationReason?: string;
 }
 
@@ -250,23 +224,14 @@ export interface TimeoutCheckResult {
 // ============================================================
 
 export interface DelegationConfig {
-  /** 是否启用委托 */
   enabled: boolean;
-  /** 委托人ID */
   delegatorId: string;
-  /** 委托人名称 */
   delegatorName: string;
-  /** 受托人ID */
   delegateeId: string;
-  /** 受托人名称 */
   delegateeName: string;
-  /** 委托生效日期 */
   startDate?: string;
-  /** 委托结束日期 */
   endDate?: string;
-  /** 委托的审批类型（为空表示全部） */
   allowedTypes?: ApprovalType[];
-  /** 委托原因 */
   reason?: string;
 }
 
@@ -275,81 +240,56 @@ export interface DelegationConfig {
 // ============================================================
 
 export interface DelegationRule {
-  /** 委托人角色 */
   fromRole: string;
-  /** 受托人角色 */
   toRole: string;
-  /** 是否启用 */
   enabled: boolean;
-  /** 备注 */
   remark?: string;
 }
 
 // ============================================================
-// 从数据字典加载委托规则
+// 默认委托规则（兜底）
 // ============================================================
 
-function loadDelegationRulesFromDictionary(): DelegationRule[] {
+export const DELEGATION_RULE_DEFAULTS: DelegationRule[] = [
+  { fromRole: 'manager', toRole: 'department_head', enabled: true, remark: '经理外出时委托给部门主管' },
+  { fromRole: 'department_head', toRole: 'manager', enabled: true, remark: '部门主管外出时委托给经理' },
+  { fromRole: 'director', toRole: 'manager', enabled: true, remark: '总监外出时委托给经理' },
+  { fromRole: 'hr', toRole: 'hr_manager', enabled: true, remark: '人事专员外出时委托给人事经理' },
+];
+
+// ============================================================
+// ★ V3.0: 从Store读取委托规则（替代原 localStorage 读取）
+// ============================================================
+
+function loadDelegationRulesFromStore(): DelegationRule[] {
   try {
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (!stored) {
-      console.warn('【委托规则】数据字典未初始化，使用默认规则');
-      return getDefaultDelegationRules();
+    const json = getSystemConfigValue('approval.delegation.rules', '');
+    if (json) {
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-
-    const dictionaries = JSON.parse(stored);
-    // 统一使用 category 字段（与 dictionaryService.ts 保持一致）
-    const delegationItems = dictionaries.filter((d: Dictionary) => d.category === 'delegation_rule');
-
-    if (delegationItems.length === 0) {
-      console.warn('【委托规则】数据字典中没有委托规则，使用默认规则');
-      return getDefaultDelegationRules();
-    }
-
-    // 转换为规则对象（使用 code 字段作为规则标识，name 字段作为描述）
-    return delegationItems.map((item: Dictionary) => {
-      // code 格式为 "from_role:to_role"
-      const [fromRole, toRole] = item.code.split(':');
-      return {
-        fromRole,
-        toRole,
-        enabled: true,
-        remark: item.name,
-      };
-    });
   } catch (error) {
-    console.error('【委托规则】加载委托规则失败，使用默认规则', error);
-    return getDefaultDelegationRules();
+    console.warn('【委托规则】解析Store配置失败，使用默认规则', error);
   }
-}
-
-function getDefaultDelegationRules(): DelegationRule[] {
-  return [
-    { fromRole: 'manager', toRole: 'department_head', enabled: true, remark: '经理外出时委托给部门主管' },
-    { fromRole: 'department_head', toRole: 'manager', enabled: true, remark: '部门主管外出时委托给经理' },
-    { fromRole: 'director', toRole: 'manager', enabled: true, remark: '总监外出时委托给经理' },
-    { fromRole: 'hr', toRole: 'hr_manager', enabled: true, remark: '人事专员外出时委托给人事经理' },
-  ];
+  return DELEGATION_RULE_DEFAULTS;
 }
 
 // ============================================================
-// 获取委托规则（带缓存）
+// 获取委托规则（带缓存，CustomEvent自动清除）
 // ============================================================
 
 let cachedDelegationRules: DelegationRule[] | null = null;
 
 export function getDelegationRules(): DelegationRule[] {
   if (!cachedDelegationRules) {
-    cachedDelegationRules = loadDelegationRulesFromDictionary();
+    cachedDelegationRules = loadDelegationRulesFromStore();
   }
   return cachedDelegationRules;
 }
 
-/**
- * 刷新委托规则缓存
- */
+/** 刷新委托规则缓存 */
 export function refreshDelegationRules(): void {
-  cachedDelegationRules = loadDelegationRulesFromDictionary();
+  cachedDelegationRules = loadDelegationRulesFromStore();
 }
 
 // ============================================================
@@ -357,11 +297,11 @@ export function refreshDelegationRules(): void {
 // ============================================================
 
 export enum TimeoutAction {
-  ESCALATE = 'escalate',           // 升级给更高层级
-  AUTO_APPROVE = 'auto_approve',  // 自动通过
-  AUTO_REJECT = 'auto_reject',    // 自动拒绝
-  NOTIFY = 'notify',               // 发送通知
-  SKIP = 'skip',                  // 跳过当前审批人
+  ESCALATE = 'escalate',
+  AUTO_APPROVE = 'auto_approve',
+  AUTO_REJECT = 'auto_reject',
+  NOTIFY = 'notify',
+  SKIP = 'skip',
 }
 
 // ============================================================
@@ -398,7 +338,7 @@ export function getUltimateTimeoutAction(): TimeoutAction {
 }
 
 // ============================================================
-// 获取HR审批类型列表（用于判断）
+// 获取HR审批类型列表
 // ============================================================
 
 export function getHrApprovalTypes(): string[] {
@@ -409,7 +349,7 @@ export function getHrApprovalTypes(): string[] {
 }
 
 // ============================================================
-// 获取财务审批类型列表（用于判断）
+// 获取财务审批类型列表
 // ============================================================
 
 export function getFinanceApprovalTypes(): string[] {

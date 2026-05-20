@@ -6,15 +6,20 @@
 import { OvertimeSummary } from '../types/labor/overtime';
 import { LeaveType } from '../types/labor/employee';
 import { overtimeCalculationService } from './overtimeCalculationService';
+import { getSystemConfigValueNumber } from '../config/systemConfigReader';
 
 // LocalStorage存储键名
 const STORAGE_KEY = 'SALARY_RECORDS';
 
-// 每月工作天数（标准月薪计算基数）
-const WORK_DAYS_PER_MONTH = 21.75;
+/** 获取每月计薪天数（从系统配置读取，兜底21.75） */
+function getWorkDaysPerMonth(): number {
+  return getSystemConfigValueNumber('labor.work-days-per-month', 21.75);
+}
 
-// 全勤奖金额（可根据公司政策调整）
-const FULL_ATTENDANCE_BONUS = 500;
+/** 获取全勤奖金额（从系统配置读取，兜底500） */
+function getFullAttendanceBonus(): number {
+  return getSystemConfigValueNumber('labor.full-attendance-bonus', 500);
+}
 
 // 请假扣款比例配置
 const LEAVE_DEDUCTION_RATES: Record<LeaveType, number> = {
@@ -186,7 +191,7 @@ function generateRecordId(employeeId: string, month: string): string {
  */
 function calculateDailyRate(baseSalary: number): number {
   if (baseSalary <= 0) return 0;
-  return baseSalary / WORK_DAYS_PER_MONTH;
+  return baseSalary / getWorkDaysPerMonth();
 }
 
 /**
@@ -257,7 +262,7 @@ export class SalaryCalculationService {
    */
   calculateFullAttendanceBonus(actualDays: number, workingDays: number): number {
     const attendanceRate = calculateAttendanceRate(actualDays, workingDays);
-    return attendanceRate === 100 ? FULL_ATTENDANCE_BONUS : 0;
+    return attendanceRate === 100 ? getFullAttendanceBonus() : 0;
   }
 
   /**

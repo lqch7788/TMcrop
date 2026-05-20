@@ -15,7 +15,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/modal';
 import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
+import {
+  NumberInput,
+  Checkbox,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '../components/ui';
 import type {
   ApprovalLevelConfigItem,
   ApprovalAmountThresholdItem,
@@ -95,11 +100,11 @@ function ThresholdModal({
       <div className="space-y-4">
         <div>
           <Label>金额上限（元）*</Label>
-          <Input
-            type="number"
+          <NumberInput
             value={maxAmount}
-            onChange={(e) => setMaxAmount(e.target.value)}
+            onChange={setMaxAmount}
             placeholder="如: 5000"
+            decimals={0}
           />
           <p className="text-xs text-gray-500 mt-1">
             {editItem ? '修改此阈值对应的金额上限' : '金额小于此值的申请将匹配此级别'}
@@ -107,13 +112,18 @@ function ThresholdModal({
         </div>
         <div>
           <Label>审批级别 *</Label>
-          <Select value={levelCode} onChange={(e) => setLevelCode(e.target.value)}>
-            <option value="">-- 请选择级别 --</option>
-            {levelConfigs.map((lc) => (
-              <option key={lc.levelCode} value={lc.levelCode}>
-                {lc.levelName}
-              </option>
-            ))}
+          <Select value={levelCode} onValueChange={setLevelCode}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">-- 请选择级别 --</SelectItem>
+              {levelConfigs.map((lc) => (
+                <SelectItem key={lc.levelCode} value={lc.levelCode}>
+                  {lc.levelName}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
@@ -193,19 +203,17 @@ function LevelConfigModal({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>审批人数</Label>
-            <Input
-              type="number"
+            <NumberInput
               value={approverCount}
-              onChange={(e) => setApproverCount(e.target.value)}
+              onChange={setApproverCount}
+              decimals={0}
             />
           </div>
           <div className="flex items-end pb-1">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={requireMultiApprover}
-                onChange={(e) => setRequireMultiApprover(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
+                onCheckedChange={(checked) => setRequireMultiApprover(!!checked)}
               />
               <span className="text-sm text-gray-700">需要多审</span>
             </label>
@@ -285,26 +293,22 @@ function TypeRuleModal({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={forceExempt}
-              onChange={(e) => {
-                setForceExempt(e.target.checked);
-                if (e.target.checked) { setForceStrict(false); setForcedLevel(''); }
+              onCheckedChange={(checked) => {
+                setForceExempt(!!checked);
+                if (checked) { setForceStrict(false); setForcedLevel(''); }
               }}
-              className="w-4 h-4 rounded border-gray-300"
             />
             <span className="text-sm text-gray-700">强制免审</span>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={forceStrict}
-              onChange={(e) => {
-                setForceStrict(e.target.checked);
-                if (e.target.checked) { setForceExempt(false); setForcedLevel(''); }
+              onCheckedChange={(checked) => {
+                setForceStrict(!!checked);
+                if (checked) { setForceExempt(false); setForcedLevel(''); }
               }}
-              className="w-4 h-4 rounded border-gray-300"
             />
             <span className="text-sm text-gray-700">强制严格</span>
           </div>
@@ -313,25 +317,28 @@ function TypeRuleModal({
           <Label>自定义审批级别（可选，优先级最高）</Label>
           <Select
             value={forcedLevel}
-            onChange={(e) => {
-              setForcedLevel(e.target.value);
-              if (e.target.value) { setForceExempt(false); setForceStrict(false); }
+            onValueChange={(val) => {
+              setForcedLevel(val);
+              if (val) { setForceExempt(false); setForceStrict(false); }
             }}
           >
-            <option value="">-- 不指定（按金额）--</option>
-            {levelConfigs.map((lc) => (
-              <option key={lc.levelCode} value={lc.levelCode}>
-                {lc.levelName}
-              </option>
-            ))}
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">-- 不指定（按金额）--</SelectItem>
+              {levelConfigs.map((lc) => (
+                <SelectItem key={lc.levelCode} value={lc.levelCode}>
+                  {lc.levelName}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={batchApprovalSupported}
-            onChange={(e) => setBatchApprovalSupported(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300"
+            onCheckedChange={(checked) => setBatchApprovalSupported(!!checked)}
           />
           <span className="text-sm text-gray-700">支持批量审批</span>
         </div>
@@ -681,74 +688,72 @@ export default function ApprovalLevelConfig() {
               {loading ? (
                 <div className="text-center py-8 text-gray-400">加载中...</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">审批类型</th>
-                        <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">强制级别</th>
-                        <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">批量审批</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">备注</th>
-                        <th className="text-center py-3 px-4 text-sm font-medium text-gray-600">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {typeRules.map((rule) => {
-                        const hasForceRule = rule.forceExempt || rule.forceStrict || rule.forcedLevel;
-                        let forceColors = LEVEL_COLORS.standard;
-                        if (rule.forceExempt) forceColors = LEVEL_COLORS.exempt;
-                        else if (rule.forceStrict) forceColors = LEVEL_COLORS.strict;
-                        else if (rule.forcedLevel) forceColors = LEVEL_COLORS[rule.forcedLevel] || LEVEL_COLORS.standard;
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600">审批类型</TableHead>
+                      <TableHead className="text-center py-3 px-4 text-sm font-medium text-gray-600">强制级别</TableHead>
+                      <TableHead className="text-center py-3 px-4 text-sm font-medium text-gray-600">批量审批</TableHead>
+                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600">备注</TableHead>
+                      <TableHead className="text-center py-3 px-4 text-sm font-medium text-gray-600">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {typeRules.map((rule) => {
+                      const hasForceRule = rule.forceExempt || rule.forceStrict || rule.forcedLevel;
+                      let forceColors = LEVEL_COLORS.standard;
+                      if (rule.forceExempt) forceColors = LEVEL_COLORS.exempt;
+                      else if (rule.forceStrict) forceColors = LEVEL_COLORS.strict;
+                      else if (rule.forcedLevel) forceColors = LEVEL_COLORS[rule.forcedLevel] || LEVEL_COLORS.standard;
 
-                        return (
-                          <tr key={rule.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4">
-                              <span className="font-medium text-gray-900">
-                                {getApprovalTypeName(rule.approvalType as ApprovalType)}
+                      return (
+                        <TableRow key={rule.id}>
+                          <TableCell className="py-3 px-4">
+                            <span className="font-medium text-gray-900">
+                              {getApprovalTypeName(rule.approvalType as ApprovalType)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-center">
+                            {hasForceRule ? (
+                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${forceColors.bg} ${forceColors.text}`}>
+                                {rule.forceExempt && '强制免审'}
+                                {rule.forceStrict && '强制严格'}
+                                {rule.forcedLevel && (levelConfigs.find((l) => l.levelCode === rule.forcedLevel)?.levelName || rule.forcedLevel)}
                               </span>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              {hasForceRule ? (
-                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${forceColors.bg} ${forceColors.text}`}>
-                                  {rule.forceExempt && '强制免审'}
-                                  {rule.forceStrict && '强制严格'}
-                                  {rule.forcedLevel && (levelConfigs.find((l) => l.levelCode === rule.forcedLevel)?.levelName || rule.forcedLevel)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 text-sm">按金额</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                                rule.batchApprovalSupported
-                                  ? 'bg-green-50 text-green-700'
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                {rule.batchApprovalSupported ? '支持' : '不支持'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-500">
-                              {rule.remark || '-'}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                title="编辑"
-                                onClick={() => {
-                                  setEditingRule(rule);
-                                  setRuleModal(true);
-                                }}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">按金额</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                              rule.batchApprovalSupported
+                                ? 'bg-green-50 text-green-700'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {rule.batchApprovalSupported ? '支持' : '不支持'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-500">
+                            {rule.remark || '-'}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-center">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              title="编辑"
+                              onClick={() => {
+                                setEditingRule(rule);
+                                setRuleModal(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
 
               <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">

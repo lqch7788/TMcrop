@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, NumberInput, TextArea, Label } from '@/components/ui';
 import type { Approval, BusinessLink } from '../../types/approval';
 
 interface MaterialApprovalFormProps {
@@ -86,53 +87,47 @@ export function MaterialApprovalForm({
           物料明细 - 请填写实际发放数量
         </div>
         <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料编码</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">申请数量</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">实际发放</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">差额</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="text-xs font-medium text-gray-500">物料编码</TableHead>
+                <TableHead className="text-xs font-medium text-gray-500">物料名称</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">申请数量</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">实际发放</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">差额</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {businessLink.materials.map((mat) => {
                 const currentQty = localItems[mat.materialId] ?? mat.requestedQuantity;
                 const diff = currentQty - mat.requestedQuantity;
                 const isInsufficient = currentQty < mat.requestedQuantity;
 
                 return (
-                  <tr key={mat.materialId}>
-                    <td className="px-3 py-2 text-gray-900">{mat.materialCode}</td>
-                    <td className="px-3 py-2 text-gray-900">{mat.materialName}</td>
-                    <td className="px-3 py-2 text-right text-gray-900">
+                  <TableRow key={mat.materialId}>
+                    <TableCell>{mat.materialCode}</TableCell>
+                    <TableCell>{mat.materialName}</TableCell>
+                    <TableCell className="text-right">
                       {mat.requestedQuantity} {mat.unit}
-                    </td>
-                    <td className="px-3 py-2 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max={mat.requestedQuantity}
+                        <NumberInput
                           value={currentQty}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             handleQuantityChange(
                               mat.materialId,
-                              Number(e.target.value),
+                              Number(value),
                               mat.requestedQuantity
                             )
                           }
-                          className={`w-20 h-8 px-2 border rounded text-right text-sm focus:outline-none focus:border-blue-500 ${
-                            isInsufficient
-                              ? 'border-amber-400 bg-amber-50'
-                              : 'border-gray-200'
-                          }`}
+                          decimals={0}
+                          className={`w-20 ${isInsufficient ? 'border-amber-400 bg-amber-50' : 'border-gray-200'}`}
                         />
                         <span className="text-gray-400 text-sm">{mat.unit}</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <span
                         className={`text-sm font-medium ${
                           diff === 0
@@ -145,12 +140,12 @@ export function MaterialApprovalForm({
                         {diff > 0 ? '+' : ''}
                         {diff}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -184,13 +179,13 @@ export function MaterialApprovalForm({
 
       {/* 审批意见 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">审批意见</label>
-        <textarea
+        <Label className="text-gray-700 mb-1">审批意见</Label>
+        <TextArea
           value={comment}
           onChange={(e) => onCommentChange(e.target.value)}
           placeholder="请输入审批意见（可选）..."
           rows={3}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="w-full border-gray-200 rounded-lg text-sm focus:border-emerald-500"
         />
       </div>
 

@@ -13,9 +13,13 @@
 
 import Dexie from 'dexie';
 
+// ★ V3.0 Phase 5: 超时时间从系统配置动态读取（兜底值 30000ms）
+import { getSystemConfigValueNumber } from '../config/systemConfigReader';
+import { storageGet } from './storageService';
+
 // API基础配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-const DEFAULT_TIMEOUT = 30000;
+const FALLBACK_TIMEOUT = 30000;
 
 interface ApiOptions {
   /** 是否使用缓存 */
@@ -334,7 +338,7 @@ class EnhancedApiClient {
       // 导入失败则尝试从localStorage读取
     }
     if (!token) {
-      token = localStorage.getItem('token');
+      token = storageGet('token');
     }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -349,8 +353,9 @@ class EnhancedApiClient {
       options.body = JSON.stringify(data);
     }
 
+    const timeoutMs = getSystemConfigValueNumber('api.timeout', FALLBACK_TIMEOUT);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     options.signal = controller.signal;
 
     try {
@@ -384,7 +389,7 @@ class EnhancedApiClient {
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`请求超时（${DEFAULT_TIMEOUT}ms）`);
+        throw new Error(`请求超时（${timeoutMs}ms）`);
       }
       throw error;
     }

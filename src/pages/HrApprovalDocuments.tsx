@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Search, Plus, Edit, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Label } from '../components/ui/label';
 
 const hrDocuments = [
   { id: 1, code: 'DOC20240315', type: '补签卡', applicant: '李明轩', dept: '生产部', applyDate: '2024-03-15', targetTime: '2024-03-15 08:15', reason: '上班途中遇到交通事故', status: '待审批', statusClass: 'pending' },
@@ -75,31 +78,33 @@ export default function HrApprovalDocuments() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">单据类型</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>补签卡</option>
-              <option>请假条</option>
-              <option>加班单</option>
-              <option>出差单</option>
-            </select>
+            <Label className="text-gray-700">单据类型</Label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="补签卡">补签卡</SelectItem>
+                <SelectItem value="请假条">请假条</SelectItem>
+                <SelectItem value="加班单">加班单</SelectItem>
+                <SelectItem value="出差单">出差单</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>待审批</option>
-              <option>已通过</option>
-              <option>已拒绝</option>
-            </select>
+            <Label className="text-gray-700">状态</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="待审批">待审批</SelectItem>
+                <SelectItem value="已通过">已通过</SelectItem>
+                <SelectItem value="已拒绝">已拒绝</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex gap-2">
             <Button variant="default">
@@ -119,31 +124,31 @@ export default function HrApprovalDocuments() {
           <h3 className="text-lg font-semibold text-gray-900">考勤单据列表</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单据编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">单据类型</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">所属部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">申请日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">补录时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">补录原因</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">审批状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>单据编号</TableHead>
+                <TableHead>单据类型</TableHead>
+                <TableHead>申请人</TableHead>
+                <TableHead>所属部门</TableHead>
+                <TableHead>申请日期</TableHead>
+                <TableHead>补录时间</TableHead>
+                <TableHead>补录原因</TableHead>
+                <TableHead>审批状态</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {paginatedDocuments.map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{doc.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{doc.type}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{doc.applicant}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{doc.dept}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{doc.applyDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{doc.targetTime}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{doc.reason}</td>
-                  <td className="px-4 py-3">
+                <TableRow key={doc.id}>
+                  <TableCell className="font-medium text-gray-900">{doc.code}</TableCell>
+                  <TableCell className="text-gray-600">{doc.type}</TableCell>
+                  <TableCell className="text-gray-600">{doc.applicant}</TableCell>
+                  <TableCell className="text-gray-600">{doc.dept}</TableCell>
+                  <TableCell className="text-gray-600">{doc.applyDate}</TableCell>
+                  <TableCell className="text-gray-600">{doc.targetTime}</TableCell>
+                  <TableCell className="text-gray-600 max-w-[150px] truncate">{doc.reason}</TableCell>
+                  <TableCell>
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       doc.statusClass === 'success' ? 'bg-green-100 text-green-700' :
                       doc.statusClass === 'danger' ? 'bg-red-100 text-red-700' :
@@ -151,8 +156,8 @@ export default function HrApprovalDocuments() {
                     }`}>
                       {doc.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" title="编辑">
                         <Edit className="w-4 h-4" />
@@ -161,11 +166,11 @@ export default function HrApprovalDocuments() {
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">

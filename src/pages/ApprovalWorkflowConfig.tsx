@@ -7,6 +7,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import {
+  UnifiedModal, TextArea,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  NumberInput, Label, Checkbox,
+} from '../components/ui';
 import { useApprovalWorkflowStore } from '../stores';
 import type { ApprovalWorkflow, ApprovalNode } from '../services/apiApprovalWorkflowService';
 
@@ -264,156 +269,154 @@ export default function ApprovalWorkflowConfig() {
       </div>
 
       {/* 编辑弹窗 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">{editingWorkflow ? '编辑审批流程' : '新增审批流程'}</h3>
+      <UnifiedModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingWorkflow ? '编辑审批流程' : '新增审批流程'}
+        size="lg"
+        showFooter
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+            <Button onClick={handleSaveWorkflow}>保存</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-700">流程名称</Label>
+              <input
+                type="text"
+                value={newWorkflow.name || ''}
+                onChange={(e) => setNewWorkflow({ ...newWorkflow, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">流程名称</label>
-                  <input
-                    type="text"
-                    value={newWorkflow.name || ''}
-                    onChange={(e) => setNewWorkflow({ ...newWorkflow, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">流程代码</label>
-                  <input
-                    type="text"
-                    value={newWorkflow.code || ''}
-                    onChange={(e) => setNewWorkflow({ ...newWorkflow, code: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
-                <textarea
-                  value={newWorkflow.description || ''}
-                  onChange={(e) => setNewWorkflow({ ...newWorkflow, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  rows={2}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">所属模块</label>
-                  <select
-                    value={newWorkflow.module || ''}
-                    onChange={(e) => setNewWorkflow({ ...newWorkflow, module: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">请选择模块</option>
-                    {MODULE_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">触发条件</label>
-                  <input
-                    type="text"
-                    value={newWorkflow.triggerCondition || ''}
-                    onChange={(e) => setNewWorkflow({ ...newWorkflow, triggerCondition: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-
-              {/* 审批节点配置 */}
-              <div className="pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-sm font-semibold text-gray-900">审批节点</h4>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={addNode}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    添加节点
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {(newWorkflow.nodes || []).map((node, index) => (
-                    <div key={node.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
-                            {index + 1}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">节点 {index + 1}</span>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeNode(node.id)} className="text-red-600 hover:text-red-700">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">节点名称</label>
-                          <input
-                            type="text"
-                            value={node.name || ''}
-                            onChange={(e) => updateNode(node.id, { name: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">审批角色</label>
-                          <input
-                            type="text"
-                            value={node.approverRole || ''}
-                            onChange={(e) => updateNode(node.id, { approverRole: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">超时时间（小时）</label>
-                          <input
-                            type="number"
-                            value={node.timeoutHours || ''}
-                            onChange={(e) => updateNode(node.id, { timeoutHours: parseInt(e.target.value) })}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={node.autoApproveOnTimeout || false}
-                              onChange={(e) => updateNode(node.id, { autoApproveOnTimeout: e.target.checked })}
-                              className="rounded"
-                            />
-                            <span className="text-gray-600">超时自动通过</span>
-                          </label>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={node.requireComment || false}
-                              onChange={(e) => updateNode(node.id, { requireComment: e.target.checked })}
-                              className="rounded"
-                            />
-                            <span className="text-gray-600">必须填写意见</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
+            <div>
+              <Label className="text-gray-700">流程代码</Label>
+              <input
+                type="text"
+                value={newWorkflow.code || ''}
+                onChange={(e) => setNewWorkflow({ ...newWorkflow, code: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-gray-700">描述</Label>
+            <TextArea
+              value={newWorkflow.description || ''}
+              onChange={(e) => setNewWorkflow({ ...newWorkflow, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              rows={2}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-700">所属模块</Label>
+              <Select value={newWorkflow.module || ''} onValueChange={(val) => setNewWorkflow({ ...newWorkflow, module: val })}>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择模块</SelectItem>
+                  {MODULE_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-              <Button onClick={handleSaveWorkflow}>保存</Button>
+            <div>
+              <Label className="text-gray-700">触发条件</Label>
+              <input
+                type="text"
+                value={newWorkflow.triggerCondition || ''}
+                onChange={(e) => setNewWorkflow({ ...newWorkflow, triggerCondition: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* 审批节点配置 */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-gray-900">审批节点</h4>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={addNode}
+                className="flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                添加节点
+              </Button>
+            </div>
+            <div className="space-y-3">
+              {(newWorkflow.nodes || []).map((node, index) => (
+                <div key={node.id} className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">节点 {index + 1}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeNode(node.id)} className="text-red-600 hover:text-red-700">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-600">节点名称</Label>
+                      <input
+                        type="text"
+                        value={node.name || ''}
+                        onChange={(e) => updateNode(node.id, { name: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-600">审批角色</Label>
+                      <input
+                        type="text"
+                        value={node.approverRole || ''}
+                        onChange={(e) => updateNode(node.id, { approverRole: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-600">超时时间（小时）</Label>
+                      <NumberInput
+                        value={node.timeoutHours}
+                        onChange={(val) => updateNode(node.id, { timeoutHours: parseInt(val) || 0 })}
+                        decimals={0}
+                        className="px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={node.autoApproveOnTimeout || false}
+                          onCheckedChange={(checked) => updateNode(node.id, { autoApproveOnTimeout: !!checked })}
+                        />
+                        <span className="text-gray-600">超时自动通过</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={node.requireComment || false}
+                          onCheckedChange={(checked) => updateNode(node.id, { requireComment: !!checked })}
+                        />
+                        <span className="text-gray-600">必须填写意见</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </UnifiedModal>
     </div>
   );
 }

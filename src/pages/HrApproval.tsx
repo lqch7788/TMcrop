@@ -16,6 +16,11 @@ import ProModal from '../components/common/modal/ProModal';
 import ProTable, { Column } from '../components/common/table/ProTable';
 import StatusBadge from '../components/common/badge/StatusBadge';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { TextArea } from '../components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { DatePicker } from '../components/ui/DatePicker';
 
 // ============================================================
 // 审批类型选项（10种类型）
@@ -324,39 +329,39 @@ export default function HrApproval() {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-gray-500">申请单号</label>
+            <Label className="text-gray-500">申请单号</Label>
             <p className="font-medium">{currentRecord.code}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-500">类型</label>
+            <Label className="text-gray-500">类型</Label>
             <p className="font-medium">{currentRecord.typeName}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-500">申请人</label>
+            <Label className="text-gray-500">申请人</Label>
             <p className="font-medium">{currentRecord.applicantName}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-500">部门</label>
+            <Label className="text-gray-500">部门</Label>
             <p className="font-medium">{currentRecord.applicantDepartment}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-500">申请时间</label>
+            <Label className="text-gray-500">申请时间</Label>
             <p className="font-medium">{currentRecord.applyDate} {currentRecord.applyTime}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-500">状态</label>
+            <Label className="text-gray-500">状态</Label>
             <p className="font-medium"><StatusBadge status={currentRecord.status} /></p>
           </div>
         </div>
         {currentRecord.title && (
           <div>
-            <label className="text-sm text-gray-500">标题</label>
+            <Label className="text-gray-500">标题</Label>
             <p className="font-medium">{currentRecord.title}</p>
           </div>
         )}
         {currentRecord.description && (
           <div>
-            <label className="text-sm text-gray-500">描述</label>
+            <Label className="text-gray-500">描述</Label>
             <p className="text-gray-700">{currentRecord.description}</p>
           </div>
         )}
@@ -367,24 +372,24 @@ export default function HrApproval() {
             {bl.leaveType && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-gray-500">请假类型</label>
+                  <Label className="text-gray-500">请假类型</Label>
                   <p className="font-medium">{bl.leaveType}</p>
                 </div>
                 {bl.startDate && (
                   <div>
-                    <label className="text-sm text-gray-500">开始日期</label>
+                    <Label className="text-gray-500">开始日期</Label>
                     <p className="font-medium">{bl.startDate}</p>
                   </div>
                 )}
                 {bl.endDate && (
                   <div>
-                    <label className="text-sm text-gray-500">结束日期</label>
+                    <Label className="text-gray-500">结束日期</Label>
                     <p className="font-medium">{bl.endDate}</p>
                   </div>
                 )}
                 {bl.totalDays && (
                   <div>
-                    <label className="text-sm text-gray-500">天数</label>
+                    <Label className="text-gray-500">天数</Label>
                     <p className="font-medium">{bl.totalDays}天</p>
                   </div>
                 )}
@@ -393,30 +398,30 @@ export default function HrApproval() {
             {bl.overtimeType && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-gray-500">加班类型</label>
+                  <Label className="text-gray-500">加班类型</Label>
                   <p className="font-medium">{bl.overtimeType}</p>
                 </div>
                 {bl.date && (
                   <div>
-                    <label className="text-sm text-gray-500">加班日期</label>
+                    <Label className="text-gray-500">加班日期</Label>
                     <p className="font-medium">{bl.date}</p>
                   </div>
                 )}
                 {bl.startTime && (
                   <div>
-                    <label className="text-sm text-gray-500">开始时间</label>
+                    <Label className="text-gray-500">开始时间</Label>
                     <p className="font-medium">{bl.startTime}</p>
                   </div>
                 )}
                 {bl.endTime && (
                   <div>
-                    <label className="text-sm text-gray-500">结束时间</label>
+                    <Label className="text-gray-500">结束时间</Label>
                     <p className="font-medium">{bl.endTime}</p>
                   </div>
                 )}
                 {bl.totalHours && (
                   <div>
-                    <label className="text-sm text-gray-500">总时长</label>
+                    <Label className="text-gray-500">总时长</Label>
                     <p className="font-medium">{bl.totalHours}小时</p>
                   </div>
                 )}
@@ -424,7 +429,7 @@ export default function HrApproval() {
             )}
             {bl.reason && (
               <div className="mt-3">
-                <label className="text-sm text-gray-500">原因</label>
+                <Label className="text-gray-500">原因</Label>
                 <p className="text-gray-700">{bl.reason}</p>
               </div>
             )}
@@ -522,59 +527,56 @@ export default function HrApproval() {
         <div className="flex flex-wrap gap-4 items-end">
           {/* 关键词搜索 */}
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">关键词搜索</label>
-            <input
-              type="text"
+            <Label className="text-gray-700">关键词搜索</Label>
+            <Input
               placeholder="搜索申请人、申请单号..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full"
             />
           </div>
           {/* 类型筛选 */}
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批类型</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              {APPROVAL_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <Label className="text-gray-700">审批类型</Label>
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="全部类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {APPROVAL_TYPE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {/* 状态筛选 */}
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              {APPROVAL_STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <Label className="text-gray-700">审批状态</Label>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                {APPROVAL_STATUS_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {/* 开始日期 */}
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="text-gray-700">开始日期</Label>
+            <DatePicker
+              selected={startDate ? new Date(startDate) : undefined}
+              onChange={(date) => setStartDate(date.toISOString().slice(0, 10))}
             />
           </div>
           {/* 结束日期 */}
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="text-gray-700">结束日期</Label>
+            <DatePicker
+              selected={endDate ? new Date(endDate) : undefined}
+              onChange={(date) => setEndDate(date.toISOString().slice(0, 10))}
             />
           </div>
           {/* 搜索按钮 */}
@@ -622,7 +624,7 @@ export default function HrApproval() {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
                     currentPage === i + 1
                       ? 'bg-emerald-600 text-white'
                       : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -677,13 +679,12 @@ export default function HrApproval() {
           </div>
         )}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">审批意见（可选）</label>
-          <textarea
+          <Label className="text-gray-700">审批意见（可选）</Label>
+          <TextArea
             value={approveComment}
             onChange={(e) => setApproveComment(e.target.value)}
             placeholder="请输入审批意见..."
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+            minRows={3}
           />
         </div>
       </ProModal>
@@ -721,13 +722,12 @@ export default function HrApproval() {
           确定要通过选中的 <strong className="text-green-600">{selectedRowKeys.length}</strong> 项审批吗？
         </p>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">审批意见（可选）</label>
-          <textarea
+          <Label className="text-gray-700">审批意见（可选）</Label>
+          <TextArea
             value={batchApproveComment}
             onChange={(e) => setBatchApproveComment(e.target.value)}
             placeholder="请输入审批意见..."
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+            minRows={3}
           />
         </div>
       </ProModal>

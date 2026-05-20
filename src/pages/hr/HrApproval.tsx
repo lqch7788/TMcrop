@@ -6,7 +6,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, Eye, Download, Search, RefreshCw, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Input, Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, DatePicker, TextArea } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { Badge } from '@/components/ui/badge';
 import ProTable from '../../components/common/table/ProTable';
@@ -377,29 +377,32 @@ export default function HrApproval() {
       fixed: 'right' as const,
       render: (_: any, record: Approval) => (
         <div className="flex items-center gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => handleViewDetail(record.id)}
-            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
             title="查看详情"
           >
             <Eye className="w-4 h-4" />
-          </button>
+          </Button>
           {record.status === ApprovalStatus.PENDING && (
             <>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleApprove(record.id)}
-                className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded"
                 title="批准"
               >
                 <Check className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleReject(record.id)}
-                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
                 title="拒绝"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -431,132 +434,145 @@ export default function HrApproval() {
         <div className="flex flex-wrap gap-3 items-end">
           {/* 关键词搜索 */}
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">关键词搜索</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">关键词搜索</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+              <Input
                 placeholder="搜索审批单标题、申请人、单号..."
                 value={filters.keyword}
                 onChange={(e) => handleFilterChange('keyword', e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 pl-10 pr-4"
               />
             </div>
           </div>
 
           {/* 审批类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批类型</label>
-            <select
+            <Label className="block text-sm font-medium text-gray-700 mb-1">审批类型</Label>
+            <Select
               value={filters.type}
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(v) => handleFilterChange('type', v)}
             >
-              {APPROVAL_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {APPROVAL_TYPE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 审批状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">审批状态</label>
-            <select
+            <Label className="block text-sm font-medium text-gray-700 mb-1">审批状态</Label>
+            <Select
               value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              onValueChange={(v) => handleFilterChange('status', v)}
             >
-              {APPROVAL_STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {APPROVAL_STATUS_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 日期筛选 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">开始日期</Label>
+            <DatePicker
+              selected={filters.startDate ? new Date(filters.startDate) : undefined}
+              onChange={(date) => handleFilterChange('startDate', date.toISOString().slice(0, 10))}
+              className="h-10"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            <Label className="block text-sm font-medium text-gray-700 mb-1">结束日期</Label>
+            <DatePicker
+              selected={filters.endDate ? new Date(filters.endDate) : undefined}
+              onChange={(date) => handleFilterChange('endDate', date.toISOString().slice(0, 10))}
+              className="h-10"
             />
           </div>
 
           {/* 搜索按钮 */}
-          <button
+          <Button
             onClick={handleSearch}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            size="default"
+            className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2"
           >
             <Search className="w-4 h-4" />
             搜索
-          </button>
+          </Button>
 
           {/* 重置按钮 */}
-          <button
+          <Button
             onClick={handleResetFilters}
-            className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2"
+            variant="secondary"
+            size="default"
+            className="flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             重置
-          </button>
+          </Button>
         </div>
 
         {/* 操作按钮栏 */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
           {batchMode === 'none' && (
             <>
-              <button
+              <Button
                 onClick={() => setBatchMode('approve')}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                size="default"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 批量通过
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setBatchMode('reject')}
                 disabled={selectedRowKeys.length === 0}
-                className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                size="default"
+                className="bg-red-600 hover:bg-red-700"
               >
                 批量拒绝
-              </button>
+              </Button>
             </>
           )}
 
           {batchMode !== 'none' && (
             <>
               {batchMode === 'approve' && (
-                <button
+                <Button
                   onClick={handleBatchApprove}
-                  className="h-9 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  size="default"
+                  className="bg-blue-600 hover:bg-blue-700"
                 >
                   确认通过 ({selectedRowKeys.length})
-                </button>
+                </Button>
               )}
               {batchMode === 'reject' && (
-                <button
+                <Button
                   onClick={handleBatchReject}
-                  className="h-9 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                  size="default"
+                  className="bg-red-600 hover:bg-red-700"
                 >
                   确认拒绝 ({selectedRowKeys.length})
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
-                className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                size="default"
+                className="bg-gray-100 text-gray-700 hover:bg-gray-200"
               >
                 取消
-              </button>
+              </Button>
             </>
           )}
 
@@ -625,12 +641,12 @@ export default function HrApproval() {
           <p>{confirmModalConfig.content}</p>
           {confirmModalConfig.type === 'reject' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">审批意见</label>
-              <textarea
+              <Label className="block text-sm font-medium text-gray-700 mb-1">审批意见</Label>
+              <TextArea
                 value={approvalComment}
                 onChange={(e) => setApprovalComment(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full"
                 placeholder="请输入审批意见（选填）"
               />
             </div>

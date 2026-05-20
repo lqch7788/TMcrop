@@ -6,6 +6,7 @@
 // ============================================================
 
 import React, { createContext, useContext, useMemo, useCallback, useEffect, ReactNode } from 'react';
+import { storageGet } from '../lib/storageService';
 import {
   Approval,
   ApprovalType,
@@ -181,8 +182,8 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
-    const approverId = localStorage.getItem('userId') || '';
-    const approverName = localStorage.getItem('username') || '系统';
+    const approverId = storageGet('userId') || '';
+    const approverName = storageGet('username') || '系统';
     try {
       const { enhancedApiClient } = await import('../lib/apiClient');
       await enhancedApiClient.patch(`/api/approvals/${id}/action`, {

@@ -14,7 +14,11 @@ import { useApproval } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { ApprovalDetail } from '../components/approval/ApprovalDetail';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '../components/ui';
 import { Button } from '../components/ui/button';
 
 export default function MyApplications() {
@@ -141,54 +145,58 @@ export default function MyApplications() {
               />
             </div>
           </div>
-          <select
+          <Select
             value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+            onValueChange={(val) => { setTypeFilter(val); setCurrentPage(1); }}
           >
-            <option value="全部">全部类型</option>
-            <option value={ApprovalType.MATERIAL_REQUEST}>领料申请</option>
-            <option value={ApprovalType.RETURN_MATERIAL}>退料单</option>
-            <option value={ApprovalType.PURCHASE_REQUEST}>采购申请</option>
-            <option value={ApprovalType.LEAVE}>请假</option>
-            <option value={ApprovalType.OVERTIME}>加班</option>
-            <option value={ApprovalType.RESIGNATION}>离职</option>
-          </select>
+            <SelectTrigger className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部类型</SelectItem>
+              <SelectItem value={ApprovalType.MATERIAL_REQUEST}>领料申请</SelectItem>
+              <SelectItem value={ApprovalType.RETURN_MATERIAL}>退料单</SelectItem>
+              <SelectItem value={ApprovalType.PURCHASE_REQUEST}>采购申请</SelectItem>
+              <SelectItem value={ApprovalType.LEAVE}>请假</SelectItem>
+              <SelectItem value={ApprovalType.OVERTIME}>加班</SelectItem>
+              <SelectItem value={ApprovalType.RESIGNATION}>离职</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* 数据列表 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">审批单号</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">标题</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">类型</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请人</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请时间</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">状态</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+        <Table>
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">审批单号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">标题</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">类型</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请人</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请时间</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">状态</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无数据</td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无数据</TableCell>
+              </TableRow>
             ) : paginatedData.map(approval => (
-              <tr key={approval.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-900">{approval.code}</td>
-                <td className="px-4 py-3 text-sm text-gray-900">{approval.title}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+              <TableRow key={approval.id}>
+                <TableCell className="px-4 py-3 text-sm text-gray-900">{approval.code}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-900">{approval.title}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-500">
                   {Object.values(ApprovalType).find(v => v === approval.type)
                     ? approval.type.replace(/_/g, ' ')
                     : approval.type}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-500">{approval.applicantName}</td>
-                <td className="px-4 py-3 text-sm text-gray-500">{approval.applyDate}</td>
-                <td className="px-4 py-3">{getStatusBadge(approval.status)}</td>
-                <td className="px-4 py-3">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-500">{approval.applicantName}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-500">{approval.applyDate}</TableCell>
+                <TableCell className="px-4 py-3">{getStatusBadge(approval.status)}</TableCell>
+                <TableCell className="px-4 py-3">
                   <div className="flex gap-2">
                     <Button variant="ghost" size="icon" onClick={() => setDetailApproval(approval)}>
                       <Eye className="w-4 h-4" />
@@ -211,11 +219,11 @@ export default function MyApplications() {
                       </>
                     )}
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {/* 分页 */}
         {totalPages > 1 && (

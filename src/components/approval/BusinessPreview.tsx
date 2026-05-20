@@ -5,6 +5,7 @@
 // ============================================================
 
 import React from 'react';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Approval, BusinessLink, MaterialItem } from '../../types/approval';
 import { getApprovalTypeName } from '../../types/approval';
 
@@ -44,24 +45,24 @@ export function BusinessPreview({ approval, businessLink }: BusinessPreviewProps
       {businessLink.materials && businessLink.materials.length > 0 && (
         <div>
           <div className="text-xs text-gray-500 mb-2">物料明细</div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">申请数量</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">单位</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="text-xs font-medium text-gray-500">物料名称</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">申请数量</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">单位</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {businessLink.materials.map((mat, idx) => (
-                <tr key={idx}>
-                  <td className="px-3 py-2 text-gray-900">{mat.materialName}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">{mat.requestedQuantity}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">{mat.unit}</td>
-                </tr>
+                <TableRow key={idx}>
+                  <TableCell>{mat.materialName}</TableCell>
+                  <TableCell className="text-right">{mat.requestedQuantity}</TableCell>
+                  <TableCell className="text-right">{mat.unit}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
@@ -85,24 +86,24 @@ export function BusinessPreview({ approval, businessLink }: BusinessPreviewProps
       {businessLink.items && businessLink.items.length > 0 && (
         <div>
           <div className="text-xs text-gray-500 mb-2">采购明细</div>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">物料名称</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">数量</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500">预计单价</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="text-xs font-medium text-gray-500">物料名称</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">数量</TableHead>
+                <TableHead className="text-right text-xs font-medium text-gray-500">预计单价</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {businessLink.items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="px-3 py-2 text-gray-900">{item.materialName}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">{item.quantity}</td>
-                  <td className="px-3 py-2 text-right text-gray-900">¥{item.estimatedPrice}</td>
-                </tr>
+                <TableRow key={idx}>
+                  <TableCell>{item.materialName}</TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">¥{item.estimatedPrice}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

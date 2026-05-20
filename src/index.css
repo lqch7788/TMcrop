@@ -12,7 +12,18 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* ★ V3.0 Phase 4: 动态主题CSS变量（默认值，运行时由useThemeConfig覆盖） */
+    --sidebar-bg: #F2F6FA;
+    --sidebar-active-bg: #dbeafe;
+    --sidebar-active-text: #1d4ed8;
+    --sidebar-collapsed-w: 64px;
+    --sidebar-expanded-w: 208px;
+    --header-bg: #F2F6FA;
+    --header-height: 48px;
+    --primary-color: #059669;
+    --primary-hover: #047857;
   }
 
   .dark {

@@ -2671,9 +2671,144 @@ function seedSystemConfigs() {
 
     // 系统设置补充（旧 TAB 还原）
     { id: 'cfg-046', config_key: 'system_name', config_value: '智慧种植生产管理系统', config_type: 'string', category: 'system', description: '系统显示名称' },
+    // ★ V3.0 Phase 1: 新增命名空间键 system.name（与 system_name 共存，逐步迁移）
+    { id: 'cfg-046n', config_key: 'system.name', config_value: '智慧种植生产管理系统', config_type: 'string', category: 'system', description: '系统显示名称（新命名空间）' },
     { id: 'cfg-047', config_key: 'system_version', config_value: 'V1.1', config_type: 'string', category: 'system', description: '当前系统版本' },
     { id: 'cfg-048', config_key: 'auto_save_interval', config_value: '5000', config_type: 'number', category: 'system', description: '自动保存间隔（毫秒）' },
     { id: 'cfg-049', config_key: 'data_retention_days', config_value: '365', config_type: 'number', category: 'system', description: '本地数据保留天数' },
+
+    // ═══════════════════════════════════════
+    // ★ V3.0 Phase 2: 任务/派工命名空间配置
+    // ═══════════════════════════════════════
+
+    // — task.overtime.* (7个参数) —
+    { id: 'cfg-050', config_key: 'task.overtime.accept-warning-hours', config_value: '12', config_type: 'number', category: 'farm_task', description: '任务接受预警时间（小时）' },
+    { id: 'cfg-051', config_key: 'task.overtime.accept-critical-hours', config_value: '24', config_type: 'number', category: 'farm_task', description: '任务接受危急时间（小时）' },
+    { id: 'cfg-052', config_key: 'task.overtime.execution-warning-hours', config_value: '24', config_type: 'number', category: 'farm_task', description: '任务执行预警时间（小时）' },
+    { id: 'cfg-053', config_key: 'task.overtime.execution-critical-hours', config_value: '48', config_type: 'number', category: 'farm_task', description: '任务执行危急时间（小时）' },
+    { id: 'cfg-054', config_key: 'task.overtime.acceptance-warning-hours', config_value: '24', config_type: 'number', category: 'farm_task', description: '任务验收预警时间（小时）' },
+    { id: 'cfg-055', config_key: 'task.overtime.acceptance-critical-hours', config_value: '48', config_type: 'number', category: 'farm_task', description: '任务验收危急时间（小时）' },
+    { id: 'cfg-056', config_key: 'task.overtime.check-interval-ms', config_value: '300000', config_type: 'number', category: 'farm_task', description: '超时检测间隔（毫秒）' },
+
+    // — task.deadline.* (3个参数) —
+    { id: 'cfg-057', config_key: 'task.deadline.max-extensions', config_value: '3', config_type: 'number', category: 'farm_task', description: '任务最大延期次数' },
+    { id: 'cfg-058', config_key: 'task.deadline.max-extension-hours', config_value: '72', config_type: 'number', category: 'farm_task', description: '单次最大延期小时数' },
+    { id: 'cfg-059', config_key: 'task.deadline.total-max-extension-hours', config_value: '168', config_type: 'number', category: 'farm_task', description: '累计最大延期小时数' },
+
+    // — task.reminder.* (3个参数) —
+    { id: 'cfg-060', config_key: 'task.reminder.min-interval-minutes', config_value: '60', config_type: 'number', category: 'farm_task', description: '催办最小间隔（分钟）' },
+    { id: 'cfg-061', config_key: 'task.reminder.max-per-day', config_value: '5', config_type: 'number', category: 'farm_task', description: '每日最大催办次数' },
+    { id: 'cfg-062', config_key: 'task.reminder.auto-reminder-hours', config_value: '12', config_type: 'number', category: 'farm_task', description: '自动催办阈值（派发后N小时未接受）' },
+
+    // — task.rework.* (1个参数) —
+    { id: 'cfg-063', config_key: 'task.rework.max-count', config_value: '2', config_type: 'number', category: 'farm_task', description: '最大返工次数' },
+
+    // — task.storage.* (5个参数) —
+    { id: 'cfg-064', config_key: 'task.storage.max-per-task', config_value: '100', config_type: 'number', category: 'farm_task', description: '每个任务最大操作记录数' },
+    { id: 'cfg-065', config_key: 'task.storage.max-records', config_value: '500', config_type: 'number', category: 'farm_task', description: '操作记录总数上限' },
+    { id: 'cfg-066', config_key: 'task.storage.archive-after-days', config_value: '90', config_type: 'number', category: 'farm_task', description: '归档天数' },
+    { id: 'cfg-067', config_key: 'task.storage.warn-threshold', config_value: '0.8', config_type: 'number', category: 'farm_task', description: '存储警告阈值（80%）' },
+    { id: 'cfg-068', config_key: 'task.storage.critical-threshold', config_value: '0.95', config_type: 'number', category: 'farm_task', description: '存储危急阈值（95%）' },
+
+    // — task.permissions / status-transitions / status-config / action-config (JSON) —
+    { id: 'cfg-069', config_key: 'task.permissions', config_value: '{"withdraw":{"roles":["admin"],"statuses":["pending"]},"cancel":{"roles":["admin"],"statuses":["accepted","in_progress"]},"reassign":{"roles":["admin"],"statuses":["failed","abandoned"]},"accept":{"roles":["assignee"],"statuses":["pending"]},"verify":{"roles":["assigner","admin"],"statuses":["waiting_acceptance"]},"continue":{"roles":["assignee"],"statuses":["rejected"]},"submitProgress":{"roles":["assignee"],"statuses":["accepted","in_progress"]},"remind":{"roles":["admin"],"statuses":["*"]}}', config_type: 'json', category: 'farm_task', description: '任务操作权限矩阵（JSON）' },
+    { id: 'cfg-070', config_key: 'task.status-transitions', config_value: '{"draft":["pending","cancelled"],"pending":["accepted","cancelled"],"accepted":["in_progress","cancelled"],"in_progress":["waiting_acceptance","cancelled","abandoned"],"waiting_acceptance":["completed","rejected"],"rejected":["in_progress","failed"],"failed":["pending"],"abandoned":["pending"],"cancelled":[],"completed":[]}', config_type: 'json', category: 'farm_task', description: '任务状态流转规则（JSON）' },
+    { id: 'cfg-071', config_key: 'task.status-config', config_value: '{"draft":{"label":"草稿","color":"text-gray-600","bg":"bg-gray-100"},"pending":{"label":"待接受","color":"text-gray-600","bg":"bg-gray-100"},"accepted":{"label":"已接受","color":"text-blue-600","bg":"bg-blue-100"},"in_progress":{"label":"处理中","color":"text-blue-600","bg":"bg-blue-100"},"waiting_acceptance":{"label":"待验收","color":"text-orange-600","bg":"bg-orange-100"},"completed":{"label":"已完成","color":"text-green-600","bg":"bg-green-100"},"rejected":{"label":"返工中","color":"text-red-600","bg":"bg-red-100"},"failed":{"label":"任务失败","color":"text-purple-600","bg":"bg-purple-100"},"cancelled":{"label":"已取消","color":"text-gray-500","bg":"bg-gray-50"},"abandoned":{"label":"已放弃","color":"text-red-400","bg":"bg-red-50"}}', config_type: 'json', category: 'farm_task', description: '任务状态显示配置（JSON）' },
+    { id: 'cfg-072', config_key: 'task.action-config', config_value: '{"create":{"label":"创建任务","color":"text-blue-600","bg":"bg-blue-50"},"publish":{"label":"派发任务","color":"text-blue-600","bg":"bg-blue-50"},"withdraw":{"label":"撤回任务","color":"text-gray-600","bg":"bg-gray-50"},"cancel":{"label":"取消任务","color":"text-gray-600","bg":"bg-gray-50"},"accept":{"label":"接受任务","color":"text-green-600","bg":"bg-green-50"},"start":{"label":"开始执行","color":"text-green-600","bg":"bg-green-50"},"progress":{"label":"提交进度","color":"text-blue-600","bg":"bg-blue-50"},"submit":{"label":"申请验收","color":"text-orange-600","bg":"bg-orange-50"},"overtime_continue":{"label":"超时继续","color":"text-amber-600","bg":"bg-amber-50"},"overtime_abandon":{"label":"超时放弃","color":"text-red-600","bg":"bg-red-50"},"complete":{"label":"验收通过","color":"text-green-600","bg":"bg-green-50"},"reject":{"label":"验收驳回","color":"text-red-600","bg":"bg-red-50"},"continue":{"label":"继续执行","color":"text-blue-600","bg":"bg-blue-50"},"reassign":{"label":"重新派发","color":"text-purple-600","bg":"bg-purple-50"},"remind":{"label":"催办","color":"text-red-600","bg":"bg-red-50"},"extend_deadline":{"label":"延期","color":"text-amber-600","bg":"bg-amber-50"}}', config_type: 'json', category: 'farm_task', description: '任务操作行为显示配置（JSON）' },
+
+    // — dispatch.weights.farm.* (3个参数) —
+    { id: 'cfg-073', config_key: 'dispatch.weights.farm.workload', config_value: '0.5', config_type: 'number', category: 'dispatch', description: '农事派工-工作量权重' },
+    { id: 'cfg-074', config_key: 'dispatch.weights.farm.skill', config_value: '0.3', config_type: 'number', category: 'dispatch', description: '农事派工-技能匹配权重' },
+    { id: 'cfg-075', config_key: 'dispatch.weights.farm.location', config_value: '0.2', config_type: 'number', category: 'dispatch', description: '农事派工-地理位置权重' },
+
+    // — dispatch.weights.smart.* (5个参数) —
+    { id: 'cfg-076', config_key: 'dispatch.weights.smart.skill-match', config_value: '0.30', config_type: 'number', category: 'dispatch', description: '智能派工-技能匹配权重' },
+    { id: 'cfg-077', config_key: 'dispatch.weights.smart.location', config_value: '0.25', config_type: 'number', category: 'dispatch', description: '智能派工-地理位置权重' },
+    { id: 'cfg-078', config_key: 'dispatch.weights.smart.current-load', config_value: '0.20', config_type: 'number', category: 'dispatch', description: '智能派工-当前负荷权重' },
+    { id: 'cfg-079', config_key: 'dispatch.weights.smart.historical-performance', config_value: '0.15', config_type: 'number', category: 'dispatch', description: '智能派工-历史表现权重' },
+    { id: 'cfg-080', config_key: 'dispatch.weights.smart.urgency', config_value: '0.10', config_type: 'number', category: 'dispatch', description: '智能派工-紧急程度权重' },
+
+    // — dispatch.priority.* (4个优先级 × 3字段 = 12个参数) —
+    { id: 'cfg-081', config_key: 'dispatch.priority.urgent.label', config_value: '紧急', config_type: 'string', category: 'dispatch', description: '紧急优先级-标签' },
+    { id: 'cfg-082', config_key: 'dispatch.priority.urgent.color', config_value: 'red', config_type: 'string', category: 'dispatch', description: '紧急优先级-颜色' },
+    { id: 'cfg-083', config_key: 'dispatch.priority.urgent.weight', config_value: '100', config_type: 'number', category: 'dispatch', description: '紧急优先级-权重' },
+    { id: 'cfg-084', config_key: 'dispatch.priority.high.label', config_value: '高', config_type: 'string', category: 'dispatch', description: '高优先级-标签' },
+    { id: 'cfg-085', config_key: 'dispatch.priority.high.color', config_value: 'orange', config_type: 'string', category: 'dispatch', description: '高优先级-颜色' },
+    { id: 'cfg-086', config_key: 'dispatch.priority.high.weight', config_value: '80', config_type: 'number', category: 'dispatch', description: '高优先级-权重' },
+    { id: 'cfg-087', config_key: 'dispatch.priority.normal.label', config_value: '普通', config_type: 'string', category: 'dispatch', description: '普通优先级-标签' },
+    { id: 'cfg-088', config_key: 'dispatch.priority.normal.color', config_value: 'blue', config_type: 'string', category: 'dispatch', description: '普通优先级-颜色' },
+    { id: 'cfg-089', config_key: 'dispatch.priority.normal.weight', config_value: '60', config_type: 'number', category: 'dispatch', description: '普通优先级-权重' },
+    { id: 'cfg-090', config_key: 'dispatch.priority.low.label', config_value: '低', config_type: 'string', category: 'dispatch', description: '低优先级-标签' },
+    { id: 'cfg-091', config_key: 'dispatch.priority.low.color', config_value: 'gray', config_type: 'string', category: 'dispatch', description: '低优先级-颜色' },
+    { id: 'cfg-092', config_key: 'dispatch.priority.low.weight', config_value: '40', config_type: 'number', category: 'dispatch', description: '低优先级-权重' },
+
+    // ═══════════════════════════════════════
+    // ★ V3.0 Phase 3: 审批配置
+    // ═══════════════════════════════════════
+
+    // — approval.timeout.* (11个参数：5个类型的timeout+escalation + ultimate) —
+    { id: 'cfg-093', config_key: 'approval.timeout.urgent-hours', config_value: '4', config_type: 'number', category: 'approval', description: '紧急审批超时（小时）' },
+    { id: 'cfg-094', config_key: 'approval.timeout.urgent-escalation', config_value: '2', config_type: 'number', category: 'approval', description: '紧急审批升级时间（小时）' },
+    { id: 'cfg-095', config_key: 'approval.timeout.normal-hours', config_value: '48', config_type: 'number', category: 'approval', description: '普通审批超时（小时）' },
+    { id: 'cfg-096', config_key: 'approval.timeout.normal-escalation', config_value: '24', config_type: 'number', category: 'approval', description: '普通审批升级时间（小时）' },
+    { id: 'cfg-097', config_key: 'approval.timeout.hr-hours', config_value: '24', config_type: 'number', category: 'approval', description: 'HR审批超时（小时）' },
+    { id: 'cfg-098', config_key: 'approval.timeout.hr-escalation', config_value: '12', config_type: 'number', category: 'approval', description: 'HR审批升级时间（小时）' },
+    { id: 'cfg-099', config_key: 'approval.timeout.finance-hours', config_value: '72', config_type: 'number', category: 'approval', description: '财务审批超时（小时）' },
+    { id: 'cfg-100', config_key: 'approval.timeout.finance-escalation', config_value: '48', config_type: 'number', category: 'approval', description: '财务审批升级时间（小时）' },
+    { id: 'cfg-101', config_key: 'approval.timeout.exempt-hours', config_value: '1', config_type: 'number', category: 'approval', description: '免审批超时（小时）' },
+    { id: 'cfg-102', config_key: 'approval.timeout.ultimate-hours', config_value: '168', config_type: 'number', category: 'approval', description: '最终超时（小时）— 超此时间自动处理' },
+    { id: 'cfg-103', config_key: 'approval.timeout.ultimate-action', config_value: 'auto_approve', config_type: 'string', category: 'approval', description: '最终超时动作（auto_approve/auto_reject）' },
+
+    // — approval.threshold.* (4个金额阈值) —
+    { id: 'cfg-104', config_key: 'approval.threshold.exempt-max', config_value: '1000', config_type: 'number', category: 'approval', description: '免审批金额上限（元）— 低于此金额自动通过' },
+    { id: 'cfg-105', config_key: 'approval.threshold.quick-max', config_value: '10000', config_type: 'number', category: 'approval', description: '快速审批金额上限（元）' },
+    { id: 'cfg-106', config_key: 'approval.threshold.standard-max', config_value: '50000', config_type: 'number', category: 'approval', description: '标准审批金额上限（元）' },
+    { id: 'cfg-107', config_key: 'approval.threshold.high-value', config_value: '100000', config_type: 'number', category: 'approval', description: '高价值订单阈值（元）' },
+
+    // — approval.delegation.* —
+    { id: 'cfg-108', config_key: 'approval.delegation.enabled', config_value: 'true', config_type: 'boolean', category: 'approval', description: '是否启用审批委托' },
+    { id: 'cfg-109', config_key: 'approval.delegation.rules', config_value: '[{"fromRole":"manager","toRole":"department_head","enabled":true,"remark":"经理外出时委托给部门主管"},{"fromRole":"department_head","toRole":"manager","enabled":true,"remark":"部门主管外出时委托给经理"},{"fromRole":"director","toRole":"manager","enabled":true,"remark":"总监外出时委托给经理"},{"fromRole":"hr","toRole":"hr_manager","enabled":true,"remark":"人事专员外出时委托给人事经理"}]', config_type: 'json', category: 'approval', description: '委托规则列表（JSON）' },
+
+    // — approval.workflow.* —
+    { id: 'cfg-110', config_key: 'approval.workflow.require-comment', config_value: 'false', config_type: 'boolean', category: 'approval', description: '审批意见是否必填' },
+
+    // ★ V3.0 Phase 4: 动态主题变量（CSS自定义属性，由 useThemeConfig 同步到 :root）
+    { id: 'cfg-111', config_key: 'theme.sidebar-bg', config_value: '#F2F6FA', config_type: 'string', category: 'theme', description: '侧边栏背景色' },
+    { id: 'cfg-112', config_key: 'theme.sidebar-active-bg', config_value: '#dbeafe', config_type: 'string', category: 'theme', description: '侧边栏激活项背景色' },
+    { id: 'cfg-113', config_key: 'theme.sidebar-active-text', config_value: '#1d4ed8', config_type: 'string', category: 'theme', description: '侧边栏激活项文字色' },
+    { id: 'cfg-114', config_key: 'theme.sidebar-collapsed-w', config_value: '64px', config_type: 'string', category: 'theme', description: '侧边栏收起宽度' },
+    { id: 'cfg-115', config_key: 'theme.sidebar-expanded-w', config_value: '208px', config_type: 'string', category: 'theme', description: '侧边栏展开宽度' },
+    { id: 'cfg-116', config_key: 'theme.header-bg', config_value: '#F2F6FA', config_type: 'string', category: 'theme', description: '顶栏背景色' },
+    { id: 'cfg-117', config_key: 'theme.header-height', config_value: '48px', config_type: 'string', category: 'theme', description: '顶栏高度' },
+    { id: 'cfg-118', config_key: 'theme.primary-color', config_value: '#059669', config_type: 'string', category: 'theme', description: '主题主色' },
+    { id: 'cfg-119', config_key: 'theme.primary-hover', config_value: '#047857', config_type: 'string', category: 'theme', description: '主题主色悬停' },
+
+    // ★ V3.0 Phase 5: 基础设施参数化
+    { id: 'cfg-120', config_key: 'api.timeout', config_value: '30000', config_type: 'number', category: 'api', description: 'API请求超时时间（毫秒）' },
+    { id: 'cfg-121', config_key: 'query.stale-time', config_value: '300000', config_type: 'number', category: 'query', description: 'React Query 数据新鲜时间（毫秒）' },
+    { id: 'cfg-122', config_key: 'query.gc-time', config_value: '600000', config_type: 'number', category: 'query', description: 'React Query 垃圾回收时间（毫秒）' },
+    { id: 'cfg-123', config_key: 'query.retry', config_value: '2', config_type: 'number', category: 'query', description: 'React Query 失败重试次数' },
+    { id: 'cfg-124', config_key: 'ui.table.default-page-size', config_value: '20', config_type: 'number', category: 'ui', description: '表格默认分页大小' },
+
+    // ★ V3.0 Phase 7: 功能开关
+    { id: 'cfg-125', config_key: 'feature.demo-mode', config_value: 'true', config_type: 'boolean', category: 'feature', description: '演示模式开关' },
+    { id: 'cfg-126', config_key: 'feature.enable-export', config_value: 'true', config_type: 'boolean', category: 'feature', description: '数据导出功能开关' },
+    { id: 'cfg-127', config_key: 'feature.enable-batch-ops', config_value: 'true', config_type: 'boolean', category: 'feature', description: '批量操作功能开关' },
+    { id: 'cfg-128', config_key: 'feature.enable-multi-tenant', config_value: 'false', config_type: 'boolean', category: 'feature', description: '多租户功能开关' },
+    { id: 'cfg-129', config_key: 'feature.enable-audit-log', config_value: 'true', config_type: 'boolean', category: 'feature', description: '审计日志功能开关' },
+    { id: 'cfg-130', config_key: 'feature.enable-iot', config_value: 'false', config_type: 'boolean', category: 'feature', description: 'IoT设备集成开关' },
+    { id: 'cfg-131', config_key: 'feature.enable-ai-optimization', config_value: 'false', config_type: 'boolean', category: 'feature', description: 'AI优化建议开关' },
+    { id: 'cfg-132', config_key: 'feature.show-tutorial', config_value: 'true', config_type: 'boolean', category: 'feature', description: '新手引导开关' },
+
+    // ★ V3.0 Phase 6: 作物生长引擎参数化（JSON blob 存储在 system_configs）
+    { id: 'cfg-133', config_key: 'crop.growth.stage-days', config_value: '{"seedling":30,"vegetative":45,"flowering":30,"fruiting":40,"harvest":20}', config_type: 'json', category: 'crop', description: '默认生长阶段天数配置（JSON，可按作物覆盖）' },
+    { id: 'cfg-134', config_key: 'crop.growth.crop-configs', config_value: '[{"name":"番茄","stages":[{"stage":"seedling","startDay":1,"endDay":30,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"幼苗期需保持土壤湿润"},{"type":"fertilization","typeName":"施肥","frequency":7,"priority":"medium","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"幼苗期以氮肥为主促进生长"}]},{"stage":"vegetative","startDay":31,"endDay":75,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"营养生长期需定期灌溉"},{"type":"fertilization","typeName":"施肥","frequency":10,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"营养生长期补充复合肥"},{"type":"pruning","typeName":"整枝","frequency":14,"priority":"medium","skillRequired":["整枝修剪"],"estimatedHours":3,"description":"及时摘除侧枝"},{"type":"scouting","typeName":"巡田","frequency":5,"priority":"medium","skillRequired":["病害识别","巡田检查"],"estimatedHours":1,"description":"检查植株健康状况"}]},{"stage":"flowering","startDay":76,"endDay":105,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":3,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"花期需保证水分供应"},{"type":"fertilization","typeName":"施肥","frequency":7,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"花期增施磷钾肥"},{"type":"pruning","typeName":"整枝","frequency":10,"priority":"medium","skillRequired":["整枝修剪"],"estimatedHours":2,"description":"调整植株结构"}]},{"stage":"fruiting","startDay":106,"endDay":145,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"结果期需充足水分"},{"type":"fertilization","typeName":"施肥","frequency":7,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"结果期补充钾肥"},{"type":"spraying","typeName":"病虫防治","frequency":14,"priority":"high","skillRequired":["农药配制","喷雾操作","生物防治"],"estimatedHours":2,"description":"防治病虫害"},{"type":"pruning","typeName":"整枝","frequency":14,"priority":"medium","skillRequired":["整枝修剪","疏花疏果"],"estimatedHours":3,"description":"疏果和整理植株"}]},{"stage":"harvest","startDay":146,"endDay":165,"tasks":[{"type":"harvest","typeName":"采收","frequency":3,"priority":"high","skillRequired":["果蔬采收","分级包装"],"estimatedHours":4,"description":"及时采收成熟果实"},{"type":"scouting","typeName":"巡田","frequency":5,"priority":"low","skillRequired":["病害识别","巡田检查"],"estimatedHours":1,"description":"检查植株状况"}]}]},{"name":"黄瓜","stages":[{"stage":"seedling","startDay":1,"endDay":25,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"幼苗期保持基质湿润"},{"type":"fertilization","typeName":"施肥","frequency":7,"priority":"medium","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":1.5,"description":"幼苗期轻施氮肥"}]},{"stage":"vegetative","startDay":26,"endDay":60,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":1,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"快速生长期需水量大"},{"type":"fertilization","typeName":"施肥","frequency":5,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"补充氮磷钾复合肥"},{"type":"pruning","typeName":"整枝","frequency":7,"priority":"medium","skillRequired":["整枝修剪"],"estimatedHours":2.5,"description":"及时摘除卷须和侧枝"}]},{"stage":"flowering","startDay":61,"endDay":80,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"花期保持水分均衡"},{"type":"fertilization","typeName":"施肥","frequency":5,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"增施磷钾肥促花"},{"type":"plant_protection","typeName":"植保","frequency":7,"priority":"high","skillRequired":["农药配制","喷雾操作","生物防治"],"estimatedHours":2,"description":"预防白粉病和霜霉病"}]},{"stage":"fruiting","startDay":81,"endDay":120,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":1,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1.5,"description":"结果期需充足均匀供水"},{"type":"fertilization","typeName":"施肥","frequency":4,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"高钾肥促进果实膨大"},{"type":"plant_protection","typeName":"植保","frequency":7,"priority":"high","skillRequired":["农药配制","喷雾操作","生物防治"],"estimatedHours":2,"description":"防治蚜虫和螨类"},{"type":"harvest","typeName":"采收","frequency":1,"priority":"high","skillRequired":["果蔬采收","分级包装"],"estimatedHours":4,"description":"及时采收嫩瓜"}]},{"stage":"harvest","startDay":121,"endDay":140,"tasks":[{"type":"harvest","typeName":"采收","frequency":1,"priority":"high","skillRequired":["果蔬采收","分级包装"],"estimatedHours":5,"description":"盛产期每日采收"}]}]},{"name":"辣椒","stages":[{"stage":"seedling","startDay":1,"endDay":35,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"幼苗期保持土壤湿润但不过湿"},{"type":"fertilization","typeName":"施肥","frequency":7,"priority":"medium","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"幼苗期以氮肥为主"}]},{"stage":"vegetative","startDay":36,"endDay":70,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"保持土壤湿润"},{"type":"fertilization","typeName":"施肥","frequency":5,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"补充复合肥"},{"type":"pruning","typeName":"修剪","frequency":10,"priority":"medium","skillRequired":["整枝修剪"],"estimatedHours":2,"description":"摘除底部老叶"}]},{"stage":"flowering","startDay":71,"endDay":95,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"花期保持适宜湿度"},{"type":"fertilization","typeName":"施肥","frequency":5,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"花期增施磷钾肥"},{"type":"plant_protection","typeName":"植保","frequency":7,"priority":"high","skillRequired":["农药配制","喷雾操作","生物防治"],"estimatedHours":2,"description":"防治蚜虫和疫病"}]},{"stage":"fruiting","startDay":96,"endDay":150,"tasks":[{"type":"irrigation","typeName":"灌溉","frequency":2,"priority":"high","skillRequired":["微喷灌溉","滴灌操作"],"estimatedHours":1,"description":"结果期需充足水分"},{"type":"fertilization","typeName":"施肥","frequency":5,"priority":"high","skillRequired":["施肥操作","水肥一体化"],"estimatedHours":2,"description":"高钾肥促进果实发育"},{"type":"plant_protection","typeName":"植保","frequency":7,"priority":"high","skillRequired":["农药配制","喷雾操作","生物防治"],"estimatedHours":2,"description":"防治炭疽病和烟青虫"},{"type":"harvest","typeName":"采收","frequency":2,"priority":"high","skillRequired":["果蔬采收","分级包装"],"estimatedHours":3.5,"description":"分批采收成熟果实"}]},{"stage":"harvest","startDay":151,"endDay":180,"tasks":[{"type":"harvest","typeName":"采收","frequency":1,"priority":"high","skillRequired":["果蔬采收","分级包装"],"estimatedHours":4,"description":"盛产期采收"}]}]}]', config_type: 'json', category: 'crop', description: '作物生长阶段任务配置（JSON数组，支持番茄/黄瓜/辣椒等）' },
+    { id: 'cfg-135', config_key: 'crop.pest.alert-rules', config_value: '[{"id":"pest_aphid","name":"蚜虫预警","symptom":["蚜虫","蚜","虫眼","卷叶"],"cropType":["番茄","黄瓜","辣椒"],"severity":"high","suggestion":"发现蚜虫，立即进行生物防治或药物喷洒","priority":"high"},{"id":"pest_powdery_mildew","name":"白粉病预警","symptom":["白粉","粉末","叶面白","粉状"],"cropType":["番茄","黄瓜","南瓜"],"severity":"high","suggestion":"发现白粉病症状，使用杀菌剂防治","priority":"high"},{"id":"pest_rot","name":"腐烂病预警","symptom":["腐烂","软腐","水渍"],"cropType":["番茄","辣椒"],"severity":"high","suggestion":"发现腐烂病株，立即清除并喷洒杀菌剂","priority":"high"},{"id":"pest_yellow_leaf","name":"黄叶病预警","symptom":["黄叶","叶片发黄","叶脉黄"],"cropType":["番茄","黄瓜"],"severity":"medium","suggestion":"检查是否为营养缺乏或病害，进行对症处理","priority":"medium"}]', config_type: 'json', category: 'crop', description: '病虫害预警规则（JSON数组）' },
+
+    // ★ V3.0 阶段8: 消除魔法数字（人力/薪资参数）
+    { id: 'cfg-136', config_key: 'labor.work-hours-per-day', config_value: '8', config_type: 'number', category: 'labor', description: '每日标准工时（小时）' },
+    { id: 'cfg-137', config_key: 'labor.work-days-per-month', config_value: '21.75', config_type: 'number', category: 'labor', description: '月标准计薪天数' },
+    { id: 'cfg-138', config_key: 'labor.full-attendance-bonus', config_value: '500', config_type: 'number', category: 'labor', description: '全勤奖金额（元）' },
   ];
 
   for (const config of configs) {
