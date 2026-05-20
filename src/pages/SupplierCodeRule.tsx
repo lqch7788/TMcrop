@@ -3,6 +3,7 @@ import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTri
 import { useNavigate } from 'react-router-dom';
 import { AddMidModal } from '../components/codeRule/AddMidModal';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { useSupplierCodeRuleStore } from '../stores';
 
 export default function SupplierCodeRule() {
@@ -104,7 +105,7 @@ export default function SupplierCodeRule() {
     if (editingCell?.type === type && editingCell?.bigCode === bigCode && editingCell?.midCode === midCode) {
       return (
         <div className="flex items-center gap-1">
-          <input
+          <Input
             type="text"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
@@ -207,14 +208,14 @@ export default function SupplierCodeRule() {
                 <td colSpan={4} className="px-2 py-2">
                   {showAddBig ? (
                     <div className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={newBigCode}
                         onChange={(e) => setNewBigCode(e.target.value)}
                         placeholder="代码(如:AB)"
                         className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
                       />
-                      <input
+                      <Input
                         type="text"
                         value={newBigName}
                         onChange={(e) => setNewBigName(e.target.value)}

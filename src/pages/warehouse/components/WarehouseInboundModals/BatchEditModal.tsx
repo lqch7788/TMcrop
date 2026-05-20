@@ -7,6 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 interface InboundBatchEditModalProps {
   records: InboundRecord[];
@@ -148,37 +152,41 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
           {/* 记录选择器 */}
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">选择入库记录</label>
-              <select
-                value={currentRecord.id}
-                onChange={(e) => {
-                  const idx = records.findIndex(r => r.id === Number(e.target.value));
+              <Label className="text-xs text-gray-600">选择入库记录</Label>
+              <Select
+                value={String(currentRecord.id)}
+                onValueChange={(val) => {
+                  const idx = records.findIndex(r => r.id === Number(val));
                   if (idx >= 0) setCurrentIndex(idx);
                 }}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
               >
-                {records.map((r, idx) => (
-                  <option key={r.id} value={r.id}>
-                    {r.code} - {r.supplier} ({r.materials.length}种物料) {editedMaterials[r.id] && <span className="bg-green-100 text-green-700">✅ 已编辑</span>} {idx !== currentIndex ? '' : '←'}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {records.map((r, idx) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.code} - {r.supplier} ({r.materials.length}种物料) {editedMaterials[r.id] ? '✓ 已编辑' : ''} {idx !== currentIndex ? '' : '←'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* 基本信息 */}
           <div className="grid grid-cols-5 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">入库单号</label>
-              <input
+              <Label className="text-xs text-gray-600">入库单号</Label>
+              <Input
                 type="text"
                 value={currentRecord.code}
                 readOnly
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100"
+                className="h-8 text-sm bg-gray-100"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">入库日期</label>
+              <Label className="text-xs text-gray-600">入库日期</Label>
               <input
                 type="date"
                 value={currentRecord.inboundDate}
@@ -187,33 +195,37 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">供应商</label>
-              <input
+              <Label className="text-xs text-gray-600">供应商</Label>
+              <Input
                 type="text"
                 value={currentRecord.supplier}
                 readOnly
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100"
+                className="h-8 text-sm bg-gray-100"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">操作员</label>
-              <input
+              <Label className="text-xs text-gray-600">操作员</Label>
+              <Input
                 type="text"
                 value={currentRecord.operator}
                 readOnly
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100"
+                className="h-8 text-sm bg-gray-100"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">状态</label>
-              <select
+              <Label className="text-xs text-gray-600">状态</Label>
+              <Select
                 value={currentRecord.status}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100"
               >
-                <option value="pending">待审核</option>
-                <option value="completed">已完成</option>
-                <option value="voided">已作废</option>
-              </select>
+                <SelectTrigger className="h-8 bg-gray-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="completed">已完成</SelectItem>
+                  <SelectItem value="voided">已作废</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -223,13 +235,13 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <h4 className="text-sm font-semibold text-gray-800">物料明细（{currentEditedMaterials.length}种物料）</h4>
             {currentRecord.status === 'pending' && (
-              <button
+              <Button
+                size="sm"
                 onClick={handleAddMaterial}
-                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700"
               >
                 <Plus className="w-3 h-3" />
                 添加物料
-              </button>
+              </Button>
             )}
           </div>
           <div className="flex-1 overflow-auto rounded-lg border border-gray-200 bg-white">
@@ -283,11 +295,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.code}
                           onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.code || '-'}</span>
@@ -295,11 +307,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.name}
                           onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.name || '-'}</span>
@@ -307,11 +319,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.category || '-'}</span>
@@ -319,11 +331,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.specification || '-'}</span>
@@ -331,11 +343,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.barcode || '-'}</span>
@@ -343,11 +355,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.unit || '-'}</span>
@@ -355,11 +367,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
-                          type="number"
+                        <NumberInput
                           value={m.quantity}
-                          onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          onChange={(val) => handleMaterialChange(m.id, 'quantity', Number(val))}
+                          className="h-6 px-1 text-xs"
+                          decimals={0}
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.quantity}</span>
@@ -367,11 +379,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.price}元</span>
@@ -379,11 +391,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.location || '-'}</span>
@@ -391,11 +403,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.batchNo || '-'}</span>
@@ -427,11 +439,11 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
-                          className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                          className="h-6 px-1 text-xs"
                         />
                       ) : (
                         <span className="text-xs text-gray-600">{m.remarks || '-'}</span>

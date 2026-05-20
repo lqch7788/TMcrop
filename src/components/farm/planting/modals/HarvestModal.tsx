@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
@@ -137,10 +138,9 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
             </div>
             <div>
               <Label className="text-gray-700">采收日期</Label>
-              <Input
-                type="date"
-                value={formData.harvestDate}
-                onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
+              <DatePicker
+                selected={formData.harvestDate ? new Date(formData.harvestDate) : undefined}
+                onChange={(date) => setFormData({ ...formData, harvestDate: date.toISOString().split('T')[0] })}
                 disabled={isHarvest === 'no'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />

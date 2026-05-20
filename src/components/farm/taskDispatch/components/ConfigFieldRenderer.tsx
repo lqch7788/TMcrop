@@ -9,6 +9,7 @@ import { Button } from '../../../ui/button';
 import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 
 interface ConfigFieldRendererProps {
@@ -106,9 +107,7 @@ export function ConfigFieldRenderer({
       <SelectTrigger className={baseInputClass}>
         <SelectValue placeholder="请选择" />
       </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="">请选择</SelectItem>
-        {field.options?.map(opt => (
+      <SelectContent>        {field.options?.map(opt => (
           <SelectItem key={opt.value} value={opt.value}>
             {opt.label}
           </SelectItem>
@@ -125,9 +124,9 @@ export function ConfigFieldRenderer({
         {field.options?.map(opt => {
           const isSelected = selectedValues.includes(opt.value);
           return (
-            <label
+            <Label
               key={opt.value}
-              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm cursor-pointer transition-colors ${
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full cursor-pointer transition-colors ${
                 isSelected
                   ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                   : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
@@ -147,7 +146,7 @@ export function ConfigFieldRenderer({
                 className="sr-only"
               />
               {opt.label}
-            </label>
+            </Label>
           );
         })}
       </div>
@@ -179,7 +178,7 @@ export function ConfigFieldRenderer({
       case 'text':
         return (
           <div key={fieldDef.key} className="flex-1 min-w-[120px]">
-            <label className="block text-xs text-gray-500 mb-1">{fieldDef.label}</label>
+            <Label className="text-xs text-gray-500">{fieldDef.label}</Label>
             <Input
               type="text"
               value={fieldValue as string}
@@ -194,7 +193,7 @@ export function ConfigFieldRenderer({
       case 'select':
         return (
           <div key={fieldDef.key} className="flex-1 min-w-[120px]">
-            <label className="block text-xs text-gray-500 mb-1">{fieldDef.label}</label>
+            <Label className="text-xs text-gray-500">{fieldDef.label}</Label>
             <Select
               value={fieldValue as string}
               onValueChange={val => onEntryChange(fieldDef.key, val)}
@@ -203,9 +202,7 @@ export function ConfigFieldRenderer({
               <SelectTrigger className={`${baseInputClass} text-sm`}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">请选择</SelectItem>
-                {fieldDef.options?.map(opt => (
+              <SelectContent>                {fieldDef.options?.map(opt => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -218,10 +215,10 @@ export function ConfigFieldRenderer({
       case 'number':
         return (
           <div key={fieldDef.key} className="flex-1 min-w-[100px]">
-            <label className="block text-xs text-gray-500 mb-1">
+            <Label className="text-xs text-gray-500">
               {fieldDef.label}
               {fieldDef.unit && <span className="text-gray-400 ml-1">({fieldDef.unit})</span>}
-            </label>
+            </Label>
             <Input
               type="text"
               inputMode="decimal"
@@ -370,10 +367,10 @@ export function ConfigFieldRenderer({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      <Label className="text-gray-700">
         {field.label}
         {(field.required || error) && <span className="text-red-500 ml-1">*</span>}
-      </label>
+      </Label>
       {renderInput()}
       {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
     </div>

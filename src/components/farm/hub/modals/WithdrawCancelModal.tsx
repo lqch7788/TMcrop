@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { TextArea } from '../../../ui/TextArea';
 import { RotateCcw, XCircle, AlertTriangle } from 'lucide-react';
 import { Task } from '../../../../types/task';
@@ -106,9 +106,9 @@ export function WithdrawCancelModal({
 
         {/* 原因输入 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="text-gray-700 mb-1">
             操作原因 <span className="text-red-500">*</span>
-          </label>
+          </Label>
           <TextArea
             value={reason}
             onChange={(e) => setReason(e.target.value)}

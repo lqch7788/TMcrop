@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Button, Label } from '@/components/ui';
 import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
 import { useWorkerStore } from '../../../../stores';
@@ -287,10 +287,10 @@ export function SelectExecutorModal({
         {/* 手动模式 - 执行人列表 */}
         {dispatchMode === 'manual' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Label className="text-gray-700 mb-2">
               <Users className="w-4 h-4 inline mr-1" />
               选择执行人
-            </label>
+            </Label>
             <Select
               value={selectedAssignee || ''}
               onValueChange={(value) => setSelectedAssignee(value)}

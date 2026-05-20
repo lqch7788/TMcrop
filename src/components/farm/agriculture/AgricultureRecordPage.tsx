@@ -7,6 +7,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table';
 import {
   Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
   X, Pencil, Trash2, Sprout, Droplets, AlertTriangle
@@ -324,8 +325,8 @@ export default function AgricultureRecordPage() {
   // 渲染子记录
   const renderChildren = (children: FarmOperationRecordChild[]) => {
     return (
-      <tr>
-        <td colSpan={12} className="px-4 py-0 bg-blue-50">
+      <TableRow>
+        <TableCell colSpan={12} className="px-4 py-0 bg-blue-50">
           <div className="py-2 pl-8 space-y-2">
             {children.map((child, index) => (
               <div key={child.id} className="flex items-start gap-4 text-sm">
@@ -356,8 +357,8 @@ export default function AgricultureRecordPage() {
               </div>
             ))}
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
     );
   };
 
@@ -390,55 +391,55 @@ export default function AgricultureRecordPage() {
 
         {/* 表格 */}
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow className="hover:bg-transparent">
                 {batchDeleteMode && (
-                  <th className="px-4 py-3 text-center text-sm font-semibold w-12">
+                  <TableHead className="py-3 text-center font-semibold text-white w-12">
                     <Input
                       type="checkbox"
                       checked={selectedRows.length === filteredRecords.length && filteredRecords.length > 0}
                       onChange={handleSelectAll}
                       className="w-4 h-4 rounded border-white"
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作单号</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">来源</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">来源编号</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作类型</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">作物/区域</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作人员</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作日期</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">进度</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">备注</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">操作单号</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">来源</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">来源编号</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">操作类型</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">作物/区域</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">操作人员</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">操作日期</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">进度</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">状态</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">备注</TableHead>
+                <TableHead className="py-3 text-center font-semibold text-white whitespace-nowrap">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {paginatedRecords.length === 0 ? (
-                <tr>
-                  <td colSpan={batchDeleteMode ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={batchDeleteMode ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 paginatedRecords.map((record) => (
                   <React.Fragment key={record.id}>
                     {/* 主记录行 */}
-                    <tr className="hover:bg-blue-50 transition-colors">
+                    <TableRow className="hover:bg-blue-50 transition-colors">
                       {batchDeleteMode && (
-                        <td className="px-4 py-3 text-center">
+                        <TableCell className="px-4 py-3 text-center">
                           <Input
                             type="checkbox"
                             checked={selectedRows.includes(record.id)}
                             onChange={() => handleSelectRow(record.id)}
                             className="w-4 h-4 rounded border-gray-300"
                           />
-                        </td>
+                        </TableCell>
                       )}
-                      <td className="px-4 py-3 text-center">
+                      <TableCell className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {record.children && record.children.length > 0 && (
                             <Button
@@ -455,42 +456,42 @@ export default function AgricultureRecordPage() {
                           )}
                           <span className="font-medium text-gray-900 text-sm">{record.recordCode}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
                         <span className={`text-sm font-medium ${getSourceColor(record.sourceType)}`}>
                           {getSourceLabel(record.sourceType)}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-blue-600">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-blue-600">
                         {record.sourceCode || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center whitespace-nowrap">
                         {getTypeBadge(record.operationType)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
                         <div className="text-sm">
                           <div className="font-medium text-gray-900">{record.cropName}</div>
                           <div className="text-gray-500 text-xs">{record.greenhouseName}</div>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap">
                         {record.operatorName}
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-600 whitespace-nowrap">
                         {record.operationDate}
-                      </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center whitespace-nowrap">
                         {getProgressBar(record.progress)}
-                      </td>
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center whitespace-nowrap">
                         {getStatusBadge(record.status)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
                         <div className="text-sm text-gray-500 max-w-[150px] truncate" title={record.remarks || ''}>
                           {record.remarks || '-'}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
                         {record.status === 'waiting_acceptance' && (
                           <div className="flex items-center justify-center gap-1">
                             <Button
@@ -513,8 +514,8 @@ export default function AgricultureRecordPage() {
                             </Button>
                           </div>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                     {/* 子记录行（折叠） */}
                     {record.children && record.children.length > 0 && expandedIds.has(record.id) && (
                       renderChildren(record.children)
@@ -522,8 +523,8 @@ export default function AgricultureRecordPage() {
                   </React.Fragment>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}

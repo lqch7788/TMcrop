@@ -11,8 +11,6 @@ import {
   LabelResumeTimeline, Pagination, Input
 } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
-import { Input } from '../../../ui/input';
-
 // ========== 数据接口 ==========
 export interface PlantLabel {
   id: number;

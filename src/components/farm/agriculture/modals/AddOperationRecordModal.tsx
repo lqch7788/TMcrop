@@ -7,6 +7,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Modal } from '../../../ui/Modal';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
+import { DatePicker } from '../../../ui/DatePicker';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
@@ -175,9 +177,9 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         {/* 第一行：操作类型、操作区域、操作人员 */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               操作类型 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <Select
               value={formData.operationType}
               onValueChange={(val) => setFormData({ ...formData, operationType: val })}
@@ -193,9 +195,9 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               操作区域 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <Select
               value={formData.greenhouseId}
               onValueChange={(val) => setFormData({ ...formData, greenhouseId: val })}
@@ -211,9 +213,9 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               操作人员 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <Select
               value={formData.operatorId}
               onValueChange={(val) => setFormData({ ...formData, operatorId: val })}
@@ -233,7 +235,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         {/* 第二行：作物名称、品种、操作日期 */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物名称</label>
+            <Label className="text-gray-700">作物名称</Label>
             <Input
               type="text"
               value={formData.cropName}
@@ -243,7 +245,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
+            <Label className="text-gray-700">品种</Label>
             <Input
               type="text"
               value={formData.variety}
@@ -253,14 +255,13 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               操作日期 <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="date"
-              value={formData.operationDate}
-              onChange={(e) => setFormData({ ...formData, operationDate: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            </Label>
+            <DatePicker
+              selected={formData.operationDate ? new Date(formData.operationDate) : undefined}
+              onChange={(date) => setFormData({ ...formData, operationDate: date.toISOString().split('T')[0] })}
+              className="w-full"
             />
           </div>
         </div>
@@ -268,7 +269,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
         {/* 第三行：开始时间、结束时间、工作量 */}
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
+            <Label className="text-gray-700">开始时间</Label>
             <Input
               type="time"
               value={formData.startTime}
@@ -277,7 +278,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
+            <Label className="text-gray-700">结束时间</Label>
             <Input
               type="time"
               value={formData.endTime}
@@ -286,7 +287,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">工作量</label>
+            <Label className="text-gray-700">工作量</Label>
             <Input
               type="number"
               value={formData.workload}
@@ -296,7 +297,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
+            <Label className="text-gray-700">单位</Label>
             <Select
               value={formData.unit}
               onValueChange={(val) => setFormData({ ...formData, unit: val })}
@@ -315,7 +316,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
 
         {/* 物料选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">使用物料</label>
+          <Label className="text-gray-700">使用物料</Label>
           <div className="relative">
             <div
               onClick={() => setMaterialDropdownOpen(!materialDropdownOpen)}
@@ -334,7 +335,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             {materialDropdownOpen && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 {materialOptions.map(m => (
-                  <label
+                  <Label
                     key={m}
                     className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
                   >
@@ -345,7 +346,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 mr-2"
                     />
                     <span className="text-sm text-gray-700">{m}</span>
-                  </label>
+                  </Label>
                 ))}
               </div>
             )}
@@ -354,7 +355,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
 
         {/* 备注 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <Label className="text-gray-700">备注</Label>
           <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}

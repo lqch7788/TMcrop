@@ -1,6 +1,8 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { TextArea } from '@/components/ui/TextArea';
 
 interface VoidModalProps {
   /** 作废原因（ApplicationTab 传入 reason，兼容旧版 voidReason） */
@@ -44,15 +46,15 @@ export const VoidModal: React.FC<VoidModalProps> = ({
           </div>
           {recordCode && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-900 mb-1">领料单号</label>
+              <Label className="block text-sm font-medium text-gray-900 mb-1">领料单号</Label>
               <p className="font-mono text-gray-900">{recordCode}</p>
             </div>
           )}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900 mb-1">
+            <Label className="block text-sm font-medium text-gray-900 mb-1">
               作废原因 <span className="text-red-500">*</span>
-            </label>
-            <textarea
+            </Label>
+            <TextArea
               value={actualReason}
               onChange={(e) => onChange(e.target.value)}
               placeholder="请输入作废原因"
@@ -75,4 +77,3 @@ export const VoidModal: React.FC<VoidModalProps> = ({
 };
 
 export default VoidModal;
-console.log('组件创建成功: VoidModal');

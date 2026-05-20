@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import * as XLSX from 'xlsx';
 
 interface InboundExportModalProps {
@@ -168,7 +169,7 @@ export const InboundExportModal: React.FC<InboundExportModalProps> = ({
               { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
               { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
             ].map((format) => (
-              <label
+              <Label
                 key={format.value}
                 className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                   exportFormat === format.value
@@ -188,7 +189,7 @@ export const InboundExportModal: React.FC<InboundExportModalProps> = ({
                   <span className="block text-sm font-medium text-gray-900">{format.label}</span>
                   <span className="block text-xs text-gray-500">{format.desc}</span>
                 </div>
-              </label>
+              </Label>
             ))}
           </div>
 

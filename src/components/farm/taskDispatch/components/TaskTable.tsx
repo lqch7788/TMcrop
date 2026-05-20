@@ -6,9 +6,10 @@
 import React from 'react';
 import { Download, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '../../../ui/button';
+import { Table, TableHeader, TableBody } from '../../../ui/table';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
-import { Pagination } from './Pagination';
+import { Pagination } from '../../../ui/Pagination';
 import { EDITABLE_STATUSES, DELETABLE_STATUSES, STATUS_MAP } from '../constants/taskDispatchConstants';
 
 interface Task {
@@ -242,66 +243,65 @@ export function TaskTable({
       </div>
 
       {/* 表格 */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <TaskTableHeader
-              exportMode={exportMode}
-              batchEditMode={batchEditMode}
-              batchDeleteMode={batchDeleteMode}
-              isAllSelected={isAllSelected}
-              isSomeSelected={isSomeSelected}
-              onSelectAll={onSelectAll}
-            />
-          </thead>
-          <tbody className="divide-y divide-gray-300">
-            {paginatedTasks.map((task, index) => {
-              const globalIndex = (currentPage - 1) * pageSize + index;
-              const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
-              const isDeletable = batchDeleteMode && DELETABLE_STATUSES.includes(task.status);
-              const isSelectable = batchEditMode ? isEditable : (batchDeleteMode ? isDeletable : true);
-              const statusName = STATUS_MAP[task.status]?.label || task.status;
-              const selectableReason = !isSelectable ? `${statusName}状态不支持此操作` : undefined;
+      <Table>
+        <TableHeader>
+          <TaskTableHeader
+            exportMode={exportMode}
+            batchEditMode={batchEditMode}
+            batchDeleteMode={batchDeleteMode}
+            isAllSelected={isAllSelected}
+            isSomeSelected={isSomeSelected}
+            onSelectAll={onSelectAll}
+          />
+        </TableHeader>
+        <TableBody className="divide-y divide-gray-300">
+          {paginatedTasks.map((task, index) => {
+            const globalIndex = (currentPage - 1) * pageSize + index;
+            const isEditable = batchEditMode && EDITABLE_STATUSES.includes(task.status);
+            const isDeletable = batchDeleteMode && DELETABLE_STATUSES.includes(task.status);
+            const isSelectable = batchEditMode ? isEditable : (batchDeleteMode ? isDeletable : true);
+            const statusName = STATUS_MAP[task.status]?.label || task.status;
+            const selectableReason = !isSelectable ? `${statusName}状态不支持此操作` : undefined;
 
-              return (
-                <TaskTableRow
-                  key={task.id}
-                  task={task}
-                  index={globalIndex}
-                  showCheckbox={showCheckbox}
-                  isSelected={selectedRows.includes(globalIndex)}
-                  isSelectable={isSelectable}
-                  selectableReason={selectableReason}
-                  onSelect={() => onSelectRow(globalIndex)}
-                  onViewDetail={() => onViewDetail(task)}
-                  onViewSop={onViewSop ? () => onViewSop(task) : undefined}
-                  onAccept={onAccept ? () => onAccept(task) : undefined}
-                  onWithdraw={onWithdraw ? () => onWithdraw(task) : undefined}
-                  onCancel={onCancel ? () => onCancel(task) : undefined}
-                  onOvertime={onOvertime ? () => onOvertime(task) : undefined}
-                  onContinue={onContinue ? () => onContinue(task.id) : undefined}
-                  onReassign={onReassign ? () => onReassign(task) : undefined}
-                  canRemind={canRemind}
-                  sendReminder={sendReminder}
-                  remindProps={{
-                    allowed: canRemind(task.id).allowed,
-                    cooldownSec: 0,
-                    todayCount: 0,
-                  }}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            return (
+              <TaskTableRow
+                key={task.id}
+                task={task}
+                index={globalIndex}
+                showCheckbox={showCheckbox}
+                isSelected={selectedRows.includes(globalIndex)}
+                isSelectable={isSelectable}
+                selectableReason={selectableReason}
+                onSelect={() => onSelectRow(globalIndex)}
+                onViewDetail={() => onViewDetail(task)}
+                onViewSop={onViewSop ? () => onViewSop(task) : undefined}
+                onAccept={onAccept ? () => onAccept(task) : undefined}
+                onWithdraw={onWithdraw ? () => onWithdraw(task) : undefined}
+                onCancel={onCancel ? () => onCancel(task) : undefined}
+                onOvertime={onOvertime ? () => onOvertime(task) : undefined}
+                onContinue={onContinue ? () => onContinue(task.id) : undefined}
+                onReassign={onReassign ? () => onReassign(task) : undefined}
+                canRemind={canRemind}
+                sendReminder={sendReminder}
+                remindProps={{
+                  allowed: canRemind(task.id).allowed,
+                  cooldownSec: 0,
+                  todayCount: 0,
+                }}
+              />
+            );
+          })}
+        </TableBody>
+      </Table>
 
       {/* 分页 */}
       <Pagination
         currentPage={currentPage}
         pageSize={pageSize}
-        total={total}
+        totalPages={Math.ceil(total / pageSize) || 1}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        showPageSize
       />
 
       {/* 导出模式底部栏 */}

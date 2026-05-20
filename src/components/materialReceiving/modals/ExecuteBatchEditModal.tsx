@@ -1,6 +1,9 @@
 import React from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteBatchEditModalProps {
@@ -63,34 +66,38 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
 
           {/* 领料单选择下拉 */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</label>
-            <select
-              value={currentRecordId || ''}
-              onChange={(e) => {
-                const idx = selectedRows.indexOf(Number(e.target.value));
+            <Label className="block text-sm font-medium text-gray-900 mb-1">选择领料单</Label>
+            <Select
+              value={String(currentRecordId || '')}
+              onValueChange={(val) => {
+                const idx = selectedRows.indexOf(Number(val));
                 onRecordChange(idx >= 0 ? idx : 0);
               }}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             >
-              {recordsList.map((record) => (
-                <option key={record.id} value={record.id}>
-                  {record.code} ({record.applicant}) {batchEditedRecords[record.id] ? '✅ 已编辑' : ''}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                <SelectValue placeholder="请选择领料单" />
+              </SelectTrigger>
+              <SelectContent>
+                {recordsList.map((record) => (
+                  <SelectItem key={record.id} value={String(record.id)}>
+                    {record.code} ({record.applicant}) {batchEditedRecords[record.id] ? '✅ 已编辑' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 编辑表单 - 3列布局 */}
           <div className="grid grid-cols-3 gap-4">
             {/* 领料单号 - 只读 */}
             <div className="bg-gray-100 rounded-lg p-3">
-              <label className="block text-xs font-medium text-gray-500 mb-1">领料单号</label>
+              <Label className="block text-xs font-medium text-gray-500 mb-1">领料单号</Label>
               <div className="text-sm font-medium text-gray-900">{currentEditedData.code}</div>
             </div>
             {/* 日期 */}
             <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">日期</label>
-              <input
+              <Label className="block text-xs font-medium text-gray-900 mb-1">日期</Label>
+              <Input
                 type="date"
                 value={currentEditedData.date || ''}
                 onChange={(e) => onFieldChange(currentRecordId, 'date', e.target.value)}
@@ -99,8 +106,8 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
             </div>
             {/* 申请人 */}
             <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">申请人</label>
-              <input
+              <Label className="block text-xs font-medium text-gray-900 mb-1">申请人</Label>
+              <Input
                 type="text"
                 value={currentEditedData.applicant || ''}
                 onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
@@ -109,22 +116,26 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
             </div>
             {/* 仓库地点 */}
             <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</label>
-              <select
-                value={currentEditedData.warehouseLocation || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'warehouseLocation', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              <Label className="block text-xs font-medium text-gray-900 mb-1">仓库地点</Label>
+              <Select
+                value={currentEditedData.warehouseLocation || 'none'}
+                onValueChange={(val) => onFieldChange(currentRecordId, 'warehouseLocation', val === 'none' ? '' : val)}
               >
-                <option value="">请选择</option>
-                {warehouseOptions.map(w => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">请选择</SelectItem>
+                  {warehouseOptions.map(w => (
+                    <SelectItem key={w} value={w}>{w}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {/* 生产批次号 */}
             <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</label>
-              <input
+              <Label className="block text-xs font-medium text-gray-900 mb-1">生产批次号</Label>
+              <Input
                 type="text"
                 value={currentEditedData.productionBatchCode || ''}
                 onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
@@ -133,24 +144,28 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
             </div>
             {/* 执行状态 */}
             <div>
-              <label className="block text-xs font-medium text-gray-900 mb-1">执行状态</label>
-              <select
-                value={currentEditedData.executeStatus || ''}
-                onChange={(e) => onFieldChange(currentRecordId, 'executeStatus', e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              <Label className="block text-xs font-medium text-gray-900 mb-1">执行状态</Label>
+              <Select
+                value={currentEditedData.executeStatus || 'none'}
+                onValueChange={(val) => onFieldChange(currentRecordId, 'executeStatus', val === 'none' ? '' : val)}
               >
-                <option value="">请选择</option>
-                {statusOptions.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">请选择</SelectItem>
+                  {statusOptions.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* 物料明细表格 */}
           {currentEditedData.materials && currentEditedData.materials.length > 0 && (
             <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">物料明细</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-2">物料明细</Label>
               <ExecuteMaterialEditTable
                 materials={currentEditedData.materials}
                 onMaterialChange={(idx, field, value) => onMaterialChange(currentRecordId, idx, field, value)}
@@ -239,7 +254,7 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                     </Button>
                   </td>
                   <td className="px-3 py-2">
-                    <input
+                    <Input
                       type="text"
                       value={material.materialCode || ''}
                       onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
@@ -257,7 +272,7 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                     </span>
                   </td>
                   <td className="px-3 py-2 text-sm">
-                    <input
+                    <Input
                       type="number"
                       value={material.actualQuantity}
                       onChange={(e) => onMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
@@ -265,7 +280,7 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
                       min="0"
@@ -279,7 +294,7 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
+                    <Input
                       type="text"
                       value={material.warehousePosition || ''}
                       onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
@@ -287,7 +302,7 @@ const ExecuteMaterialEditTable: React.FC<ExecuteMaterialEditTableProps> = ({ mat
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
+                    <Input
                       type="text"
                       value={material.remark || ''}
                       onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}

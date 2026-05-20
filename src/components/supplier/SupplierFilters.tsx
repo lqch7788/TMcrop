@@ -6,6 +6,7 @@ import { getSupplierTypeName } from './data';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Label } from '../ui/label';
 import { useDictionaryStore, useRegionStore } from '../../stores';
 
 interface SupplierFiltersProps {
@@ -98,7 +99,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
         <div className="flex-1 grid grid-cols-5 gap-4">
           {/* 供应商名称 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商名称</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商名称</Label>
             <Input
               type="text"
               value={filters.name}
@@ -110,7 +111,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 组织 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">所属组织</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">所属组织</Label>
             <Select
               value={filters.organization}
               onValueChange={(val) => onFilterChange('organization', val)}
@@ -128,7 +129,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 供应商类型 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商类型</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商类型</Label>
             <Select
               value={filters.type}
               onValueChange={(val) => onFilterChange('type', val)}
@@ -148,7 +149,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 供应商属性 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商属性</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商属性</Label>
             <Select
               value={filters.supplierAttribute}
               onValueChange={(val) => onFilterChange('supplierAttribute', val)}
@@ -166,7 +167,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 供应商状态 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商状态</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商状态</Label>
             <Select
               value={filters.status}
               onValueChange={(val) => onFilterChange('status', val)}
@@ -212,7 +213,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
         <div className="mt-3 grid grid-cols-5 gap-4">
           {/* 联系人 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">联系人</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">联系人</Label>
             <Input
               type="text"
               value={filters.contact || ''}
@@ -224,7 +225,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 区域级联：省 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">省份</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">省份</Label>
             <Select
               value={(filters as any).province || ''}
               onValueChange={(val) => handleProvinceChange(val)}
@@ -243,7 +244,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 区域级联：市 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">城市</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">城市</Label>
             <Select
               value={(filters as any).city || ''}
               onValueChange={(val) => handleCityChange(val)}
@@ -263,7 +264,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 区域级联：区 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">区县</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">区县</Label>
             <Select
               value={(filters as any).district || ''}
               onValueChange={(val) => onFilterChange('district' as any, val)}
@@ -283,7 +284,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
 
           {/* 供应商编号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</label>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">供应商编号</Label>
             <Input
               type="text"
               value={filters.code || ''}

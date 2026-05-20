@@ -9,7 +9,7 @@ import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { TextArea } from '../../ui/TextArea';
@@ -145,7 +145,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
             <h4 className="text-sm font-medium text-gray-700 mb-3">任务信息</h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">任务标题 <span className="text-red-500">*</span></label>
+                <Label className="text-gray-600 mb-1">任务标题 <span className="text-red-500">*</span></Label>
                 <Input
                   type="text"
                   value={title}
@@ -157,7 +157,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">任务类型</label>
+                  <Label className="text-gray-600 mb-1">任务类型</Label>
                   <Select
                     value={taskType}
                     onValueChange={(val) => setTaskType(val)}
@@ -173,7 +173,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">关联批次</label>
+                  <Label className="text-gray-600 mb-1">关联批次</Label>
                   <Select
                     value={batchCode}
                     onValueChange={(val) => setBatchCode(val)}
@@ -181,9 +181,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="请选择批次" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">请选择批次</SelectItem>
-                      {cropBatches.map((batch) => (
+                    <SelectContent>                      {cropBatches.map((batch) => (
                         <SelectItem key={batch.batchCode} value={batch.batchCode}>
                           {batch.batchCode} - {batch.cropName}
                         </SelectItem>
@@ -195,7 +193,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">执行区域 <span className="text-red-500">*</span></label>
+                  <Label className="text-gray-600 mb-1">执行区域 <span className="text-red-500">*</span></Label>
                   <Select
                     value={greenhouse}
                     onValueChange={(val) => setGreenhouse(val)}
@@ -203,28 +201,25 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="请选择区域" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">请选择区域</SelectItem>
-                      {greenhouses.map((gh) => (
+                    <SelectContent>                      {greenhouses.map((gh) => (
                         <SelectItem key={gh.id} value={gh.name}>{gh.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">计划日期</label>
-                  <Input
-                    type="date"
-                    value={plannedDate}
-                    onChange={(e) => setPlannedDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <Label className="text-gray-600 mb-1">计划日期</Label>
+                  <DatePicker
+                    selected={plannedDate ? new Date(plannedDate) : undefined}
+                    onChange={(date) => setPlannedDate(date.toISOString().split('T')[0])}
+                    placeholder="选择计划日期"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">预计工时</label>
+                  <Label className="text-gray-600 mb-1">预计工时</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
@@ -238,7 +233,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">优先级</label>
+                  <Label className="text-gray-600 mb-1">优先级</Label>
                   <Select
                     value={priority}
                     onValueChange={(val) => setPriority(val as any)}
@@ -262,7 +257,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-sm font-medium text-gray-700 mb-3">执行人选择</h4>
             <div className="space-y-2">
-              <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${!assigneeId ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
+              <Label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${!assigneeId ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
                 <Input
                   type="radio"
                   name="assignee"
@@ -275,10 +270,10 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   <p className="text-sm font-medium text-gray-900">保存草稿</p>
                   <p className="text-xs text-gray-500">暂不分派，稍后手动派发</p>
                 </div>
-              </label>
+              </Label>
 
               {workers.map((worker) => (
-                <label
+                <Label
                   key={worker.id}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${assigneeId === worker.id ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}
                 >
@@ -296,7 +291,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                       <p className="text-xs text-gray-500">{worker.department}</p>
                     )}
                   </div>
-                </label>
+                </Label>
               ))}
             </div>
           </div>

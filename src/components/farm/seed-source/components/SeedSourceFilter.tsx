@@ -11,7 +11,7 @@ import { useDictionaryStore, getDictItems } from '../../../../stores/useDictiona
 import { useDepartmentStore } from '../../../../stores/useDepartmentStore';
 import { useUserStore } from '../../../../stores/useUserStore';
 import { Input } from '../../../ui/input';
-import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Label, DatePicker, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -123,7 +123,7 @@ export function SeedSourceFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               <SelectItem value={SourceType.SEED}>种子</SelectItem>
               <SelectItem value={SourceType.SEEDLING}>种苗</SelectItem>
             </SelectContent>
@@ -141,7 +141,7 @@ export function SeedSourceFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {suppliers.map(s => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
@@ -160,7 +160,7 @@ export function SeedSourceFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               {statusOptions.map(s => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
@@ -179,7 +179,7 @@ export function SeedSourceFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               <SelectItem value={PropagationType.EXTERNAL}>外购入库</SelectItem>
               <SelectItem value={PropagationType.BREEDING}>育种计划产出</SelectItem>
               <SelectItem value={PropagationType.SEED_SAVING}>种植留种</SelectItem>
@@ -199,7 +199,7 @@ export function SeedSourceFilter({
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="__all__">全部</SelectItem>
               <SelectItem value={PropagationStatus.PLANNED}>已计划</SelectItem>
               <SelectItem value={PropagationStatus.IN_PROGRESS}>进行中</SelectItem>
               <SelectItem value={PropagationStatus.HARVESTED}>已采收</SelectItem>
@@ -213,10 +213,12 @@ export function SeedSourceFilter({
         {/* 采购/入库日期 */}
         <div className="min-w-[150px]">
           <Label className="text-gray-700">采购/入库日期</Label>
-          <Input
-            type="date"
-            value={filters.startDate}
-            onChange={(e) => onChange({ ...filters, startDate: e.target.value, endDate: e.target.value })}
+          <DatePicker
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date) => {
+              const dateStr = date.toISOString().split('T')[0];
+              onChange({ ...filters, startDate: dateStr, endDate: dateStr });
+            }}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -295,7 +297,7 @@ export function SeedSourceFilter({
                           <SelectValue placeholder="全部" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">全部</SelectItem>
+                          <SelectItem value="__all__">全部</SelectItem>
                           {cropTypes.map((t: any) => (
                             <SelectItem key={t.dictCode} value={t.dictCode}>{t.dictLabel}</SelectItem>
                           ))}
@@ -329,7 +331,7 @@ export function SeedSourceFilter({
                           <SelectValue placeholder="全部" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">全部</SelectItem>
+                          <SelectItem value="__all__">全部</SelectItem>
                           {departments.map((d: any) => (
                             <SelectItem key={d.oid || d.id} value={d.oid || d.id}>{d.name}</SelectItem>
                           ))}
@@ -346,7 +348,7 @@ export function SeedSourceFilter({
                           <SelectValue placeholder="全部" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">全部</SelectItem>
+                          <SelectItem value="__all__">全部</SelectItem>
                           {filteredUsers.map((u: any) => (
                             <SelectItem key={u.oid || u.id} value={u.oid || u.id}>{u.name}</SelectItem>
                           ))}

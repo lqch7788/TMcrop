@@ -125,24 +125,25 @@ export default function WarehouseInboundPage() {
       {/* Tab切换按钮 + 编码规则 */}
       <div className="flex items-center gap-4">
         <div className="h-6 w-px bg-gray-500"></div>
-        <button
+        <Button
+          size="sm"
           onClick={() => navigate('/code-rule')}
-          className="px-3 h-9 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
         >
           编码规则 &gt;&gt;
-        </button>
+        </Button>
         <span className="text-base font-bold text-blue-600">物料编码生成</span>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setCodeGenExpanded(!codeGenExpanded)}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
           title={codeGenExpanded ? '收起' : '展开'}
         >
           {codeGenExpanded ? (
-            <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
+            <ChevronDown className="w-5 h-5 text-gray-600" />
           ) : (
-            <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
+            <ChevronRight className="w-5 h-5 text-gray-600" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* 编码规则生成器 */}
@@ -185,12 +186,13 @@ export default function WarehouseInboundPage() {
             <h3 className="text-lg font-semibold text-gray-900">物料入库记录</h3>
             {hasActiveMode && (
               <div className="flex items-center gap-2 ml-4">
-                <button
+                <Button
+                  variant="link"
+                  size="sm"
                   onClick={onSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                 >
                   {isAllSelected ? '全不选' : '全选'}
-                </button>
+                </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
             )}

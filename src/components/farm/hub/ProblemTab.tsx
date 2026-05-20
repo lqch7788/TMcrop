@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '../../ui/input';
+import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';
 
@@ -750,7 +751,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                     }
                   };
                   return (
-                    <label
+                    <Label
                       key={worker.id}
                       className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 ${
                         isChecked ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
@@ -776,7 +777,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                           </span>
                         ))}
                       </div>
-                    </label>
+                    </Label>
                   );
                 })
               )}
@@ -871,10 +872,9 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               自定义
             </Button>
             {expectedCompletion === 'custom' && (
-              <Input
-                type="date"
-                value={customDueDate}
-                onChange={(e) => setCustomDueDate(e.target.value)}
+              <DatePicker
+                selected={customDueDate ? new Date(customDueDate) : undefined}
+                onChange={(date) => setCustomDueDate(date.toISOString().split('T')[0])}
                 className="px-4 py-2 border-2 border-violet-200 rounded-lg text-base focus:outline-none focus:border-violet-500"
               />
             )}
@@ -894,7 +894,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {FEEDBACK_OPTIONS.map(item => (
-              <label
+              <Label
                 key={item.key}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 cursor-pointer transition-all ${
                   requiredFeedback.includes(item.key)
@@ -921,7 +921,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 {requiredFeedback.includes(item.key) && (
                   <CheckCircle className="w-4 h-4 text-emerald-500 ml-auto" />
                 )}
-              </label>
+              </Label>
             ))}
           </div>
         </div>
@@ -1291,49 +1291,49 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
           {/* 任务列表 */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">任务编号</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">任务标题</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">温室</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">执行人</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">截止日期</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">优先级</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">来源问题</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+              <Table>
+                <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <TableRow>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务编号</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">任务标题</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">温室</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">执行人</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">截止日期</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">优先级</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">状态</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-sm font-semibold">来源问题</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-100">
                   {linkedTasks.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                    <TableRow>
+                      <TableCell colSpan={8} className="px-4 py-12 text-center text-gray-400">
                         暂无分派任务
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     linkedTasks.map((task: any) => {
                       const problem = [...pendingProblems, ...dispatchedProblems, ...handledProblems].find(
                         p => p.id === task.sourceProblemId
                       );
                       return (
-                        <tr key={task.id} className="hover:bg-emerald-50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-mono text-gray-600">
+                        <TableRow key={task.id} className="hover:bg-emerald-50 transition-colors">
+                          <TableCell className="px-4 py-3 text-sm font-mono text-gray-600">
                             {task.taskCode}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">
                             {task.title}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-600">
                             {task.greenhouseName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-600">
                             {task.assigneeName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                             {task.dueDate}
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
                             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                               task.priority === 'high' || task.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                               task.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
@@ -1343,8 +1343,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                                task.priority === 'medium' ? '中' :
                                task.priority === 'low' ? '低' : '普通'}
                             </span>
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
                             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                               task.status === 'completed' ? 'bg-green-100 text-green-700' :
                               task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
@@ -1359,8 +1359,8 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                                task.status === 'not_started' ? '未开始' :
                                task.status === 'paused' ? '已暂停' : '未知'}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm">
                             {problem ? (
                               <div className="flex items-center gap-2">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -1375,13 +1375,13 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>

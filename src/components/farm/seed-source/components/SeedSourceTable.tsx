@@ -5,12 +5,14 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle, ClipboardList, GitBranch } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 繁殖途径标签颜色
 const PROPAGATION_TYPE_LABELS: Record<string, string> = {
@@ -350,11 +352,11 @@ export function SeedSourceTable({
 
       {/* 表格 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow className="hover:from-blue-500 hover:to-blue-600">
               {showCheckbox && (
-                <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
                   <Input
                     type="checkbox"
                     checked={selectedRows.length === data.length && data.length > 0}
@@ -367,38 +369,38 @@ export function SeedSourceTable({
                     }}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种源批号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">关联生产计划</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">种源类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">来源途径</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">采购/入库日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">入库数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">完成比例</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">备注</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">创建人</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种源批号</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">关联生产计划</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种源类型</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源途径</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">入库数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
-              <tr>
-                <td colSpan={showCheckbox ? 17 : 16} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={showCheckbox ? 17 : 16} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               currentData.map((record) => (
-                <tr key={record.id} className="hover:bg-emerald-50">
+                <TableRow key={record.id} className="hover:bg-emerald-50">
                   {showCheckbox && (
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3">
                       <Input
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
@@ -411,9 +413,9 @@ export function SeedSourceTable({
                         }}
                         className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                       />
-                    </td>
+                    </TableCell>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap">
                     <Button
                       variant="link"
                       size="sm"
@@ -422,25 +424,25 @@ export function SeedSourceTable({
                     >
                       {record.seedCode}
                     </Button>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.productionPlanCode ? (
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">
                         {record.productionPlanCode}
                       </span>
                     ) : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{getCropVarietyName(record)}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {getVarietyPath(record)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {SOURCE_TYPE_MAP[record.sourceType] || record.sourceType}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       {record.propagationType && record.propagationType !== 'external' ? (
                         <>
@@ -457,16 +459,16 @@ export function SeedSourceTable({
                         <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin] || record.sourceOrigin || '-'}</span>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</td>
-                  <td className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
                     {record.initialCount.toLocaleString()} {formatUnit(record.unit)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.availableCount.toLocaleString()} {formatUnit(record.unit)}
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     {record.initialCount > 0 ? (
                       <span className={`font-medium ${
                         record.availableCount / record.initialCount >= 0.8
@@ -480,13 +482,13 @@ export function SeedSourceTable({
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[record.status]?.color || ''}`}>
                       {STOCK_STATUS_MAP[record.status]?.label || record.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -539,59 +541,30 @@ export function SeedSourceTable({
                         <XCircle className="w-4 h-4" />
                       </Button>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination - 固定在表格外部底部 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pagination.pageSize)}
-            onValueChange={(val) => {
-              const newSize = Number(val);
-              onPageSizeChange?.(newSize);
-              onChange({ ...pagination, pageSize: newSize, current: 1 });
-            }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 w-auto">
-              <SelectValue placeholder="20" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
-            disabled={pagination.current === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
-            disabled={pagination.current >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={pagination.current}
+          totalPages={totalPages || 1}
+          onPageChange={(page) => onChange({ ...pagination, current: page })}
+          pageSize={pagination.pageSize}
+          onPageSizeChange={(size) => {
+            onPageSizeChange?.(size);
+            onChange({ ...pagination, pageSize: size, current: 1 });
+          }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

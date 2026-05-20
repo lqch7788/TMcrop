@@ -166,12 +166,12 @@ export default function SeedlingPage() {
   const filteredData = useMemo(() => {
     return seedlings.filter(item => {
       // 使用 startsWith 替代 includes，避免误匹配（如筛选"黄"会匹配到"黄瓜"和"黄番茄"）
-      if (filters.cropName && !item.cropName.startsWith(filters.cropName)) return false;
+      if (filters.cropName && filters.cropName !== '__all__' && !item.cropName.startsWith(filters.cropName)) return false;
       if (filters.seedlingCode && !item.seedlingCode.startsWith(filters.seedlingCode)) return false;
       if (filters.sourceCode && !item.sourceCode.startsWith(filters.sourceCode)) return false;
-      if (filters.siteName && item.siteName !== filters.siteName) return false;
-      if (filters.seedlingType && item.seedlingType !== filters.seedlingType) return false;
-      if (filters.status && item.status !== filters.status) return false;
+      if (filters.siteName && filters.siteName !== '__all__' && item.siteName !== filters.siteName) return false;
+      if (filters.seedlingType && filters.seedlingType !== '__all__' && item.seedlingType !== filters.seedlingType) return false;
+      if (filters.status && filters.status !== '__all__' && item.status !== filters.status) return false;
       if (filters.startDate && item.startDate < filters.startDate) return false;
       if (filters.endDate && item.startDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.startsWith(filters.createBy)) return false;

@@ -10,7 +10,9 @@ import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
 import { Input } from '../../../ui/input';
+import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
+import { DatePicker } from '../../../ui/DatePicker';
 
 interface OvertimeHandleModalProps {
   isOpen: boolean;
@@ -117,9 +119,9 @@ export function OvertimeHandleModal({
 
         {/* 处理方式选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Label className="text-gray-700 mb-2">
             选择处理方式
-          </label>
+          </Label>
           <div className="grid grid-cols-2 gap-3">
             <Button
               onClick={() => setHandleType('continue')}
@@ -173,9 +175,9 @@ export function OvertimeHandleModal({
         {handleType === 'continue' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="text-gray-700">
                 超时原因 <span className="text-red-500">*</span>
-              </label>
+              </Label>
               <TextArea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -186,14 +188,13 @@ export function OvertimeHandleModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="text-gray-700">
                 新截止日期 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
-                value={newDeadline}
-                onChange={(e) => setNewDeadline(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+              </Label>
+              <DatePicker
+                selected={newDeadline ? new Date(newDeadline) : undefined}
+                onChange={(date) => setNewDeadline(date.toISOString().split('T')[0])}
+                minDate={new Date()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -212,9 +213,9 @@ export function OvertimeHandleModal({
         {/* 放弃执行表单 */}
         {handleType === 'abandon' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <Label className="text-gray-700">
               放弃原因 <span className="text-red-500">*</span>
-            </label>
+            </Label>
             <TextArea
               value={reason}
               onChange={(e) => setReason(e.target.value)}

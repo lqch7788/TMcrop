@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TextArea } from '@/components/ui/TextArea';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVariety } from '@/types/cropVariety';
@@ -241,10 +242,9 @@ export function AddModal({
         <Label className="text-gray-700">
           订单日期
         </Label>
-        <Input
-          type="date"
-          value={formData.orderDate}
-          onChange={(e) => setFormData({ ...formData, orderDate: e.target.value })}
+        <DatePicker
+          selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
+          onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
           className="border-gray-200"
         />
       </div>
@@ -347,10 +347,9 @@ export function AddModal({
         <Label className="text-gray-700">
           预计采收日期
         </Label>
-        <Input
-          type="date"
-          value={formData.expectedHarvestDate}
-          onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
+        <DatePicker
+          selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
+          onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
           className="border-gray-200"
         />
       </div>

@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 
 interface InboundEditModalProps {
@@ -132,13 +134,13 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
               <div>
                 <span className="text-xs text-gray-500 block">供应商</span>
                 {record.status === 'pending' ? (
-                  <input
+                  <Input
                     type="text"
                     value={editedSupplier}
                     onChange={(e) => setEditedSupplier(e.target.value)}
                     placeholder="选择或输入供应商名称"
                     list="edit-supplier-list"
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm"
+                    className="h-7 text-sm"
                   />
                 ) : (
                   <span className="text-sm font-medium text-gray-900">{record.supplier}</span>
@@ -209,23 +211,25 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                     <tr key={m.id} className="hover:bg-gray-50">
                       <td className="px-2 py-1.5">
                         {record.status === 'pending' ? (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDeleteMaterial(m.id)}
-                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                            className="text-red-500 hover:bg-red-50"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          </Button>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.code}
                             onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-blue-600 font-medium">{m.code}</span>
@@ -233,11 +237,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.name}
                             onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-900">{m.name}</span>
@@ -245,11 +249,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.category}
                             onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.category || '-'}</span>
@@ -257,11 +261,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.specification}
                             onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.specification || '-'}</span>
@@ -269,11 +273,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.unit}
                             onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.unit}</span>
@@ -281,11 +285,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
-                            type="number"
+                          <NumberInput
                             value={m.quantity}
-                            onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            onChange={(val) => handleMaterialChange(m.id, 'quantity', Number(val))}
+                            className="h-6 px-1 text-xs"
+                            decimals={0}
                           />
                         ) : (
                           <span className="text-xs text-gray-900">{m.quantity}</span>
@@ -293,11 +297,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.price}
                             onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-900">{m.price}</span>
@@ -305,11 +309,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.batchNo}
                             onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.batchNo || '-'}</span>
@@ -317,11 +321,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.productionDate}
                             onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.productionDate || '-'}</span>
@@ -329,11 +333,11 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.expiryDate}
                             onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
-                            className="w-full h-6 px-1 border border-gray-200 rounded text-xs"
+                            className="h-6 px-1 text-xs"
                           />
                         ) : (
                           <span className="text-xs text-gray-600">{m.expiryDate || '-'}</span>

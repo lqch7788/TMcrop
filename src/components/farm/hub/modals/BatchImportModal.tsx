@@ -5,7 +5,7 @@
 import React, { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { Button } from '@/components/ui/button';
+import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Input } from '../../../ui/input';
 
 // 导入行类型
@@ -188,7 +188,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
               className="hidden"
               id="batch-file-upload"
             />
-            <label htmlFor="batch-file-upload" className="cursor-pointer">
+            <Label htmlFor="batch-file-upload" className="cursor-pointer">
               {importFile ? (
                 <div>
                   <Upload className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
@@ -206,7 +206,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
                   </p>
                 </div>
               )}
-            </label>
+            </Label>
           </div>
 
           {/* CSV格式说明 */}
@@ -235,32 +235,32 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
                 </span>
               </div>
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务类型</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务区域</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">作物</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">执行人</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">计划开始时间</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务工时</th>
-                      <th className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">优先级</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-300">
+                <Table>
+                  <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <TableRow>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务类型</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务区域</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">作物</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">执行人</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">计划开始时间</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">任务工时</TableHead>
+                      <TableHead className="px-3 py-2 text-left text-sm font-semibold whitespace-nowrap">优先级</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-gray-300">
                     {importPreview.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-blue-100 transition-colors">
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.typeLabel || '未知类型'}</td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.field}</td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.crop}</td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.assignee}</td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                      <TableRow key={idx} className="hover:bg-blue-100 transition-colors">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.typeLabel || '未知类型'}</TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.field}</TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.crop}</TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">{row.assignee}</TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
                           {row.planStart?.split(' ')[0] || '-'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
                           {row.estimatedDays || 0}天{row.estimatedHours || 0}小时
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-xs ${
                             row.priority === 'urgent'
                               ? 'bg-red-100 text-red-700'
@@ -270,11 +270,11 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
                           }`}>
                             {row.priority === 'urgent' ? '紧急' : row.priority === 'high' ? '高' : '普通'}
                           </span>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}

@@ -13,6 +13,7 @@ import { CropVariety } from '../../../../types/cropVariety';
 import * as supplierService from '../../../../services/supplierService';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
+import { DatePicker } from '../../../ui/DatePicker';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -332,10 +333,9 @@ export function EditModal({
           <Label className="text-gray-900">
             {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
           </Label>
-          <Input
-            type="date"
-            value={formData.purchaseDate}
-            onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
+          <DatePicker
+            selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
+            onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

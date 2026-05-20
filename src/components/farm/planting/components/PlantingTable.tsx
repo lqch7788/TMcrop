@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, Printer, Image, CheckCircle, Download, ChevronLeft, ChevronRight, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, CheckCircle, Download, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -11,6 +11,8 @@ import * as cropVarietyService from '../../../../services/apiCropVarietyService'
 import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 操作模式类型
 type PlantingOperationMode = 'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export';
@@ -701,42 +703,42 @@ export function PlantingTable({
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-380px)]">
-        <table className="w-full min-w-[1900px]">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
-            <tr>
+        <Table className="min-w-[1900px]">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
+            <TableRow className="hover:from-blue-500 hover:to-blue-600">
               {columns.map((col, index) => (
-                <th
+                <TableHead
                   key={index}
-                  className="px-4 py-3 text-left text-sm font-semibold text-white whitespace-nowrap"
+                  className="px-4 py-3 text-white whitespace-nowrap font-semibold"
                   style={{ minWidth: col.width }}
                 >
                   {col.title}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               currentData.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <TableRow key={record.id} className="hover:bg-gray-50">
                   {columns.map((col, index) => (
-                    <td key={index} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap" style={{ minWidth: col.width }}>
+                    <TableCell key={index} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap" style={{ minWidth: col.width }}>
                       {col.render
                         ? col.render(record[col.dataIndex as keyof Planting] as never, record)
                         : (record[col.dataIndex as keyof Planting] as never)}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}
@@ -756,47 +758,18 @@ export function PlantingTable({
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pagination.pageSize)}
-            onValueChange={(val) => {
-              const newSize = Number(val);
-              onPageSizeChange?.(newSize);
-              onChange({ ...pagination, pageSize: newSize, current: 1 });
-            }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 w-auto">
-              <SelectValue placeholder="20" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.max(1, pagination.current - 1) })}
-            disabled={pagination.current === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{pagination.current} / {totalPages || 1}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onChange({ ...pagination, current: Math.min(totalPages || 1, pagination.current + 1) })}
-            disabled={pagination.current >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={pagination.current}
+          totalPages={totalPages || 1}
+          onPageChange={(page) => onChange({ ...pagination, current: page })}
+          pageSize={pagination.pageSize}
+          onPageSizeChange={(size) => {
+            onPageSizeChange?.(size);
+            onChange({ ...pagination, pageSize: size, current: 1 });
+          }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

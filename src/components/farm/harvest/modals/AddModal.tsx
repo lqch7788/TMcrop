@@ -12,6 +12,7 @@ import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../ui/table';
 import {
   getProduceCategoryInfo,
 } from '../../../../data/produceCodeRule';
@@ -437,29 +438,29 @@ export const AddModal: React.FC<AddModalProps> = ({
 
         {addForm.products.length > 0 ? (
           <div className="overflow-x-auto border border-gray-400 rounded-lg">
-            <table className="w-full min-w-[1200px]">
-              <thead className="bg-emerald-600">
-                <tr>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-36">产品编码</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-28">产品名称</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white">分类信息</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-24">品质等级</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-28">采收量(kg)</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-28">目标产量</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-20">完成率</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white">备注</th>
-                  <th className="px-2 py-2 text-left text-sm font-semibold text-white w-12">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+            <Table className="min-w-[1200px]">
+              <TableHeader className="bg-emerald-600">
+                <TableRow className="hover:from-emerald-600 hover:to-emerald-600">
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-36">产品编码</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">产品名称</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold">分类信息</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-24">品质等级</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">采收量(kg)</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">目标产量</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-20">完成率</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold">备注</TableHead>
+                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-12">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200">
                 {addForm.products.map((product, idx) => {
                   const completionRate = product.targetYield > 0
                     ? Math.round((product.harvestQuantity / product.targetYield) * 100)
                     : 0;
 
                   return (
-                    <tr key={idx}>
-                      <td className="px-2 py-2">
+                    <TableRow key={idx}>
+                      <TableCell className="px-2 py-2">
                         <div className="flex items-center gap-1">
                           <Input
                             type="text"
@@ -469,8 +470,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                             className="w-32 px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           />
                         </div>
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.cropName}
@@ -478,8 +479,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                           placeholder="输入产品名称"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </td>
-                      <td className="px-2 py-2 text-sm text-gray-700 bg-gray-50">
+                      </TableCell>
+                      <TableCell className="px-2 py-2 text-sm text-gray-700 bg-gray-50">
                         {(() => {
                           if (!product.productCode || product.productCode.length < 6) {
                             return <span className="text-gray-400">-</span>;
@@ -491,8 +492,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                           }
                           return <span className="text-gray-400">-</span>;
                         })()}
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Select
                           value={product.grade}
                           onValueChange={(val) => onProductChange(idx, 'grade', val)}
@@ -506,8 +507,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Input
                           type="number"
                           value={product.harvestQuantity}
@@ -515,8 +516,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                           min="0"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Input
                           type="number"
                           value={product.targetYield}
@@ -524,11 +525,11 @@ export const AddModal: React.FC<AddModalProps> = ({
                           min="0"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </td>
-                      <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50 text-center">
+                      </TableCell>
+                      <TableCell className="px-2 py-2 text-sm text-blue-700 bg-gray-50 text-center">
                         {completionRate}%
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.remarks}
@@ -536,8 +537,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                           placeholder="备注"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </td>
-                      <td className="px-2 py-2">
+                      </TableCell>
+                      <TableCell className="px-2 py-2">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -546,12 +547,12 @@ export const AddModal: React.FC<AddModalProps> = ({
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className="text-sm text-gray-500 italic border border-gray-400 rounded-lg p-4 text-center">

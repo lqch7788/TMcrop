@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 
 interface MaterialExportModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export function MaterialExportModal({
     >
       <div className="space-y-3">
         {formats.map((format) => (
-          <label
+          <Label
             key={format.value}
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
               exportFormat === format.value
@@ -63,7 +64,7 @@ export function MaterialExportModal({
               <span className="block text-sm font-medium text-gray-900">{format.label}</span>
               <span className="block text-xs text-gray-500">{format.desc}</span>
             </div>
-          </label>
+          </Label>
         ))}
       </div>
     </UnifiedModal>

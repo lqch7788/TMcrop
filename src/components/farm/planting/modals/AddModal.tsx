@@ -5,6 +5,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
@@ -368,10 +369,9 @@ export function AddModal({
         {/* 种植日期 */}
         <div>
           <Label className="text-gray-900">种植日期</Label>
-          <Input
-            type="date"
-            value={formData.plantingDate}
-            onChange={(e) => setFormData({ ...formData, plantingDate: e.target.value })}
+          <DatePicker
+            selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
+            onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>

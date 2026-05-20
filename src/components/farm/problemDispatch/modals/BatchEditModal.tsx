@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { DatePicker } from '../../../ui/DatePicker';
 import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 import { TextArea } from '../../../ui/TextArea';
@@ -139,10 +140,9 @@ export function BatchEditModal({
 
             {/* 巡检日期 - 可编辑 */}
             <FormField label="巡检日期">
-              <Input
-                type="date"
-                value={editedData.checkDate ?? currentProblem.checkDate}
-                onChange={(e) => handleFieldChange('checkDate', e.target.value)}
+              <DatePicker
+                selected={(editedData.checkDate ?? currentProblem.checkDate) ? new Date(editedData.checkDate ?? currentProblem.checkDate) : undefined}
+                onChange={(date) => handleFieldChange('checkDate', date.toISOString().split('T')[0])}
               />
             </FormField>
 

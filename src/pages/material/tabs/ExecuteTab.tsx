@@ -2,6 +2,9 @@
 // 领料出库页面
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useExecuteTab } from './hooks/useExecuteTab';
 import {
   ExecuteTabFilters,
@@ -233,8 +236,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
               {/* 基本信息 */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">出库单号</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">出库单号</Label>
+                  <Input
                     type="text"
                     value={executeSelectedRecord.code}
                     disabled
@@ -242,8 +245,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">日期</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">日期</Label>
+                  <Input
                     type="date"
                     value={executeEditForm.date}
                     onChange={(e) => setExecuteEditForm({ ...executeEditForm, date: e.target.value })}
@@ -251,8 +254,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">申领人</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">申领人</Label>
+                  <Input
                     type="text"
                     value={executeEditForm.applicant}
                     onChange={(e) => setExecuteEditForm({ ...executeEditForm, applicant: e.target.value })}
@@ -260,22 +263,26 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">库存地点</label>
-                  <select
-                    value={executeEditForm.warehouseLocation}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, warehouseLocation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">库存地点</Label>
+                  <Select
+                    value={executeEditForm.warehouseLocation || 'none'}
+                    onValueChange={(val) => setExecuteEditForm({ ...executeEditForm, warehouseLocation: val === 'none' ? '' : val })}
                   >
-                    <option value="仓库A区">仓库A区</option>
-                    <option value="仓库B区">仓库B区</option>
-                    <option value="仓库C区">仓库C区</option>
-                    <option value="仓库D区">仓库D区</option>
-                    <option value="仓库E区">仓库E区</option>
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="仓库A区">仓库A区</SelectItem>
+                      <SelectItem value="仓库B区">仓库B区</SelectItem>
+                      <SelectItem value="仓库C区">仓库C区</SelectItem>
+                      <SelectItem value="仓库D区">仓库D区</SelectItem>
+                      <SelectItem value="仓库E区">仓库E区</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">审核人</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">审核人</Label>
+                  <Input
                     type="text"
                     value={executeEditForm.reviewer}
                     onChange={(e) => setExecuteEditForm({ ...executeEditForm, reviewer: e.target.value })}
@@ -283,8 +290,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">操作人</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">操作人</Label>
+                  <Input
                     type="text"
                     value={executeEditForm.operator}
                     onChange={(e) => setExecuteEditForm({ ...executeEditForm, operator: e.target.value })}
@@ -292,8 +299,8 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">生产批次号</label>
-                  <input
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">生产批次号</Label>
+                  <Input
                     type="text"
                     value={executeEditForm.productionBatchCode}
                     onChange={(e) => setExecuteEditForm({ ...executeEditForm, productionBatchCode: e.target.value })}
@@ -301,17 +308,21 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">执行状态</label>
-                  <select
-                    value={executeEditForm.executeStatus}
-                    onChange={(e) => setExecuteEditForm({ ...executeEditForm, executeStatus: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">执行状态</Label>
+                  <Select
+                    value={executeEditForm.executeStatus || 'none'}
+                    onValueChange={(val) => setExecuteEditForm({ ...executeEditForm, executeStatus: val === 'none' ? '' : val })}
                   >
-                    <option value="已出库">已出库</option>
-                    <option value="部分出库">部分出库</option>
-                    <option value="待出库">待出库</option>
-                    <option value="已取消">已取消</option>
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="已出库">已出库</SelectItem>
+                      <SelectItem value="部分出库">部分出库</SelectItem>
+                      <SelectItem value="待出库">待出库</SelectItem>
+                      <SelectItem value="已取消">已取消</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -355,7 +366,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               </Button>
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.applicationCode || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'applicationCode', e.target.value)}
@@ -363,7 +374,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.materialCode || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialCode', e.target.value)}
@@ -371,7 +382,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.materialName || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'materialName', e.target.value)}
@@ -379,7 +390,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.batchNo || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'batchNo', e.target.value)}
@@ -387,7 +398,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.spec || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'spec', e.target.value)}
@@ -395,7 +406,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.unit || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'unit', e.target.value)}
@@ -403,7 +414,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="number"
                                 value={mat.requestedQuantity || 0}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
@@ -411,7 +422,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="number"
                                 value={mat.stockQuantity || 0}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
@@ -419,7 +430,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="number"
                                 value={mat.actualQuantity || 0}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'actualQuantity', Number(e.target.value))}
@@ -427,7 +438,7 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
                               />
                             </td>
                             <td className="px-2 py-1">
-                              <input
+                              <Input
                                 type="text"
                                 value={mat.remark || ''}
                                 onChange={(e) => handleExecuteEditMaterialChange(idx, 'remark', e.target.value)}

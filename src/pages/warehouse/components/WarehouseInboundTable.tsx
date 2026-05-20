@@ -7,6 +7,8 @@ import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { getStatusText, getStatusClassName } from '../utils/warehouseInbound.utils';
 
 interface WarehouseInboundTableProps {
@@ -72,11 +74,9 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
               {/* 选择框列 */}
               {hasActiveMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={isAllSelected}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -105,11 +105,9 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                       {deleteMode && record.status !== 'pending' ? (
                         <span className="text-gray-300 text-xs">—</span>
                       ) : (
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedRows.includes(record.id)}
-                          onChange={() => onSelectRow(record.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          onCheckedChange={() => onSelectRow(record.id)}
                         />
                       )}
                     </td>
@@ -117,16 +115,17 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
 
                   {/* 展开按钮 */}
                   <td className="px-4 py-3">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onToggleExpand(record.id)}
-                      className="p-1 hover:bg-gray-100 rounded"
                     >
                       {expandedRows.has(record.id) ? (
                         <ChevronDown className="w-4 h-4 text-gray-500" />
                       ) : (
                         <ChevronRight className="w-4 h-4 text-gray-500" />
                       )}
-                    </button>
+                    </Button>
                   </td>
 
                   {/* 数据列 */}
@@ -197,18 +196,22 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
+          <Select
+            value={String(pageSize)}
+            onValueChange={(val) => {
+              onPageSizeChange(Number(val));
               onPageChange(1);
             }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="w-20 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

@@ -8,6 +8,7 @@ import { Button } from '../../../ui/button';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
 import { OvertimeBadge } from './OvertimeBadge';
 import { Input } from '../../../ui/input';
+import { TableRow, TableCell } from '../../../ui/table';
 
 interface TaskTableRowProps {
   task: any;
@@ -66,10 +67,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
   const statusInfo = STATUS_MAP[task.status] || { label: task.status, bg: 'bg-gray-100', color: 'text-gray-600' };
 
   return (
-    <tr key={task.id} className="hover:bg-blue-100 transition-colors">
+    <TableRow key={task.id} className="hover:bg-blue-100 transition-colors">
       {/* 复选框 */}
       {showCheckbox && (
-        <td className="px-3 py-3 text-center whitespace-nowrap">
+        <TableCell className="px-3 py-3 text-center whitespace-nowrap">
           <Input
             type="checkbox"
             checked={isSelected}
@@ -78,11 +79,11 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             className={`w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 ${!isSelectable ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={!isSelectable ? selectableReason : ''}
           />
-        </td>
+        </TableCell>
       )}
 
       {/* 任务ID */}
-      <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
+      <TableCell className="px-3 py-3 text-sm font-medium whitespace-nowrap">
         <Button
           variant="link"
           size="sm"
@@ -91,10 +92,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         >
           {task.id}
         </Button>
-      </td>
+      </TableCell>
 
       {/* 任务类型 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <div className="flex flex-wrap gap-1 items-center">
           {(task.types || []).slice(0, 2).map((typeValue: string, idx: number) => {
             const typeLabel = getTypeLabel(typeValue);
@@ -110,32 +111,32 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             <span className="text-xs text-gray-500">+{(task.types || []).length - 2}</span>
           )}
         </div>
-      </td>
+      </TableCell>
 
       {/* 任务区域 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.field}</td>
+      <TableCell className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.field}</TableCell>
 
       {/* 作物 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         {task.crop === '其他' ? (
           <div className="text-orange-500 text-xs">其他（{(task as any).cropRemarks || ''}）</div>
         ) : (
           <span className="text-sm text-gray-600">{task.crop}</span>
         )}
-      </td>
+      </TableCell>
 
       {/* 批次 */}
-      <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
+      <TableCell className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
         {(task as any).batchCode || '-'}
-      </td>
+      </TableCell>
 
       {/* 执行人 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <span className="text-sm text-gray-600">{task.assignee}</span>
-      </td>
+      </TableCell>
 
       {/* 进度 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden w-16 flex-shrink-0">
             <div
@@ -145,17 +146,17 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
           </div>
           <span className="text-xs text-gray-500">{task.progress}%</span>
         </div>
-      </td>
+      </TableCell>
 
       {/* 优先级 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <span className={`text-xs font-medium ${task.priority === 'urgent' ? 'text-red-500' : task.priority === 'high' ? 'text-orange-500' : 'text-gray-500'}`}>
           {task.priority === 'urgent' ? '紧急' : task.priority === 'high' ? '高' : '普通'}
         </span>
-      </td>
+      </TableCell>
 
       {/* 状态 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <div className="flex flex-col gap-1">
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color}`}>
             {statusInfo.label}
@@ -165,10 +166,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             <OvertimeBadge timeout={(task as any).timeout} size="sm" showLabel={true} />
           )}
         </div>
-      </td>
+      </TableCell>
 
       {/* 操作按钮 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         <div className="flex items-center gap-1 flex-wrap">
           {/* 待验收 - 验收按钮 */}
           {task.status === 'waiting_acceptance' && onAccept && (
@@ -275,15 +276,15 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             </Button>
           )}
         </div>
-      </td>
+      </TableCell>
 
       {/* 备注 */}
-      <td className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
+      <TableCell className="px-3 py-3 text-sm text-gray-600 max-w-[200px] truncate" title={(task as any).remarks || '-'}>
         {(task as any).remarks || '-'}
-      </td>
+      </TableCell>
 
       {/* 作业标准 */}
-      <td className="px-3 py-3 whitespace-nowrap">
+      <TableCell className="px-3 py-3 whitespace-nowrap">
         {(task.types?.length || 0) >= 2 && (task as any).sopContent ? (
           <Button
             variant="link"
@@ -297,18 +298,18 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
         ) : (
           <span className="text-gray-400 text-xs">-</span>
         )}
-      </td>
+      </TableCell>
 
       {/* 计划开始 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</td>
+      <TableCell className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planStart || '-'}</TableCell>
 
       {/* 计划结束 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</td>
+      <TableCell className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{task.planEnd || '-'}</TableCell>
 
       {/* 任务工时 */}
-      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
+      <TableCell className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">
         {formatWorkHours((task as any).estimatedDays || 0, (task as any).estimatedHours || 0)}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 });

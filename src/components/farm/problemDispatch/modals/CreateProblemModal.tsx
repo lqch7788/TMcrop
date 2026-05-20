@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { DatePicker } from '../../../ui/DatePicker';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 import { TextArea } from '../../../ui/TextArea';
 
@@ -90,10 +91,9 @@ export function CreateProblemModal({
           </FormField>
 
           <FormField label="巡检日期" required error={errors.checkDate}>
-            <Input
-              type="date"
-              value={formData.checkDate}
-              onChange={(e) => onFormChange('checkDate', e.target.value)}
+            <DatePicker
+              selected={formData.checkDate ? new Date(formData.checkDate) : undefined}
+              onChange={(date) => onFormChange('checkDate', date.toISOString().split('T')[0])}
             />
           </FormField>
 

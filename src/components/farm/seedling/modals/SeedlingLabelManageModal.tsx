@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Tag, Download } from 'lucide-react';
 import { Button } from '../../../ui/button';
-import { LabelResumeTimeline } from '../../../ui';
+import { LabelResumeTimeline, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 import { usePlantLabelStore } from '../../../../stores';
 import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
@@ -163,52 +163,38 @@ export default function SeedlingLabelManageModal({
               </div>
             ) : (
               <>
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">标签编号</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">移入位置</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">移入日期</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
+                <Table>
+                  <TableHeader className="bg-gray-50 sticky top-0">
+                    <TableRow>
+                      <TableHead className="px-3 py-2 text-xs">标签编号</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">移入位置</TableHead>
+                      <TableHead className="px-3 py-2 text-xs">移入日期</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-gray-100">
                     {paginatedLabels.map((label) => (
-                      <tr
+                      <TableRow
                         key={label.id}
-                        className={`cursor-pointer transition-colors ${
-                          selectedLabelId === label.id ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : 'hover:bg-gray-50'
+                        className={`cursor-pointer ${
+                          selectedLabelId === label.id ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : ''
                         }`}
                         onClick={() => handleSelectLabel(label.id)}
                       >
-                        <td className="px-3 py-2 font-mono text-xs">{label.label_number}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{label.move_in_area_name || '-'}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{label.move_in_date || '-'}</td>
-                      </tr>
+                        <TableCell className="px-3 py-2 font-mono text-xs">{label.label_number}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.move_in_area_name || '-'}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.move_in_date || '-'}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
                 {/* 分页 */}
                 {labelTotalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 p-3 border-t">
-                    <Button
-                      onClick={() => setLabelPage((p) => Math.max(1, p - 1))}
-                      disabled={labelPage === 1}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      上一页
-                    </Button>
-                    <span className="text-xs text-gray-500">{labelPage}/{labelTotalPages}</span>
-                    <Button
-                      onClick={() => setLabelPage((p) => Math.min(labelTotalPages, p + 1))}
-                      disabled={labelPage === labelTotalPages}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      下一页
-                    </Button>
+                  <div className="flex justify-center p-3 border-t">
+                    <Pagination
+                      currentPage={labelPage}
+                      totalPages={labelTotalPages}
+                      onPageChange={setLabelPage}
+                    />
                   </div>
                 )}
               </>

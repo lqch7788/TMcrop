@@ -8,6 +8,7 @@ import { outbound } from '../../services/inventoryService';
 import { InventoryStock, BusinessType } from '../../types/inventory';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { TextArea } from '../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
@@ -148,9 +149,9 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
           <div className="space-y-4">
             {/* 出库数量 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Label className="block text-sm font-medium text-gray-700 mb-1">
                 出库数量 <span className="text-red-500">*</span>
-              </label>
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -168,7 +169,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
             {/* 业务类型 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">业务类型</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
               <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
                 <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
                   <SelectValue placeholder="其他" />
@@ -186,7 +187,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
             {/* 业务单号 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">业务单号</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">业务单号</Label>
               <Input
                 type="text"
                 value={businessCode}
@@ -198,7 +199,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
             {/* 备注 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">备注</Label>
               <TextArea
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}

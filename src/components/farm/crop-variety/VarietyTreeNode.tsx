@@ -11,6 +11,7 @@ import { CropVariety } from '../../../types/cropVariety';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TableRow, TableCell } from '@/components/ui/table';
 
 interface VarietyTreeNodeProps {
   node: VarietyTreeNodeType;
@@ -300,13 +301,13 @@ export function VarietyTreeNode({
   return (
     <>
       {/* 节点行 */}
-      <tr
+      <TableRow
         className={getLevelStyles(node.level, isExpanded)}
         onClick={handleSelect}
         style={{ cursor: node.isRecorded || node.level === 'detail' ? 'pointer' : 'default' }}
       >
         {/* 类别列 - 只有类别级别显示，箭头在文字前面 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'category' ? (
             <div className="flex items-center gap-2">
               {renderToggleButton()}
@@ -316,10 +317,10 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 类型列 - 只有类型级别显示，箭头在文字前面 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'type' ? (
             <div className="flex items-center gap-2">
               {renderToggleButton()}
@@ -372,10 +373,10 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 品种列 - 只有品种级别显示，箭头在文字前面 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'variety' ? (
             <div className="flex items-center gap-2">
               {renderToggleButton()}
@@ -431,10 +432,10 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 子品种列 - 只有子品种级别显示，箭头在文字前面 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'subVariety1' ? (
             <div className="flex items-center gap-2">
               {renderToggleButton()}
@@ -490,10 +491,10 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 详细名称列 - 只有详细品种级别显示 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'detail' ? (
             <div className="flex items-center gap-2">
               <span className="font-mono text-green-600 text-sm">{node.code}</span>
@@ -507,19 +508,19 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 编码列 - 只有详细品种显示完整11位编码 */}
-        <td className="px-4 py-1">
+        <TableCell className="px-4 py-1">
           {node.level === 'detail' ? (
             <span className="font-mono text-blue-600 text-sm font-medium">{getFullCropCode()}</span>
           ) : (
             <span className="text-gray-300">-</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 状态 */}
-        <td className="px-4 py-1 whitespace-nowrap">
+        <TableCell className="px-4 py-1 whitespace-nowrap">
           {node.isRecorded || node.level === 'detail' ? (
             <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
               启用
@@ -529,10 +530,10 @@ export function VarietyTreeNode({
           ) : (
             <span className="text-xs text-gray-400">待录入</span>
           )}
-        </td>
+        </TableCell>
 
         {/* 操作 */}
-        <td className="px-4 py-1 whitespace-nowrap">
+        <TableCell className="px-4 py-1 whitespace-nowrap">
           <div className="flex items-center gap-1">
             {(node.isRecorded || node.level === 'detail') && (
               <Button size="icon" variant="ghost" onClick={handleSelect} title="查看详情">
@@ -557,13 +558,13 @@ export function VarietyTreeNode({
               </Button>
             )}
           </div>
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
 
       {/* 内联新增表单 */}
       {isInlineAdding && (
-        <tr className="bg-yellow-50 border-l-4 border-yellow-400">
-          <td className="px-4 py-2" colSpan={8}>
+        <TableRow className="bg-yellow-50 border-l-4 border-yellow-400">
+          <TableCell className="px-4 py-2" colSpan={8}>
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
                 {inlineAddState.level === 'type' && '新增类型：'}
@@ -591,8 +592,8 @@ export function VarietyTreeNode({
                 取消
               </Button>
             </div>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       )}
 
       {/* 递归渲染子节点 */}

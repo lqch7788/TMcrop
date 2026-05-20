@@ -138,14 +138,14 @@ export default function SeedSourcePage() {
     }
 
     const filtered = seedSources.filter(item => {
-      if (filters.cropCategory && item.cropCategory !== filters.cropCategory) return false;
+      if (filters.cropCategory && filters.cropCategory !== '__all__' && item.cropCategory !== filters.cropCategory) return false;
       if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
       // 方案1.3: 作物类型筛选（按cropCategory匹配）
-      if (filters.cropType && item.cropCategory !== filters.cropType) return false;
+      if (filters.cropType && filters.cropType !== '__all__' && item.cropCategory !== filters.cropType) return false;
       if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
-      if (filters.sourceType && item.sourceType !== filters.sourceType) return false;
-      if (filters.supplierName && !item.supplierName.includes(filters.supplierName)) return false;
-      if (filters.status && item.status !== filters.status) return false;
+      if (filters.sourceType && filters.sourceType !== '__all__' && item.sourceType !== filters.sourceType) return false;
+      if (filters.supplierName && filters.supplierName !== '__all__' && !item.supplierName.includes(filters.supplierName)) return false;
+      if (filters.status && filters.status !== '__all__' && item.status !== filters.status) return false;
       if (filters.startDate && item.purchaseDate < filters.startDate) return false;
       if (filters.endDate && item.purchaseDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '../../../ui/button';
+import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
@@ -109,9 +110,9 @@ export function ReassignTaskModal({
 
         {/* 执行人选择 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Label className="text-gray-700 mb-2">
             选择新执行人
-          </label>
+          </Label>
           <div className="relative">
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Select
@@ -121,9 +122,7 @@ export function ReassignTaskModal({
               <SelectTrigger className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="请选择执行人" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">请选择执行人</SelectItem>
-                {availableAssignees.map(user => (
+              <SelectContent>                {availableAssignees.map(user => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.name} ({user.role})
                   </SelectItem>

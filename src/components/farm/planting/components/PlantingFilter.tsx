@@ -6,7 +6,7 @@ import React, { useMemo } from 'react';
 import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
-import { Label, TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Label, DatePicker, TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { TreeSelectNode } from '@/components/ui/TreeSelect';
 import { Input } from '../../../ui/input';
 
@@ -113,10 +113,9 @@ export function PlantingFilter({
         {/* 定植日期 */}
         <div className="min-w-[150px]">
           <Label className="text-gray-700">定植日期</Label>
-          <Input
-            type="date"
-            value={filters.transplantDate}
-            onChange={(e) => onChange({ ...filters, transplantDate: e.target.value })}
+          <DatePicker
+            selected={filters.transplantDate ? new Date(filters.transplantDate) : undefined}
+            onChange={(date) => onChange({ ...filters, transplantDate: date.toISOString().split('T')[0] })}
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>

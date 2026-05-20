@@ -9,6 +9,7 @@ import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 // 来源类型选项
@@ -83,7 +84,7 @@ export function AgricultureRecordFilterToolbar({
       <div className="flex flex-wrap gap-4 items-end">
         {/* 搜索框 */}
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">搜索</label>
+          <Label className="text-gray-700">搜索</Label>
           <Input
             type="text"
             value={filters.searchText}
@@ -95,7 +96,7 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 来源类型 */}
         <div className="min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">来源类型</label>
+          <Label className="text-gray-700">来源类型</Label>
           <Select
             value={filters.sourceType}
             onValueChange={(val) => onFiltersChange({ ...filters, sourceType: val as any })}
@@ -113,7 +114,7 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 操作类型 */}
         <div className="min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作类型</label>
+          <Label className="text-gray-700">操作类型</Label>
           <Select
             value={filters.operationType}
             onValueChange={(val) => onFiltersChange({ ...filters, operationType: val })}
@@ -131,7 +132,7 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 状态 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+          <Label className="text-gray-700">状态</Label>
           <Select
             value={filters.status}
             onValueChange={(val) => onFiltersChange({ ...filters, status: val })}
@@ -149,7 +150,7 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 操作区域 */}
         <div className="min-w-[150px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作区域</label>
+          <Label className="text-gray-700">操作区域</Label>
           <Select
             value={filters.greenhouseId}
             onValueChange={(val) => onFiltersChange({ ...filters, greenhouseId: val })}
@@ -167,7 +168,7 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 操作人员 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">操作人员</label>
+          <Label className="text-gray-700">操作人员</Label>
           <Select
             value={filters.operatorId}
             onValueChange={(val) => onFiltersChange({ ...filters, operatorId: val })}

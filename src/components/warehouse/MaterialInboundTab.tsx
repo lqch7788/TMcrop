@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 export interface InboundMaterial {
@@ -354,7 +355,7 @@ export function MaterialInboundTab({
         <div className="flex items-end gap-4">
           <div className="flex-1 grid grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">入库单号</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">入库单号</Label>
               <Input
                 type="text"
                 value={inboundSearchCode}
@@ -364,7 +365,7 @@ export function MaterialInboundTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">供应商</Label>
               <Input
                 type="text"
                 value={inboundSearchSupplier}
@@ -374,7 +375,7 @@ export function MaterialInboundTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
               <Select value={inboundSearchStatus} onValueChange={(val) => setInboundSearchStatus(val)}>
                 <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                   <SelectValue placeholder="全部" />
@@ -388,7 +389,7 @@ export function MaterialInboundTab({
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">物料名称</Label>
               <Input
                 type="text"
                 value={inboundSearchMaterialName}
@@ -398,7 +399,7 @@ export function MaterialInboundTab({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">物料编码</label>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">物料编码</Label>
               <Input
                 type="text"
                 value={inboundSearchMaterialCode}

@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
+import { Label } from '../../components/ui/label';
 import { useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierCodeGenState {
@@ -47,7 +48,7 @@ export default function SupplierCodeGenerator({
       <div className="grid grid-cols-6 gap-4">
         {/* 供应商大类选择 */}
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">供应商大类</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">供应商大类</Label>
           <Select
             value={codeGen.bigCategory}
             onValueChange={(val) => onCodeGenChange('bigCategory', val)}
@@ -68,7 +69,7 @@ export default function SupplierCodeGenerator({
 
         {/* 供应商中类选择 */}
         <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">供应商中类</label>
+          <Label className="block text-sm font-medium text-gray-700 mb-1">供应商中类</Label>
           <Select
             value={codeGen.midCategory}
             onValueChange={(val) => onCodeGenChange('midCategory', val)}
@@ -90,7 +91,7 @@ export default function SupplierCodeGenerator({
 
         {/* 生成编码显示和操作 */}
         <div className="col-span-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <Label className="block text-sm font-medium text-gray-700 mb-1">
             生成编码
             {success && !error && (
               <span className="ml-2 text-sm text-green-600 font-normal">{success}</span>
@@ -98,7 +99,7 @@ export default function SupplierCodeGenerator({
             {error && (
               <span className="ml-2 text-sm text-red-600 font-normal">{error}</span>
             )}
-          </label>
+          </Label>
           <div className="flex gap-2">
             {/* 生成的编码显示 */}
             <Input
