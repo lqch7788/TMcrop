@@ -16,6 +16,8 @@ import {
   SourceType,
   InventoryStatus,
   InventoryStock,
+  TraceResult,
+  DownstreamTraceResult,
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { Button } from '../components/ui/button';
@@ -47,8 +49,8 @@ export default function InventoryV3Page() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedStock, setSelectedStock] = useState<InventoryStock | null>(null);
   const [traceData, setTraceData] = useState<{
-    upstream: any[];
-    downstream: any[];
+    upstream: TraceResult[];
+    downstream: DownstreamTraceResult[];
   } | null>(null);
   // 出库功能相关 state
   const [activeTab, setActiveTab] = useState<TabType>('list');
@@ -62,7 +64,7 @@ export default function InventoryV3Page() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const filters: any = {};
+      const filters: { stockType?: StockType; status?: InventoryStatus; sourceType?: SourceType } = {};
       if (filter.stockType) filters.stockType = filter.stockType;
       if (filter.status) filters.status = filter.status;
       if (filter.sourceType) filters.sourceType = filter.sourceType;
@@ -249,7 +251,7 @@ export default function InventoryV3Page() {
             </div>
             <Select
               value={filter.stockType}
-              onValueChange={(val) => setFilter({ ...filter, stockType: val as any })}
+              onValueChange={(val) => setFilter({ ...filter, stockType: val as StockType | '' })}
             >
               <SelectTrigger className="w-auto">
                 <SelectValue placeholder="全部类型" />
@@ -263,7 +265,7 @@ export default function InventoryV3Page() {
             </Select>
             <Select
               value={filter.status}
-              onValueChange={(val) => setFilter({ ...filter, status: val as any })}
+              onValueChange={(val) => setFilter({ ...filter, status: val as InventoryStatus | '' })}
             >
               <SelectTrigger className="w-auto">
                 <SelectValue placeholder="全部状态" />
@@ -279,7 +281,7 @@ export default function InventoryV3Page() {
             </Select>
             <Select
               value={filter.sourceType}
-              onValueChange={(val) => setFilter({ ...filter, sourceType: val as any })}
+              onValueChange={(val) => setFilter({ ...filter, sourceType: val as SourceType | '' })}
             >
               <SelectTrigger className="w-auto">
                 <SelectValue placeholder="全部来源" />

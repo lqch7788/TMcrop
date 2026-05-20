@@ -835,4 +835,3 @@ export default function StatisticsTab({
   );
 }
 
-console.log("组件创建成功: StatisticsTab");

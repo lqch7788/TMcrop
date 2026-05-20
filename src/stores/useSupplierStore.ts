@@ -26,7 +26,7 @@ interface SupplierState {
  * 数据库列名为snake_case（supplier_code, supplier_name等）
  * 写入时直接匹配DB列名，供API路由的INSERT/UPDATE使用
  */
-function toBackendFields(item: any): Record<string, any> {
+function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
   return {
     supplier_code: item.code,
     supplier_name: item.name,
@@ -56,7 +56,7 @@ function toBackendFields(item: any): Record<string, any> {
  * queryToObjects已将DB的snake_case转为camelCase（supplier_code→supplierCode）
  * 优先匹配camelCase（实际API返回格式），snake_case作为兜底
  */
-function fromBackendFields(record: any): Supplier {
+function fromBackendFields(record: Record<string, unknown>): Supplier {
   return {
     id: record.id,
     code: record.supplierCode || record.supplier_code || record.code || '',
@@ -90,7 +90,7 @@ export const useSupplierStore = create<SupplierState>()(
       loadItems: async () => {
         set({ isLoading: true, error: null });
         try {
-          const resp = await enhancedApiClient.get<any>('/suppliers?limit=200', {
+          const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/suppliers?limit=200', {
             useCache: true, cacheStrategy: 'network-first',
           });
           // enhancedApiClient 已提取 .data，resp 即为实际数据数组
@@ -99,7 +99,7 @@ export const useSupplierStore = create<SupplierState>()(
           set({ items: mapped, isLoading: false });
         } catch (error) {
           console.error('[useSupplierStore] 获取供应商失败:', error);
-          set({ error: (error as Error).message, isLoading: false });
+          set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
         }
       },
 
@@ -107,7 +107,7 @@ export const useSupplierStore = create<SupplierState>()(
         try {
           const backendData = toBackendFields(item);
           backendData.id = item.code || `SUP${Date.now()}`;
-          const result = await enhancedApiClient.post<any>('/suppliers', backendData, {
+          const result = await enhancedApiClient.post<Record<string, unknown>>('/suppliers', backendData, {
             offlineQueue: true, useCache: true,
           });
           const newItem: Supplier = {
@@ -128,8 +128,13 @@ export const useSupplierStore = create<SupplierState>()(
           await enhancedApiClient.put(`/suppliers/${id}`, backendUpdates, {
             offlineQueue: true,
           });
-          set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
-          return { ...updates } as Supplier;
+          let found: Supplier | null = null;
+          set((s) => {
+            const updated = s.items.map((i) => i.id === id ? { ...i, ...updates } as Supplier : i);
+            found = updated.find((i) => i.id === id) || null;
+            return { items: updated };
+          });
+          return found;
         } catch (error) {
           console.error('[useSupplierStore] 更新供应商失败:', error);
           return null;

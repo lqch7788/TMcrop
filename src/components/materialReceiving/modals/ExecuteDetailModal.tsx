@@ -147,4 +147,3 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
 };
 
 export default ExecuteDetailModal;
-console.log('组件创建成功: ExecuteDetailModal');

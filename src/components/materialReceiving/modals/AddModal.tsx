@@ -5,9 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import type { MaterialItem } from '../../../types/materialReceiving';
+import type { MaterialItem, MaterialRequestFormState } from '../../../types/materialReceiving';
 import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
 import { UserSelect } from '../../common/settings/UserSelect';
+import { useUserStore } from '../../../stores/useUserStore';
 
 // 生产计划批次号选项
 const PRODUCTION_BATCH_CODES = [
@@ -17,13 +18,13 @@ const PRODUCTION_BATCH_CODES = [
 
 interface AddModalProps {
   isOpen: boolean;
-  addForm: any;
-  onChange: (field: string, value: any) => void;
+  addForm: MaterialRequestFormState;
+  onChange: (field: string, value: string | number | boolean | MaterialItem[]) => void;
   onSave: () => void;
   onClose: () => void;
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
-  onMaterialChange: (index: number, field: string, value: any) => void;
+  onMaterialChange: (index: number, field: string, value: string | number) => void;
   onGenerateCode: () => void;
 }
 
@@ -38,8 +39,9 @@ export const AddModal: React.FC<AddModalProps> = ({
   onMaterialChange,
   onGenerateCode,
 }) => {
-  // 获取当前登录用户
-  const currentOperator = localStorage.getItem('username') || '陆启闯';
+  // 获取当前登录用户（优先从Store获取）
+  const storeUsers = useUserStore(state => state.users);
+  const currentOperator = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
   const isOtherBatch = addForm.productionBatchCode === '其他';
 
   // 物料编码或名称变化时，自动填充其他字段
@@ -363,4 +365,3 @@ export const AddModal: React.FC<AddModalProps> = ({
 };
 
 export default AddModal;
-console.log('组件创建成功: AddModal');

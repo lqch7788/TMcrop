@@ -92,4 +92,3 @@ export const StatCards: React.FC<StatCardsProps> = ({ summaryData }) => {
 };
 
 export default StatCards;
-console.log('组件创建成功: StatCards');

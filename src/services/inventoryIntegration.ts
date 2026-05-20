@@ -7,6 +7,7 @@ import {
   StockType,
   SourceType,
   BusinessType,
+  FrozenType,
   InboundRequest,
   OutboundRequest,
   FreezeRequest,
@@ -292,7 +293,7 @@ export async function inboundHarvest(
       // 采收的种子/种苗默认全量冻结，用于下次流转
       await inventoryService.freezeInventory({
         instanceId: result.instanceId,
-        frozenType: 'task' as any,
+        frozenType: FrozenType.TASK,
         frozenQuantity: harvestRecord.harvestQuantity,
         businessId: harvestRecord.id,
         businessType: BusinessType.HARVEST,

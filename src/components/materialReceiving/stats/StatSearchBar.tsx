@@ -331,4 +331,3 @@ export const StatSearchBar: React.FC<StatSearchBarProps> = ({
 };
 
 export default StatSearchBar;
-console.log('组件创建成功: StatSearchBar');

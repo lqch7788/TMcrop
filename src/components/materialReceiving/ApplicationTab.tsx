@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { MaterialReceivingRecord, MaterialItem } from '../../types/materialReceiving';
+import type { MaterialReceivingRecord, MaterialItem, MaterialRequestFormState } from '../../types/materialReceiving';
 
 interface ApplicationTabProps {
   // 状态
@@ -69,30 +69,10 @@ interface ApplicationTabProps {
   currentBatchEditIndex: number;
   setCurrentBatchEditIndex: (v: number) => void;
   // 表单状态
-  editForm: {
-    date: string;
-    applicant: string;
-    department: string;
-    warehouseLocation: string;
-    plantArea: string;
-    reviewer: string;
-    productionBatchCode: string;
-    status: string;
-    materials: MaterialItem[];
-  };
-  setEditForm: (v: any) => void;
-  addForm: {
-    code: string;
-    date: string;
-    applicant: string;
-    department: string;
-    warehouseLocation: string;
-    plantArea: string;
-    reviewer: string;
-    productionBatchCode: string;
-    materials: MaterialItem[];
-  };
-  setAddForm: (v: any) => void;
+  editForm: MaterialRequestFormState & { status: string };
+  setEditForm: (v: MaterialRequestFormState & { status: string }) => void;
+  addForm: MaterialRequestFormState;
+  setAddForm: (v: MaterialRequestFormState) => void;
   exportFileType: string;
   setExportFileType: (v: string) => void;
   // 回调函数
@@ -564,4 +544,3 @@ export default function ApplicationTab({
   );
 }
 
-console.log("组件创建成功: ApplicationTab");

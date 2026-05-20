@@ -122,4 +122,3 @@ export const DetailModal: React.FC<DetailModalProps> = ({ isOpen, record, onClos
 };
 
 export default DetailModal;
-console.log('组件创建成功: DetailModal');

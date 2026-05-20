@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { MaterialExecuteRecord, ExecuteMaterialItem, MaterialReceivingRecord } from '../../types/materialReceiving';
+import type { MaterialExecuteRecord, ExecuteMaterialItem, MaterialReceivingRecord, ExecuteAddFormState, ExecuteEditFormState } from '../../types/materialReceiving';
 
 interface ExecuteTabProps {
   // 状态
@@ -57,26 +57,10 @@ interface ExecuteTabProps {
   showBatchDeleteConfirm: boolean;
   setShowBatchDeleteConfirm: (v: boolean) => void;
   // 表单状态
-  editForm: {
-    date: string;
-    applicant: string;
-    warehouseLocation: string;
-    reviewer: string;
-    productionBatchCode: string;
-    executeStatus: string;
-    materials: ExecuteMaterialItem[];
-  };
-  setEditForm: (v: any) => void;
-  addForm: {
-    code: string;
-    date: string;
-    applicant: string;
-    warehouseLocation: string;
-    reviewer: string;
-    productionBatchCode: string;
-    materials: ExecuteMaterialItem[];
-  };
-  setAddForm: (v: any) => void;
+  editForm: ExecuteEditFormState & { executeStatus: string };
+  setEditForm: (v: ExecuteEditFormState & { executeStatus: string }) => void;
+  addForm: ExecuteAddFormState;
+  setAddForm: (v: ExecuteAddFormState) => void;
   exportFileType: string;
   setExportFileType: (v: string) => void;
   // 新增相关状态
@@ -105,10 +89,10 @@ interface ExecuteTabProps {
   onCancelAdd: () => void;
   onEditAddMaterial: () => void;
   onEditRemoveMaterial: (index: number) => void;
-  onEditMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: any) => void;
+  onEditMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: string | number) => void;
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
-  onMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: any) => void;
+  onMaterialChange: (index: number, field: keyof ExecuteMaterialItem, value: string | number) => void;
   onAddToMaterialPool: () => void;
   onRemoveFromMaterialPool: (index: number) => void;
   onUpdateMaterialPoolQuantity: (index: number, actualQuantity: number) => void;
@@ -573,4 +557,3 @@ export default function ExecuteTab({
   );
 }
 
-console.log("组件创建成功: ExecuteTab");

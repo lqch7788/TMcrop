@@ -41,7 +41,7 @@ export interface MaterialReturnItem {
 
 /** 获取退料列表 */
 export async function getMaterialReturns(params?: Record<string, string>): Promise<MaterialReturnRecord[]> {
-  const resp = await enhancedApiClient.get<any>('/material-returns', {
+  const resp = await enhancedApiClient.get<MaterialReturnRecord[]>('/material-returns', {
     useCache: true, cacheStrategy: 'network-first',
   });
   if (resp?.data) return resp.data;
@@ -51,7 +51,7 @@ export async function getMaterialReturns(params?: Record<string, string>): Promi
 
 /** 创建退料记录 */
 export async function createMaterialReturn(data: Omit<MaterialReturnRecord, 'id'>): Promise<MaterialReturnRecord | null> {
-  const result = await enhancedApiClient.post<any>('/material-returns', data, {
+  const result = await enhancedApiClient.post<MaterialReturnRecord>('/material-returns', data, {
     offlineQueue: true, useCache: true,
   });
   return result?.data || result;

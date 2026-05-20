@@ -77,17 +77,17 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
   }, [provinces, cityOptions, getChildren]);
 
   const handleProvinceChange = (value: string) => {
-    onFilterChange('province' as any, value);
-    onFilterChange('city' as any, '');
-    onFilterChange('district' as any, '');
+    onFilterChange('province', value);
+    onFilterChange('city', '');
+    onFilterChange('district', '');
     setCityOptions([]);
     setDistrictOptions([]);
     loadCities(value);
   };
 
   const handleCityChange = (value: string) => {
-    onFilterChange('city' as any, value);
-    onFilterChange('district' as any, '');
+    onFilterChange('city', value);
+    onFilterChange('district', '');
     setDistrictOptions([]);
     loadDistricts(value);
   };
@@ -227,7 +227,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">省份</Label>
             <Select
-              value={(filters as any).province || ''}
+              value={(filters.province ?? '') || ''}
               onValueChange={(val) => handleProvinceChange(val)}
             >
               <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
@@ -246,9 +246,9 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">城市</Label>
             <Select
-              value={(filters as any).city || ''}
+              value={(filters.city ?? '') || ''}
               onValueChange={(val) => handleCityChange(val)}
-              disabled={!(filters as any).province}
+              disabled={!(filters.province ?? '')}
             >
               <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
                 <SelectValue placeholder="全部" />
@@ -266,9 +266,9 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">区县</Label>
             <Select
-              value={(filters as any).district || ''}
-              onValueChange={(val) => onFilterChange('district' as any, val)}
-              disabled={!(filters as any).city}
+              value={(filters.district ?? '') || ''}
+              onValueChange={(val) => onFilterChange('district', val)}
+              disabled={!(filters.city ?? '')}
             >
               <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
                 <SelectValue placeholder="全部" />
@@ -317,7 +317,7 @@ export function filterSuppliers<T extends {
     if (filters.code && !supplier.code.toLowerCase().includes(filters.code.toLowerCase())) return false;
     if (filters.name && !supplier.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
     if (filters.contact && !supplier.contact.toLowerCase().includes(filters.contact.toLowerCase())) return false;
-    if (filters.type !== '全部' && (supplier as any).supplierType !== filters.type) return false;
+    if (filters.type !== '全部' && supplier.supplierType !== filters.type) return false;
     if (filters.status !== '全部' && supplier.status !== filters.status) return false;
     if (filters.supplierAttribute !== '全部' && supplier.supplierAttribute !== filters.supplierAttribute) return false;
     if (filters.organization !== '全部' && supplier.organization !== filters.organization) return false;

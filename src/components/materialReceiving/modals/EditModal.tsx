@@ -5,19 +5,19 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import type { MaterialReceivingRecord, MaterialItem } from '../../../types/materialReceiving';
+import type { MaterialReceivingRecord, MaterialItem, MaterialRequestFormState } from '../../../types/materialReceiving';
 import { UserSelect } from '../../common/settings/UserSelect';
 
 interface EditModalProps {
   isOpen: boolean;
   record: MaterialReceivingRecord;
-  editForm: any;
-  onChange: (field: string, value: any) => void;
+  editForm: MaterialRequestFormState;
+  onChange: (field: string, value: string | number | boolean | MaterialItem[]) => void;
   onSave: () => void;
   onClose: () => void;
   onAddMaterial: () => void;
   onRemoveMaterial: (index: number) => void;
-  onMaterialChange: (index: number, field: string, value: any) => void;
+  onMaterialChange: (index: number, field: string, value: string | number) => void;
 }
 
 export const EditModal: React.FC<EditModalProps> = ({
@@ -271,4 +271,3 @@ export const EditModal: React.FC<EditModalProps> = ({
 };
 
 export default EditModal;
-console.log('组件创建成功: EditModal');

@@ -45,4 +45,3 @@ export const DeleteConfirm: React.FC<DeleteConfirmProps> = ({ onConfirm, onCance
 };
 
 export default DeleteConfirm;
-console.log('组件创建成功: DeleteConfirm');

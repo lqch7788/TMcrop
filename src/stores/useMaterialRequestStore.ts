@@ -8,7 +8,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { MaterialReceivingRecord } from '../types/materialReceiving';
 
 interface MaterialRequestState {
   // 本地选中状态（用于审批联动等）

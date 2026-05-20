@@ -43,4 +43,3 @@ export const StatTabHeader: React.FC<StatTabHeaderProps> = ({
 };
 
 export default StatTabHeader;
-console.log('组件创建成功: StatTabHeader');

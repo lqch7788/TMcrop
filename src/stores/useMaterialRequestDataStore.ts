@@ -61,8 +61,8 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
   result.warehouseLocation = result.warehouseLocation || db.warehouseName || db.warehouseLocation || '';
 
   // 状态字段派生
-  const approvalStatus = result.approvalStatus || (db as any).approval_status || '';
-  const rawStatus = result.rawStatus || (db as any).status || '';
+  const approvalStatus = String(result.approvalStatus ?? db.approval_status ?? '');
+  const rawStatus = String(result.rawStatus ?? db.status ?? '');
   if (approvalStatus === 'approved') {
     result.status = '已审批';
     result.statusClass = 'approved';
@@ -89,7 +89,7 @@ function normalize(db: Record<string, unknown>): MaterialReceivingRecord {
     try { result.materials = JSON.parse(result.materials); } catch { result.materials = []; }
   }
   if (!Array.isArray(result.materials)) result.materials = [];
-  return result as unknown as MaterialReceivingRecord;
+  return result as MaterialReceivingRecord;
 }
 
 /** 前端数据 → 后端数据 */
@@ -135,7 +135,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         set({ isLoading: true, error: null });
         try {
           // enhancedApiClient 已自动提取 .data，resp 直接就是数组
-          const resp = await enhancedApiClient.get<any>('/material-requests', {
+          const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/material-requests', {
             useCache: true, cacheStrategy: 'network-first', params,
           });
           const list = Array.isArray(resp) ? resp : [];
@@ -144,7 +144,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
           set({ items: mapped, isLoading: false });
         } catch (error) {
           console.error('[MaterialRequestStore] 获取物料申请失败:', error);
-          set({ error: (error as Error).message, isLoading: false });
+          set({ error: error instanceof Error ? error.message : '获取物料申请失败', isLoading: false });
         }
       },
 
@@ -163,7 +163,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
           body.approval_status = 'pending';
           body.materials = JSON.stringify(body.materials || item.materials || []);
 
-          const result = await enhancedApiClient.post<any>('/material-requests', body, {
+          const result = await enhancedApiClient.post<Record<string, unknown>>('/material-requests', body, {
             offlineQueue: true, useCache: true,
           });
 
@@ -209,7 +209,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
 
         set((s) => ({
           items: s.items.map((i) =>
-            i.id === id || (i as any).code === id ? { ...i, ...updates } : i
+            i.id === id || i.code === id ? { ...i, ...updates } : i
           ),
         }));
 
@@ -225,7 +225,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       // ---------- 删除单个（乐观更新）----------
       deleteItem: async (id) => {
         set((s) => ({
-          items: s.items.filter((i) => i.id !== id && (i as any).code !== id),
+          items: s.items.filter((i) => i.id !== id && i.code !== id),
         }));
 
         try {
@@ -240,7 +240,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
       // ---------- 批量删除（乐观更新）----------
       deleteItems: async (ids) => {
         set((s) => ({
-          items: s.items.filter((i) => !ids.includes(i.id) && !ids.includes((i as any).code)),
+          items: s.items.filter((i) => !ids.includes(i.id) && !ids.includes(i.code)),
         }));
 
         try {
