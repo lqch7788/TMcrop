@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon, Plus, Edit, T
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -287,11 +289,9 @@ export function PurchasePlanTable({
               {/* checkbox 列 - 导出/批量模式时显示 */}
               {(exportMode || batchEditMode || batchDeleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === filteredAndSortedData.length && filteredAndSortedData.length > 0}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
@@ -336,16 +336,10 @@ export function PurchasePlanTable({
                   {/* checkbox - 导出/批量模式时显示 */}
                   {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(plan.purchaseApplicationCode)}
-                        onChange={() => onSelectRow(plan.purchaseApplicationCode)}
+                        onCheckedChange={() => onSelectRow(plan.purchaseApplicationCode)}
                         disabled={(batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')}
-                        className={`w-4 h-4 rounded border-gray-300 focus:ring-emerald-500 ${
-                          (batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'text-emerald-600'
-                        }`}
                       />
                     </td>
                   )}
@@ -377,24 +371,26 @@ export function PurchasePlanTable({
                     <div className="flex items-center gap-1">
                       {plan.status !== 'completed' && plan.status !== 'purchasing' && (
                         <>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => onEdit(plan)}
-                            className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
                             title="编辑"
                           >
                             <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               if (confirm(`确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`)) {
                                 onDelete(plan);
                               }
                             }}
-                            className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
                             title="删除"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                       {(plan.status === 'completed' || plan.status === 'purchasing') && (
@@ -437,15 +433,14 @@ export function PurchasePlanTable({
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+          <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
+            <SelectTrigger className="w-20 h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

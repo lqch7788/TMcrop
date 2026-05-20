@@ -2,6 +2,10 @@ import { X, Upload } from 'lucide-react';
 import { CropBatch, Greenhouse } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS } from '../constants';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { getAllVarieties } from '../../../services/cropVarietyService';
 import { getDictItems } from '../../../stores/useDictionaryStore';
 
@@ -112,22 +116,20 @@ export function BatchEditModal({
           {/* Batch Selector */}
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">选择生产计划批次号</label>
-              <select
-                value={selectedBatchCode}
-                onChange={(e) => onSelectedBatchCodeChange(e.target.value)}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-              >
-                <option value="">请选择批次号</option>
-                {selectedBatches.map(batch => (
-                  <option key={batch.id} value={batch.batchCode}>
-                    {batch.batchCode} - {batch.cropName}{' '}
-                    {editedBatchCodes.includes(batch.batchCode) && (
-                      <span className="bg-green-100 text-green-700">✅ 已编辑</span>
-                    )}
-                  </option>
-                ))}
-              </select>
+              <Label className="text-xs text-gray-600">选择生产计划批次号</Label>
+              <Select value={selectedBatchCode} onValueChange={(v) => onSelectedBatchCodeChange(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="请选择批次号" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedBatches.map(batch => (
+                    <SelectItem key={batch.id} value={batch.batchCode}>
+                      {batch.batchCode} - {batch.cropName}
+                      {editedBatchCodes.includes(batch.batchCode) ? ' [已编辑]' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -147,114 +149,132 @@ export function BatchEditModal({
                 {/* 种植模式 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">种植模式</div>
-                  <select
+                  <Select
                     value={editedData.plantingMode ?? currentBatch.plantingMode}
-                    onChange={(e) => handleFieldChange('plantingMode', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleFieldChange('plantingMode', v)}
                   >
-                    {plantingModeOptions.map(m => (
-                      <option key={m.id} value={m.name}>{m.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plantingModeOptions.map(m => (
+                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 作物名称 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">作物名称</div>
-                  <select
+                  <Select
                     value={editedData.cropName ?? currentBatch.cropName}
-                    onChange={(e) => handleCropChange(e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleCropChange(v)}
                   >
-                    {cropTypeOptions.map(c => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cropTypeOptions.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 作物品种 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                  <select
+                  <Select
                     value={editedData.variety ?? currentBatch.variety}
-                    onChange={(e) => handleFieldChange('variety', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleFieldChange('variety', v)}
                   >
-                    {(cropTypeOptions.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(cropTypeOptions.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 种植区域 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">种植区域</div>
-                  <select
+                  <Select
                     value={editedData.greenhouseId ?? currentBatch.greenhouseId}
-                    onChange={(e) => handleGreenhouseChange(e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleGreenhouseChange(v)}
                   >
-                    {greenhouses.filter(g => g.status === 'active').map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {greenhouses.filter(g => g.status === 'active').map(g => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 种植面积 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">种植面积</div>
-                  <input
+                  <Input
                     type="text"
                     value={editedData.plantingArea ?? currentBatch.plantingArea}
                     onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="h-8 px-2 text-sm"
                   />
                 </div>
 
                 {/* 开始时间 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">开始时间</div>
-                  <input
-                    type="date"
-                    value={editedData.startDate ?? currentBatch.startDate}
-                    onChange={(e) => handleFieldChange('startDate', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  <DatePicker
+                    selected={editedData.startDate ? new Date(editedData.startDate) : currentBatch.startDate ? new Date(currentBatch.startDate) : undefined}
+                    onChange={(date) => handleFieldChange('startDate', date.toISOString().split('T')[0])}
+                    placeholder="选择日期"
                   />
                 </div>
 
                 {/* 预计结束时间 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">预计结束时间</div>
-                  <input
-                    type="date"
-                    value={editedData.expectedHarvestDate ?? currentBatch.expectedHarvestDate}
-                    onChange={(e) => handleFieldChange('expectedHarvestDate', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  <DatePicker
+                    selected={editedData.expectedHarvestDate ? new Date(editedData.expectedHarvestDate) : currentBatch.expectedHarvestDate ? new Date(currentBatch.expectedHarvestDate) : undefined}
+                    onChange={(date) => handleFieldChange('expectedHarvestDate', date.toISOString().split('T')[0])}
+                    placeholder="选择日期"
                   />
                 </div>
 
                 {/* 负责人 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">负责人</div>
-                  <select
+                  <Select
                     value={editedData.responsiblePerson ?? currentBatch.responsiblePerson}
-                    onChange={(e) => handleFieldChange('responsiblePerson', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleFieldChange('responsiblePerson', v)}
                   >
-                    {RESPONSIBLE_PERSONS.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RESPONSIBLE_PERSONS.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* 目标产量 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">目标产量</div>
-                  <input
+                  <Input
                     type="text"
                     value={editedData.targetYield ?? currentBatch.targetYield}
                     onChange={(e) => handleFieldChange('targetYield', e.target.value)}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="h-8 px-2 text-sm"
                   />
                 </div>
 
@@ -287,14 +307,18 @@ export function BatchEditModal({
                 {/* 计划是否完成 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">计划是否完成</div>
-                  <select
+                  <Select
                     value={editedData.isCompleted === undefined ? 'no' : editedData.isCompleted ? 'yes' : 'no'}
-                    onChange={(e) => handleFieldChange('isCompleted', e.target.value === 'yes')}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    onValueChange={(v) => handleFieldChange('isCompleted', v === 'yes')}
                   >
-                    <option value="no">否</option>
-                    <option value="yes">是</option>
-                  </select>
+                    <SelectTrigger className="h-8 px-2 text-sm">
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">否</SelectItem>
+                      <SelectItem value="yes">是</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {editedData.isCompleted === true && (
                     <p className="text-xs text-red-600 mt-1 font-medium">
                       ⚠️ 选择"是"后计划将归档，无法编辑和删除

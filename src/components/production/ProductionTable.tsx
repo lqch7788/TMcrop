@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
 
@@ -72,31 +74,25 @@ export function ProductionTable({
             <tr>
               {exportMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={allSelectedForExport}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onSelectAll()}
                   />
                 </th>
               )}
               {batchEditMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={allSelectedForBatchEdit}
-                    onChange={onBatchSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onBatchSelectAll()}
                   />
                 </th>
               )}
               {batchDeleteMode && (
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={allSelectedForBatchDelete}
-                    onChange={onBatchDeleteSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => onBatchDeleteSelectAll()}
                   />
                 </th>
               )}
@@ -123,41 +119,35 @@ export function ProductionTable({
               <tr key={batch.id} className={getRowClassName(batch)}>
                 {exportMode && (
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedRows.includes(batch.id)}
-                      onChange={() => onSelectRow(batch.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      onCheckedChange={() => onSelectRow(batch.id)}
                     />
                   </td>
                 )}
                 {batchEditMode && (
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedRows.includes(batch.id)}
-                      onChange={() => {
+                      onCheckedChange={() => {
                         if (batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled') {
                           onSelectRow(batch.id);
                         }
                       }}
                       disabled={batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled'}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
                     />
                   </td>
                 )}
                 {batchDeleteMode && (
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selectedRows.includes(batch.id)}
-                      onChange={() => {
+                      onCheckedChange={() => {
                         if (batch.batchStatus === 'draft' || batch.batchStatus === 'cancelled') {
                           onSelectRow(batch.id);
                         }
                       }}
                       disabled={batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled'}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
                     />
                   </td>
                 )}
@@ -230,24 +220,28 @@ export function ProductionTable({
                   <div className="flex items-center gap-1">
                     {batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled' && (
                       <>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => onEdit(batch)}
-                          className="p-1.5 hover:bg-blue-50 rounded text-gray-600 hover:text-blue-600"
+                          className="text-gray-600 hover:text-blue-600"
                           title="编辑"
                         >
                           <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             if (confirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
                               onDelete(batch);
                             }
                           }}
-                          className="p-1.5 hover:bg-red-50 rounded text-gray-600 hover:text-red-600"
+                          className="text-gray-600 hover:text-red-600"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </>
                     )}
                     {(batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled') && (
@@ -297,15 +291,19 @@ export function ProductionTable({
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="w-20 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

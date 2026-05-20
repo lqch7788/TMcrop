@@ -2,8 +2,11 @@
  * 采购计划批量编辑弹窗组件
  */
 import React, { useRef, useEffect } from 'react';
-import { Modal, FormField, Select } from '../ui/Modal';
+import { Modal } from '../ui/Modal';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ChevronDown, Trash2, Plus } from 'lucide-react';
 import { UserSelect } from '../common/settings/UserSelect';
 import { useUserStore } from '../../stores';
@@ -159,85 +162,81 @@ function MaterialItemsEditTable({
             <tr key={idx} className="hover:bg-gray-50">
               {/* 删除按钮 */}
               <td className="px-2 py-2 text-center">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => {
                     onItemsChange(items.filter((_, i) => i !== idx));
                   }}
-                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
                   title="删除此行"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
               </td>
               {/* 物料编码 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.materialCode || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], materialCode: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs font-mono focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
               {/* 物料名称 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.materialName || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], materialName: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs font-medium focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
               {/* 分类 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.category || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], category: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
               {/* 规格型号 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.specification || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], specification: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
               {/* 单位 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.unit || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], unit: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-center focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs text-center rounded border-gray-200"
                 />
               </td>
               {/* 数量 */}
               <td className="px-2 py-2">
-                <input
+                <Input
                   type="number"
                   value={item.quantity || 0}
                   onChange={(e) => {
@@ -245,12 +244,12 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], quantity: Number(e.target.value) };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-right focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs text-right rounded border-gray-200"
                 />
               </td>
               {/* 预估单价 */}
               <td className="px-2 py-2">
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={item.estimatedPrice || 0}
@@ -259,33 +258,31 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], estimatedPrice: Number(e.target.value) };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs text-right focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs text-right rounded border-gray-200"
                 />
               </td>
               {/* 供应商 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.supplier || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], supplier: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
               {/* 用途说明 */}
               <td className="px-2 py-2">
-                <input
-                  type="text"
+                <Input
                   value={item.purpose || ''}
                   onChange={(e) => {
                     const newItems = [...items];
                     newItems[idx] = { ...newItems[idx], purpose: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="w-full px-1 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:border-blue-600"
+                  className="h-7 p-1 text-xs rounded border-gray-200"
                 />
               </td>
             </tr>
@@ -375,7 +372,7 @@ export function BatchEditModal({
 
           {/* 采购申请批次号选择下拉 */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">选择采购申请批次号</label>
+            <Label className="text-gray-700">选择采购申请批次号</Label>
             <BatchSelectDropdown
               selectedRows={selectedRows}
               purchasePlansData={purchasePlansData}
@@ -396,46 +393,50 @@ export function BatchEditModal({
               <div className="text-sm font-medium text-gray-900">{currentEditingPlan?.purchaseApplicationCode || '-'}</div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">采购类型</label>
-              <select
+              <Label className="text-xs text-gray-700">采购类型</Label>
+              <Select
                 value={batchEditData.purchaseType}
-                onChange={(e) => onBatchEditDataChange('purchaseType', e.target.value)}
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                onValueChange={(v) => onBatchEditDataChange('purchaseType', v)}
               >
-                <option value="production">生产物资采购</option>
-                <option value="urgent">紧急采购</option>
-                <option value="routine">常规采购</option>
-                <option value="material">通用物资</option>
-                <option value="safety">劳保用品</option>
-                <option value="equipment">设备采购</option>
-                <option value="other">其他</option>
-              </select>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="production">生产物资采购</SelectItem>
+                  <SelectItem value="urgent">紧急采购</SelectItem>
+                  <SelectItem value="routine">常规采购</SelectItem>
+                  <SelectItem value="material">通用物资</SelectItem>
+                  <SelectItem value="safety">劳保用品</SelectItem>
+                  <SelectItem value="equipment">设备采购</SelectItem>
+                  <SelectItem value="other">其他</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">关联生产批次号</label>
-              <select
+              <Label className="text-xs text-gray-700">关联生产批次号</Label>
+              <Select
                 value={currentEditingPlan?.relatedBatchCode || ''}
-                onChange={(e) => {
+                onValueChange={(v) => {
                   if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, relatedBatchCode: e.target.value });
+                    onCurrentEditingPlanChange({ ...currentEditingPlan, relatedBatchCode: v });
                   }
                 }}
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
               >
-                <option value="">不关联批次</option>
-                <option value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</option>
-                <option value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</option>
-                <option value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</option>
-                <option value="YMB2026-001">YMB2026-001 - 番茄育苗批次</option>
-                <option value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</option>
-                <option value="JZB2026-001">JZB2026-001 - 番茄种源批次</option>
-                <option value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</option>
-              </select>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="不关联批次" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不关联批次</SelectItem>
+                  <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
+                  <SelectItem value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</SelectItem>
+                  <SelectItem value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</SelectItem>
+                  <SelectItem value="YMB2026-001">YMB2026-001 - 番茄育苗批次</SelectItem>
+                  <SelectItem value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</SelectItem>
+                  <SelectItem value="JZB2026-001">JZB2026-001 - 番茄种源批次</SelectItem>
+                  <SelectItem value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 第2行：申请人 + 申请部门 + 需求日期 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">申请人</label>
+              <Label className="text-xs text-gray-700">申请人</Label>
               <UserSelect
                 value={currentEditingPlan?.applicantId || ''}
                 onChange={(value) => {
@@ -454,50 +455,52 @@ export function BatchEditModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">申请部门</label>
-              <select
+              <Label className="text-xs text-gray-700">申请部门</Label>
+              <Select
                 value={currentEditingPlan?.applicantDepartment || ''}
-                onChange={(e) => {
+                onValueChange={(v) => {
                   if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicantDepartment: e.target.value });
+                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicantDepartment: v });
                   }
                 }}
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
               >
-                <option value="">请选择</option>
-                <option value="生产部">生产部</option>
-                <option value="技术部">技术部</option>
-                <option value="后勤部">后勤部</option>
-                <option value="办公室">办公室</option>
-                <option value="财务部">财务部</option>
-                <option value="采购部">采购部</option>
-                <option value="仓储部">仓储部</option>
-                <option value="销售部">销售部</option>
-              </select>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="生产部">生产部</SelectItem>
+                  <SelectItem value="技术部">技术部</SelectItem>
+                  <SelectItem value="后勤部">后勤部</SelectItem>
+                  <SelectItem value="办公室">办公室</SelectItem>
+                  <SelectItem value="财务部">财务部</SelectItem>
+                  <SelectItem value="采购部">采购部</SelectItem>
+                  <SelectItem value="仓储部">仓储部</SelectItem>
+                  <SelectItem value="销售部">销售部</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">需求日期</label>
-              <input
+              <Label className="text-xs text-gray-700">需求日期</Label>
+              <Input
                 type="date"
                 value={batchEditData.requiredDate}
                 onChange={(e) => onBatchEditDataChange('requiredDate', e.target.value)}
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
 
             {/* 第3行：优先级 + 状态（只读不可编辑）+ 备注 */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">优先级</label>
-              <select
+              <Label className="text-xs text-gray-700">优先级</Label>
+              <Select
                 value={batchEditData.priority}
-                onChange={(e) => onBatchEditDataChange('priority', e.target.value)}
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
+                onValueChange={(v) => onBatchEditDataChange('priority', v)}
               >
-                <option value="urgent">紧急</option>
-                <option value="high">高</option>
-                <option value="normal">中</option>
-                <option value="low">低</option>
-              </select>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="urgent">紧急</SelectItem>
+                  <SelectItem value="high">高</SelectItem>
+                  <SelectItem value="normal">中</SelectItem>
+                  <SelectItem value="low">低</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">状态</div>
@@ -513,30 +516,30 @@ export function BatchEditModal({
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
-              <input
-                type="text"
+              <Label className="text-xs text-gray-700">备注</Label>
+              <Input
                 value={batchEditData.remark}
                 onChange={(e) => onBatchEditDataChange('remark', e.target.value)}
                 placeholder="输入备注"
-                className="w-full h-9 px-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
 
             {/* 第4行：物料明细（展开显示） */}
             <div className="md:col-span-3 border-t border-gray-200 pt-3 mt-2">
               <div className="flex items-center justify-between">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => onShowEditItemsExpandedChange(!showEditItemsExpanded)}
-                  className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
                 >
                   <ChevronDown className={`w-4 h-4 transition-transform ${showEditItemsExpanded ? 'rotate-180' : ''}`} />
                   物料明细（{batchEditItems.length || 0}种物料）
-                </button>
+                </Button>
                 {showEditItemsExpanded && (
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
                     onClick={() => {
                       const newItem: PurchasePlanItem = {
                         id: `new_${Date.now()}`,
@@ -559,11 +562,10 @@ export function BatchEditModal({
                       };
                       onBatchEditItemsChange([...batchEditItems, newItem]);
                     }}
-                    className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-md"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-4 h-4" />
                     新增物料
-                  </button>
+                  </Button>
                 )}
               </div>
 

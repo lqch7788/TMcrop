@@ -2,6 +2,9 @@ import { Search } from 'lucide-react';
 import { batchStatusLabels, PlanTypeLabels } from './constants';
 import { PlanType } from '../../types';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface ProductionFiltersProps {
   batchCodeSearch: string;
@@ -43,82 +46,82 @@ export function ProductionFilters({
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
       <div className="flex flex-col lg:flex-row gap-4 items-end">
+        {/* 计划类型下拉选择 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">计划类型</label>
-          <select
-            value={planTypeFilter}
-            onChange={(e) => onPlanTypeChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="all">全部类型</option>
-            {Object.entries(PlanTypeLabels).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+          <Label className="text-gray-700 text-center">计划类型</Label>
+          <Select value={planTypeFilter} onValueChange={(v) => onPlanTypeChange(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="全部类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              {Object.entries(PlanTypeLabels).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        {/* 批次编号搜索 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">批次编号</label>
-          <input
-            type="text"
+          <Label className="text-gray-700 text-center">批次编号</Label>
+          <Input
             placeholder="搜索批次编号"
             value={batchCodeSearch}
             onChange={(e) => onBatchCodeChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+        {/* 种植模式搜索 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">种植模式</label>
-          <input
-            type="text"
+          <Label className="text-gray-700 text-center">种植模式</Label>
+          <Input
             placeholder="搜索种植模式"
             value={plantingModeSearch}
             onChange={(e) => onPlantingModeChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+        {/* 作物名称搜索 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">作物名称</label>
-          <input
-            type="text"
+          <Label className="text-gray-700 text-center">作物名称</Label>
+          <Input
             placeholder="搜索作物名称"
             value={cropNameSearch}
             onChange={(e) => onCropNameChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+        {/* 作物品种搜索 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">作物品种</label>
-          <input
-            type="text"
+          <Label className="text-gray-700 text-center">作物品种</Label>
+          <Input
             placeholder="搜索作物品种"
             value={varietySearch}
             onChange={(e) => onVarietyChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+        {/* 种植区域搜索 */}
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">种植区域</label>
-          <input
-            type="text"
+          <Label className="text-gray-700 text-center">种植区域</Label>
+          <Input
             placeholder="搜索种植区域"
             value={greenhouseSearch}
             onChange={(e) => onGreenhouseChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+        {/* 状态下拉选择 */}
         <div className="min-w-[120px]">
-          <label className="block text-sm font-medium text-gray-700 text-center mb-1">状态</label>
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="all">全部状态</option>
-            {Object.entries(batchStatusLabels).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+          <Label className="text-gray-700 text-center">状态</Label>
+          <Select value={statusFilter} onValueChange={(v) => onStatusChange(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部状态</SelectItem>
+              {Object.entries(batchStatusLabels).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        {/* 操作按钮 */}
         <div className="flex gap-2 ml-2">
           <Button size="sm" onClick={onReset}>
             重置

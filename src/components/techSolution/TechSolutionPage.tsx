@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload, Leaf } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
+import { Label } from '../ui/label';
+import { Select as UISelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Input as UIInput } from '../ui/input';
+import { Checkbox } from '../ui/checkbox';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
@@ -545,68 +549,60 @@ export function TechSolutionPage() {
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">方案编号</label>
-            <input
-              type="text"
+            <Label>方案编号</Label>
+            <UIInput
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="请输入方案编号"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">作物</label>
-            <select
-              value={cropFilter}
-              onChange={(e) => setCropFilter(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>番茄</option>
-              <option>黄瓜</option>
-              <option>草莓</option>
-              <option>辣椒</option>
-            </select>
+            <Label>作物</Label>
+            <UISelect value={cropFilter} onValueChange={(v) => setCropFilter(v)}>
+              <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="番茄">番茄</SelectItem>
+                <SelectItem value="黄瓜">黄瓜</SelectItem>
+                <SelectItem value="草莓">草莓</SelectItem>
+                <SelectItem value="辣椒">辣椒</SelectItem>
+              </SelectContent>
+            </UISelect>
           </div>
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">编制人</label>
-            <input
-              type="text"
+            <Label>编制人</Label>
+            <UIInput
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="请输入编制人"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option>全部</option>
-              <option>已发布</option>
-              <option>草稿</option>
-              <option>审核中</option>
-            </select>
+            <Label>状态</Label>
+            <UISelect value={status} onValueChange={(v) => setStatus(v)}>
+              <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="全部">全部</SelectItem>
+                <SelectItem value="已发布">已发布</SelectItem>
+                <SelectItem value="草稿">草稿</SelectItem>
+                <SelectItem value="审核中">审核中</SelectItem>
+              </SelectContent>
+            </UISelect>
           </div>
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
-            <input
+            <Label>开始日期</Label>
+            <UIInput
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
-            <input
+            <Label>结束日期</Label>
+            <UIInput
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div className="flex gap-2">
@@ -725,11 +721,9 @@ export function TechSolutionPage() {
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
                 {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedRows.length === filteredTechSolutions.length && filteredTechSolutions.length > 0}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    onCheckedChange={() => handleSelectAll()}
                   />
                 </th>}
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案编号</th>
@@ -755,11 +749,9 @@ export function TechSolutionPage() {
                 <tr key={tech.id} className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode || batchDeleteMode) && (
                     <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(tech.id)}
-                        onChange={() => handleSelectRow(tech.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        onCheckedChange={() => handleSelectRow(tech.id)}
                       />
                     </td>
                   )}
@@ -872,15 +864,14 @@ export function TechSolutionPage() {
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+          <UISelect value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
+            <SelectTrigger className="w-20 h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </UISelect>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">
@@ -1058,14 +1049,14 @@ export function TechSolutionPage() {
                 <Input value={editForm.lastSubmitTime || new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
               </FormField>
               <FormField label="方案是否有效">
-                <select
+                <Select
                   value={editForm.isValid}
                   onChange={(e) => setEditForm({...editForm, isValid: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="有效">有效</option>
-                  <option value="作废">作废</option>
-                </select>
+                  options={[
+                    { value: '有效', label: '有效' },
+                    { value: '作废', label: '作废' },
+                  ]}
+                />
                 {editForm.isValid === '作废' && (
                   <p className="text-xs text-red-600 mt-1 font-medium">
                     ⚠️ 选择"作废"后方案将无法使用，提交后将进入审核流程
@@ -1206,15 +1197,11 @@ export function TechSolutionPage() {
           </FormField>
           <div className="grid grid-cols-2 gap-4">
             <FormField label="编制人">
-              <select
+              <Select
                 value={newPlanForm.author}
                 onChange={(e) => setNewPlanForm({...newPlanForm, author: e.target.value})}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                {operatorOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                options={operatorOptions}
+              />
             </FormField>
             <FormField label="创建日期">
               <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
@@ -1292,22 +1279,18 @@ export function TechSolutionPage() {
           {/* Batch Selector */}
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">选择技术方案编号</label>
-              <select
-                value={selectedTechCode}
-                onChange={(e) => setSelectedTechCode(e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">请选择方案编号</option>
-                {techSolutions.filter(t => selectedRows.includes(t.id)).map(tech => (
-                  <option key={tech.id} value={tech.code}>
-                    {tech.code} - {tech.title}{' '}
-                    {editedTechCodes.includes(tech.code) && (
-                      <span className="bg-green-100 text-green-700">✅ 已编辑</span>
-                    )}
-                  </option>
-                ))}
-              </select>
+              <Label>选择技术方案编号</Label>
+              <UISelect value={selectedTechCode} onValueChange={(v) => setSelectedTechCode(v)}>
+                <SelectTrigger><SelectValue placeholder="请选择方案编号" /></SelectTrigger>
+                <SelectContent>
+                  {techSolutions.filter(t => selectedRows.includes(t.id)).map(tech => (
+                    <SelectItem key={tech.id} value={tech.code}>
+                      {tech.code} - {tech.title}{' '}
+                      {editedTechCodes.includes(tech.code) ? '✅ 已编辑' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </UISelect>
             </div>
           </div>
 
@@ -1327,8 +1310,7 @@ export function TechSolutionPage() {
                 {/* 版本 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">版本</div>
-                  <input
-                    type="text"
+                  <UIInput
                     value={editedData.version ?? currentTech.version}
                     onChange={(e) => {
                       const updated = {
@@ -1340,15 +1322,14 @@ export function TechSolutionPage() {
                         setEditedTechCodes([...editedTechCodes, selectedTechCode]);
                       }
                     }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    className="h-7 py-0 text-xs"
                   />
                 </div>
 
                 {/* 方案标题 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2 col-span-2">
                   <div className="text-xs text-gray-500 mb-1">方案标题</div>
-                  <input
-                    type="text"
+                  <UIInput
                     value={editedData.title ?? currentTech.title}
                     onChange={(e) => {
                       const updated = {
@@ -1360,62 +1341,59 @@ export function TechSolutionPage() {
                         setEditedTechCodes([...editedTechCodes, selectedTechCode]);
                       }
                     }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    className="h-7 py-0 text-xs"
                   />
                 </div>
 
                 {/* 作物品种 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                  <select
-                    value={editedData.crop ?? currentTech.crop}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], crop: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-                  >
-                    <option>番茄</option>
-                    <option>黄瓜</option>
-                    <option>草莓</option>
-                    <option>辣椒</option>
-                  </select>
+                  <UISelect value={editedData.crop ?? currentTech.crop} onValueChange={(v) => {
+                    const updated = {
+                      ...editedTechs,
+                      [selectedTechCode]: { ...editedTechs[selectedTechCode], crop: v },
+                    };
+                    setEditedTechs(updated);
+                    if (!editedTechCodes.includes(selectedTechCode)) {
+                      setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                    }
+                  }}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="番茄">番茄</SelectItem>
+                      <SelectItem value="黄瓜">黄瓜</SelectItem>
+                      <SelectItem value="草莓">草莓</SelectItem>
+                      <SelectItem value="辣椒">辣椒</SelectItem>
+                    </SelectContent>
+                  </UISelect>
                 </div>
 
                 {/* 种植模式 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">种植模式</div>
-                  <select
-                    value={editedData.plantingMode ?? currentTech.plantingMode}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], plantingMode: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-                  >
-                    {plantingModes.map(mode => (
-                      <option key={mode} value={mode}>{mode}</option>
-                    ))}
-                  </select>
+                  <UISelect value={editedData.plantingMode ?? currentTech.plantingMode} onValueChange={(v) => {
+                    const updated = {
+                      ...editedTechs,
+                      [selectedTechCode]: { ...editedTechs[selectedTechCode], plantingMode: v },
+                    };
+                    setEditedTechs(updated);
+                    if (!editedTechCodes.includes(selectedTechCode)) {
+                      setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                    }
+                  }}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {plantingModes.map(mode => (
+                        <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </UISelect>
                 </div>
 
                 {/* 适用范围 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">适用范围</div>
-                  <input
-                    type="text"
+                  <UIInput
                     value={editedData.stage ?? currentTech.stage}
                     onChange={(e) => {
                       const updated = {
@@ -1427,7 +1405,7 @@ export function TechSolutionPage() {
                         setEditedTechCodes([...editedTechCodes, selectedTechCode]);
                       }
                     }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                    className="h-7 py-0 text-xs"
                   />
                 </div>
 
@@ -1462,24 +1440,23 @@ export function TechSolutionPage() {
                 {/* 状态 - 可编辑 */}
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">状态</div>
-                  <select
-                    value={editedData.status ?? currentTech.status}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], status: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-                  >
-                    <option>已发布</option>
-                    <option>审核中</option>
-                    <option>草稿</option>
-                  </select>
+                  <UISelect value={editedData.status ?? currentTech.status} onValueChange={(v) => {
+                    const updated = {
+                      ...editedTechs,
+                      [selectedTechCode]: { ...editedTechs[selectedTechCode], status: v },
+                    };
+                    setEditedTechs(updated);
+                    if (!editedTechCodes.includes(selectedTechCode)) {
+                      setEditedTechCodes([...editedTechCodes, selectedTechCode]);
+                    }
+                  }}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="已发布">已发布</SelectItem>
+                      <SelectItem value="审核中">审核中</SelectItem>
+                      <SelectItem value="草稿">草稿</SelectItem>
+                    </SelectContent>
+                  </UISelect>
                 </div>
 
                 {/* 方案详情文件 - 可编辑 */}
@@ -1661,27 +1638,29 @@ export function TechSolutionPage() {
               { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
               { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
             ].map((format) => (
-              <label
+              <div
                 key={format.value}
+                onClick={() => setExportFormat(format.value)}
                 className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                   exportFormat === format.value
                     ? 'border-emerald-500 bg-emerald-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="exportFormat"
-                  value={format.value}
-                  checked={exportFormat === format.value}
-                  onChange={(e) => setExportFormat(e.target.value)}
-                  className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
-                />
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  exportFormat === format.value
+                    ? 'border-emerald-500'
+                    : 'border-gray-300'
+                }`}>
+                  {exportFormat === format.value && (
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  )}
+                </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">{format.label}</p>
                   <p className="text-xs text-gray-500">{format.desc}</p>
                 </div>
-              </label>
+              </div>
             ))}
           </div>
         </div>
