@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { X, Upload, Camera } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 
 // 图片上传组件属性接口
 export interface ImageUploaderProps {
@@ -139,7 +140,7 @@ export function ImageUploader({
               <span className="text-sm text-gray-500">点击上传</span>
             </>
           )}
-          <input
+          <Input
             type="file"
             accept="image/*"
             multiple={!maxCount || maxCount > 1}
@@ -218,7 +219,7 @@ export function SingleImageUploader({
         >
           <Upload className="w-8 h-8 text-gray-400 mb-2" />
           <span className="text-sm text-gray-500">点击上传</span>
-          <input
+          <Input
             type="file"
             accept="image/*"
             onChange={handleFileChange}

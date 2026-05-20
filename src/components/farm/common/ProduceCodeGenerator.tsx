@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import {
   produceCategories,
   getProduceTypesByCategory,
@@ -70,69 +72,78 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
         {/* 大类选择 */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-          <select
+          <Select
             value={codeGen.bigCategory}
-            onChange={(e) => setCodeGen(prev => ({
+            onValueChange={(val) => setCodeGen(prev => ({
               ...prev,
-              bigCategory: e.target.value as ProduceCategoryCode,
+              bigCategory: val as ProduceCategoryCode,
               type: '',
               subCategory: '',
               generatedCode: '',
             }))}
-            className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           >
-            <option value="">请选择</option>
-            {produceCategories.map((cat) => (
-              <option key={cat.code} value={cat.code}>
-                {cat.code}-{cat.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {produceCategories.map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>
+                  {cat.code}-{cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 类型选择 */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-          <select
+          <Select
             value={codeGen.type}
-            onChange={(e) => setCodeGen(prev => ({
+            onValueChange={(val) => setCodeGen(prev => ({
               ...prev,
-              type: e.target.value,
+              type: val,
               subCategory: '',
               generatedCode: '',
             }))}
             disabled={!codeGen.bigCategory}
-            className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
           >
-            <option value="">请选择</option>
-            {currentTypes.map((type) => (
-              <option key={type.code} value={type.code}>
-                {type.code}-{type.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {currentTypes.map((type) => (
+                <SelectItem key={type.code} value={type.code}>
+                  {type.code}-{type.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 品种选择 */}
         <div className="col-span-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
-          <select
+          <Select
             value={codeGen.subCategory}
-            onChange={(e) => setCodeGen(prev => ({
+            onValueChange={(val) => setCodeGen(prev => ({
               ...prev,
-              subCategory: e.target.value,
+              subCategory: val,
               generatedCode: '',
             }))}
             disabled={!codeGen.type}
-            className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
           >
-            <option value="">请选择</option>
-            {currentSubCategories.map((sub) => (
-              <option key={sub.code} value={sub.code}>
-                {sub.code}-{sub.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              {currentSubCategories.map((sub) => (
+                <SelectItem key={sub.code} value={sub.code}>
+                  {sub.code}-{sub.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 生成编码 */}
@@ -147,7 +158,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
             )}
           </label>
           <div className="flex gap-2">
-            <input
+            <Input
               type="text"
               value={codeGen.generatedCode}
               placeholder="点击生成"

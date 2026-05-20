@@ -10,6 +10,7 @@ import { LabelResumeTimeline } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 import { usePlantLabelStore } from '../../../../stores';
 import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
+import { Input } from '../../../ui/input';
 
 const PAGE_SIZE = 20;
 const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
@@ -123,7 +124,7 @@ export default function SeedlingLabelManageModal({
         <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
+            <Input
               value={searchText}
               onChange={(e) => { setSearchText(e.target.value); setLabelPage(1); }}
               placeholder="搜索标签编号..."

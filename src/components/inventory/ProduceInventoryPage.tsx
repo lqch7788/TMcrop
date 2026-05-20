@@ -8,7 +8,9 @@ import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, Tre
 import { useWarehouseStore } from '../../stores';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Select, Modal } from '../ui/Modal';
+import { Select as RadixSelect, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
 import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
 import { ProduceDetailModal } from './ProduceDetailModal';
@@ -402,7 +404,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
               <Clock className="w-4 h-4 text-amber-600" />
               启用存储时间预警
             </label>
-            <input
+            <Input
               type="checkbox"
               checked={settings.enableStorageTimeAlert}
               onChange={(e) => setSettings({ ...settings, enableStorageTimeAlert: e.target.checked })}
@@ -412,7 +414,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
           {settings.enableStorageTimeAlert && (
             <div className="flex items-center gap-2 ml-6">
               <span className="text-sm text-gray-600">存储超过</span>
-              <input
+              <Input
                 type="number"
                 min="1"
                 value={settings.storageTimeThreshold}
@@ -431,7 +433,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
               <Package className="w-4 h-4 text-blue-600" />
               启用库存量预警
             </label>
-            <input
+            <Input
               type="checkbox"
               checked={settings.enableQuantityAlert}
               onChange={(e) => setSettings({ ...settings, enableQuantityAlert: e.target.checked })}
@@ -441,7 +443,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
           {settings.enableQuantityAlert && (
             <div className="flex items-center gap-2 ml-6">
               <span className="text-sm text-gray-600">库存低于</span>
-              <input
+              <Input
                 type="number"
                 min="0"
                 value={settings.minQuantityThreshold}
@@ -449,7 +451,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
                 className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               <span className="text-sm text-gray-600">{inventory.unit} 或高于</span>
-              <input
+              <Input
                 type="number"
                 min="0"
                 value={settings.maxQuantityThreshold}
@@ -1004,7 +1006,7 @@ export default function ProduceInventoryPage() {
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="搜索产品编码、作物名称、批次号..."
                 value={searchText}
@@ -1141,7 +1143,7 @@ export default function ProduceInventoryPage() {
               <tr>
                 {(exportMode || batchEditMode || deleteMode) && (
                   <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={isAllSelected}
                       onChange={handleSelectAll}
@@ -1179,7 +1181,7 @@ export default function ProduceInventoryPage() {
                   <tr key={item.id} className="hover:bg-blue-50 transition-colors">
                     {(exportMode || batchEditMode || deleteMode) && (
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <input
+                        <Input
                           type="checkbox"
                           checked={selectedRows.includes(item.id)}
                           onChange={() => handleSelectRow(item.id)}
@@ -1232,15 +1234,16 @@ export default function ProduceInventoryPage() {
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="px-2 py-1 border border-gray-200 rounded text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+            <RadixSelect value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
+              <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </RadixSelect>
             <span className="text-sm text-gray-500">条</span>
           </div>
           <div className="flex items-center gap-2">

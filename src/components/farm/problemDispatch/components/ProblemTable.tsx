@@ -5,6 +5,7 @@
 import React from 'react';
 import { Button } from '../../../ui/button';
 import { SourceCell } from './SourceCell';
+import { Input } from '../../../ui/input';
 
 // 状态映射：后端英文 → 前端中文
 const STATUS_CN_MAP: Record<string, string> = {
@@ -108,7 +109,7 @@ export function ProblemTable({
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold w-12">
                 {showCheckbox && problems.length > 0 && (
-                  <input
+                  <Input
                     type="checkbox"
                     checked={isAllSelected}
                     onChange={batchDispatchMode ? onBatchSelectAll : onToggleSelectAll}
@@ -139,7 +140,7 @@ export function ProblemTable({
                   <td className="px-4 py-3">
                     {batchDispatchMode ? (
                       getStatusCN(problem.status) === '待处理' && !problem.sourceTaskId ? (
-                        <input
+                        <Input
                           type="checkbox"
                           checked={selectedProblems.includes(problem.id)}
                           onChange={() => onToggleSelect(problem.id)}
@@ -147,7 +148,7 @@ export function ProblemTable({
                         />
                       ) : null
                     ) : (batchDeleteMode || exportMode) ? (
-                      <input
+                      <Input
                         type="checkbox"
                         checked={selectedRows.includes(problem.id)}
                         onChange={() => onToggleSelect(problem.id)}

@@ -5,6 +5,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { PAGE_SIZE_OPTIONS } from '../constants_taskDispatch';
 
 interface PaginationProps {
@@ -29,18 +30,22 @@ export function Pagination({
       {/* 每页条数选择 */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-500">每页</span>
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            onPageSizeChange(Number(e.target.value));
+        <Select
+          value={String(pageSize)}
+          onValueChange={(val) => {
+            onPageSizeChange(Number(val));
             onPageChange(1); // 重置到第一页
           }}
-          className="px-2 py-1 border border-gray-200 rounded text-sm"
         >
-          {PAGE_SIZE_OPTIONS.map(size => (
-            <option key={size} value={size}>{size}</option>
-          ))}
-        </select>
+          <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+            <SelectValue placeholder="20" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZE_OPTIONS.map(size => (
+              <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-sm text-gray-500">条</span>
       </div>
 

@@ -1,5 +1,7 @@
 import { Search } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 // 搜索过滤器类型
 export interface InspectionSearchFilters {
@@ -36,7 +38,7 @@ export function InspectionSearch({
         {/* 巡查编号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">巡查编号</label>
-          <input
+          <Input
             type="text"
             value={filters.recordCode}
             onChange={(e) => onFiltersChange({ ...filters, recordCode: e.target.value })}
@@ -48,23 +50,27 @@ export function InspectionSearch({
         {/* 巡查类型 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">巡查类型</label>
-          <select
+          <Select
             value={filters.inspectionType}
-            onChange={(e) => onFiltersChange({ ...filters, inspectionType: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, inspectionType: val })}
           >
-            <option value="">全部</option>
-            <option value="farm">种植区域巡查</option>
-            <option value="equipment">设备保养巡查</option>
-            <option value="infrastructure">基础设施巡检</option>
-            <option value="other">其他</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="farm">种植区域巡查</SelectItem>
+              <SelectItem value="equipment">设备保养巡查</SelectItem>
+              <SelectItem value="infrastructure">基础设施巡检</SelectItem>
+              <SelectItem value="other">其他</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 提交人 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">提交人</label>
-          <input
+          <Input
             type="text"
             value={filters.inspectorName}
             onChange={(e) => onFiltersChange({ ...filters, inspectorName: e.target.value })}
@@ -76,7 +82,7 @@ export function InspectionSearch({
         {/* 巡查日期(起) */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">巡查日期(起)</label>
-          <input
+          <Input
             type="date"
             value={filters.startDate}
             onChange={(e) => onFiltersChange({ ...filters, startDate: e.target.value })}
@@ -87,7 +93,7 @@ export function InspectionSearch({
         {/* 巡查日期(止) */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">巡查日期(止)</label>
-          <input
+          <Input
             type="date"
             value={filters.endDate}
             onChange={(e) => onFiltersChange({ ...filters, endDate: e.target.value })}
@@ -98,32 +104,40 @@ export function InspectionSearch({
         {/* 状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
+          <Select
             value={filters.status}
-            onChange={(e) => onFiltersChange({ ...filters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, status: val })}
           >
-            <option value="">全部</option>
-            <option value="normal">正常</option>
-            <option value="attention">需关注</option>
-            <option value="critical">异常</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="normal">正常</SelectItem>
+              <SelectItem value="attention">需关注</SelectItem>
+              <SelectItem value="critical">异常</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 问题处理状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">问题处理状态</label>
-          <select
+          <Select
             value={filters.problemStatus}
-            onChange={(e) => onFiltersChange({ ...filters, problemStatus: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onFiltersChange({ ...filters, problemStatus: val })}
           >
-            <option value="">全部</option>
-            <option value="待处理">待处理</option>
-            <option value="处理中">处理中</option>
-            <option value="待验收">待验收</option>
-            <option value="已处理">已处理</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              <SelectItem value="待处理">待处理</SelectItem>
+              <SelectItem value="处理中">处理中</SelectItem>
+              <SelectItem value="待验收">待验收</SelectItem>
+              <SelectItem value="已处理">已处理</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 按钮行 */}

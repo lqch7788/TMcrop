@@ -7,6 +7,9 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Supplier } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { TextArea } from '../../components/ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
 import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
 
 interface SupplierBatchEditModalProps {
@@ -169,20 +172,24 @@ export default function SupplierBatchEditModal({
         {/* 供应商选择下拉 + 导航 */}
         <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
           <label className="text-sm font-medium text-gray-700 whitespace-nowrap">当前编辑：</label>
-          <select
-            value={currentSupplierId ?? ''}
-            onChange={(e) => {
-              const idx = selectedSuppliers.findIndex(s => s.id === Number(e.target.value));
+          <Select
+            value={currentSupplierId != null ? String(currentSupplierId) : ''}
+            onValueChange={(val) => {
+              const idx = selectedSuppliers.findIndex(s => s.id === Number(val));
               if (idx >= 0) onSupplierSelect(idx);
             }}
-            className="flex-1 h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           >
-            {selectedSuppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.code} — {s.name} {batchEditedSuppliers[s.id] ? ' ✅' : ''}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="flex-1 h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="请选择供应商" />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedSuppliers.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
+                  {s.code} — {s.name} {batchEditedSuppliers[s.id] ? ' ✅' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -241,54 +248,70 @@ export default function SupplierBatchEditModal({
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">供应类型</label>
-              <select
+              <Select
                 value={getValue('supplierType')}
-                onChange={(e) => handleFieldChange('supplierType', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                onValueChange={(val) => handleFieldChange('supplierType', val)}
               >
-                <option value="">不修改</option>
-                {categories.map(cat => (
-                  <option key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="不修改" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不修改</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.code} value={cat.code}>{getSupplierTypeName(cat.code)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">供应商属性</label>
-              <select
+              <Select
                 value={getValue('supplierAttribute')}
-                onChange={(e) => handleFieldChange('supplierAttribute', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                onValueChange={(val) => handleFieldChange('supplierAttribute', val)}
               >
-                <option value="">不修改</option>
-                {supplierAttributeOptions.map(opt => (
-                  <option key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="不修改" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不修改</SelectItem>
+                  {supplierAttributeOptions.map(opt => (
+                    <SelectItem key={opt.dictCode} value={opt.dictLabel}>{opt.dictLabel}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">所属组织</label>
-              <select
+              <Select
                 value={getValue('organization')}
-                onChange={(e) => handleFieldChange('organization', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                onValueChange={(val) => handleFieldChange('organization', val)}
               >
-                <option value="">不修改</option>
-                <option value="宁波帮帮忙公司">宁波帮帮忙公司</option>
-                <option value="成都帮帮您公司">成都帮帮您公司</option>
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="不修改" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不修改</SelectItem>
+                  <SelectItem value="宁波帮帮忙公司">宁波帮帮忙公司</SelectItem>
+                  <SelectItem value="成都帮帮您公司">成都帮帮您公司</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">状态</label>
-              <select
+              <Select
                 value={getValue('status')}
-                onChange={(e) => handleFieldChange('status', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                onValueChange={(val) => handleFieldChange('status', val)}
               >
-                <option value="">不修改</option>
-                <option value="合作中">合作中</option>
-                <option value="暂停">暂停</option>
-                <option value="终止">终止</option>
-              </select>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                  <SelectValue placeholder="不修改" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">不修改</SelectItem>
+                  <SelectItem value="合作中">合作中</SelectItem>
+                  <SelectItem value="暂停">暂停</SelectItem>
+                  <SelectItem value="终止">终止</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -297,7 +320,7 @@ export default function SupplierBatchEditModal({
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">联系人</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('contact')}
                 onChange={(e) => handleFieldChange('contact', e.target.value)}
@@ -307,7 +330,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">移动电话</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('mobilePhone')}
                 onChange={(e) => handleFieldChange('mobilePhone', e.target.value)}
@@ -317,7 +340,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">工作电话</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('workPhone')}
                 onChange={(e) => handleFieldChange('workPhone', e.target.value)}
@@ -327,7 +350,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">传真</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('fax')}
                 onChange={(e) => handleFieldChange('fax', e.target.value)}
@@ -342,7 +365,7 @@ export default function SupplierBatchEditModal({
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">国家</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('country')}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
@@ -352,7 +375,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">省份</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('province')}
                 onChange={(e) => handleFieldChange('province', e.target.value)}
@@ -362,7 +385,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">城市</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('city')}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
@@ -373,7 +396,7 @@ export default function SupplierBatchEditModal({
           </div>
           <div className="mb-4">
             <label className="block text-xs font-medium text-gray-700 mb-1">详细地址</label>
-            <input
+            <Input
               type="text"
               value={getValue('address')}
               onChange={(e) => handleFieldChange('address', e.target.value)}
@@ -387,7 +410,7 @@ export default function SupplierBatchEditModal({
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">开户行</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('bankName')}
                 onChange={(e) => handleFieldChange('bankName', e.target.value)}
@@ -397,7 +420,7 @@ export default function SupplierBatchEditModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">银行卡号</label>
-              <input
+              <Input
                 type="text"
                 value={getValue('bankCardNumber')}
                 onChange={(e) => handleFieldChange('bankCardNumber', e.target.value)}
@@ -410,7 +433,7 @@ export default function SupplierBatchEditModal({
           {/* 备注 */}
           <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">备注</h4>
           <div>
-            <textarea
+            <TextArea
               value={getValue('remarks')}
               onChange={(e) => handleFieldChange('remarks', e.target.value)}
               placeholder={currentSupplier?.remarks || '未填写'}

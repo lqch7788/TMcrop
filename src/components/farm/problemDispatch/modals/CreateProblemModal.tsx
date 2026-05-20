@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
+import { TextArea } from '../../../ui/TextArea';
 
 interface CreateProblemModalProps {
   isOpen: boolean;
@@ -118,7 +119,7 @@ export function CreateProblemModal({
 
           <div className="md:col-span-3">
             <FormField label="问题描述" required error={errors.issueText}>
-              <textarea
+              <TextArea
                 value={formData.issueText}
                 onChange={(e) => onFormChange('issueText', e.target.value)}
                 placeholder="详细描述发现的问题..."

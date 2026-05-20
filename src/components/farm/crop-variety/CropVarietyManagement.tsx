@@ -15,6 +15,8 @@ import { AddCropVarietyModal } from './modals/AddCropVarietyModal';
 import { EditCropVarietyModal } from './modals/EditCropVarietyModal';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DisplayMode, VarietyTreeNode as VarietyTreeNodeType } from './types';
 import {
   getCategoryOptions,
@@ -531,70 +533,82 @@ export default function CropVarietyManagement() {
               {/* 类别 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
-                <select
+                <Select
                   value={codeGenCategory}
-                  onChange={(e) => setCodeGenCategory(e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  onValueChange={(val) => setCodeGenCategory(val)}
                 >
-                  <option value="">请选择</option>
-                  {categoryOptions.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 类型 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-                <select
+                <Select
                   value={codeGenType}
-                  onChange={(e) => setCodeGenType(e.target.value)}
+                  onValueChange={(val) => setCodeGenType(val)}
                   disabled={!codeGenCategory}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">请选择</option>
-                  {typeOptions.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeOptions.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 品种 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">品种</label>
-                <select
+                <Select
                   value={codeGenVariety}
-                  onChange={(e) => setCodeGenVariety(e.target.value)}
+                  onValueChange={(val) => setCodeGenVariety(val)}
                   disabled={!codeGenType}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">请选择</option>
-                  {varietyOptions.map(v => (
-                    <option key={v.value} value={v.value}>{v.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {varietyOptions.map(v => (
+                      <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 子品种（3位码） */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">子品种</label>
-                <select
+                <Select
                   value={codeGenSubVariety1}
-                  onChange={(e) => setCodeGenSubVariety1(e.target.value)}
+                  onValueChange={(val) => setCodeGenSubVariety1(val)}
                   disabled={!codeGenVariety || subVariety1Options.length === 0}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">请选择</option>
-                  {subVariety1Options.map(s => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subVariety1Options.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 详细品种名称（用户手工输入） */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">详细品种名称</label>
-                <input
+                <Input
                   type="text"
                   value={detailVarietyName}
                   onChange={(e) => setDetailVarietyName(e.target.value)}
@@ -607,14 +621,14 @@ export default function CropVarietyManagement() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">详细品种序号</label>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="text"
                     value={detailVarietyCode}
                     readOnly
                     placeholder="自动分配"
                     className="w-20 h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 font-mono"
                   />
-                  <input
+                  <Input
                     type="text"
                     value={generatedCode}
                     readOnly

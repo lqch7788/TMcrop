@@ -21,7 +21,7 @@ export interface SystemConfig {
   configKey: string;
   configValue: string;
   configType: string;       // 'string' | 'number' | 'boolean'
-  category: string;         // 'system' | 'task' | 'approval' | 'business'
+  category: string;         // 'system' | 'ui' | 'feature' | 'demo' | 'task' | 'approval' | 'business'
   description: string;
   isActive: boolean;
   createdAt: string;

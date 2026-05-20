@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, TransplantHistory, TransplantAction } from '../../../../types/crop';
 import { getTransplantHistory } from '../../../../services/seedlingService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface TransplantHistoryModalProps {
   isOpen: boolean;
@@ -80,15 +81,19 @@ export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHi
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium text-gray-700">选择二维码编号：</label>
-            <select
+            <Select
               value={selectedLabel}
-              onChange={(e) => setSelectedLabel(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setSelectedLabel(val)}
             >
-              {labelNumbers.map(label => (
-                <option key={label} value={label}>{label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="选择标签" />
+              </SelectTrigger>
+              <SelectContent>
+                {labelNumbers.map(label => (
+                  <SelectItem key={label} value={label}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

@@ -5,6 +5,7 @@
 
 import type { SourceModuleType } from '../constants/sourceConfig';
 import { SOURCE_MODULE_OPTIONS } from '../constants/sourceConfig';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SourceFilterProps {
   value: SourceModuleType | 'all';
@@ -15,17 +16,21 @@ export function SourceFilter({ value, onChange }: SourceFilterProps) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-500">来源：</span>
-      <select
+      <Select
         value={value}
-        onChange={(e) => onChange(e.target.value as SourceModuleType | 'all')}
-        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onValueChange={(val) => onChange(val as SourceModuleType | 'all')}
       >
-        {SOURCE_MODULE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-auto">
+          <SelectValue placeholder="全部" />
+        </SelectTrigger>
+        <SelectContent>
+          {SOURCE_MODULE_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

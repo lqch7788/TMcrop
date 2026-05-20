@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 interface OperationRecordPanelProps {
   records: UnifiedOperationRecord[];
@@ -68,19 +70,23 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
         <div className="px-6 py-3 border-b border-gray-200 flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">操作类型:</span>
-            <select
+            <Select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+              onValueChange={(val) => setFilterType(val)}
             >
-              {ACTION_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white w-auto">
+                <SelectValue placeholder="全部操作" />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTION_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
-            <input
+            <Input
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}

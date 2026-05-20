@@ -6,8 +6,9 @@ import React, { useMemo } from 'react';
 import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
-import { TreeSelect } from '@/components/ui';
+import { TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { TreeSelectNode } from '@/components/ui/TreeSelect';
+import { Input } from '../../../ui/input';
 
 interface PlantingFilterProps {
   filters: PlantingFilters;
@@ -70,22 +71,25 @@ export function PlantingFilter({
         {/* 作物品种 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
-          <select
+          <Select
             value={filters.cropName}
-            onChange={(e) => onChange({ ...filters, cropName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, cropName: val })}
           >
-            <option value="">全部</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              {cropNames.map(c => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 种植批号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">种植批号</label>
-          <input
+          <Input
             type="text"
             value={filters.plantCode}
             onChange={(e) => onChange({ ...filters, plantCode: e.target.value })}
@@ -97,7 +101,7 @@ export function PlantingFilter({
         {/* 来源批号（种源/育苗批号） */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">来源批号</label>
-          <input
+          <Input
             type="text"
             value={filters.sourceCode}
             onChange={(e) => onChange({ ...filters, sourceCode: e.target.value })}
@@ -109,7 +113,7 @@ export function PlantingFilter({
         {/* 定植日期 */}
         <div className="min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
-          <input
+          <Input
             type="date"
             value={filters.transplantDate}
             onChange={(e) => onChange({ ...filters, transplantDate: e.target.value })}
@@ -134,15 +138,18 @@ export function PlantingFilter({
         {/* 采收状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">采收状态</label>
-          <select
+          <Select
             value={filters.isHarvest}
-            onChange={(e) => onChange({ ...filters, isHarvest: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, isHarvest: val })}
           >
-            <option value="">全部</option>
-            <option value="false">未采收</option>
-            <option value="true">已采收</option>
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="false">未采收</SelectItem>
+              <SelectItem value="true">已采收</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -151,7 +158,7 @@ export function PlantingFilter({
         {/* 组织 */}
         <div className="min-w-[140px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">组织</label>
-          <input
+          <Input
             type="text"
             value={filters.orgName || ''}
             onChange={(e) => onChange({ ...filters, orgName: e.target.value })}
@@ -163,7 +170,7 @@ export function PlantingFilter({
         {/* 定植数量最小值 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≥</label>
-          <input
+          <Input
             type="number"
             value={filters.countMin || ''}
             onChange={(e) => onChange({ ...filters, countMin: e.target.value ? Number(e.target.value) : undefined })}
@@ -176,7 +183,7 @@ export function PlantingFilter({
         {/* 定植数量最大值 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">定植数量≤</label>
-          <input
+          <Input
             type="number"
             value={filters.countMax || ''}
             onChange={(e) => onChange({ ...filters, countMax: e.target.value ? Number(e.target.value) : undefined })}

@@ -7,6 +7,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, ChevronDown, ChevronRight, Leaf, Plus } from 'lucide-react';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   initVarieties,
@@ -152,7 +153,7 @@ export function CropCodeSelector({
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}

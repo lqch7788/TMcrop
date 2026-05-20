@@ -3,6 +3,7 @@ import { Barcode, Package } from 'lucide-react';
 import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { X } from 'lucide-react';
 
 interface MaterialEditModalProps {
@@ -79,7 +80,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 当前库存 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">当前库存</label>
-          <input
+          <Input
             type="number"
             value={form.quantity}
             onChange={(e) => handleChange('quantity', parseFloat(e.target.value) || 0)}
@@ -90,7 +91,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 单位 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">单位</label>
-          <input
+          <Input
             type="text"
             value={form.unit}
             onChange={(e) => handleChange('unit', e.target.value)}
@@ -101,7 +102,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 规格型号 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">规格型号</label>
-          <input
+          <Input
             type="text"
             value={form.specification}
             onChange={(e) => handleChange('specification', e.target.value)}
@@ -112,7 +113,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 最低库存 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">最低库存限值</label>
-          <input
+          <Input
             type="number"
             value={form.minStock}
             onChange={(e) => handleChange('minStock', parseFloat(e.target.value) || 0)}
@@ -123,7 +124,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 最高库存 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">最高库存限值</label>
-          <input
+          <Input
             type="number"
             value={form.maxStock}
             onChange={(e) => handleChange('maxStock', parseFloat(e.target.value) || 0)}
@@ -134,7 +135,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 单价 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">单价</label>
-          <input
+          <Input
             type="text"
             value={form.price}
             onChange={(e) => handleChange('price', e.target.value)}
@@ -145,7 +146,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 供应商 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">供应商</label>
-          <input
+          <Input
             type="text"
             value={form.supplier}
             onChange={(e) => handleChange('supplier', e.target.value)}
@@ -156,7 +157,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 存放位置 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">存放位置</label>
-          <input
+          <Input
             type="text"
             value={form.location}
             onChange={(e) => handleChange('location', e.target.value)}
@@ -167,7 +168,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 批次号 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">批次号</label>
-          <input
+          <Input
             type="text"
             value={form.batchNo}
             onChange={(e) => handleChange('batchNo', e.target.value)}
@@ -178,7 +179,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 生产日期 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">生产日期</label>
-          <input
+          <Input
             type="date"
             value={form.productionDate}
             onChange={(e) => handleChange('productionDate', e.target.value)}
@@ -189,7 +190,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 过期日期 */}
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">过期日期</label>
-          <input
+          <Input
             type="date"
             value={form.expiryDate}
             onChange={(e) => handleChange('expiryDate', e.target.value)}

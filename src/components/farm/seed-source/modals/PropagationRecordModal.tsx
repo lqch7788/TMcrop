@@ -9,6 +9,9 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Plus, Clock, Thermometer, Droplets, AlertTriangle } from 'lucide-react';
 import { SeedSource, PropagationType, PropagationStatus, PropagationRecord } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 // 阶段中文映射
 const STAGE_LABELS: Record<string, string> = {
@@ -150,7 +153,7 @@ export function PropagationRecordModal({
             {/* 记录日期 */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">记录日期</label>
-              <input
+              <Input
                 type="datetime-local"
                 value={formData.recordDate || ''}
                 onChange={(e) => setFormData({ ...formData, recordDate: e.target.value })}
@@ -161,15 +164,19 @@ export function PropagationRecordModal({
             {/* 阶段 */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">当前阶段</label>
-              <select
+              <Select
                 value={formData.stage}
-                onChange={(e) => setFormData({ ...formData, stage: e.target.value as PropagationStatus })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => setFormData({ ...formData, stage: val as PropagationStatus })}
               >
-                {Object.entries(STAGE_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="选择阶段" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(STAGE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 温度 */}
@@ -177,7 +184,7 @@ export function PropagationRecordModal({
               <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                 <Thermometer className="w-3 h-3 text-orange-500" /> 温度（℃）
               </label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.temperature ?? ''}
@@ -192,7 +199,7 @@ export function PropagationRecordModal({
               <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                 <Droplets className="w-3 h-3 text-blue-500" /> 湿度（%）
               </label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.humidity ?? ''}
@@ -205,7 +212,7 @@ export function PropagationRecordModal({
             {/* 操作人 */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">操作人</label>
-              <input
+              <Input
                 type="text"
                 value={formData.operator || ''}
                 onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
@@ -219,20 +226,24 @@ export function PropagationRecordModal({
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">授粉类型</label>
-                  <select
-                    value={formData.pollinationType || ''}
-                    onChange={(e) => setFormData({ ...formData, pollinationType: (e.target.value || undefined) as any })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <Select
+                    value={formData.pollinationType || '__none__'}
+                    onValueChange={(val) => setFormData({ ...formData, pollinationType: val === '__none__' ? undefined : val as any })}
                   >
-                    <option value="">未设置</option>
-                    <option value="self">自花授粉</option>
-                    <option value="cross">异花授粉</option>
-                    <option value="open">开放授粉</option>
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <SelectValue placeholder="未设置" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">未设置</SelectItem>
+                      <SelectItem value="self">自花授粉</SelectItem>
+                      <SelectItem value="cross">异花授粉</SelectItem>
+                      <SelectItem value="open">开放授粉</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">授粉作物</label>
-                  <input
+                  <Input
                     type="text"
                     value={formData.pollinatorCrop || ''}
                     onChange={(e) => setFormData({ ...formData, pollinatorCrop: e.target.value })}
@@ -242,7 +253,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">授粉花朵数</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.flowerCount || ''}
                     onChange={(e) => setFormData({ ...formData, flowerCount: Number(e.target.value) })}
@@ -251,7 +262,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">坐果数</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.fruitSetCount || ''}
                     onChange={(e) => setFormData({ ...formData, fruitSetCount: Number(e.target.value) })}
@@ -266,7 +277,7 @@ export function PropagationRecordModal({
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">采收种子数</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.harvestSeedCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestSeedCount: Number(e.target.value) })}
@@ -275,7 +286,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">种子重量(g)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.seedWeight || ''}
@@ -291,7 +302,7 @@ export function PropagationRecordModal({
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">采收苗数</label>
-                  <input
+                  <Input
                     type="number"
                     value={formData.harvestPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestPlantCount: Number(e.target.value) })}
@@ -306,7 +317,7 @@ export function PropagationRecordModal({
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">发芽率(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.germinationRate || ''}
@@ -316,7 +327,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">净度(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.purity || ''}
@@ -326,7 +337,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">水分(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.moisture || ''}
@@ -339,7 +350,7 @@ export function PropagationRecordModal({
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">成活率(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.survivalRate || ''}
@@ -349,7 +360,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">生根率(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.rootedRate || ''}
@@ -359,7 +370,7 @@ export function PropagationRecordModal({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">嫁接成活率(%)</label>
-                  <input
+                  <Input
                     type="number"
                     step="0.1"
                     value={formData.graftSuccessRate || ''}
@@ -375,7 +386,7 @@ export function PropagationRecordModal({
               <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-amber-500" /> 异常描述
               </label>
-              <input
+              <Input
                 type="text"
                 value={formData.abnormality || ''}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
@@ -387,7 +398,7 @@ export function PropagationRecordModal({
             {/* 备注 - 占两列 */}
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={formData.remarks || ''}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}

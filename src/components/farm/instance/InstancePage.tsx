@@ -8,6 +8,7 @@ import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '@/types/crop';
 import { Button } from '@/components/ui/button';
 import { CROP_INSTANCE_STATUS_MAP, SOURCE_ORIGIN_MAP } from '@/constants/cropConstants';
+import { Input } from '../../ui/input';
 
 export default function InstancePage() {
   const [searchCode, setSearchCode] = useState('');
@@ -90,7 +91,7 @@ export default function InstancePage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               搜索实例编码/作物品种
             </label>
-            <input
+            <Input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}

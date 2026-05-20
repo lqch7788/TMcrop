@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Modal, FormField } from '../../../ui/Modal';
 import { NumberInput } from '../../../ui/NumberInput';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { TextArea } from '../../../ui/TextArea';
 import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
@@ -144,7 +147,7 @@ export function CreateInspectionModal({
           <div className="flex-1">
             <FormField label="巡查编号" required>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="text"
                   value={newRecord.recordCode}
                   onChange={(e) => updateField('recordCode', e.target.value)}
@@ -177,44 +180,56 @@ export function CreateInspectionModal({
 
         {/* 巡查类型选择 */}
         <FormField label="巡查类型" required>
-          <select
+          <Select
             value={newRecord.inspectionType}
-            onChange={(e) => updateField('inspectionType', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onValueChange={(val) => updateField('inspectionType', val)}
           >
-            <option value="farm">种植区域巡查</option>
-            <option value="equipment">设备保养巡查</option>
-            <option value="infrastructure">基础设施巡检</option>
-            <option value="other">其他</option>
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder="种植区域巡查" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="farm">种植区域巡查</SelectItem>
+              <SelectItem value="equipment">设备保养巡查</SelectItem>
+              <SelectItem value="infrastructure">基础设施巡检</SelectItem>
+              <SelectItem value="other">其他</SelectItem>
+            </SelectContent>
+          </Select>
         </FormField>
 
         {/* 动态表单区域 - 根据巡查类型显示不同字段 */}
         {newRecord.inspectionType === 'farm' && (
           <div className="grid grid-cols-2 gap-4">
             <FormField label="巡查区域" required error={errors.greenhouseId}>
-              <select
+              <Select
                 value={newRecord.greenhouseId}
-                onChange={(e) => updateField('greenhouseId', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => updateField('greenhouseId', val)}
               >
-                <option value="">请选择区域</option>
-                {greenhouses.map(gh => (
-                  <option key={gh.id} value={gh.id}>{gh.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择区域" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择区域</SelectItem>
+                  {greenhouses.map(gh => (
+                    <SelectItem key={gh.id} value={gh.id}>{gh.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="作物名称" required error={errors.cropName}>
-              <select
+              <Select
                 value={newRecord.cropName}
-                onChange={(e) => updateField('cropName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => updateField('cropName', val)}
               >
-                <option value="">请选择作物</option>
-                {cropTypes.map(crop => (
-                  <option key={crop.id} value={crop.name}>{crop.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择作物" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择作物</SelectItem>
+                  {cropTypes.map(crop => (
+                    <SelectItem key={crop.id} value={crop.name}>{crop.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
           </div>
         )}
@@ -222,27 +237,30 @@ export function CreateInspectionModal({
         {newRecord.inspectionType === 'equipment' && (
           <div className="grid grid-cols-2 gap-4">
             <FormField label="选择设备" required error={errors.equipmentId}>
-              <select
+              <Select
                 value={newRecord.equipmentId}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-                  const eq = equipmentRecords.find(x => x.id === selectedId);
+                onValueChange={(val) => {
+                  const eq = equipmentRecords.find(x => x.id === val);
                   onNewRecordChange(prev => ({
                     ...prev,
-                    equipmentId: selectedId,
+                    equipmentId: val,
                     equipmentName: eq?.name || ''
                   }));
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">请选择设备</option>
-                {equipmentRecords.map(eq => (
-                  <option key={eq.id} value={eq.id}>{eq.name} - {eq.location}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <SelectValue placeholder="请选择设备" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择设备</SelectItem>
+                  {equipmentRecords.map(eq => (
+                    <SelectItem key={eq.id} value={eq.id}>{eq.name} - {eq.location}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="设备名称">
-              <input
+              <Input
                 type="text"
                 value={newRecord.equipmentName}
                 readOnly
@@ -256,28 +274,31 @@ export function CreateInspectionModal({
         {newRecord.inspectionType === 'infrastructure' && (
           <div className="grid grid-cols-2 gap-4">
             <FormField label="选择基础设施" required error={errors.infrastructureId}>
-              <select
+              <Select
                 value={newRecord.infrastructureId}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-                  const inf = infrastructureRecords.find(x => x.id === selectedId);
+                onValueChange={(val) => {
+                  const inf = infrastructureRecords.find(x => x.id === val);
                   // 使用函数式更新确保两个字段同步更新
                   onNewRecordChange(prev => ({
                     ...prev,
-                    infrastructureId: selectedId,
+                    infrastructureId: val,
                     infrastructureName: inf?.name || ''
                   }));
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
-                <option value="">请选择基础设施</option>
-                {infrastructureRecords.map(inf => (
-                  <option key={inf.id} value={inf.id}>{inf.name} - {inf.type}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  <SelectValue placeholder="请选择基础设施" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">请选择基础设施</SelectItem>
+                  {infrastructureRecords.map(inf => (
+                    <SelectItem key={inf.id} value={inf.id}>{inf.name} - {inf.type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="设施名称">
-              <input
+              <Input
                 type="text"
                 value={newRecord.infrastructureName}
                 readOnly
@@ -290,7 +311,7 @@ export function CreateInspectionModal({
 
         {newRecord.inspectionType === 'other' && (
           <FormField label="其他说明" required error={errors.remarks}>
-            <textarea
+            <TextArea
               value={newRecord.remarks}
               onChange={(e) => updateField('remarks', e.target.value)}
               placeholder="请输入其他巡查类型的具体说明"
@@ -303,7 +324,7 @@ export function CreateInspectionModal({
         {/* 巡查人员和关联批次 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="巡查人员">
-            <input
+            <Input
               type="text"
               value={users.find(u => u.id === newRecord.inspectorId)?.name || ''}
               readOnly
@@ -311,23 +332,27 @@ export function CreateInspectionModal({
             />
           </FormField>
           <FormField label="关联生产计划批次">
-            <select
+            <Select
               value={newRecord.batchId}
-              onChange={(e) => updateField('batchId', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => updateField('batchId', val)}
             >
-              <option value="">不关联批次</option>
-              {cropBatches.filter(b => b.status === 'active' || b.status === 'planning').map(batch => (
-                <option key={batch.id} value={batch.id}>{batch.batchCode} - {batch.cropName}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="不关联批次" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">不关联批次</SelectItem>
+                {cropBatches.filter(b => b.status === 'active' || b.status === 'planning').map(batch => (
+                  <SelectItem key={batch.id} value={batch.id}>{batch.batchCode} - {batch.cropName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
 
         {/* 日期、时间、时长 */}
         <div className="grid grid-cols-3 gap-4">
           <FormField label="巡查日期" required error={errors.checkDate}>
-            <input
+            <Input
               type="date"
               value={newRecord.checkDate}
               onChange={(e) => updateField('checkDate', e.target.value)}
@@ -335,7 +360,7 @@ export function CreateInspectionModal({
             />
           </FormField>
           <FormField label="巡查时间">
-            <input
+            <Input
               type="time"
               value={newRecord.checkTime}
               onChange={(e) => updateField('checkTime', e.target.value)}
@@ -355,15 +380,19 @@ export function CreateInspectionModal({
         {newRecord.inspectionType === 'farm' && (
           <div className="grid grid-cols-3 gap-4">
             <FormField label="作物状态">
-              <select
+              <Select
                 value={newRecord.cropStatus}
-                onChange={(e) => updateField('cropStatus', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => updateField('cropStatus', val)}
               >
-                {CROP_STATUS_LABELS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择作物状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CROP_STATUS_LABELS.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
             <FormField label="株高(cm)">
               <NumberInput
@@ -452,7 +481,7 @@ export function CreateInspectionModal({
           <FormField label="巡查结果" required>
             <div className="flex gap-6">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input
+                <Input
                   type="checkbox"
                   checked={newRecord.inspectionResult === 'normal'}
                   onChange={() => {
@@ -466,7 +495,7 @@ export function CreateInspectionModal({
                 </span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group">
-                <input
+                <Input
                   type="checkbox"
                   checked={newRecord.inspectionResult === 'abnormal'}
                   onChange={() => {
@@ -500,7 +529,7 @@ export function CreateInspectionModal({
                           : 'border-gray-200 bg-white text-gray-600 hover:border-red-300'
                       }`}
                     >
-                      <input
+                      <Input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {
@@ -560,7 +589,7 @@ export function CreateInspectionModal({
 
             {/* 问题描述 */}
             <FormField label="问题描述">
-              <textarea
+              <TextArea
                 value={newRecord.issueText}
                 onChange={(e) => updateField('issueText', e.target.value)}
                 placeholder={newRecord.issueCategories?.length === 1 ? "请详细描述发现的问题" : "请详细描述各种问题现象"}
@@ -585,7 +614,7 @@ export function CreateInspectionModal({
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <input
+                    <Input
                       type="radio"
                       name="issueSeverity"
                       value={level}
@@ -626,7 +655,7 @@ export function CreateInspectionModal({
                     <label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
                       <Camera className="w-6 h-6 text-gray-400" />
                       <span className="text-xs text-gray-400 mt-1">添加</span>
-                      <input
+                      <Input
                         type="file"
                         accept="image/*"
                         multiple
@@ -678,28 +707,31 @@ export function CreateInspectionModal({
                   );
                 })}
               </div>
-              <select
+              <Select
                 value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    toggleFeedbackUser(e.target.value);
-                    e.target.value = '';
+                onValueChange={(val) => {
+                  if (val) {
+                    toggleFeedbackUser(val);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
               >
-                <option value="">+ 选择反馈人员</option>
-                {users.filter(u => !(newRecord.feedbackUsers || []).includes(u.id)).map(user => (
-                  <option key={user.id} value={user.id}>{user.name} - {user.role}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                  <SelectValue placeholder="+ 选择反馈人员" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">+ 选择反馈人员</SelectItem>
+                  {users.filter(u => !(newRecord.feedbackUsers || []).includes(u.id)).map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.name} - {user.role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
           </div>
         )}
 
         {/* 备注 */}
         <FormField label="备注">
-          <textarea
+          <TextArea
             value={newRecord.remarks}
             onChange={(e) => updateField('remarks', e.target.value)}
             placeholder="请输入巡查备注"

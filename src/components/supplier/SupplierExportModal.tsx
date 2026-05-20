@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../ui/input';
 import { UnifiedModal } from '../ui/UnifiedModal';
 
 interface SupplierExportModalProps {
@@ -41,7 +42,7 @@ export default function SupplierExportModal({ isOpen, exportFormat, selectedCoun
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <input
+                <Input
                   type="radio"
                   name="exportFormat"
                   value={format.value}

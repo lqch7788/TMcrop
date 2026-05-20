@@ -7,6 +7,9 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Search, X } from 'lucide-react';
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { TextArea } from '../../ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
@@ -177,14 +180,18 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">数据来源</label>
-                <select
+                <Select
                   value={form.dataSource}
-                  onChange={(e) => updateField('dataSource', e.target.value)}
-                  className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  onValueChange={(val) => updateField('dataSource', val)}
                 >
-                  <option value="manual">手动录入</option>
-                  <option value="auto_iot">IoT自动</option>
-                </select>
+                  <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectValue placeholder="手动录入" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">手动录入</SelectItem>
+                    <SelectItem value="auto_iot">IoT自动</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -221,7 +228,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 ) : (
                   <>
                     <div className="flex">
-                      <input
+                      <Input
                         type="text"
                         value={planSearchKeyword}
                         onChange={(e) => { setPlanSearchKeyword(e.target.value); setShowPlanSearch(true); }}
@@ -298,7 +305,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">关联种植记录</label>
-                <input
+                <Input
                   type="text"
                   value={form.plantingCode || ''}
                   onChange={(e) => updateField('plantingCode', e.target.value)}
@@ -328,7 +335,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   肥料名称 <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   value={form.fertilizerName}
                   onChange={(e) => updateField('fertilizerName', e.target.value)}
@@ -340,7 +347,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">稀释比例</label>
-                <input
+                <Input
                   type="text"
                   value={form.dilutionRatio}
                   onChange={(e) => updateField('dilutionRatio', e.target.value)}
@@ -350,7 +357,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">施肥量 (kg)</label>
-                <input
+                <Input
                   type="number"
                   value={form.quantity || ''}
                   onChange={(e) => updateField('quantity', Number(e.target.value))}
@@ -362,7 +369,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">单价 (元/kg)</label>
-                <input
+                <Input
                   type="number"
                   value={form.unitPrice || ''}
                   onChange={(e) => updateField('unitPrice', Number(e.target.value))}
@@ -375,7 +382,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">总成本（自动计算）</label>
-              <input
+              <Input
                 type="text"
                 value={`${form.totalCost.toFixed(2)} 元`}
                 readOnly
@@ -392,7 +399,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">温室位置</label>
-                <input
+                <Input
                   type="text"
                   value={form.greenhouseName}
                   onChange={(e) => updateField('greenhouseName', e.target.value)}
@@ -421,7 +428,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">施肥时间</label>
-              <input
+              <Input
                 type="datetime-local"
                 value={form.fertilizeTime}
                 onChange={(e) => updateField('fertilizeTime', e.target.value)}
@@ -437,7 +444,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">操作员</label>
-              <input
+              <Input
                 type="text"
                 value={form.operatorName}
                 onChange={(e) => updateField('operatorName', e.target.value)}
@@ -447,7 +454,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={form.description}
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder="请输入备注信息"

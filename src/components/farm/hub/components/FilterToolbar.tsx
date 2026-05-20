@@ -6,6 +6,8 @@
 import React from 'react';
 import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 
 interface FilterToolbarProps {
@@ -67,7 +69,7 @@ export function FilterToolbar({
           {/* 任务ID搜索 */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">任务ID</label>
-            <input
+            <Input
               type="text"
               value={taskIdSearch}
               onChange={(e) => onTaskIdChange(e.target.value)}
@@ -79,59 +81,75 @@ export function FilterToolbar({
           {/* 时间范围筛选 */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">时间范围</label>
-            <select
+            <Select
               value={timeFilter}
-              onChange={(e) => onTimeFilterChange(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => onTimeFilterChange(val)}
             >
-              {TIME_FILTER_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="全部" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_FILTER_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 任务区域筛选 */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">任务区域编号</label>
-            <select
+            <Select
               value={fieldFilter}
-              onChange={(e) => onFieldFilterChange(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => onFieldFilterChange(val)}
             >
-              <option value="all">全部任务区域</option>
-              {fields.map(f => (
-                <option key={f.id} value={f.name}>{f.name} ({f.crop})</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="全部任务区域" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部任务区域</SelectItem>
+                {fields.map(f => (
+                  <SelectItem key={f.id} value={f.name}>{f.name} ({f.crop})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 执行人筛选 */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">执行人</label>
-            <select
+            <Select
               value={assigneeFilter}
-              onChange={(e) => onAssigneeFilterChange(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => onAssigneeFilterChange(val)}
             >
-              <option value="all">全部人员</option>
-              {staff.map(s => (
-                <option key={s.id} value={s.name}>{s.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="全部人员" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部人员</SelectItem>
+                {staff.map(s => (
+                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 状态筛选 */}
           <div>
             <label className="block text-xs text-gray-500 mb-1">状态</label>
-            <select
+            <Select
               value={statusFilter}
-              onChange={(e) => onStatusFilterChange(e.target.value)}
-              className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => onStatusFilterChange(val)}
             >
-              {STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

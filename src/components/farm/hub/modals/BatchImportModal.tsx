@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
 
 // 导入行类型
 export interface ImportRow {
@@ -180,7 +181,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
               importFile ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 hover:border-gray-400'
             }`}
           >
-            <input
+            <Input
               type="file"
               accept=".csv,.xlsx"
               onChange={handleFileChange}

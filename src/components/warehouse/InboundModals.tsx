@@ -5,6 +5,8 @@ import { useUserStore } from '../../stores/useUserStore';
 import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun } from 'docx';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;
@@ -296,7 +298,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.materialCode}
                             onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
@@ -308,7 +310,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.materialName}
                             onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
@@ -320,7 +322,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.category}
                             onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
@@ -332,7 +334,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.specification}
                             onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
@@ -344,7 +346,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.unit}
                             onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
@@ -356,7 +358,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="number"
                             value={m.quantity}
                             onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
@@ -368,7 +370,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.price}
                             onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
@@ -380,7 +382,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.batchNo}
                             onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
@@ -392,7 +394,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.productionDate}
                             onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
@@ -404,7 +406,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
                       </td>
                       <td className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <input
+                          <Input
                             type="text"
                             value={m.expiryDate}
                             onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
@@ -558,26 +560,30 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
           <div className="flex items-center gap-4 mb-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-600 mb-1">选择入库记录</label>
-              <select
-                value={currentRecord.id}
-                onChange={(e) => {
-                  const idx = records.findIndex(r => r.id === Number(e.target.value));
+              <Select
+                value={String(currentRecord.id)}
+                onValueChange={(val) => {
+                  const idx = records.findIndex(r => r.id === Number(val));
                   if (idx >= 0) setCurrentIndex(idx);
                 }}
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
               >
-                {records.map((r, idx) => (
-                  <option key={r.id} value={r.id}>
-                    {r.code} - {r.supplier} ({r.materials.length}种物料) {editedMaterials[r.id] && <span className="bg-green-100 text-green-700">✅ 已编辑</span>} {idx !== currentIndex ? '' : '←'}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                  <SelectValue placeholder="选择入库记录" />
+                </SelectTrigger>
+                <SelectContent>
+                  {records.map((r, idx) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.code} - {r.supplier} ({r.materials.length}种物料){editedMaterials[r.id] ? ' ✅ 已编辑' : ''}{idx !== currentIndex ? '' : ' ←'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-5 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">入库单号</label>
-              <input
+              <Input
                 type="text"
                 value={currentRecord.code}
                 readOnly
@@ -586,7 +592,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">入库日期</label>
-              <input
+              <Input
                 type="date"
                 value={currentRecord.inboundDate}
                 readOnly
@@ -595,7 +601,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">供应商</label>
-              <input
+              <Input
                 type="text"
                 value={currentRecord.supplier}
                 readOnly
@@ -604,7 +610,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">操作员</label>
-              <input
+              <Input
                 type="text"
                 value={currentRecord.operator}
                 readOnly
@@ -613,14 +619,16 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">状态</label>
-              <select
-                value={currentRecord.status}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100"
-              >
-                <option value="pending">待审核</option>
-                <option value="completed">已完成</option>
-                <option value="voided">已作废</option>
-              </select>
+              <Select value={currentRecord.status} disabled>
+                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm bg-gray-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="completed">已完成</SelectItem>
+                  <SelectItem value="voided">已作废</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -687,7 +695,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.materialCode}
                           onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
@@ -699,7 +707,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.materialName}
                           onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
@@ -711,7 +719,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
@@ -723,7 +731,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
@@ -735,7 +743,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
@@ -747,7 +755,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
@@ -759,7 +767,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="number"
                           value={m.quantity}
                           onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
@@ -771,7 +779,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
@@ -783,7 +791,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.supplier}
                           onChange={(e) => handleMaterialChange(m.id, 'supplier', e.target.value)}
@@ -795,7 +803,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
@@ -807,7 +815,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
@@ -819,7 +827,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="date"
                           value={m.productionDate}
                           onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
@@ -831,7 +839,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="date"
                           value={m.expiryDate}
                           onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
@@ -843,7 +851,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     </td>
                     <td className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <input
+                        <Input
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}
@@ -1234,7 +1242,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <input
+                <Input
                   type="radio"
                   name="exportFormat"
                   value={format.value}
@@ -1549,7 +1557,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">入库单号</label>
               <div className="flex gap-1">
-                <input
+                <Input
                   type="text"
                   value={formData.code}
                   onChange={(e) => {
@@ -1569,7 +1577,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">入库日期</label>
-              <input
+              <Input
                 type="date"
                 value={formData.inboundDate}
                 readOnly
@@ -1578,7 +1586,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">供应商</label>
-              <input
+              <Input
                 type="text"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
@@ -1587,7 +1595,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
             </div>
             <div>
               <label className="block text-xs font-medium text-emerald-700 mb-1">操作员</label>
-              <input
+              <Input
                 type="text"
                 value={formData.operator}
                 readOnly
@@ -1640,7 +1648,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         </Button>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.materialCode}
                           onChange={(e) => handleMaterialChange(m.id, 'materialCode', e.target.value)}
@@ -1648,7 +1656,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.materialName}
                           onChange={(e) => handleMaterialChange(m.id, 'materialName', e.target.value)}
@@ -1656,7 +1664,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
@@ -1664,7 +1672,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
@@ -1672,7 +1680,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
@@ -1680,7 +1688,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
@@ -1688,7 +1696,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="number"
                           value={m.quantity}
                           onChange={(e) => handleMaterialChange(m.id, 'quantity', Number(e.target.value))}
@@ -1696,7 +1704,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
@@ -1704,7 +1712,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.supplier}
                           onChange={(e) => handleMaterialChange(m.id, 'supplier', e.target.value)}
@@ -1712,7 +1720,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
@@ -1720,7 +1728,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.batchNo}
                           onChange={(e) => handleMaterialChange(m.id, 'batchNo', e.target.value)}
@@ -1728,7 +1736,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="date"
                           value={m.productionDate}
                           onChange={(e) => handleMaterialChange(m.id, 'productionDate', e.target.value)}
@@ -1736,7 +1744,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="date"
                           value={m.expiryDate}
                           onChange={(e) => handleMaterialChange(m.id, 'expiryDate', e.target.value)}
@@ -1744,7 +1752,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <input
+                        <Input
                           type="text"
                           value={m.remarks}
                           onChange={(e) => handleMaterialChange(m.id, 'remarks', e.target.value)}

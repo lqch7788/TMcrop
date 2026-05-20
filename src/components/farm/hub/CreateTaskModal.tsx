@@ -10,6 +10,9 @@ import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { TextArea } from '../../ui/TextArea';
 
 interface CreateTaskModalProps {
   onClose: () => void;
@@ -143,7 +146,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
             <div className="space-y-3">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">任务标题 <span className="text-red-500">*</span></label>
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -155,50 +158,62 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">任务类型</label>
-                  <select
+                  <Select
                     value={taskType}
-                    onChange={(e) => setTaskType(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    onValueChange={(val) => setTaskType(val)}
                   >
-                    {FARM_OPERATION_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <SelectValue placeholder="请选择类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FARM_OPERATION_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">关联批次</label>
-                  <select
+                  <Select
                     value={batchCode}
-                    onChange={(e) => setBatchCode(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    onValueChange={(val) => setBatchCode(val)}
                   >
-                    <option value="">请选择批次</option>
-                    {cropBatches.map((batch) => (
-                      <option key={batch.batchCode} value={batch.batchCode}>
-                        {batch.batchCode} - {batch.cropName}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <SelectValue placeholder="请选择批次" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">请选择批次</SelectItem>
+                      {cropBatches.map((batch) => (
+                        <SelectItem key={batch.batchCode} value={batch.batchCode}>
+                          {batch.batchCode} - {batch.cropName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">执行区域 <span className="text-red-500">*</span></label>
-                  <select
+                  <Select
                     value={greenhouse}
-                    onChange={(e) => setGreenhouse(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    onValueChange={(val) => setGreenhouse(val)}
                   >
-                    <option value="">请选择区域</option>
-                    {greenhouses.map((gh) => (
-                      <option key={gh.id} value={gh.name}>{gh.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <SelectValue placeholder="请选择区域" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">请选择区域</SelectItem>
+                      {greenhouses.map((gh) => (
+                        <SelectItem key={gh.id} value={gh.name}>{gh.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">计划日期</label>
-                  <input
+                  <Input
                     type="date"
                     value={plannedDate}
                     onChange={(e) => setPlannedDate(e.target.value)}
@@ -211,7 +226,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">预计工时</label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <Input
                       type="number"
                       min="1"
                       max="24"
@@ -224,16 +239,20 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">优先级</label>
-                  <select
+                  <Select
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    onValueChange={(val) => setPriority(val as any)}
                   >
-                    <option value="urgent">紧急</option>
-                    <option value="high">高</option>
-                    <option value="medium">中</option>
-                    <option value="low">低</option>
-                  </select>
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                      <SelectValue placeholder="中" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="urgent">紧急</SelectItem>
+                      <SelectItem value="high">高</SelectItem>
+                      <SelectItem value="medium">中</SelectItem>
+                      <SelectItem value="low">低</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -244,7 +263,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
             <h4 className="text-sm font-medium text-gray-700 mb-3">执行人选择</h4>
             <div className="space-y-2">
               <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${!assigneeId ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}>
-                <input
+                <Input
                   type="radio"
                   name="assignee"
                   value=""
@@ -263,7 +282,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   key={worker.id}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${assigneeId === worker.id ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'}`}
                 >
-                  <input
+                  <Input
                     type="radio"
                     name="assignee"
                     value={worker.id}
@@ -285,7 +304,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
           {/* 任务描述 */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-sm font-medium text-gray-700 mb-2">任务描述</h4>
-            <textarea
+            <TextArea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="请输入任务详细描述..."

@@ -10,6 +10,7 @@ import { useProblemDispatch, type ProblemFlowRecord } from '../../../hooks/usePr
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
 
 interface ProblemDispatchModalProps {
   problemId: number;
@@ -180,7 +181,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                     selectedWorkerId === worker.id ? 'bg-emerald-50 border border-emerald-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <input
+                  <Input
                     type="radio"
                     name="worker"
                     value={worker.id}
@@ -221,7 +222,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-2">期望完成日期:</label>
-                <input
+                <Input
                   type="date"
                   value={expectedDate}
                   onChange={(e) => setExpectedDate(e.target.value)}
@@ -232,7 +233,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                 <label className="block text-sm text-gray-600 mb-2">必填项:</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={requireCheckin}
                       onChange={(e) => setRequireCheckin(e.target.checked)}
@@ -241,7 +242,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                     <span className="text-sm text-gray-700">位置打卡</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input
+                    <Input
                       type="checkbox"
                       checked={requirePhoto}
                       onChange={(e) => setRequirePhoto(e.target.checked)}

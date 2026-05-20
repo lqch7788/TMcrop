@@ -9,6 +9,8 @@ import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -109,7 +111,7 @@ export function EditModal({
         {/* 种植数量 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植数量</label>
-          <input
+          <Input
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
@@ -120,7 +122,7 @@ export function EditModal({
         {/* 种植日期 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种植日期</label>
-          <input
+          <Input
             type="date"
             value={formData.plantingDate}
             onChange={(e) => setFormData({ ...formData, plantingDate: e.target.value })}
@@ -131,7 +133,7 @@ export function EditModal({
         {/* 损耗率(%) */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">损耗率(%)</label>
-          <input
+          <Input
             type="number"
             step="0.1"
             min="0"
@@ -145,7 +147,7 @@ export function EditModal({
         {/* 土壤PH值 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">土壤PH值</label>
-          <input
+          <Input
             type="number"
             step="0.1"
             value={formData.soilPH || ''}
@@ -157,7 +159,7 @@ export function EditModal({
         {/* 土壤EC值 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">土壤EC值</label>
-          <input
+          <Input
             type="number"
             step="0.1"
             value={formData.soilEC || ''}
@@ -169,7 +171,7 @@ export function EditModal({
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}

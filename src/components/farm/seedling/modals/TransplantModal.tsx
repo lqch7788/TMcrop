@@ -7,6 +7,9 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 interface TransplantModalProps {
   isOpen: boolean;
@@ -150,7 +153,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">定植数量</label>
-              <input
+              <Input
                 type="number"
                 value={formData.transplantCount || ''}
                 onChange={(e) => setFormData({ ...formData, transplantCount: Number(e.target.value) })}
@@ -161,20 +164,23 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">定植区域</label>
-              <select
+              <Select
                 value={formData.areaId}
-                onChange={(e) => handleAreaChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                onValueChange={(val) => handleAreaChange(val)}
               >
-                <option value="">请选择</option>
-                {areas.map(a => (
-                  <option key={a.value} value={a.value}>{a.label}</option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  {areas.map(a => (
+                    <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">土壤PH值</label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.soilPH}
@@ -184,7 +190,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">土壤EC值</label>
-              <input
+              <Input
                 type="number"
                 step="0.1"
                 value={formData.soilEC}
@@ -194,7 +200,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">定植日期</label>
-              <input
+              <Input
                 type="date"
                 value={formData.transplantDate}
                 onChange={(e) => setFormData({ ...formData, transplantDate: e.target.value })}
@@ -203,7 +209,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <textarea
+              <TextArea
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}

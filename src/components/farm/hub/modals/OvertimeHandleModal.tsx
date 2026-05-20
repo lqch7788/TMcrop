@@ -6,6 +6,8 @@
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
 import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
@@ -172,7 +174,7 @@ export function OvertimeHandleModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 超时原因 <span className="text-red-500">*</span>
               </label>
-              <textarea
+              <TextArea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="请说明超时原因..."
@@ -185,7 +187,7 @@ export function OvertimeHandleModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 新截止日期 <span className="text-red-500">*</span>
               </label>
-              <input
+              <Input
                 type="date"
                 value={newDeadline}
                 onChange={(e) => setNewDeadline(e.target.value)}
@@ -211,7 +213,7 @@ export function OvertimeHandleModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               放弃原因 <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <TextArea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="请说明放弃执行的原因..."

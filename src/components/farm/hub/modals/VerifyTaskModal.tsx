@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '../../../ui/Modal';
 import { Button } from '@/components/ui/button';
+import { TextArea } from '../../../ui/TextArea';
 import { CheckCircle, XCircle, Clock, User, MessageSquare, Image, Mic, MapPin, Package } from 'lucide-react';
 import { Task, TaskRecord, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { TaskProgressTimeline } from '../components/TaskProgressTimeline';
@@ -141,7 +142,7 @@ export function VerifyTaskModal({
             {handleType === 'reject' ? '驳回原因' : '验收意见'}
             {handleType === 'reject' && <span className="text-red-500">*</span>}
           </label>
-          <textarea
+          <TextArea
             value={comments}
             onChange={(e) => setComments(e.target.value)}
             placeholder={

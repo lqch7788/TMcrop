@@ -6,6 +6,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -148,22 +150,25 @@ export function CropVarietyTable({
 
           {/* 搜索框区域 - 均匀分布 */}
           <div className="flex-1 flex items-center gap-4">
-            <select
+            <Select
               value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
+              onValueChange={(val) => {
+                setCategoryFilter(val);
                 setCurrentPage(1);
               }}
-              className="h-10 px-3 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1"
             >
-              <option value="">全部类别</option>
-              {categoryOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 px-3 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1">
+                <SelectValue placeholder="全部类别" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="作物品种搜索..."
                 value={searchNameKeyword}
@@ -173,7 +178,7 @@ export function CropVarietyTable({
             </div>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="作物编码搜索..."
                 value={searchCodeKeyword}
@@ -302,15 +307,19 @@ export function CropVarietyTable({
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
+          <Select
+            value={String(pageSize)}
+            onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
+            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
+              <SelectValue placeholder="20" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-gray-500">条</span>
         </div>
         <div className="flex items-center gap-2">

@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
 export interface Material {
   id: number;
@@ -103,7 +105,7 @@ export function MaterialFilters({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">物料编号</label>
-          <input
+          <Input
             type="text"
             value={filters.code}
             onChange={(e) => handleChange('code', e.target.value)}
@@ -113,7 +115,7 @@ export function MaterialFilters({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">物料名称</label>
-          <input
+          <Input
             type="text"
             value={filters.name}
             onChange={(e) => handleChange('name', e.target.value)}
@@ -123,7 +125,7 @@ export function MaterialFilters({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">供应商</label>
-          <input
+          <Input
             type="text"
             value={filters.supplier}
             onChange={(e) => handleChange('supplier', e.target.value)}
@@ -133,7 +135,7 @@ export function MaterialFilters({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
-          <input
+          <Input
             type="text"
             value={filters.location}
             onChange={(e) => handleChange('location', e.target.value)}
@@ -143,44 +145,45 @@ export function MaterialFilters({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">大类</label>
-          <select
-            value={filters.searchBigCategory}
-            onChange={(e) => handleChange('searchBigCategory', e.target.value)}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">全部</option>
-            {getSearchBigCategories().map((cat) => (
-              <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-            ))}
-          </select>
+          <Select value={filters.searchBigCategory} onValueChange={(val) => handleChange('searchBigCategory', val)}>
+            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {getSearchBigCategories().map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>{cat.code} - {cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">中类</label>
-          <select
-            value={filters.searchMidCategory}
-            onChange={(e) => handleChange('searchMidCategory', e.target.value)}
-            disabled={!filters.searchBigCategory}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
-          >
-            <option value="">全部</option>
-            {getSearchMidCategories().map((cat) => (
-              <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-            ))}
-          </select>
+          <Select value={filters.searchMidCategory} onValueChange={(val) => handleChange('searchMidCategory', val)} disabled={!filters.searchBigCategory}>
+            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {getSearchMidCategories().map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>{cat.code} - {cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">小类</label>
-          <select
-            value={filters.searchSubCategory}
-            onChange={(e) => handleChange('searchSubCategory', e.target.value)}
-            disabled={!filters.searchMidCategory}
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
-          >
-            <option value="">全部</option>
-            {getSearchSubCategories().map((cat) => (
-              <option key={cat.code} value={cat.code}>{cat.code} - {cat.name}</option>
-            ))}
-          </select>
+          <Select value={filters.searchSubCategory} onValueChange={(val) => handleChange('searchSubCategory', val)} disabled={!filters.searchMidCategory}>
+            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {getSearchSubCategories().map((cat) => (
+                <SelectItem key={cat.code} value={cat.code}>{cat.code} - {cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-end gap-2">
           <Button

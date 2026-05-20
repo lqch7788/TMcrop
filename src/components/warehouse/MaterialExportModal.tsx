@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UnifiedModal } from '../ui/UnifiedModal';
+import { Input } from '../ui/input';
 
 interface MaterialExportModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export function MaterialExportModal({
                 : 'border-gray-300 hover:border-gray-400'
             }`}
           >
-            <input
+            <Input
               type="radio"
               name="exportFormat"
               value={format.value}

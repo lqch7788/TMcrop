@@ -6,6 +6,8 @@ import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { SeedlingFilters } from '../../../../types/crop';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedlingFilterProps {
   filters: SeedlingFilters;
@@ -34,22 +36,26 @@ export function SeedlingFilter({
         {/* 作物品种 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">作物品种</label>
-          <select
+          <Select
             value={filters.cropName}
-            onChange={(e) => onChange({ ...filters, cropName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, cropName: val })}
           >
-            <option value="">全部</option>
-            {cropNames.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {cropNames.map(c => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 育苗批号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">育苗批号</label>
-          <input
+          <Input
             type="text"
             value={filters.seedlingCode}
             onChange={(e) => onChange({ ...filters, seedlingCode: e.target.value })}
@@ -61,22 +67,26 @@ export function SeedlingFilter({
         {/* 育苗方式 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">育苗方式</label>
-          <select
+          <Select
             value={filters.seedlingType}
-            onChange={(e) => onChange({ ...filters, seedlingType: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, seedlingType: val })}
           >
-            <option value="">全部</option>
-            {seedlingTypes.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {seedlingTypes.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 种源批号 */}
         <div className="flex-1 min-w-[150px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">种源批号</label>
-          <input
+          <Input
             type="text"
             value={filters.sourceCode}
             onChange={(e) => onChange({ ...filters, sourceCode: e.target.value })}
@@ -88,31 +98,39 @@ export function SeedlingFilter({
         {/* 温室场地 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">温室场地</label>
-          <select
+          <Select
             value={filters.siteName}
-            onChange={(e) => onChange({ ...filters, siteName: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, siteName: val })}
           >
-            <option value="">全部</option>
-            {sites.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {sites.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 状态 */}
         <div className="min-w-[120px]">
           <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select
+          <Select
             value={filters.status}
-            onChange={(e) => onChange({ ...filters, status: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            onValueChange={(val) => onChange({ ...filters, status: val })}
           >
-            <option value="">全部</option>
-            {statusOptions.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">全部</SelectItem>
+              {statusOptions.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 按钮行 */}

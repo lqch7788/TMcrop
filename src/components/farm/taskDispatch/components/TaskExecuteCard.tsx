@@ -9,6 +9,7 @@ import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '../../../ui/Modal';
 import FeedbackInput from '../../../common/FeedbackInput';
 import { Button } from '@/components/ui/button';
+import { TextArea } from '../../../ui/TextArea';
 
 interface TaskExecuteCardProps {
   task: Task;
@@ -103,7 +104,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
             </label>
             <span className="text-sm font-medium text-gray-700">{progress}%</span>
           </div>
-          <input
+          <Input
             type="range"
             min="0"
             max="100"
@@ -142,7 +143,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                   </div>
                   {req.type === 'gps' && (
                     <div className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         placeholder="点击获取GPS"
                         className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
@@ -186,7 +187,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                     </div>
                   )}
                   {req.type === 'text' && (
-                    <textarea
+                    <TextArea
                       placeholder={`请输入${req.label}...`}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm resize-none"
                       rows={2}
@@ -210,7 +211,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
           <label className="text-sm font-medium text-gray-700 mb-2 block">
             进度说明 {progress < 100 && '(选填)'}
           </label>
-          <textarea
+          <TextArea
             value={submitText}
             onChange={(e) => setSubmitText(e.target.value)}
             placeholder={

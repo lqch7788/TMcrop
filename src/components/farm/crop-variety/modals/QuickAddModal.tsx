@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Input } from '../../../ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { Search, Plus, Sprout } from 'lucide-react';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
 import {
@@ -175,16 +177,19 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <span className="text-red-500">*</span> 类别
             </label>
-            <select
+            <Select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onValueChange={(val) => setSelectedCategory(val)}
             >
-              <option value="">请选择</option>
-              {categoryOptions.map(c => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map(c => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 类型 */}
@@ -192,17 +197,20 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <span className="text-red-500">*</span> 类型
             </label>
-            <select
+            <Select
               value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
+              onValueChange={(val) => setSelectedType(val)}
               disabled={!selectedCategory}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              <option value="">请选择</option>
-              {typeOptions.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {typeOptions.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 品种 */}
@@ -210,17 +218,20 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <span className="text-red-500">*</span> 品种
             </label>
-            <select
+            <Select
               value={selectedVariety}
-              onChange={(e) => setSelectedVariety(e.target.value)}
+              onValueChange={(val) => setSelectedVariety(val)}
               disabled={!selectedType}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              <option value="">请选择</option>
-              {varietyOptions.map(v => (
-                <option key={v.value} value={v.value}>{v.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {varietyOptions.map(v => (
+                  <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -246,7 +257,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             {/* 别名 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">别名</label>
-              <input
+              <Input
                 type="text"
                 value={alias}
                 onChange={(e) => setAlias(e.target.value)}
@@ -259,7 +270,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             {/* 生长周期 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">生长周期（天）</label>
-              <input
+              <Input
                 type="number"
                 value={growthCycle || ''}
                 onChange={(e) => setGrowthCycle(e.target.value ? Number(e.target.value) : undefined)}
@@ -271,7 +282,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             {/* 目标产量 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">目标产量（kg/亩）</label>
-              <input
+              <Input
                 type="number"
                 value={targetYield || ''}
                 onChange={(e) => setTargetYield(e.target.value ? Number(e.target.value) : undefined)}
@@ -283,7 +294,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             {/* 备注 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-              <input
+              <Input
                 type="text"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}

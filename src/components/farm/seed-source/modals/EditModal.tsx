@@ -11,6 +11,9 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as supplierService from '../../../../services/supplierService';
+import { Input } from '../../../ui/input';
+import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
 /** 种源类型 → 供应商类型 级联映射 */
 const SOURCE_TYPE_TO_SUPPLIER_TYPE: Record<string, string | null> = {
@@ -216,7 +219,7 @@ export function EditModal({
         {/* 种源批号 - 只读显示 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">种源批号</label>
-          <input
+          <Input
             type="text"
             value={record.seedCode}
             readOnly
@@ -259,7 +262,7 @@ export function EditModal({
           {/* 选择"其他"时显示补充说明输入框 */}
           {formData.sourceType === SourceType.OTHER && (
             <div className="mt-2">
-              <input
+              <Input
                 type="text"
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
@@ -293,26 +296,34 @@ export function EditModal({
             {formData.sourceOrigin === 'external_purchase' && <span className="text-red-500">*</span>}
             {formData.sourceOrigin === 'external_purchase' ? '供应商' : '供应商（可选）'}
           </label>
-          <select
-            value={formData.supplierId}
-            onChange={(e) => {
-              const supplier = suppliers.find(s => s.value === e.target.value);
-              setFormData({ ...formData, supplierId: e.target.value, supplierName: supplier?.label || '' });
+          <Select
+            value={formData.supplierId || '__none__'}
+            onValueChange={(val) => {
+              if (val === '__none__') {
+                setFormData({ ...formData, supplierId: '', supplierName: '' });
+                return;
+              }
+              const supplier = suppliers.find(s => s.value === val);
+              setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="">{
-              formData.sourceOrigin === 'external_purchase'
-                ? '请选择'
-                : '内部自留/无需填写'
-            }</option>
-            {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-            {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.length === 0 && suppliers.length > 0 && (
-              <option value="" disabled className="text-gray-400">当前种源类型下无匹配供应商，请切换种源类型</option>
-            )}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectValue placeholder={
+                formData.sourceOrigin === 'external_purchase' ? '请选择' : '内部自留/无需填写'
+              } />
+            </SelectTrigger>
+            <SelectContent>
+              {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+              {formData.sourceOrigin === 'external_purchase' && filteredSuppliers.length === 0 && suppliers.length > 0 && (
+                <SelectItem value="__none__" disabled>当前种源类型下无匹配供应商，请切换种源类型</SelectItem>
+              )}
+              {formData.sourceOrigin !== 'external_purchase' && (
+                <SelectItem value="__none__">内部自留/无需填写</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
@@ -320,7 +331,7 @@ export function EditModal({
           <label className="block text-sm font-medium text-gray-900 mb-1">
             {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
           </label>
-          <input
+          <Input
             type="date"
             value={formData.purchaseDate}
             onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
@@ -332,7 +343,7 @@ export function EditModal({
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">登记数量</label>
           <div className="flex gap-2">
-            <input
+            <Input
               type="number"
               value={formData.quantity || ''}
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
@@ -350,7 +361,7 @@ export function EditModal({
         {/* 单价 */}
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1">单价（元）</label>
-          <input
+          <Input
             type="number"
             value={formData.unitPrice || ''}
             onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
@@ -371,7 +382,7 @@ export function EditModal({
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
           <label className="block text-sm font-medium text-gray-900 mb-1">备注</label>
-          <textarea
+          <TextArea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}

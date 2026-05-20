@@ -19,6 +19,7 @@ import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
+import { Input } from '../../ui/input';
 import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 
@@ -1007,7 +1008,7 @@ export function InspectionTab({
                       : 'border-gray-300 hover:border-emerald-300'
                   }`}
                 >
-                  <input
+                  <Input
                     type="radio"
                     name="exportFormat"
                     value={format.value}

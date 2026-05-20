@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { Input } from '../../../ui/input';
 
 interface TaskTableHeaderProps {
   exportMode?: boolean;
@@ -33,7 +34,7 @@ export function TaskTableHeader({
     <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
       {showCheckbox && (
         <th className="px-4 py-3 text-center">
-          <input
+          <Input
             type="checkbox"
             checked={isAllSelected}
             ref={(el) => {

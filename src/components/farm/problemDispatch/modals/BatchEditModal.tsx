@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select } from '../../../ui/Modal';
 import type { ProblemEntry } from '../../../../hooks/usePersistentProblems';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
+import { TextArea } from '../../../ui/TextArea';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -148,7 +149,7 @@ export function BatchEditModal({
             {/* 问题描述 - 可编辑 */}
             <div className="md:col-span-2">
               <FormField label="问题描述">
-                <textarea
+                <TextArea
                   value={editedData.issueText ?? currentProblem.issueText}
                   onChange={(e) => handleFieldChange('issueText', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"

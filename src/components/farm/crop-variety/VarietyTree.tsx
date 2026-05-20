@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';
@@ -136,19 +138,22 @@ export function VarietyTree({
 
           {/* 搜索框区域 - 均匀分布 */}
           <div className="flex-1 flex items-center gap-4">
-            <select
+            <Select
               value={categoryFilter}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1"
+              onValueChange={(val) => handleCategoryChange(val)}
             >
-              <option value="">全部类别</option>
-              {categoryOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1">
+                <SelectValue placeholder="全部类别" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="作物品种搜索..."
                 value={searchNameKeyword}
@@ -158,7 +163,7 @@ export function VarietyTree({
             </div>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="作物编码搜索..."
                 value={searchCodeKeyword}
