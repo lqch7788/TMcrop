@@ -2,6 +2,7 @@ import { BarChart3, ClipboardList, Package, TrendingDown, TrendingUp, Download, 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { MonthlyStatistics, MaterialStatistics, DepartmentStatistics, GreenhouseStatistics, FieldStatistics, BatchStatistics, MonthSummaryRow, MonthDetailRow, CategorySummary, CategoryTrend, TrendChartData, DepartmentPieData, CategoryPieData } from '../../types/materialReceiving';
 import { monthlyStatisticsData, materialStatisticsData, departmentStatisticsData, greenhouseStatisticsData, fieldStatisticsData, batchStatisticsData, categorySummaryData, categoryTrendData, trendChartData, departmentPieData, categoryPieData, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getMonthCategoryData, getSingleMonthTableData, getSingleMonthTotal, CATEGORY_COLORS } from '../../data/materialReceivingData';
@@ -644,7 +645,7 @@ export default function StatisticsTab({
                     value={departmentFilter[0] || 'all'}
                     onValueChange={(val) => setDepartmentFilter(val === 'all' ? [] : [val])}
                   >
-                    <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-[150px]">
+                    <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 w-[150px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -661,18 +662,16 @@ export default function StatisticsTab({
                 {/* 时间范围 */}
                 <div className="flex items-center gap-2">
                   <Label className="text-sm font-medium text-gray-700 mb-0">时间:</Label>
-                  <input
-                    type="date"
-                    value={dateRange.start}
-                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                    className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <DatePicker
+                    selected={dateRange.start ? new Date(dateRange.start) : undefined}
+                    onChange={(date) => setDateRange({ ...dateRange, start: date.toISOString().slice(0, 10) })}
+                    placeholder="开始日期"
                   />
                   <span className="text-gray-400">至</span>
-                  <input
-                    type="date"
-                    value={dateRange.end}
-                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                    className="h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  <DatePicker
+                    selected={dateRange.end ? new Date(dateRange.end) : undefined}
+                    onChange={(date) => setDateRange({ ...dateRange, end: date.toISOString().slice(0, 10) })}
+                    placeholder="结束日期"
                   />
                 </div>
 
@@ -700,7 +699,7 @@ export default function StatisticsTab({
                       value={greenhouseTypeFilter}
                       onValueChange={(val) => setGreenhouseTypeFilter(val)}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[150px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -718,7 +717,7 @@ export default function StatisticsTab({
                       value={greenhouseFilter[0] || 'all'}
                       onValueChange={(val) => setGreenhouseFilter(val === 'all' ? [] : [val])}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -742,7 +741,7 @@ export default function StatisticsTab({
                       value={comparisonPeriod}
                       onValueChange={(val) => setComparisonPeriod(val)}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -765,7 +764,7 @@ export default function StatisticsTab({
                       value={fieldFilter[0] || 'all'}
                       onValueChange={(val) => setFieldFilter(val === 'all' ? [] : [val])}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -787,7 +786,7 @@ export default function StatisticsTab({
                       value={comparisonPeriod}
                       onValueChange={(val) => setComparisonPeriod(val)}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-[160px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -810,7 +809,7 @@ export default function StatisticsTab({
                       value={batchFilter || 'all'}
                       onValueChange={(val) => setBatchFilter(val === 'all' ? '' : val)}
                     >
-                      <SelectTrigger className="h-9 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[280px]">
+                      <SelectTrigger className="h-10 px-3 border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[280px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

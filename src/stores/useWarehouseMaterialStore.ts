@@ -31,7 +31,7 @@ export const useWarehouseMaterialStore = create<WarehouseMaterialState>()(
         set({ isLoading: true, error: null });
         try {
           const data = await warehouseService.getMaterials();
-          set({ items: data, isLoading: false });
+          set({ items: Array.isArray(data) ? data : [], isLoading: false });
         } catch (error) {
           console.error('[useWarehouseMaterialStore] 获取物料失败:', error);
           set({ error: (error as Error).message, isLoading: false });
@@ -83,6 +83,16 @@ export const useWarehouseMaterialStore = create<WarehouseMaterialState>()(
         }
       },
     }),
-    { name: 'warehouse-material-storage', partialize: (s) => ({ items: s.items }) }
+    {
+      name: 'warehouse-material-storage',
+      partialize: (s) => ({ items: s.items }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Record<string, unknown>),
+        items: Array.isArray((persisted as Record<string, unknown>)?.items)
+          ? (persisted as Record<string, unknown>).items as Material[]
+          : (current as { items: Material[] }).items,
+      }),
+    }
   )
 );

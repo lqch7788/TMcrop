@@ -117,7 +117,7 @@ export function MaterialFilters({
             value={filters.code}
             onChange={(e) => handleChange('code', e.target.value)}
             placeholder="搜索编号"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -127,7 +127,7 @@ export function MaterialFilters({
             value={filters.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="搜索名称"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -137,7 +137,7 @@ export function MaterialFilters({
             value={filters.supplier}
             onChange={(e) => handleChange('supplier', e.target.value)}
             placeholder="搜索供应商"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -147,13 +147,13 @@ export function MaterialFilters({
             value={filters.location}
             onChange={(e) => handleChange('location', e.target.value)}
             placeholder="搜索位置"
-            className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">大类</Label>
           <Select value={filters.searchBigCategory} onValueChange={(val) => handleChange('searchBigCategory', val)}>
-            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
@@ -167,7 +167,7 @@ export function MaterialFilters({
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">中类</Label>
           <Select value={filters.searchMidCategory} onValueChange={(val) => handleChange('searchMidCategory', val)} disabled={!filters.searchBigCategory}>
-            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
@@ -181,7 +181,7 @@ export function MaterialFilters({
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">小类</Label>
           <Select value={filters.searchSubCategory} onValueChange={(val) => handleChange('searchSubCategory', val)} disabled={!filters.searchMidCategory}>
-            <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
@@ -216,6 +216,7 @@ export function MaterialFilters({
 }
 
 export function filterMaterials(materials: Material[], filters: MaterialFiltersState): Material[] {
+  if (!Array.isArray(materials)) return [];
   return materials.filter((m) => {
     if (filters.code && !m.code.includes(filters.code)) return false;
     if (filters.name && !m.name.includes(filters.name)) return false;

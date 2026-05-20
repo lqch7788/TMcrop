@@ -4,9 +4,12 @@ import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Tra
 import { X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
+import { UnifiedModal } from '../ui/UnifiedModal';
 
 export interface InboundMaterial {
   id: number;
@@ -361,7 +364,7 @@ export function MaterialInboundTab({
                 value={inboundSearchCode}
                 onChange={(e) => setInboundSearchCode(e.target.value)}
                 placeholder="搜索单号"
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -371,13 +374,13 @@ export function MaterialInboundTab({
                 value={inboundSearchSupplier}
                 onChange={(e) => setInboundSearchSupplier(e.target.value)}
                 placeholder="搜索供应商"
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
               <Label className="block text-sm font-medium text-gray-700 mb-1">状态</Label>
               <Select value={inboundSearchStatus} onValueChange={(val) => setInboundSearchStatus(val)}>
-                <SelectTrigger className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
                   <SelectValue placeholder="全部" />
                 </SelectTrigger>
                 <SelectContent>
@@ -395,7 +398,7 @@ export function MaterialInboundTab({
                 value={inboundSearchMaterialName}
                 onChange={(e) => setInboundSearchMaterialName(e.target.value)}
                 placeholder="搜索物料名称"
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div>
@@ -405,7 +408,7 @@ export function MaterialInboundTab({
                 value={inboundSearchMaterialCode}
                 onChange={(e) => setInboundSearchMaterialCode(e.target.value)}
                 placeholder="搜索物料编码"
-                className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -512,47 +515,45 @@ export function MaterialInboundTab({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {(editMode || deleteMode || exportMode) && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                    <Input
-                      type="checkbox"
+                  <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                    <Checkbox
                       checked={isAllSelected}
-                      onChange={handleSelectAll}
+                      onCheckedChange={handleSelectAll}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库单号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库单号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {displayedRecords.map((record) => (
                 <>
-                  <tr key={record.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={record.id} className="hover:bg-blue-100 transition-colors">
                     {(editMode || deleteMode || exportMode) && (
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <TableCell className="px-4 py-3 whitespace-nowrap">
                         {deleteMode && record.status !== 'pending' ? (
                           <span className="text-gray-300 text-xs">—</span>
                         ) : (
-                          <Input
-                            type="checkbox"
+                          <Checkbox
                             checked={selectedRows.includes(record.id)}
-                            onChange={() => handleSelectRow(record.id)}
+                            onCheckedChange={() => handleSelectRow(record.id)}
                             className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                           />
                         )}
-                      </td>
+                      </TableCell>
                     )}
-                    <td className="px-4 py-3">
+                    <TableCell className="px-4 py-3">
                       <Button variant="ghost" size="icon" onClick={() => toggleExpandRow(record.id)}>
                         {expandedRows.has(record.id) ? (
                           <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -560,15 +561,15 @@ export function MaterialInboundTab({
                           <ChevronRight className="w-4 h-4 text-gray-500" />
                         )}
                       </Button>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => onViewRecord(record)}>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap" onClick={() => onViewRecord(record)}>
                       {record.code}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplier}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.operator}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.materials.length} 种物料</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplier}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.operator}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.materials.length} 种物料</TableCell>
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         record.status === 'completed' ? 'bg-green-100 text-green-700' :
                         record.status === 'voided' ? 'bg-gray-100 text-gray-500' :
@@ -576,63 +577,63 @@ export function MaterialInboundTab({
                       }`}>
                         {record.status === 'completed' ? '已完成' : record.status === 'voided' ? '已作废' : '待审核'}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                   {expandedRows.has(record.id) && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-3 bg-gray-50">
+                    <TableRow>
+                      <TableCell colSpan={7} className="px-4 py-3 bg-gray-50">
                         <div className="text-sm">
                           <p className="font-medium text-gray-700 mb-2">物料明细：</p>
                           <div className="overflow-x-auto rounded border">
-                            <table className="w-full bg-white">
-                              <thead className="bg-gray-100">
-                                <tr>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">物料编码</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">物料名称</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">分类</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">规格</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">条形码</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">单位</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">数量</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">单价</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">供应商</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">存放位置</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">批号</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">生产日期</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">有效期至</th>
-                                  <th className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">备注</th>
-                                </tr>
-                              </thead>
-                              <tbody>
+                            <Table className="w-full bg-white">
+                              <TableHeader className="bg-gray-100">
+                                <TableRow>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">物料编码</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">物料名称</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">分类</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">规格</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">条形码</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">单位</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">数量</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">单价</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">供应商</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">存放位置</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">批号</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">生产日期</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">有效期至</TableHead>
+                                  <TableHead className="px-2 py-2 text-left text-xs font-medium whitespace-nowrap">备注</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
                                 {record.materials.map((m) => (
-                                  <tr key={m.id} className="border-t">
-                                    <td className="px-2 py-2 text-xs text-blue-600 whitespace-nowrap">{m.materialCode}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.materialName}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.category}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.specification}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.barcode}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.unit}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.quantity}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.price}元</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.supplier}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.location}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.batchNo}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.productionDate}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.expiryDate}</td>
-                                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.remarks}</td>
-                                  </tr>
+                                  <TableRow key={m.id} className="border-t">
+                                    <TableCell className="px-2 py-2 text-xs text-blue-600 whitespace-nowrap">{m.materialCode}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.materialName}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.category}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.specification}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.barcode}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.unit}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.quantity}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{m.price}元</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.supplier}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.location}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.batchNo}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.productionDate}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.expiryDate}</TableCell>
+                                    <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{m.remarks}</TableCell>
+                                  </TableRow>
                                 ))}
-                              </tbody>
-                            </table>
+                              </TableBody>
+                            </Table>
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                 </>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}
@@ -677,37 +678,33 @@ export function MaterialInboundTab({
         onClose={() => setShowExportModal(false)}
       />
 
-      {showEditWarning && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.402-1.333-3.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">批量编辑入库记录风险提示</h3>
-            </div>
-            <div className="text-sm text-gray-600 space-y-2 mb-6">
-              <p>编辑入库记录后可能存在以下风险：</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>入库记录关联的库存数据可能发生变化</li>
-                <li>修改物料明细可能影响成本统计</li>
-                <li>已审核的记录修改后需要重新审核</li>
-              </ul>
-              <p className="font-medium text-gray-700">请谨慎操作，确认要进行批量编辑吗？</p>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setShowEditWarning(false)} className="flex-1">
-                取消
-              </Button>
-              <Button variant="blue" onClick={handleProceedToEdit} className="flex-1">
-                已知晓
-              </Button>
-            </div>
+      <UnifiedModal
+        isOpen={showEditWarning}
+        onClose={() => setShowEditWarning(false)}
+        title="批量编辑入库记录风险提示"
+        size="sm"
+        showFooter={true}
+        footer={
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={() => setShowEditWarning(false)} className="flex-1">
+              取消
+            </Button>
+            <Button variant="blue" onClick={handleProceedToEdit} className="flex-1">
+              已知晓
+            </Button>
           </div>
+        }
+      >
+        <div className="text-sm text-gray-600 space-y-2">
+          <p>编辑入库记录后可能存在以下风险：</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>入库记录关联的库存数据可能发生变化</li>
+            <li>修改物料明细可能影响成本统计</li>
+            <li>已审核的记录修改后需要重新审核</li>
+          </ul>
+          <p className="font-medium text-gray-700">请谨慎操作，确认要进行批量编辑吗？</p>
         </div>
-      )}
+      </UnifiedModal>
     </>
   );
 }

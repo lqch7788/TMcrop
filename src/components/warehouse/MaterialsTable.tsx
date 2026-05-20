@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight, Eye, Edit, Trash2 } from 'lucide-react';
 import { Material } from './MaterialFilters';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { Checkbox } from '../ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 
 interface MaterialsTableProps {
   materials: Material[];
@@ -73,87 +74,85 @@ export function MaterialsTable({
       )}
 
       <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        <table className="w-full" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full" style={{ minWidth: '1500px', tableLayout: 'fixed' }}>
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {(exportMode || batchEditMode || deleteMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <Input
-                    type="checkbox"
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <Checkbox
                     checked={isAllSelected}
-                    onChange={onSelectAll}
+                    onCheckedChange={onSelectAll}
                     className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                </th>
+                </TableHead>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-40">分类</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">规格型号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">条形码</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-16">单位</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">库存数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最低库存</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最高库存</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">单价（元）</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">存放位置</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">生产日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料编号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">物料名称</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-40">分类</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">规格型号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">条形码</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-16">单位</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">库存数量</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最低库存</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">最高库存</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">单价（元）</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">供应商</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">存放位置</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">批次号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">生产日期</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">有效期至</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-32">最后更新时间</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-20">数据状态</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-300">
             {displayedMaterials.map((item) => (
-              <tr key={item.id} className="hover:bg-blue-100 transition-colors">
+              <TableRow key={item.id} className="hover:bg-blue-100 transition-colors">
                 {(exportMode || batchEditMode || deleteMode) && (
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Input
-                      type="checkbox"
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <Checkbox
                       checked={selectedRows.includes(item.id)}
-                      onChange={() => onSelectRow(item.id)}
+                      onCheckedChange={() => onSelectRow(item.id)}
                       className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                     />
-                  </td>
+                  </TableCell>
                 )}
-                <td
+                <TableCell
                   className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline whitespace-nowrap"
                   onClick={() => onView(item)}
                 >
                   {item.code}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.category}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.specification}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.barcode}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.unit}</td>
-                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.name}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.category}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.specification}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.barcode}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.unit}</TableCell>
+                <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                   <span className={`font-medium ${item.quantity < item.minStock ? 'text-red-600' : 'text-gray-900'}`}>
                     {item.quantity}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.minStock}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.maxStock}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.price.replace('元', '')}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.supplier}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.location}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.batchNo}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expiryDate}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.minStock}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.maxStock}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.price.replace('元', '')}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.supplier}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.location}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.batchNo}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expiryDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}</TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     item.dataStatus === '启用' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
                     {item.dataStatus}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

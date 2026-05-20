@@ -24,6 +24,7 @@ export interface FertilizerData {
   fertilizerType: string;
   dilutionRatio: string;
   quantity: number;
+  unit: string;
   unitPrice: number;
   totalCost: number;
   fertilizeTime: string;
@@ -55,6 +56,7 @@ const FIELD_MAP: Record<string, string> = {
   fertilizer_type: 'fertilizerType',
   dilution_ratio: 'dilutionRatio',
   quantity: 'quantity',
+  unit: 'unit',
   unit_price: 'unitPrice',
   total_cost: 'totalCost',
   fertilize_time: 'fertilizeTime',

@@ -4,6 +4,8 @@ import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { NumberInput } from '../ui/NumberInput';
+import { DatePicker } from '../ui/DatePicker';
 import { Label } from '../ui/label';
 import { X } from 'lucide-react';
 
@@ -81,11 +83,11 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 当前库存 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">当前库存</Label>
-          <Input
-            type="number"
+          <NumberInput
             value={form.quantity}
-            onChange={(e) => handleChange('quantity', parseFloat(e.target.value) || 0)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            onChange={(val) => handleChange('quantity', parseFloat(val) || 0)}
+            decimals={2}
+            className="h-8 px-2"
           />
         </div>
 
@@ -114,22 +116,22 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 最低库存 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">最低库存限值</Label>
-          <Input
-            type="number"
+          <NumberInput
             value={form.minStock}
-            onChange={(e) => handleChange('minStock', parseFloat(e.target.value) || 0)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            onChange={(val) => handleChange('minStock', parseFloat(val) || 0)}
+            decimals={2}
+            className="h-8 px-2"
           />
         </div>
 
         {/* 最高库存 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">最高库存限值</Label>
-          <Input
-            type="number"
+          <NumberInput
             value={form.maxStock}
-            onChange={(e) => handleChange('maxStock', parseFloat(e.target.value) || 0)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            onChange={(val) => handleChange('maxStock', parseFloat(val) || 0)}
+            decimals={2}
+            className="h-8 px-2"
           />
         </div>
 
@@ -180,22 +182,20 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
         {/* 生产日期 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
-          <Input
-            type="date"
-            value={form.productionDate}
-            onChange={(e) => handleChange('productionDate', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          <DatePicker
+            selected={form.productionDate ? new Date(form.productionDate) : undefined}
+            onChange={(date) => handleChange('productionDate', date.toISOString().slice(0, 10))}
+            placeholder="选择生产日期"
           />
         </div>
 
         {/* 过期日期 */}
         <div>
           <Label className="block text-xs font-medium text-gray-700 mb-1">过期日期</Label>
-          <Input
-            type="date"
-            value={form.expiryDate}
-            onChange={(e) => handleChange('expiryDate', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+          <DatePicker
+            selected={form.expiryDate ? new Date(form.expiryDate) : undefined}
+            onChange={(date) => handleChange('expiryDate', date.toISOString().slice(0, 10))}
+            placeholder="选择过期日期"
           />
         </div>
       </div>
@@ -214,45 +214,39 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
   if (!isOpen || !material) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-red-600">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            删除确认
-          </h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-        <div className="p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <h4 className="text-sm font-medium text-gray-900">警告：删除此物料将造成严重后果！</h4>
-              <p className="text-sm text-gray-500 mt-1">
-                您正在删除物料：<strong>{material.name}</strong>（{material.code}）
-              </p>
-              <ul className="text-sm text-red-500 mt-2 space-y-1">
-                <li>• 此操作将删除所有相关的入库记录</li>
-                <li>• 历史数据将无法恢复</li>
-                <li>• 可能导致库存数据错乱</li>
-                <li>• 已使用的物料信息将无法追溯</li>
-              </ul>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">
-            此操作不可撤销！请确认是否继续删除？
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="删除确认"
+      size="md"
+      showFooter={false}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <span className="text-2xl">⚠️</span>
+        <div>
+          <h4 className="text-sm font-medium text-gray-900">警告：删除此物料将造成严重后果！</h4>
+          <p className="text-sm text-gray-500 mt-1">
+            您正在删除物料：<strong>{material.name}</strong>（{material.code}）
           </p>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose} className="flex-1">
-              取消
-            </Button>
-            <Button variant="destructive" onClick={onConfirm} className="flex-1">
-              确认删除
-            </Button>
-          </div>
+          <ul className="text-sm text-red-500 mt-2 space-y-1">
+            <li>• 此操作将删除所有相关的入库记录</li>
+            <li>• 历史数据将无法恢复</li>
+            <li>• 可能导致库存数据错乱</li>
+            <li>• 已使用的物料信息将无法追溯</li>
+          </ul>
         </div>
       </div>
-    </div>
+      <p className="text-sm text-gray-500 mb-4">
+        此操作不可撤销！请确认是否继续删除？
+      </p>
+      <div className="flex gap-3">
+        <Button variant="secondary" onClick={onClose} className="flex-1">
+          取消
+        </Button>
+        <Button variant="destructive" onClick={onConfirm} className="flex-1">
+          确认删除
+        </Button>
+      </div>
+    </UnifiedModal>
   );
 }

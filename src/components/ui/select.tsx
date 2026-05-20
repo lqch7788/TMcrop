@@ -3,7 +3,22 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+// Radix Select 不允许 SelectItem 的 value 为空字符串
+// 当 value=""时自动映射为 sentinel 值，onValueChange 时反向映射
+const ALL_SENTINEL = '__all__';
+
+const Select: React.FC<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>> = ({
+  value,
+  onValueChange,
+  ...props
+}) => (
+  <SelectPrimitive.Root
+    value={value === '' ? ALL_SENTINEL : value}
+    onValueChange={onValueChange ? (val: string) => onValueChange(val === ALL_SENTINEL ? '' : val) : undefined}
+    {...props}
+  />
+);
+
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
@@ -60,9 +75,10 @@ SelectContent.displayName = SelectPrimitive.Content.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, value, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
+    value={value === '' ? ALL_SENTINEL : value}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-blue-50 focus:text-blue-700 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className

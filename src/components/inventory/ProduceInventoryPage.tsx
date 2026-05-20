@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, X, AlertTriangle, AlertCircle, CheckCircle, Clock, Package, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { useWarehouseStore } from '../../stores';
 import { ProduceInventory, AlertInfo, InventoryStatus } from '../../types/inventory';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, Modal } from '../ui/Modal';
-import { Select as RadixSelect, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Pagination } from '../ui/Pagination';
 import ProduceInventoryToolbar from './ProduceInventoryToolbar';
 import { ExportFormatModal } from '../farm/harvest/modals/ExportFormatModal';
 import { ProduceDetailModal } from './ProduceDetailModal';
@@ -1233,40 +1233,15 @@ export default function ProduceInventoryPage() {
 
         {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <RadixSelect value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
-              <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </RadixSelect>
-            <span className="text-sm text-gray-500">条</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm">{currentPage} / {totalPages}</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

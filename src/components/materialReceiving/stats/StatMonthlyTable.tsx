@@ -3,6 +3,7 @@ import { BarChart3, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 interface StatMonthlyTableProps {
   activeTab: 'monthly' | 'material';
@@ -151,78 +152,78 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <TableRow>
                 {exportMode && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                  <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <Checkbox
                       checked={selectedRows.length === getAllMonthKeys().length && getAllMonthKeys().length > 0}
                       onCheckedChange={() => onSelectAll()}
                     />
-                  </th>
+                  </TableHead>
                 )}
-                <th
+                <TableHead
                   className="px-4 py-3 text-left text-sm font-semibold cursor-pointer hover:bg-blue-400 whitespace-nowrap"
                   onClick={() => onSort('month')}
                 >
                   月份 {sortConfig.key === 'month' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料分类</th>
-                <th
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料分类</TableHead>
+                <TableHead
                   className="px-4 py-3 text-right text-sm font-semibold cursor-pointer hover:bg-blue-400"
                   onClick={() => onSort('totalQuantity')}
                 >
                   领料数量 {sortConfig.key === 'totalQuantity' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   className="px-4 py-3 text-right text-sm font-semibold cursor-pointer hover:bg-blue-400"
                   onClick={() => onSort('totalAmount')}
                 >
                   领料金额 {sortConfig.key === 'totalAmount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">排名</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">占比</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">环比</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">同比</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">排名</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">占比</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">环比</TableHead>
+                <TableHead className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">同比</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-300">
               {/* 单月视图：直接显示7分类 */}
               {monthFilter !== 'all' && (
                 <>
                   {getSingleMonthTableData(yearFilter, monthFilter).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-emerald-50/50 transition-colors">
+                    <TableRow key={idx} className="hover:bg-emerald-50/50 transition-colors">
                       {exportMode && (
-                        <td className="px-4 py-3">
+                        <TableCell className="px-4 py-3">
                           <Checkbox
                             checked={selectedRows.includes(idx)}
                             onCheckedChange={() => onSelectRow(idx)}
                           />
-                        </td>
+                        </TableCell>
                       )}
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{row.monthName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{row.categoryName}</td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">{row.quantity.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600">¥{row.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">-</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">{getCategoryStats(row.quantity, getSingleMonthTotal(yearFilter, monthFilter).totalQty)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">-</td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">-</td>
-                    </tr>
+                      <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{row.monthName}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-600">{row.categoryName}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900">{row.quantity.toLocaleString()}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right font-bold text-emerald-600">¥{row.amount.toLocaleString()}</TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-500">-</TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-500">{getCategoryStats(row.quantity, getSingleMonthTotal(yearFilter, monthFilter).totalQty)}</TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-500">-</TableCell>
+                      <TableCell className="px-4 py-3 text-center text-sm text-gray-500">-</TableCell>
+                    </TableRow>
                   ))}
                   {/* 当月合计 */}
-                  <tr className="bg-emerald-50 font-bold">
-                    {exportMode && <td className="px-4 py-3"></td>}
-                    <td className="px-4 py-3 text-sm text-emerald-700 whitespace-nowrap">当月合计</td>
-                    <td className="px-4 py-3 text-sm text-emerald-600">-</td>
-                    <td className="px-4 py-3 text-sm text-right text-emerald-700">{getSingleMonthTotal(yearFilter, monthFilter).totalQty.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-right text-emerald-700">¥{getSingleMonthTotal(yearFilter, monthFilter).totalAmt.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
-                    <td className="px-4 py-3 text-center text-sm text-emerald-700">100%</td>
-                    <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
-                    <td className="px-4 py-3 text-center text-sm text-emerald-700">-</td>
-                  </tr>
+                  <TableRow className="bg-emerald-50 font-bold">
+                    {exportMode && <TableCell className="px-4 py-3"></TableCell>}
+                    <TableCell className="px-4 py-3 text-sm text-emerald-700 whitespace-nowrap">当月合计</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-emerald-600">-</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-right text-emerald-700">{getSingleMonthTotal(yearFilter, monthFilter).totalQty.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-right text-emerald-700">¥{getSingleMonthTotal(yearFilter, monthFilter).totalAmt.toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3 text-center text-sm text-emerald-700">-</TableCell>
+                    <TableCell className="px-4 py-3 text-center text-sm text-emerald-700">100%</TableCell>
+                    <TableCell className="px-4 py-3 text-center text-sm text-emerald-700">-</TableCell>
+                    <TableCell className="px-4 py-3 text-center text-sm text-emerald-700">-</TableCell>
+                  </TableRow>
                 </>
               )}
 
@@ -232,60 +233,60 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                   {getSortedMonthSummaries().map((monthRow, monthIdx) => (
                     <React.Fragment key={monthRow.month}>
                       {/* 月份汇总行（可点击展开） */}
-                      <tr
+                      <TableRow
                         className="cursor-pointer hover:bg-emerald-50/50 bg-gray-50"
                         onClick={() => onToggleMonthExpand(monthRow.month)}
                       >
                         {exportMode && (
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <TableCell className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedRows.includes(monthIdx)}
                               onCheckedChange={() => onSelectRow(monthIdx)}
                             />
-                          </td>
+                          </TableCell>
                         )}
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <TableCell className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">
                               {expandedMonths.has(monthRow.month) ? '▼' : '▶'}
                             </span>
                             <span className="text-sm font-medium text-gray-900">{monthRow.monthName}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-gray-500">
                           点击展开7分类详情
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900">
                           {monthRow.totalQuantity.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right font-bold text-emerald-600">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-right font-bold text-emerald-600">
                           ¥{monthRow.totalAmount.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-500">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-center text-sm text-gray-500">
                           {getMonthStats(monthRow.month).rank}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-500">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-center text-sm text-gray-500">
                           {getMonthStats(monthRow.month).percent}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-center text-sm">
                           <span className={getMonthStats(monthRow.month).qoq.startsWith('↑') ? 'text-green-600' : getMonthStats(monthRow.month).qoq.startsWith('↓') ? 'text-red-600' : 'text-gray-400'}>
                             {getMonthStats(monthRow.month).qoq}
                           </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm">
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-center text-sm">
                           <span className={getMonthStats(monthRow.month).yoy.startsWith('↑') ? 'text-green-600' : getMonthStats(monthRow.month).yoy.startsWith('↓') ? 'text-red-600' : 'text-gray-400'}>
                             {getMonthStats(monthRow.month).yoy}
                           </span>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
 
                       {/* 展开的7分类明细 */}
                       {expandedMonths.has(monthRow.month) && getMonthDetails(monthRow.month).map((detail, idx) => (
-                        <tr key={`${monthRow.month}-${idx}`} className="hover:bg-emerald-50/50">
-                          <td className="px-4 py-3 pl-10 text-sm text-gray-400 whitespace-nowrap">
+                        <TableRow key={`${monthRow.month}-${idx}`} className="hover:bg-emerald-50/50">
+                          <TableCell className="px-4 py-3 pl-10 text-sm text-gray-400 whitespace-nowrap">
                             └ {detail.monthName}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-700">
                             <div className="flex items-center gap-2">
                               <span
                                 className="w-2 h-2 rounded-full"
@@ -293,40 +294,40 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                               />
                               {detail.categoryName}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-600">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-gray-600">
                             {detail.quantity.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-600">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-gray-600">
                             ¥{detail.amount.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-400">-</td>
-                          <td className="px-4 py-3 text-center text-sm text-gray-500">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center text-gray-400">-</TableCell>
+                          <TableCell className="px-4 py-3 text-center text-sm text-gray-500">
                             {getCategoryStats(detail.quantity, monthRow.totalQuantity)}
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-400">-</td>
-                          <td className="px-4 py-3 text-center text-gray-400">-</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center text-gray-400">-</TableCell>
+                          <TableCell className="px-4 py-3 text-center text-gray-400">-</TableCell>
+                        </TableRow>
                       ))}
                     </React.Fragment>
                   ))}
 
                   {/* 年度合计 */}
-                  <tr className="bg-emerald-100 font-bold text-emerald-800">
-                    {exportMode && <td className="px-4 py-3"></td>}
-                    <td className="px-4 py-3 whitespace-nowrap">年度合计</td>
-                    <td className="px-4 py-3">-</td>
-                    <td className="px-4 py-3 text-right">{getYearTotalQuantity(yearFilter).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">¥{getYearTotalAmount(yearFilter).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-center">-</td>
-                    <td className="px-4 py-3 text-center">100%</td>
-                    <td className="px-4 py-3 text-center">-</td>
-                    <td className="px-4 py-3 text-center">-</td>
-                  </tr>
+                  <TableRow className="bg-emerald-100 font-bold text-emerald-800">
+                    {exportMode && <TableCell className="px-4 py-3"></TableCell>}
+                    <TableCell className="px-4 py-3 whitespace-nowrap">年度合计</TableCell>
+                    <TableCell className="px-4 py-3">-</TableCell>
+                    <TableCell className="px-4 py-3 text-right">{getYearTotalQuantity(yearFilter).toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3 text-right">¥{getYearTotalAmount(yearFilter).toLocaleString()}</TableCell>
+                    <TableCell className="px-4 py-3 text-center">-</TableCell>
+                    <TableCell className="px-4 py-3 text-center">100%</TableCell>
+                    <TableCell className="px-4 py-3 text-center">-</TableCell>
+                    <TableCell className="px-4 py-3 text-center">-</TableCell>
+                  </TableRow>
                 </>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </>

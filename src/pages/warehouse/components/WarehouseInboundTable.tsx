@@ -9,6 +9,7 @@ import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { getStatusText, getStatusClassName } from '../utils/warehouseInbound.utils';
 
 interface WarehouseInboundTableProps {
@@ -68,40 +69,40 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       {/* 表格主体 */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <tr>
+        <Table className="w-full">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <TableRow>
               {/* 选择框列 */}
               {hasActiveMode && (
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={() => onSelectAll()}
                   />
-                </th>
+                </TableHead>
               )}
 
               {/* 展开按钮列 */}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></th>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-10"></TableHead>
 
               {/* 表头 */}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库单号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-            </tr>
-          </thead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库单号</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">入库日期</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">供应商</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作员</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">物料数量</TableHead>
+              <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</TableHead>
+            </TableRow>
+          </TableHeader>
 
-          <tbody className="divide-y divide-gray-300">
+          <TableBody className="divide-y divide-gray-300">
             {displayedRecords.map((record) => (
               <React.Fragment key={record.id}>
                 {/* 主数据行 */}
-                <tr className="hover:bg-blue-100 transition-colors">
+                <TableRow className="hover:bg-blue-100 transition-colors">
                   {/* 选择框 */}
                   {hasActiveMode && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
                       {deleteMode && record.status !== 'pending' ? (
                         <span className="text-gray-300 text-xs">—</span>
                       ) : (
@@ -110,11 +111,11 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                           onCheckedChange={() => onSelectRow(record.id)}
                         />
                       )}
-                    </td>
+                    </TableCell>
                   )}
 
                   {/* 展开按钮 */}
-                  <td className="px-4 py-3">
+                  <TableCell className="px-4 py-3">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -126,70 +127,70 @@ export const WarehouseInboundTable: React.FC<WarehouseInboundTableProps> = ({
                         <ChevronRight className="w-4 h-4 text-gray-500" />
                       )}
                     </Button>
-                  </td>
+                  </TableCell>
 
                   {/* 数据列 */}
-                  <td
+                  <TableCell
                     className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
                     onClick={() => onViewRecord(record)}
                   >
                     {record.code}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplier}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.operator}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.materials.length} 种物料</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.inboundDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplier}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.operator}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.materials.length} 种物料</TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClassName(record.status)}`}>
                       {getStatusText(record.status)}
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
 
                 {/* 展开的物料明细行 */}
                 {expandedRows.has(record.id) && (
-                  <tr key={`${record.id}-expanded`} className="bg-white hover:bg-gray-50">
-                    <td colSpan={hasActiveMode ? 8 : 7} className="px-4 py-3">
+                  <TableRow key={`${record.id}-expanded`} className="bg-white hover:bg-gray-50">
+                    <TableCell colSpan={hasActiveMode ? 8 : 7} className="px-4 py-3">
                       <div className="space-y-2">
                         <div className="text-sm font-medium text-gray-700 mb-2">
                           物料明细（共 {record.materials.length} 项）
                         </div>
-                        <table className="w-full text-sm">
-                          <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                            <tr>
-                              <th className="px-3 py-2 text-left font-medium">物料编码</th>
-                              <th className="px-3 py-2 text-left font-medium">物料名称</th>
-                              <th className="px-3 py-2 text-left font-medium">分类</th>
-                              <th className="px-3 py-2 text-left font-medium">规格</th>
-                              <th className="px-3 py-2 text-right font-medium">数量</th>
-                              <th className="px-3 py-2 text-right font-medium">单价</th>
-                              <th className="px-3 py-2 text-left font-medium">批次号</th>
-                              <th className="px-3 py-2 text-left font-medium">有效期至</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-300">
+                        <Table className="w-full text-sm">
+                          <TableHeader className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                            <TableRow>
+                              <TableHead className="px-3 py-2 text-left font-medium">物料编码</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">物料名称</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">分类</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">规格</TableHead>
+                              <TableHead className="px-3 py-2 text-right font-medium">数量</TableHead>
+                              <TableHead className="px-3 py-2 text-right font-medium">单价</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">批次号</TableHead>
+                              <TableHead className="px-3 py-2 text-left font-medium">有效期至</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody className="divide-y divide-gray-300">
                             {record.materials.map((material, idx) => (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-gray-800 font-mono text-xs">{material.code}</td>
-                                <td className="px-3 py-2 text-gray-800 font-medium">{material.name}</td>
-                                <td className="px-3 py-2 text-gray-600">{material.category}</td>
-                                <td className="px-3 py-2 text-gray-600">{material.specification}</td>
-                                <td className="px-3 py-2 text-right text-gray-800">{material.quantity} {material.unit}</td>
-                                <td className="px-3 py-2 text-right text-gray-800">{material.price}</td>
-                                <td className="px-3 py-2 text-gray-600">{material.batchNo || '-'}</td>
-                                <td className="px-3 py-2 text-gray-600">{material.expiryDate || '-'}</td>
-                              </tr>
+                              <TableRow key={idx} className="hover:bg-gray-50">
+                                <TableCell className="px-3 py-2 text-gray-800 font-mono text-xs">{material.code}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-800 font-medium">{material.name}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.category}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.specification}</TableCell>
+                                <TableCell className="px-3 py-2 text-right text-gray-800">{material.quantity} {material.unit}</TableCell>
+                                <TableCell className="px-3 py-2 text-right text-gray-800">{material.price}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.batchNo || '-'}</TableCell>
+                                <TableCell className="px-3 py-2 text-gray-600">{material.expiryDate || '-'}</TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
               </React.Fragment>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* 分页 */}

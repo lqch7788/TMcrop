@@ -2,6 +2,8 @@ import { Material } from './MaterialFilters';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { NumberInput } from '../ui/NumberInput';
+import { DatePicker } from '../ui/DatePicker';
 import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
@@ -99,29 +101,29 @@ export function MaterialBatchEditModal({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <Label className="block text-xs font-medium text-gray-700 mb-1">库存数量</Label>
-            <Input
-              type="number"
+            <NumberInput
               value={currentEditedData.quantity ?? ''}
-              onChange={(e) => onFieldChange(currentMaterialId, 'quantity', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+              onChange={(val) => onFieldChange(currentMaterialId, 'quantity', parseFloat(val) || 0)}
+              decimals={2}
+              className="h-8 px-3"
             />
           </div>
           <div>
             <Label className="block text-xs font-medium text-gray-700 mb-1">最低库存</Label>
-            <Input
-              type="number"
+            <NumberInput
               value={currentEditedData.minStock ?? ''}
-              onChange={(e) => onFieldChange(currentMaterialId, 'minStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+              onChange={(val) => onFieldChange(currentMaterialId, 'minStock', parseFloat(val) || 0)}
+              decimals={2}
+              className="h-8 px-3"
             />
           </div>
           <div>
             <Label className="block text-xs font-medium text-gray-700 mb-1">最高库存</Label>
-            <Input
-              type="number"
+            <NumberInput
               value={currentEditedData.maxStock ?? ''}
-              onChange={(e) => onFieldChange(currentMaterialId, 'maxStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+              onChange={(val) => onFieldChange(currentMaterialId, 'maxStock', parseFloat(val) || 0)}
+              decimals={2}
+              className="h-8 px-3"
             />
           </div>
         </div>
@@ -199,20 +201,18 @@ export function MaterialBatchEditModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
-            <Input
-              type="date"
-              value={currentEditedData.productionDate || ''}
-              onChange={(e) => onFieldChange(currentMaterialId, 'productionDate', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+            <DatePicker
+              selected={currentEditedData.productionDate ? new Date(currentEditedData.productionDate as string) : undefined}
+              onChange={(date) => onFieldChange(currentMaterialId, 'productionDate', date.toISOString().slice(0, 10))}
+              placeholder="选择生产日期"
             />
           </div>
           <div>
             <Label className="block text-xs font-medium text-gray-700 mb-1">有效期至</Label>
-            <Input
-              type="date"
-              value={currentEditedData.expiryDate || ''}
-              onChange={(e) => onFieldChange(currentMaterialId, 'expiryDate', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
+            <DatePicker
+              selected={currentEditedData.expiryDate ? new Date(currentEditedData.expiryDate as string) : undefined}
+              onChange={(date) => onFieldChange(currentMaterialId, 'expiryDate', date.toISOString().slice(0, 10))}
+              placeholder="选择有效期"
             />
           </div>
         </div>
