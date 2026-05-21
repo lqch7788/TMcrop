@@ -5,7 +5,6 @@
  * 对接后端: /api/alarm-configs
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -92,8 +91,7 @@ function normalizeContact(db: Record<string, unknown>): AlarmContact {
 // ==================== 创建 Store ====================
 
 export const useAlarmConfigStore = create<AlarmConfigState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       levels: LEVEL_DEFAULTS,
       contacts: [],
       isLoading: false,
@@ -164,10 +162,5 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'alarm-config-storage',
-      partialize: (state) => ({ levels: state.levels }),
-    }
-  )
+    })
 );

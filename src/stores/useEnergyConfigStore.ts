@@ -6,7 +6,6 @@
  * 对接后端: /api/energy-configs
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -99,8 +98,7 @@ interface EnergyConfigState {
 // ==================== 创建 Store ====================
 
 export const useEnergyConfigStore = create<EnergyConfigState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -163,10 +161,5 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'energy-config-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

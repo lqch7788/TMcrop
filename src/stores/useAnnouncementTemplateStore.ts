@@ -10,7 +10,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -100,8 +99,7 @@ interface AnnouncementTemplateState {
 // ========== Store ==========
 
 export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       templates: [],
       isLoading: false,
       error: null,
@@ -222,10 +220,5 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'announcement-template-storage',
-      partialize: (state) => ({ templates: state.templates }),
-    }
-  )
+    })
 );

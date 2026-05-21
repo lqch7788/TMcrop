@@ -6,7 +6,6 @@
  * 对接后端: /api/device-systems
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -82,8 +81,7 @@ interface DeviceSystemState {
 // ==================== 创建 Store ====================
 
 export const useDeviceSystemStore = create<DeviceSystemState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -146,10 +144,5 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'device-system-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

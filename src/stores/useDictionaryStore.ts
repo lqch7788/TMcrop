@@ -3,7 +3,6 @@
  * 迁移自 SettingsDataProvider
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { getDictionaries, type Dictionary } from '../services/apiBasicDataService';
 
 interface DictionaryStore {
@@ -20,8 +19,7 @@ interface DictionaryStore {
 }
 
 export const useDictionaryStore = create<DictionaryStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       dictionaries: [],
       loading: false,
       error: null,
@@ -54,12 +52,7 @@ export const useDictionaryStore = create<DictionaryStore>()(
         set({ lastFetch: null });
         await get().loadDictionaries();
       },
-    }),
-    {
-      name: 'dictionary_store',
-      partialize: (state) => ({ dictionaries: state.dictionaries }),
-    }
-  )
+    })
 );
 
 // 辅助函数 - 按分类获取字典项
