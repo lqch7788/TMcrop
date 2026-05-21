@@ -1,18 +1,11 @@
 /**
  * 薪酬管理 Store - CompensationStore
  *
- * Phase 5: 薪酬管理模块
- * V2.0 更新：添加 FIELD_MAP + normalize/denormalize 模式
- *
- * 设计原则：
- * 1. 薪酬数据基于请假/加班/考勤记录计算
- * 2. 优先调用API，API失败时降级到本地存储
- * 3. 支持离线队列，联网后自动同步
- * 4. camelCase 前端字段，snake_case 后端字段通过 FIELD_MAP 映射
+ * V2.1 架构 - 已简化
+ * camelCase 前端字段，snake_case 后端字段通过 FIELD_MAP 映射
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -164,8 +157,7 @@ interface CompensationState {
 // ==================== Store 实现 ====================
 
 export const useCompensationStore = create<CompensationState>()(
-  persist(
-    (set, _get) => ({
+  (set, _get) => ({
       // 初始状态
       salaryRecords: [],
       filters: {},
@@ -180,10 +172,7 @@ export const useCompensationStore = create<CompensationState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiData = await enhancedApiClient.get<{ data: Record<string, unknown>[] }>('/compensation', {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const apiData = await enhancedApiClient.get<{ data: Record<string, unknown>[] }>('/compensation');
 
           if (apiData && Array.isArray(apiData) && apiData.length > 0) {
             const normalized = apiData.map((item: Record<string, unknown>) => normalize(item));
@@ -258,7 +247,7 @@ export const useCompensationStore = create<CompensationState>()(
 
         try {
           const body = denormalize(record);
-          await enhancedApiClient.post('/compensation', body, { offlineQueue: true });
+          await enhancedApiClient.post('/compensation', body);
         } catch (error) {
           console.warn('[CompensationStore] 创建薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
@@ -276,7 +265,7 @@ export const useCompensationStore = create<CompensationState>()(
 
         try {
           const body = denormalize(updates);
-          await enhancedApiClient.put(`/compensation/${id}`, body, { offlineQueue: true });
+          await enhancedApiClient.put(`/compensation/${id}`, body);
         } catch (error) {
           console.warn('[CompensationStore] 更新薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
@@ -289,7 +278,7 @@ export const useCompensationStore = create<CompensationState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/compensation/${id}`, { offlineQueue: true });
+          await enhancedApiClient.delete(`/compensation/${id}`);
         } catch (error) {
           console.warn('[CompensationStore] 删除薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
@@ -307,7 +296,7 @@ export const useCompensationStore = create<CompensationState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/compensation/${id}`, { status: 'approved', approved_at: now }, { offlineQueue: true });
+          await enhancedApiClient.put(`/compensation/${id}`, { status: 'approved', approved_at: now });
         } catch (error) {
           console.warn('[CompensationStore] 审批薪酬API失败:', error);
         }
@@ -322,7 +311,7 @@ export const useCompensationStore = create<CompensationState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/compensation/${id}`, { status: 'paid', paid_at: now }, { offlineQueue: true });
+          await enhancedApiClient.put(`/compensation/${id}`, { status: 'paid', paid_at: now });
         } catch (error) {
           console.warn('[CompensationStore] 更新薪酬状态API失败:', error);
         }
@@ -335,24 +324,6 @@ export const useCompensationStore = create<CompensationState>()(
           filters: { ...state.filters, ...filters },
         }));
       },
-
-      // ========== 同步 ==========
-
-      syncPendingChanges: async () => {
-        try {
-          await enhancedApiClient.forcSync();
-          set({ pendingSyncCount: 0 });
-        } catch (error) {
-          console.warn('[CompensationStore] 同步失败:', error);
-        }
-      },
-    }),
-    {
-      name: 'compensation-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        salaryRecords: state.salaryRecords,
-      }),
     }
   )
 );

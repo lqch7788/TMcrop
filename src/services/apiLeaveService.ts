@@ -105,11 +105,9 @@ export async function getLeaveRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  const response = await enhancedApiClient.get<any>('/leave', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/leave?${paramsStr}` : '/leave';
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: LeaveRecord[] = (response.data || []).map((item: any) => ({
@@ -144,10 +142,7 @@ export async function getLeaveRecords(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getLeaveById(id: string): Promise<LeaveRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/leave/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/leave/${id}`);
 
   if (!response.data) return null;
 
@@ -192,10 +187,7 @@ export async function createLeaveRecord(leave: CreateLeaveParams): Promise<Leave
     remarks: leave.remarks,
   };
 
-  const response = await enhancedApiClient.post<any>('/leave', snakeData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const response = await enhancedApiClient.post<any>('/leave', snakeData);
 
   return {
     ...leave,
@@ -220,9 +212,7 @@ export async function updateLeaveRecord(id: string, updates: UpdateLeaveParams):
   if (updates.status) snakeData.status = updates.status;
   if (updates.remarks !== undefined) snakeData.remarks = updates.remarks;
 
-  await enhancedApiClient.put(`/leave/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/leave/${id}`, snakeData);
 
   return true;
 }
@@ -232,9 +222,7 @@ export async function updateLeaveRecord(id: string, updates: UpdateLeaveParams):
  * 降级策略：API → 离线队列
  */
 export async function deleteLeaveRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/leave/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/leave/${id}`);
   return true;
 }
 
@@ -244,9 +232,7 @@ export async function deleteLeaveRecord(id: string): Promise<boolean> {
  */
 export async function deleteLeaveRecords(ids: string[]): Promise<boolean> {
   for (const id of ids) {
-    await enhancedApiClient.delete(`/leave/${id}`, {
-      offlineQueue: true,
-    });
+    await enhancedApiClient.delete(`/leave/${id}`);
   }
   return true;
 }
@@ -259,11 +245,9 @@ export async function getLeaveQuotas(workerId?: string, year?: number): Promise<
   if (workerId) params.worker_id = workerId;
   if (year) params.year = String(year);
 
-  const response = await enhancedApiClient.get<any>('/leave/quotas/list', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/leave/quotas/list?${paramsStr}` : '/leave/quotas/list';
+  const response = await enhancedApiClient.get<any>(url);
 
   return (response.data || []).map((item: any) => ({
     id: item.id,
@@ -295,8 +279,6 @@ export async function freezeLeaveQuota(
     leave_type: leaveType,
     days,
     year: year || new Date().getFullYear(),
-  }, {
-    offlineQueue: true,
   });
   return true;
 }
@@ -315,8 +297,6 @@ export async function releaseLeaveQuota(
     leave_type: leaveType,
     days,
     year: year || new Date().getFullYear(),
-  }, {
-    offlineQueue: true,
   });
   return true;
 }
@@ -335,8 +315,6 @@ export async function deductLeaveQuota(
     leave_type: leaveType,
     days,
     year: year || new Date().getFullYear(),
-  }, {
-    offlineQueue: true,
   });
   return true;
 }

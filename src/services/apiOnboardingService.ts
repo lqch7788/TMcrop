@@ -113,11 +113,9 @@ export async function getOnboardingRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  return await enhancedApiClient.get('/onboarding', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/onboarding?${paramsStr}` : '/onboarding';
+  return await enhancedApiClient.get(url);
 }
 
 /**
@@ -125,10 +123,7 @@ export async function getOnboardingRecords(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getOnboardingById(id: string): Promise<OnboardingRecord | null> {
-  return await enhancedApiClient.get<OnboardingRecord>(`/onboarding/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<OnboardingRecord>(`/onboarding/${id}`);
 }
 
 /**
@@ -136,10 +131,7 @@ export async function getOnboardingById(id: string): Promise<OnboardingRecord | 
  * 降级策略：API → 离线队列
  */
 export async function createOnboardingRecord(record: CreateOnboardingParams): Promise<OnboardingRecord> {
-  return await enhancedApiClient.post<OnboardingRecord>('/onboarding', record, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<OnboardingRecord>('/onboarding', record);
 }
 
 /**
@@ -147,9 +139,7 @@ export async function createOnboardingRecord(record: CreateOnboardingParams): Pr
  * 降级策略：API → 离线队列
  */
 export async function updateOnboardingRecord(id: string, updates: UpdateOnboardingParams): Promise<OnboardingRecord | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/onboarding/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/onboarding/${id}`, updates);
   return result ? { ...updates, id } as OnboardingRecord : null;
 }
 
@@ -158,9 +148,7 @@ export async function updateOnboardingRecord(id: string, updates: UpdateOnboardi
  * 降级策略：API → 离线队列
  */
 export async function deleteOnboardingRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/onboarding/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/onboarding/${id}`);
   return true;
 }
 
@@ -169,9 +157,7 @@ export async function deleteOnboardingRecord(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteOnboardingRecords(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/onboarding/batch-delete', { ids }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post('/onboarding/batch-delete', { ids });
   return true;
 }
 
@@ -180,8 +166,6 @@ export async function deleteOnboardingRecords(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function updateOnboardingStatus(id: string, params: UpdateStatusParams): Promise<boolean> {
-  await enhancedApiClient.post(`/onboarding/${id}/status`, params, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/onboarding/${id}/status`, params);
   return true;
 }

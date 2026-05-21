@@ -1,16 +1,13 @@
 /**
- * 指标数据 Zustand Store (V2.1 架构)
+ * 指标数据 Zustand Store (V2.1 架构 - 已简化)
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → useIndicators Hook → 组件 (组件不直接读写localStorage)
+ * 架构：enhancedApiClient → API
+ * 数据流：Store → useIndicators Hook → 组件
  *
  * 对接后端: /api/indicators
- *
- * 设计模式参考: useTempTaskStore.ts (V2.1 标准模板)
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import type { Indicator, EvaluationItem, AnalyzeItem, CategorySummary } from '../pages/types/indicators.types';
 
@@ -178,8 +175,7 @@ export interface IndicatorDataState {
 // ========== Store ==========
 
 export const useIndicatorDataStore = create<IndicatorDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       indicators: [],
       evaluationData: DEFAULT_EVALUATION_DATA,
       isLoading: false,
@@ -209,10 +205,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
           const query = params.toString();
           const url = `/indicators${query ? `?${query}` : ''}`;
 
-          const response = await enhancedApiClient.get(url, {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const response = await enhancedApiClient.get(url);
 
           // enhancedApiClient 已提取 .data，返回数组
           const rawData = Array.isArray(response) ? response : [];
@@ -270,7 +263,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
         try {
           // 构造请求体（后端要求 id 必填）
           const body = { ...denormalize(data), id: localId };
-          const response = await enhancedApiClient.post('/indicators', body, { offlineQueue: true, priority: 0 });
+          const response = await enhancedApiClient.post('/indicators', body);
 
           // enhancedApiClient 提取 .data → 返回完整记录
           const savedItem = response && typeof response === 'object' && 'id' in response
@@ -321,7 +314,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
         });
         try {
           const body = denormalize(updates);
-          await enhancedApiClient.put(`/indicators/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/indicators/${id}`, body);
         } catch (error) {
           const errMsg = (error as Error)?.message || '更新指标失败';
           console.warn('[IndicatorDataStore] 更新指标API失败:', errMsg);
@@ -353,7 +346,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
           };
         });
         try {
-          await enhancedApiClient.delete(`/indicators/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/indicators/${id}`);
           return true;
         } catch (error) {
           console.warn('[IndicatorDataStore] 删除指标API失败:', error);
@@ -386,7 +379,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
         try {
           await Promise.all(
             ids.map((id) =>
-              enhancedApiClient.delete(`/indicators/${id}`, { offlineQueue: true, priority: 0 }).catch(() => {})
+              enhancedApiClient.delete(`/indicators/${id}`).catch(() => {})
             )
           );
           return true;
@@ -409,29 +402,17 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
       // ---------- 评估数据管理 ----------
       fetchEvaluations: async () => {
         try {
-          const response = await enhancedApiClient.get('/indicator-evaluations', {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const response = await enhancedApiClient.get('/indicator-evaluations');
           const rawData = Array.isArray(response) ? response : [];
           const normalized = rawData.map((item: Record<string, unknown>) => normalizeEvaluation(item));
           if (normalized.length > 0) {
             set({ evaluationData: normalized });
           }
         } catch (error) {
-          console.warn('[IndicatorDataStore] 评估数据API获取失败，使用本地缓存:', error);
-          // persist 中间件自动从 localStorage 恢复 evaluationData
+          console.warn('[IndicatorDataStore] 评估数据API获取失败:', error);
         }
       },
 
       setEvaluationData: (data) => set({ evaluationData: data }),
-    }),
-    {
-      name: 'indicator-data-storage',
-      partialize: (state) => ({
-        indicators: state.indicators,
-        evaluationData: state.evaluationData,
-      }),
-    }
-  )
+    })
 );

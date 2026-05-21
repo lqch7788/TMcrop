@@ -271,7 +271,7 @@ export const useStatisticsStore = create<StatisticsState>()(
             monthly_statistics: Record<string, unknown>[];
             category_summary: CategorySummaryItem[];
             category_trend: CategoryTrendItem[];
-          }>('/material-statistics', { useCache: true, cacheStrategy: 'stale-while-revalidate' });
+          }>('/material-statistics');
 
           if (data) {
             set({

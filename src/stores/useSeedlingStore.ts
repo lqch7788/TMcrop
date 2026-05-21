@@ -1,13 +1,10 @@
 /**
- * 育苗管理 Zustand Store
+ * 育苗管理 Zustand Store (V2.1 架构 - 已简化)
  * 数据流：enhancedApiClient → Store → 页面组件
- * 三级降级：API → IndexedDB → localStorage
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Seedling, DailyRecord } from '../types/crop';
 import * as seedlingService from '../services/apiSeedlingService';
-import { enhancedApiClient } from '../lib/apiClient';
 
 interface SeedlingState {
   items: Seedling[];
@@ -24,8 +21,7 @@ interface SeedlingState {
 }
 
 export const useSeedlingStore = create<SeedlingState>()(
-  persist(
-    (set) => ({
+  (set) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -46,8 +42,6 @@ export const useSeedlingStore = create<SeedlingState>()(
         const result = await seedlingService.addSeedling(item);
         if (result) {
           set((s) => ({ items: [result, ...s.items] }));
-          // 清空 GET 缓存，确保下次 loadItems 获取最新数据
-          enhancedApiClient.clearCache().catch(() => {});
         }
         return result;
       } catch (error) {
@@ -61,7 +55,6 @@ export const useSeedlingStore = create<SeedlingState>()(
         const result = await seedlingService.updateSeedling(id, updates);
         if (result) {
           set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
-          enhancedApiClient.clearCache().catch(() => {});
         }
         return result;
       } catch (error) {
@@ -75,7 +68,6 @@ export const useSeedlingStore = create<SeedlingState>()(
         const result = await seedlingService.deleteSeedling(id);
         if (result) {
           set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
-          enhancedApiClient.clearCache().catch(() => {});
         }
         return result;
       } catch (error) {
@@ -89,7 +81,6 @@ export const useSeedlingStore = create<SeedlingState>()(
         const result = await seedlingService.deleteSeedlings(ids);
         if (result) {
           set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
-          enhancedApiClient.clearCache().catch(() => {});
         }
         return result;
       } catch (error) {
@@ -124,18 +115,5 @@ export const useSeedlingStore = create<SeedlingState>()(
         return false;
       }
     },
-  }),
-  {
-    name: 'seedling-storage',
-    version: 2,  // 版本升级：清除旧格式缓存，避免非数组数据导致 filter 报错
-    partialize: (state) => ({ items: state.items }),
-    merge: (persisted: unknown, current) => {
-      const state = current as SeedlingState;
-      if (persisted && typeof persisted === 'object' && Array.isArray((persisted as Record<string, unknown>).items)) {
-        return { ...state, items: (persisted as Record<string, unknown>).items as Seedling[] };
-      }
-      return state;
-    },
-  }
-)
+  })
 );

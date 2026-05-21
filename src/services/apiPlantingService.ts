@@ -134,10 +134,7 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPlantings(): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings');
   return transformPlantingFromBackend(data) as Planting[];
 }
 
@@ -146,10 +143,7 @@ export async function getPlantings(): Promise<Planting[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPlantingById(id: string): Promise<Planting | undefined> {
-  const data = await enhancedApiClient.get<BackendPlanting>(`/plantings/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting>(`/plantings/${id}`);
   return transformPlantingFromBackend(data) as Planting;
 }
 
@@ -158,10 +152,7 @@ export async function getPlantingById(id: string): Promise<Planting | undefined>
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPlantingsByIds(ids: string[]): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/batch?ids=${ids.join(',')}`);
   return transformPlantingFromBackend(data) as Planting[];
 }
 
@@ -170,10 +161,7 @@ export async function getPlantingsByIds(ids: string[]): Promise<Planting[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPlantingsBySourceId(sourceId: string): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/source/${sourceId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/source/${sourceId}`);
   return transformPlantingFromBackend(data) as Planting[];
 }
 
@@ -182,10 +170,7 @@ export async function getPlantingsBySourceId(sourceId: string): Promise<Planting
  * 降级策略：API → 离线队列
  */
 export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' | 'updateTime'>): Promise<Planting> {
-  const result = await enhancedApiClient.post<{ id: string }>('/plantings', planting, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/plantings', planting);
   return { ...planting, id: result.id } as Planting;
 }
 
@@ -194,9 +179,7 @@ export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' |
  * 降级策略：API → 离线队列
  */
 export async function updatePlanting(id: string, updates: Partial<Planting>): Promise<Planting | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates);
   return result ? { ...updates, id } as Planting : null;
 }
 
@@ -205,9 +188,7 @@ export async function updatePlanting(id: string, updates: Partial<Planting>): Pr
  * 降级策略：API → 离线队列
  */
 export async function deletePlanting(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/plantings/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/plantings/${id}`);
   return true;
 }
 
@@ -216,9 +197,7 @@ export async function deletePlanting(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deletePlantings(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/plantings/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/plantings/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -227,9 +206,7 @@ export async function deletePlantings(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function harvestPlanting(id: string, harvestDate: string, harvestCount?: number): Promise<boolean> {
-  await enhancedApiClient.post(`/plantings/${id}/harvest`, { harvestDate, harvestCount }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/plantings/${id}/harvest`, { harvestDate, harvestCount });
   return true;
 }
 
@@ -238,10 +215,7 @@ export async function harvestPlanting(id: string, harvestDate: string, harvestCo
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getUnharvestedPlantings(): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/unharvested', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/unharvested');
   return transformPlantingFromBackend(data) as Planting[];
 }
 
@@ -250,10 +224,7 @@ export async function getUnharvestedPlantings(): Promise<Planting[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestedPlantings(): Promise<Planting[]> {
-  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/harvested', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/harvested');
   return transformPlantingFromBackend(data) as Planting[];
 }
 

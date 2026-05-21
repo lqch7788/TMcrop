@@ -615,11 +615,6 @@ export async function saveDictionaries(data: {
  * 优先从API获取，失败时使用本地存储
  */
 export async function getSystemConfigs(configKey?: string): Promise<SystemConfig[]> {
-  const params: Record<string, string> = {};
-  if (configKey) {
-    params.configKey = configKey;
-  }
-
   // 本地存储的回退数据
   const LOCAL_STORAGE_KEY = 'yuanxingtu_system_configs';
   const DEFAULT_CONFIGS: SystemConfig[] = [
@@ -632,8 +627,13 @@ export async function getSystemConfigs(configKey?: string): Promise<SystemConfig
     { id: '7', configKey: DEFAULT_USERNAME_KEY, configValue: DEFAULT_USERNAME_VALUE, configType: 'string', description: '系统默认用户名' },
   ];
 
+  let url = '/dictionary/system-configs';
+  if (configKey) {
+    url += `?configKey=${encodeURIComponent(configKey)}`;
+  }
+
   try {
-    const data = await apiClient.get<SystemConfig[]>('/dictionary/system-configs', params);
+    const data = await apiClient.get<SystemConfig[]>(url);
     // API成功时保存到本地存储
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
     return data;
@@ -673,13 +673,13 @@ const DEFAULT_WAREHOUSES: Warehouse[] = [
 ];
 
 export async function getWarehouses(status?: string): Promise<Warehouse[]> {
-  const params: Record<string, string> = {};
+  let url = '/dictionary/warehouses';
   if (status) {
-    params.status = status;
+    url += `?status=${encodeURIComponent(status)}`;
   }
 
   try {
-    const data = await apiClient.get<Warehouse[]>('/dictionary/warehouses', params);
+    const data = await apiClient.get<Warehouse[]>(url);
     localStorage.setItem(WAREHOUSE_STORAGE_KEY, JSON.stringify(data));
     return data;
   } catch (error) {
@@ -721,16 +721,17 @@ const DEFAULT_BASES: Base[] = [
  * 获取基地列表
  */
 export async function getBases(status?: string, orgOid?: string): Promise<Base[]> {
-  const params: Record<string, string> = {};
+  const queryParts: string[] = [];
   if (status) {
-    params.status = status;
+    queryParts.push(`status=${encodeURIComponent(status)}`);
   }
   if (orgOid) {
-    params.orgOid = orgOid;
+    queryParts.push(`orgOid=${encodeURIComponent(orgOid)}`);
   }
+  const url = '/dictionary/bases' + (queryParts.length > 0 ? `?${queryParts.join('&')}` : '');
 
   try {
-    const data = await apiClient.get<Base[]>('/dictionary/bases', params);
+    const data = await apiClient.get<Base[]>(url);
     localStorage.setItem(BASE_STORAGE_KEY, JSON.stringify(data));
     return data;
   } catch (error) {
@@ -768,16 +769,17 @@ const DEFAULT_GREENHOUSES: Greenhouse[] = [
 ];
 
 export async function getGreenhouses(status?: string, baseOid?: string): Promise<Greenhouse[]> {
-  const params: Record<string, string> = {};
+  const queryParts: string[] = [];
   if (status) {
-    params.status = status;
+    queryParts.push(`status=${encodeURIComponent(status)}`);
   }
   if (baseOid) {
-    params.baseOid = baseOid;
+    queryParts.push(`baseOid=${encodeURIComponent(baseOid)}`);
   }
+  const url = '/dictionary/greenhouses' + (queryParts.length > 0 ? `?${queryParts.join('&')}` : '');
 
   try {
-    const data = await apiClient.get<Greenhouse[]>('/dictionary/greenhouses', params);
+    const data = await apiClient.get<Greenhouse[]>(url);
     localStorage.setItem(GREENHOUSE_STORAGE_KEY, JSON.stringify(data));
     return data;
   } catch (error) {

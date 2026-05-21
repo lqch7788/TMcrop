@@ -8,7 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -154,8 +153,7 @@ const STATUS_LABEL_MAP: Record<string, string> = {
 };
 
 export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
-  persist(
-    (set) => ({
+  (set) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -219,7 +217,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
         // 尝试调用API（后端可能无此接口）
         try {
           const body = denormalize(data);
-          await enhancedApiClient.post('/salary_adjustment', body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.post('/salary_adjustment', body);
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 创建API不可用，仅本地保存:', error);
         }
@@ -247,7 +245,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
         // 尝试调用API
         try {
           const body = denormalize(updates);
-          await enhancedApiClient.put(`/salary_adjustment/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/salary_adjustment/${id}`, body);
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 更新API不可用:', error);
         }
@@ -260,7 +258,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/salary_adjustment/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/salary_adjustment/${id}`);
           return true;
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 删除API不可用:', error);
@@ -278,7 +276,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/salary_adjustment/${id}`, { offlineQueue: true, priority: 0 })
+                .delete(`/salary_adjustment/${id}`)
                 .catch(() => {})
             )
           );
@@ -300,7 +298,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           await enhancedApiClient.post(
             `/salary_adjustment/${id}/status`,
             { status: 'approved' },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 审批API不可用:', error);
@@ -319,7 +317,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           await enhancedApiClient.post(
             `/salary_adjustment/${id}/status`,
             { status: 'rejected' },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 驳回API不可用:', error);
@@ -339,18 +337,13 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           await enhancedApiClient.post(
             `/salary_adjustment/${id}/status`,
             { status },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[SalaryAdjustmentStore] 状态更新API不可用:', error);
         }
       },
-    }),
-    {
-      name: 'salary-adjustment-data-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );
 
 /** 辅助：获取当前记录 */

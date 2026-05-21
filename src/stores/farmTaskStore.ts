@@ -1,18 +1,12 @@
 /**
  * 农事任务 Store - FarmTaskStore
  *
- * Phase 3 参照模板
- *
- * 设计原则：
- * 1. 保留现有mock数据作为种子数据（不删除任何数据）
- * 2. 优先调用API，API失败时降级到本地存储
- * 3. 支持离线队列，联网后自动同步
+ * V2.1 架构 - 已简化
  *
  * 注意：此Store专注于数据管理，业务逻辑（如状态流转、操作记录）保留在useTasks中
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -140,8 +134,7 @@ interface FarmTaskState {
 // ========== Store 实现 ==========
 
 export const useFarmTaskStore = create<FarmTaskState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // 初始状态
       tasks: [],
       filters: {},
@@ -158,10 +151,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           // 尝试从API获取
           // API返回格式: { success: true, data: Task[], meta: {...} }
-          const apiData = await enhancedApiClient.get<Task[]>('/farm-tasks', {
-            useCache: false,  // 禁用缓存，确保每次都从API获取
-            cacheStrategy: 'network-first',
-          });
+          const apiData = await enhancedApiClient.get<Task[]>('/farm-tasks');
 
           // 正确处理 API 返回的 { success, data, meta } 结构
           if (Array.isArray(apiData) && apiData.length > 0) {
@@ -222,8 +212,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
           // 尝试调用API（包含 taskCode，确保后端使用 NS 前缀而非 TK 默认值）
           const savedTask = await enhancedApiClient.post<Task>(
             '/farm-tasks',
-            { ...task, taskCode },
-            { offlineQueue: true }
+            { ...task, taskCode }
           );
 
           // API成功，将API返回数据合并到本地任务（保留本地字段，仅用API数据补充）
@@ -255,9 +244,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/farm-tasks/${id}`, updates, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.put(`/farm-tasks/${id}`, updates);
         } catch (error) {
           console.warn('[FarmTaskStore] 更新任务API失败，已加入离线队列:', error);
           set(state => ({
@@ -273,9 +260,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/farm-tasks/${id}`, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.delete(`/farm-tasks/${id}`);
         } catch (error) {
           console.warn('[FarmTaskStore] 删除任务API失败，已加入离线队列:', error);
           set(state => ({
@@ -310,7 +295,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
         // 异步同步到后端 API
         newTasks.forEach(task => {
-          enhancedApiClient.post('/farm-tasks', task, { offlineQueue: true })
+          enhancedApiClient.post('/farm-tasks', task)
             .catch(() => console.warn('[FarmTaskStore] 迁移任务同步API失败:', task.id));
         });
       },
@@ -323,17 +308,6 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         }));
       },
 
-      // ========== 同步 ==========
-
-      syncPendingChanges: async () => {
-        try {
-          await enhancedApiClient.forcSync();
-          set({ pendingSyncCount: 0 });
-        } catch (error) {
-          console.warn('[FarmTaskStore] 同步失败:', error);
-        }
-      },
-
       // ========== 内部方法 ==========
 
       _initializeSeedData: () => {
@@ -341,20 +315,6 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         // 这里只设置加载状态
         set({ isLoading: false });
         // 种子数据初始化完成（使用空数据，由 useTasks 填充）
-      },
-    }),
-    {
-      name: 'farm-task-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        tasks: state.tasks,
-        filters: state.filters,
-      }),
-      // 防御 localStorage 数据损坏：确保 tasks 总是数组
-      onRehydrateStorage: () => (state) => {
-        if (state && !Array.isArray(state.tasks)) {
-          state.tasks = [];
-        }
       },
     }
   )

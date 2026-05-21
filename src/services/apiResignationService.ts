@@ -91,11 +91,9 @@ export async function getResignationRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  const response = await enhancedApiClient.get<any>('/resignation', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/resignation?${paramsStr}` : '/resignation';
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: ResignationRecord[] = (response.data || []).map((item: any) => ({
@@ -131,10 +129,7 @@ export async function getResignationRecords(
  * 获取单个离职记录
  */
 export async function getResignationById(id: string): Promise<ResignationRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/resignation/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/resignation/${id}`);
 
   if (!response.data) return null;
 
@@ -181,9 +176,7 @@ export async function createResignationRecord(resignation: CreateResignationPara
     remarks: resignation.remarks,
   };
 
-  const response = await enhancedApiClient.post<any>('/resignation', snakeData, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.post<any>('/resignation', snakeData);
 
   return {
     ...resignation,
@@ -210,9 +203,7 @@ export async function updateResignationRecord(id: string, updates: UpdateResigna
   if (updates.status) snakeData.status = updates.status;
   if (updates.remarks !== undefined) snakeData.remarks = updates.remarks;
 
-  await enhancedApiClient.put(`/resignation/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/resignation/${id}`, snakeData);
 
   return true;
 }
@@ -221,9 +212,7 @@ export async function updateResignationRecord(id: string, updates: UpdateResigna
  * 删除离职记录
  */
 export async function deleteResignationRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/resignation/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/resignation/${id}`);
   return true;
 }
 
@@ -233,8 +222,7 @@ export async function deleteResignationRecord(id: string): Promise<boolean> {
 export async function rejoinWorker(workerId: string, rejoinDate: string): Promise<boolean> {
   await enhancedApiClient.post(
     `/labor/workers/${workerId}/rejoin`,
-    { rejoin_date: rejoinDate },
-    { offlineQueue: true }
+    { rejoin_date: rejoinDate }
   );
   return true;
 }

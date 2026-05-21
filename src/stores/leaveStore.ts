@@ -1,13 +1,11 @@
 /**
- * 请假管理 Zustand Store (V2.0 架构改造)
+ * 请假管理 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写 localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/leave
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -173,8 +171,7 @@ interface LeaveState {
 // ==================== 第五步：创建 Store ====================
 
 export const useLeaveStore = create<LeaveState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       leaveRecords: [],
       isLoading: false,
       error: null,
@@ -198,7 +195,6 @@ export const useLeaveStore = create<LeaveState>()(
           set({ leaveRecords: normalized, isLoading: false });
         } catch (error) {
           console.warn('[LeaveStore] API获取失败，使用本地缓存:', error);
-          // persist 中间件会自动从 localStorage 恢复数据
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -210,7 +206,7 @@ export const useLeaveStore = create<LeaveState>()(
           const response = await enhancedApiClient.post<{
             success: boolean;
             data: { id: string };
-          }>('/leave', body, { offlineQueue: true, priority: 0 });
+          }>('/leave', body);
 
           // enhancedApiClient 已自动提取 .data，response 直接就是 { id }
           const newId = (response as any)?.id || `LV${Date.now()}`;
@@ -254,7 +250,7 @@ export const useLeaveStore = create<LeaveState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/leave/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/leave/${id}`, body);
         } catch (error) {
           console.warn('[LeaveStore] 更新请假记录失败，已加入离线队列:', error);
         }
@@ -267,7 +263,7 @@ export const useLeaveStore = create<LeaveState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/leave/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/leave/${id}`);
           return true;
         } catch (error) {
           console.warn('[LeaveStore] 删除请假记录失败，已加入离线队列:', error);
@@ -285,7 +281,7 @@ export const useLeaveStore = create<LeaveState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/leave/${id}`, { offlineQueue: true, priority: 0 })
+                .delete(`/leave/${id}`)
                 .catch(() => {})
             )
           );
@@ -322,10 +318,7 @@ export const useLeaveStore = create<LeaveState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates), {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates));
         } catch (error) {
           console.warn('[LeaveStore] 审批请假失败:', error);
         }
@@ -353,10 +346,7 @@ export const useLeaveStore = create<LeaveState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates), {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates));
         } catch (error) {
           console.warn('[LeaveStore] 驳回请假失败:', error);
         }
@@ -383,10 +373,7 @@ export const useLeaveStore = create<LeaveState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates), {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/leave/${id}`, denormalize(updates));
         } catch (error) {
           console.warn('[LeaveStore] 取消请假失败:', error);
         }
@@ -399,15 +386,6 @@ export const useLeaveStore = create<LeaveState>()(
           filters: { ...state.filters, ...newFilters },
         }));
       },
-    }),
-    {
-      // ==================== 第六步：持久化配置 ====================
-      name: 'leave-data-storage',
-      // 只持久化数据，不持久化 isLoading 和 error
-      partialize: (state) => ({
-        leaveRecords: state.leaveRecords,
-        filters: state.filters,
-      }),
     }
   )
 );

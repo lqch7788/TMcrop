@@ -126,7 +126,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
         try {
           const response = await enhancedApiClient.get<ApiListResponse>(
             '/basic-data/system-configs',
-            { useCache: true, cacheStrategy: 'network-first' }
+            {}
           );
 
           let rawData: Record<string, unknown>[] = [];
@@ -153,7 +153,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
             success: boolean;
             data: Record<string, unknown>;
             message?: string;
-          }>('/basic-data/system-configs', body, { offlineQueue: true, priority: 0 });
+          }>('/basic-data/system-configs', body);
 
           // 后端返回完整记录时用它，否则用乐观数据
           const saved = response && 'data' in response ? response.data : null;
@@ -186,8 +186,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           const body = denormalize(data);
           await enhancedApiClient.put(
             `/basic-data/system-configs/${id}`,
-            body,
-            { offlineQueue: true, priority: 0 }
+            body
           );
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
         } catch (error) {
@@ -201,8 +200,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
 
         try {
           await enhancedApiClient.delete(
-            `/basic-data/system-configs/${id}`,
-            { offlineQueue: true, priority: 0 }
+            `/basic-data/system-configs/${id}`
           );
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
           return true;

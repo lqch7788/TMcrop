@@ -93,9 +93,7 @@ export async function getOperationLogs(filters?: OperationLogFilters): Promise<O
     if (filters.limit) params.limit = String(filters.limit);
   }
 
-  const data = await enhancedApiClient.get<OperationLogResult>('/operation-logs', {
-    useCache: false, // 日志数据不适合缓存
-  });
+  const data = await enhancedApiClient.get<OperationLogResult>('/operation-logs');
   return data;
 }
 
@@ -105,10 +103,7 @@ export async function getOperationLogs(filters?: OperationLogFilters): Promise<O
  */
 export async function getOperationLogById(id: string): Promise<OperationLog | null> {
   try {
-    const data = await enhancedApiClient.get<OperationLog>(`/operation-logs/${id}`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    const data = await enhancedApiClient.get<OperationLog>(`/operation-logs/${id}`);
     return data;
   } catch {
     return null;
@@ -120,10 +115,7 @@ export async function getOperationLogById(id: string): Promise<OperationLog | nu
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getOperationLogStats(): Promise<OperationLogStats> {
-  const data = await enhancedApiClient.get<OperationLogStats>('/operation-logs/stats/summary', {
-    useCache: true,
-    cacheStrategy: 'stale-while-revalidate',
-  });
+  const data = await enhancedApiClient.get<OperationLogStats>('/operation-logs/stats/summary');
   return data;
 }
 
@@ -132,9 +124,7 @@ export async function getOperationLogStats(): Promise<OperationLogStats> {
  * 降级策略：API → 离线队列
  */
 export async function deleteOperationLog(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/operation-logs/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/operation-logs/${id}`);
 }
 
 /**
@@ -154,8 +144,6 @@ export async function createOperationLog(log: {
   status?: 'success' | 'warning' | 'error' | 'info';
   errorMessage?: string;
 }): Promise<{ id: string; createdAt: string }> {
-  const result = await enhancedApiClient.post<{ id: string; createdAt: string }>('/operation-logs', log, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string; createdAt: string }>('/operation-logs', log);
   return result;
 }

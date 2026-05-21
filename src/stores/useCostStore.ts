@@ -3,7 +3,6 @@
  * 统一管理成本类别和预算的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getCostCategories, createCostCategory, updateCostCategory, deleteCostCategory,
   getCostBudgets, createCostBudget, updateCostBudget, deleteCostBudget,
@@ -33,8 +32,7 @@ interface CostStore {
 }
 
 export const useCostStore = create<CostStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       categories: [],
       budgets: [],
       loading: false,
@@ -134,10 +132,5 @@ export const useCostStore = create<CostStore>()(
       },
 
       refreshAll: async () => { set({ lastFetch: null }); await get().loadAll(); },
-    }),
-    {
-      name: 'cost_store',
-      partialize: (s) => ({ categories: s.categories, budgets: s.budgets }),
-    }
-  )
+    })
 );

@@ -134,11 +134,9 @@ export async function getOvertimeRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  const response = await enhancedApiClient.get<any>('/overtime', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/overtime?${paramsStr}` : '/overtime';
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: OvertimeRecord[] = (response.data || []).map((item: any) => ({
@@ -180,10 +178,7 @@ export async function getOvertimeRecords(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getOvertimeById(id: string): Promise<OvertimeRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/overtime/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/overtime/${id}`);
 
   if (!response.data) return null;
 
@@ -241,10 +236,7 @@ export async function createOvertimeRecord(overtime: CreateOvertimeParams): Prom
     remarks: overtime.remarks,
   };
 
-  const response = await enhancedApiClient.post<any>('/overtime', snakeData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const response = await enhancedApiClient.post<any>('/overtime', snakeData);
 
   return {
     ...overtime,
@@ -274,9 +266,7 @@ export async function updateOvertimeRecord(id: string, updates: UpdateOvertimePa
   if (updates.status) snakeData.status = updates.status;
   if (updates.remarks !== undefined) snakeData.remarks = updates.remarks;
 
-  await enhancedApiClient.put(`/overtime/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/overtime/${id}`, snakeData);
 
   return true;
 }
@@ -286,9 +276,7 @@ export async function updateOvertimeRecord(id: string, updates: UpdateOvertimePa
  * 降级策略：API → 离线队列
  */
 export async function deleteOvertimeRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/overtime/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/overtime/${id}`);
   return true;
 }
 
@@ -298,9 +286,7 @@ export async function deleteOvertimeRecord(id: string): Promise<boolean> {
  */
 export async function deleteOvertimeRecords(ids: string[]): Promise<boolean> {
   for (const id of ids) {
-    await enhancedApiClient.delete(`/overtime/${id}`, {
-      offlineQueue: true,
-    });
+    await enhancedApiClient.delete(`/overtime/${id}`);
   }
   return true;
 }
@@ -314,8 +300,6 @@ export async function approveOvertimeRecord(id: string, approved: boolean, comme
     status: approved ? 'approved' : 'rejected',
     approved_at: new Date().toISOString(),
     approval_comment: comment,
-  }, {
-    offlineQueue: true,
   });
   return true;
 }

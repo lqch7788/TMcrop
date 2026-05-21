@@ -17,10 +17,7 @@ import { HarvestRecord } from '../types/index';
  * 降级策略：API → IndexedDB 缓存
  */
 export async function initHarvestRecords(): Promise<HarvestRecord[]> {
-  return await enhancedApiClient.get<HarvestRecord[]>('/harvest/init', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<HarvestRecord[]>('/harvest/init');
 }
 
 /**
@@ -28,10 +25,7 @@ export async function initHarvestRecords(): Promise<HarvestRecord[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecords(): Promise<HarvestRecord[]> {
-  return await enhancedApiClient.get<HarvestRecord[]>('/harvest', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<HarvestRecord[]>('/harvest');
 }
 
 /**
@@ -39,10 +33,7 @@ export async function getHarvestRecords(): Promise<HarvestRecord[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordById(id: string): Promise<HarvestRecord | undefined> {
-  return await enhancedApiClient.get<HarvestRecord>(`/harvest/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<HarvestRecord>(`/harvest/${id}`);
 }
 
 /**
@@ -50,10 +41,7 @@ export async function getHarvestRecordById(id: string): Promise<HarvestRecord | 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordsByIds(ids: string[]): Promise<HarvestRecord[]> {
-  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch?ids=${ids.join(',')}`);
 }
 
 /**
@@ -61,10 +49,7 @@ export async function getHarvestRecordsByIds(ids: string[]): Promise<HarvestReco
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getHarvestRecordsByBatchCode(batchCode: string): Promise<HarvestRecord[]> {
-  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch-code/${batchCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<HarvestRecord[]>(`/harvest/batch-code/${batchCode}`);
 }
 
 /**
@@ -72,10 +57,7 @@ export async function getHarvestRecordsByBatchCode(batchCode: string): Promise<H
  * 降级策略：API → 离线队列
  */
 export async function addHarvestRecord(record: Omit<HarvestRecord, 'id'>): Promise<HarvestRecord> {
-  const result = await enhancedApiClient.post<{ id: string }>('/harvest', record, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/harvest', record);
   return { ...record, id: result.id } as HarvestRecord;
 }
 
@@ -84,10 +66,7 @@ export async function addHarvestRecord(record: Omit<HarvestRecord, 'id'>): Promi
  * 降级策略：API → 离线队列
  */
 export async function addHarvestRecords(newRecords: Omit<HarvestRecord, 'id'>[]): Promise<HarvestRecord[]> {
-  return await enhancedApiClient.post<HarvestRecord[]>('/harvest/batch', newRecords, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<HarvestRecord[]>('/harvest/batch', newRecords);
 }
 
 /**
@@ -95,9 +74,7 @@ export async function addHarvestRecords(newRecords: Omit<HarvestRecord, 'id'>[])
  * 降级策略：API → 离线队列
  */
 export async function updateHarvestRecord(id: string, updates: Partial<HarvestRecord>): Promise<HarvestRecord | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/harvest/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/harvest/${id}`, updates);
   return result ? { ...updates, id } as HarvestRecord : null;
 }
 
@@ -106,9 +83,7 @@ export async function updateHarvestRecord(id: string, updates: Partial<HarvestRe
  * 降级策略：API → 离线队列
  */
 export async function deleteHarvestRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/harvest/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/harvest/${id}`);
   return true;
 }
 
@@ -117,9 +92,7 @@ export async function deleteHarvestRecord(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteHarvestRecords(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/harvest/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/harvest/batch?ids=${ids.join(',')}`);
   return true;
 }
 

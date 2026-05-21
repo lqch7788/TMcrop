@@ -1,10 +1,9 @@
 /**
- * 生产计划数据 Zustand Store
+ * 生产计划数据 Zustand Store (V2.1 架构 - 已简化)
  * 管理生产计划的完整 CRUD 数据流
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { CropBatch } from '../types';
 import * as planService from '../services/apiProductionPlanLocalService';
 
@@ -29,67 +28,54 @@ interface ProductionPlanState {
 }
 
 export const useProductionPlanStore = create<ProductionPlanState>()(
-  persist(
-    (set) => ({
-      plans: [],
-      isLoading: false,
-      error: null,
+  (set) => ({
+    plans: [],
+    isLoading: false,
+    error: null,
 
-      fetchPlans: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          const data = await planService.getProductionPlans();
-          const safeData = Array.isArray(data) ? data : [];
-          set({ plans: safeData as unknown as CropBatch[], isLoading: false });
-        } catch (error) {
-          console.error('[useProductionPlanStore] 获取生产计划失败:', error);
-          set({ error: (error as Error).message, isLoading: false });
-        }
-      },
+    fetchPlans: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const data = await planService.getProductionPlans();
+        const safeData = Array.isArray(data) ? data : [];
+        set({ plans: safeData as unknown as CropBatch[], isLoading: false });
+      } catch (error) {
+        console.error('[useProductionPlanStore] 获取生产计划失败:', error);
+        set({ error: (error as Error).message, isLoading: false });
+      }
+    },
 
-      addPlan: async (plan) => {
-        const result = await planService.addProductionPlan(plan as any);
-        const newPlan = { ...plan, id: (result as any).id || '' } as CropBatch;
-        set((state) => ({ plans: [newPlan, ...state.plans] }));
-        return newPlan;
-      },
+    addPlan: async (plan) => {
+      const result = await planService.addProductionPlan(plan as any);
+      const newPlan = { ...plan, id: (result as any).id || '' } as CropBatch;
+      set((state) => ({ plans: [newPlan, ...state.plans] }));
+      return newPlan;
+    },
 
-      updatePlan: async (id, updates) => {
-        const result = await planService.updateProductionPlan(id, updates as any);
-        if (result) {
-          set((state) => ({
-            plans: state.plans.map((p) => (p.id === id ? { ...p, ...(result as any) } : p)),
-          }));
-        }
-        return result as unknown as CropBatch | null;
-      },
+    updatePlan: async (id, updates) => {
+      const result = await planService.updateProductionPlan(id, updates as any);
+      if (result) {
+        set((state) => ({
+          plans: state.plans.map((p) => (p.id === id ? { ...p, ...(result as any) } : p)),
+        }));
+      }
+      return result as unknown as CropBatch | null;
+    },
 
-      deletePlan: async (id) => {
-        const result = await planService.deleteProductionPlan(id);
-        if (result) {
-          set((state) => ({ plans: state.plans.filter((p) => p.id !== id) }));
-        }
-        return result;
-      },
+    deletePlan: async (id) => {
+      const result = await planService.deleteProductionPlan(id);
+      if (result) {
+        set((state) => ({ plans: state.plans.filter((p) => p.id !== id) }));
+      }
+      return result;
+    },
 
-      deletePlans: async (ids) => {
-        const result = await planService.deleteProductionPlans(ids);
-        if (result) {
-          set((state) => ({ plans: state.plans.filter((p) => !ids.includes(p.id)) }));
-        }
-        return result;
-      },
-    }),
-    {
-      name: 'production-plan-storage',
-      partialize: (state) => ({ plans: state.plans }),
-      merge: (persisted: unknown, current) => {
-        const p = persisted as Record<string, unknown> | null;
-        return {
-          ...current,
-          plans: Array.isArray(p?.plans) ? p!.plans : current.plans,
-        };
-      },
-    }
-  )
+    deletePlans: async (ids) => {
+      const result = await planService.deleteProductionPlans(ids);
+      if (result) {
+        set((state) => ({ plans: state.plans.filter((p) => !ids.includes(p.id)) }));
+      }
+      return result;
+    },
+  })
 );

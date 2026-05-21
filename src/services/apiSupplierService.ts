@@ -24,10 +24,7 @@ export async function initSuppliers(): Promise<Supplier[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllSuppliers(): Promise<Supplier[]> {
-  return await enhancedApiClient.get<Supplier[]>('/suppliers', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Supplier[]>('/suppliers');
 }
 
 /**
@@ -35,10 +32,7 @@ export async function getAllSuppliers(): Promise<Supplier[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function searchSuppliers(keyword: string): Promise<Supplier[]> {
-  return await enhancedApiClient.get<Supplier[]>(`/suppliers/search?keyword=${encodeURIComponent(keyword)}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Supplier[]>(`/suppliers/search?keyword=${encodeURIComponent(keyword)}`);
 }
 
 /**
@@ -46,10 +40,7 @@ export async function searchSuppliers(keyword: string): Promise<Supplier[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSupplierById(id: number): Promise<Supplier | undefined> {
-  return await enhancedApiClient.get<Supplier>(`/suppliers/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Supplier>(`/suppliers/${id}`);
 }
 
 /**
@@ -57,8 +48,5 @@ export async function getSupplierById(id: number): Promise<Supplier | undefined>
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getActiveSuppliers(): Promise<Array<{ value: string; label: string; code: string }>> {
-  return await enhancedApiClient.get<Array<{ value: string; label: string; code: string }>>('/suppliers/active', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Array<{ value: string; label: string; code: string }>>('/suppliers/active');
 }

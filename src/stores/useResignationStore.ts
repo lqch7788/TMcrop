@@ -165,7 +165,7 @@ export const useResignationStore = create<ResignationState>()(
           const response = await enhancedApiClient.post<{
             success: boolean;
             data: { id: string; resignation_code: string };
-          }>('/resignation', body, { offlineQueue: true, priority: 0 });
+          }>('/resignation', body);
 
           const newId = (response as any)?.id || `RSG${Date.now()}`;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
@@ -190,7 +190,7 @@ export const useResignationStore = create<ResignationState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/resignation/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/resignation/${id}`, body);
         } catch (error) {
           console.warn('[ResignationStore] 更新失败，已加入离线队列:', error);
         }
@@ -203,7 +203,7 @@ export const useResignationStore = create<ResignationState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/resignation/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/resignation/${id}`);
           return true;
         } catch (error) {
           console.warn('[ResignationStore] 删除失败，已加入离线队列:', error);
@@ -221,7 +221,7 @@ export const useResignationStore = create<ResignationState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/resignation/${id}`, { offlineQueue: true, priority: 0 })
+                .delete(`/resignation/${id}`)
                 .catch(() => {})
             )
           );

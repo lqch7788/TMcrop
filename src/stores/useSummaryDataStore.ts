@@ -15,7 +15,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -381,8 +380,7 @@ interface SummaryDataState {
 // ========== Store 实现 ==========
 
 export const useSummaryDataStore = create<SummaryDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       overview: null,
       yieldItems: [],
       yieldGroupBy: 'month',
@@ -718,25 +716,5 @@ export const useSummaryDataStore = create<SummaryDataState>()(
         if (!timestamp) return true;
         return Date.now() - timestamp > maxAgeMs;
       },
-    }),
-    {
-      name: 'summary-data-storage',
-      partialize: (state) => ({
-        overview: state.overview,
-        yieldItems: state.yieldItems,
-        yieldGroupBy: state.yieldGroupBy,
-        costDetailItems: state.costDetailItems,
-        costSummary: state.costSummary,
-        laborItems: state.laborItems,
-        laborGroupBy: state.laborGroupBy,
-        batchItems: state.batchItems,
-        chainStages: state.chainStages,
-        problemItems: state.problemItems,
-        indicators: state.indicators,
-        indicatorsRaw: state.indicatorsRaw,
-        lastFetchTimestamps: state.lastFetchTimestamps,
-        schemaVersion: state.schemaVersion,
-      }),
-    }
-  )
+    })
 );

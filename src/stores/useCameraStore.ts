@@ -126,7 +126,7 @@ export const useCameraStore = create<CameraState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/cameras', body, { offlineQueue: true, priority: 0 }
+            '/api/cameras', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -145,7 +145,7 @@ export const useCameraStore = create<CameraState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/cameras/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/cameras/${oid}`, body);
         } catch (error) {
           console.warn('[CameraStore] 更新失败:', error);
         }
@@ -154,7 +154,7 @@ export const useCameraStore = create<CameraState>()(
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try {
-          await enhancedApiClient.delete(`/api/cameras/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/cameras/${oid}`);
           return true;
         } catch (error) {
           console.warn('[CameraStore] 删除失败:', error);

@@ -17,10 +17,7 @@ import { Task, TaskFilters, TaskStats, TaskStatus } from '../types/task';
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllTasks(): Promise<Task[]> {
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks');
   return data || [];
 }
 
@@ -29,10 +26,7 @@ export async function getAllTasks(): Promise<Task[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTaskById(id: string): Promise<Task | undefined> {
-  return await enhancedApiClient.get<Task>(`/farm-tasks/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Task>(`/farm-tasks/${id}`);
 }
 
 /**
@@ -40,10 +34,7 @@ export async function getTaskById(id: string): Promise<Task | undefined> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTaskByCode(taskCode: string): Promise<Task | undefined> {
-  return await enhancedApiClient.get<Task>(`/farm-tasks/code/${taskCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Task>(`/farm-tasks/code/${taskCode}`);
 }
 
 /**
@@ -51,22 +42,23 @@ export async function getTaskByCode(taskCode: string): Promise<Task | undefined>
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
-  const params: Record<string, string> = {};
+  const queryParams = new URLSearchParams();
   if (filters) {
-    if (filters.status) params.status = filters.status.join(',');
-    if (filters.sourceType) params.sourceType = filters.sourceType;
-    if (filters.assigneeId) params.assigneeId = filters.assigneeId;
-    if (filters.assignerId) params.assignerId = filters.assignerId;
-    if (filters.greenhouseId) params.greenhouseId = filters.greenhouseId;
-    if (filters.batchId) params.batchId = filters.batchId;
-    if (filters.priority) params.priority = filters.priority;
-    if (filters.keyword) params.keyword = filters.keyword;
+    if (filters.status) queryParams.set('status', filters.status.join(','));
+    if (filters.sourceType) queryParams.set('sourceType', filters.sourceType);
+    if (filters.assigneeId) queryParams.set('assigneeId', filters.assigneeId);
+    if (filters.assignerId) queryParams.set('assignerId', filters.assignerId);
+    if (filters.greenhouseId) queryParams.set('greenhouseId', filters.greenhouseId);
+    if (filters.batchId) queryParams.set('batchId', filters.batchId);
+    if (filters.priority) queryParams.set('priority', filters.priority);
+    if (filters.keyword) queryParams.set('keyword', filters.keyword);
     if (filters.dateRange) {
-      params.startDate = filters.dateRange.start;
-      params.endDate = filters.dateRange.end;
+      queryParams.set('startDate', filters.dateRange.start);
+      queryParams.set('endDate', filters.dateRange.end);
     }
   }
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks', { params, useCache: true, cacheStrategy: 'network-first' });
+  const url = `/farm-tasks${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const data = await enhancedApiClient.get<Task[]>(url);
   return data || [];
 }
 
@@ -75,10 +67,7 @@ export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
  * 降级策略：API → 离线队列
  */
 export async function createTask(task: Omit<Task, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>): Promise<Task> {
-  const result = await enhancedApiClient.post<Task>('/farm-tasks', task, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<Task>('/farm-tasks', task);
   return result;
 }
 
@@ -87,9 +76,7 @@ export async function createTask(task: Omit<Task, 'id' | 'taskCode' | 'createdAt
  * 降级策略：API → 离线队列
  */
 export async function updateTask(id: string, updates: Partial<Task>): Promise<Task | null> {
-  const result = await enhancedApiClient.put<Task>(`/farm-tasks/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<Task>(`/farm-tasks/${id}`, updates);
   return result;
 }
 
@@ -98,9 +85,7 @@ export async function updateTask(id: string, updates: Partial<Task>): Promise<Ta
  * 降级策略：API → 离线队列
  */
 export async function deleteTask(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/farm-tasks/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/farm-tasks/${id}`);
   return true;
 }
 
@@ -109,9 +94,7 @@ export async function deleteTask(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteTasks(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/farm-tasks/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/farm-tasks/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -120,9 +103,7 @@ export async function deleteTasks(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function publishTask(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/publish`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/publish`);
 }
 
 /**
@@ -130,9 +111,7 @@ export async function publishTask(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function withdrawTask(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/withdraw`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/withdraw`);
 }
 
 /**
@@ -140,9 +119,7 @@ export async function withdrawTask(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function acceptTask(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/accept`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/accept`);
 }
 
 /**
@@ -150,9 +127,7 @@ export async function acceptTask(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function startTask(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/start`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/start`);
 }
 
 /**
@@ -160,9 +135,7 @@ export async function startTask(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function submitProgress(id: string, progress: number, feedback?: Record<string, unknown>): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/progress`, { progress, feedback }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/progress`, { progress, feedback });
 }
 
 /**
@@ -170,9 +143,7 @@ export async function submitProgress(id: string, progress: number, feedback?: Re
  * 降级策略：API → 离线队列
  */
 export async function submitForAcceptance(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/submit-acceptance`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/submit-acceptance`);
 }
 
 /**
@@ -180,9 +151,7 @@ export async function submitForAcceptance(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function completeTask(id: string, comments?: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/complete`, { comments }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/complete`, { comments });
 }
 
 /**
@@ -190,9 +159,7 @@ export async function completeTask(id: string, comments?: string): Promise<Task 
  * 降级策略：API → 离线队列
  */
 export async function rejectTask(id: string, reason: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reject`, { reason }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reject`, { reason });
 }
 
 /**
@@ -200,9 +167,7 @@ export async function rejectTask(id: string, reason: string): Promise<Task | nul
  * 降级策略：API → 离线队列
  */
 export async function cancelTask(id: string, reason: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/cancel`, { reason }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/cancel`, { reason });
 }
 
 /**
@@ -210,9 +175,7 @@ export async function cancelTask(id: string, reason: string): Promise<Task | nul
  * 降级策略：API → 离线队列
  */
 export async function abandonTask(id: string, reason: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/abandon`, { reason }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/abandon`, { reason });
 }
 
 /**
@@ -220,9 +183,7 @@ export async function abandonTask(id: string, reason: string): Promise<Task | nu
  * 降级策略：API → 离线队列
  */
 export async function overtimeContinue(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-continue`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-continue`);
 }
 
 /**
@@ -230,9 +191,7 @@ export async function overtimeContinue(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function overtimeAbandon(id: string, reason: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-abandon`, { reason }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-abandon`, { reason });
 }
 
 /**
@@ -240,9 +199,7 @@ export async function overtimeAbandon(id: string, reason: string): Promise<Task 
  * 降级策略：API → 离线队列
  */
 export async function reassignTask(id: string, assigneeId: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reassign`, { assigneeId }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reassign`, { assigneeId });
 }
 
 /**
@@ -250,9 +207,7 @@ export async function reassignTask(id: string, assigneeId: string): Promise<Task
  * 降级策略：API → 离线队列
  */
 export async function extendDeadline(id: string, newDeadline: string, reason: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/extend-deadline`, { newDeadline, reason }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/extend-deadline`, { newDeadline, reason });
 }
 
 /**
@@ -260,9 +215,7 @@ export async function extendDeadline(id: string, newDeadline: string, reason: st
  * 降级策略：API → 离线队列
  */
 export async function remindTask(id: string): Promise<boolean> {
-  await enhancedApiClient.post(`/farm-tasks/${id}/remind`, undefined, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/farm-tasks/${id}/remind`);
   return true;
 }
 
@@ -271,10 +224,7 @@ export async function remindTask(id: string): Promise<boolean> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTaskStats(filters?: TaskFilters): Promise<TaskStats> {
-  return await enhancedApiClient.get<TaskStats>('/farm-tasks/stats', {
-    useCache: true,
-    cacheStrategy: 'stale-while-revalidate',
-  });
+  return await enhancedApiClient.get<TaskStats>('/farm-tasks/stats');
 }
 
 /**
@@ -282,10 +232,7 @@ export async function getTaskStats(filters?: TaskFilters): Promise<TaskStats> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTaskCountByStatus(status: TaskStatus): Promise<number> {
-  return await enhancedApiClient.get<number>(`/farm-tasks/count?status=${status}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<number>(`/farm-tasks/count?status=${status}`);
 }
 
 /**
@@ -293,10 +240,7 @@ export async function getTaskCountByStatus(status: TaskStatus): Promise<number> 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTaskRecords(taskId: string): Promise<any[]> {
-  return await enhancedApiClient.get<any[]>(`/farm-tasks/${taskId}/records`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<any[]>(`/farm-tasks/${taskId}/records`);
 }
 
 /**
@@ -304,10 +248,7 @@ export async function getTaskRecords(taskId: string): Promise<any[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getOverdueTasks(): Promise<Task[]> {
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/overdue', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/overdue');
   return data || [];
 }
 
@@ -316,10 +257,7 @@ export async function getOverdueTasks(): Promise<Task[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPendingTasks(): Promise<Task[]> {
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/pending', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/pending');
   return data || [];
 }
 
@@ -328,10 +266,7 @@ export async function getPendingTasks(): Promise<Task[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInProgressTasks(): Promise<Task[]> {
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/in-progress', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/in-progress');
   return data || [];
 }
 
@@ -340,10 +275,7 @@ export async function getInProgressTasks(): Promise<Task[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
-  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/waiting-acceptance', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Task[]>('/farm-tasks/waiting-acceptance');
   return data || [];
 }
 
@@ -352,9 +284,7 @@ export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
  * 降级策略：API → 离线队列
  */
 export async function archiveTask(id: string): Promise<Task | null> {
-  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/archive`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/archive`);
 }
 
 /**
@@ -362,8 +292,6 @@ export async function archiveTask(id: string): Promise<Task | null> {
  * 降级策略：API → 离线队列
  */
 export async function archiveTasks(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post(`/farm-tasks/batch-archive`, { ids }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/farm-tasks/batch-archive`, { ids });
   return true;
 }

@@ -1,9 +1,8 @@
 /**
- * 施肥管理 Zustand Store
- * V10.0 新增 — 直连 enhancedApiClient
+ * 施肥管理 Zustand Store (V2.1 架构 - 已简化)
+ * 直连 enhancedApiClient
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -113,130 +112,119 @@ interface FertilizerState {
 
 // ========== Store 实现 ==========
 export const useFertilizerStore = create<FertilizerState>()(
-  persist(
-    (set, get) => ({
-      items: [],
-      stats: [],
-      isLoading: false,
-      error: null,
+  (set, get) => ({
+    items: [],
+    stats: [],
+    isLoading: false,
+    error: null,
 
-      fetchItems: async (filters = {}) => {
-        set({ isLoading: true, error: null });
-        try {
-          const params = new URLSearchParams();
-          Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
-          const response = await enhancedApiClient.get<any>(`/fertilizer?${params.toString()}`);
-          // enhancedApiClient 已解包 data，queryToObjects 已在服务端转 camelCase
-          const rawItems = Array.isArray(response) ? response : response?.data ?? [];
-          set({ items: rawItems as FertilizerData[], isLoading: false });
-        } catch (err) {
-          set({ error: (err as Error).message, isLoading: false });
-        }
-      },
+    fetchItems: async (filters = {}) => {
+      set({ isLoading: true, error: null });
+      try {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        const response = await enhancedApiClient.get<any>(`/fertilizer?${params.toString()}`);
+        const rawItems = Array.isArray(response) ? response : response?.data ?? [];
+        set({ items: rawItems as FertilizerData[], isLoading: false });
+      } catch (err) {
+        set({ error: (err as Error).message, isLoading: false });
+      }
+    },
 
-      fetchItemById: async (id: string) => {
-        try {
-          const response = await enhancedApiClient.get<any>(`/fertilizer/${id}`);
-          // enhancedApiClient 已解包 data，queryToObjects 已在服务端转 camelCase
-          return (response.data ?? response) as FertilizerData;
-        } catch {
-          return null;
-        }
-      },
+    fetchItemById: async (id: string) => {
+      try {
+        const response = await enhancedApiClient.get<any>(`/fertilizer/${id}`);
+        return (response.data ?? response) as FertilizerData;
+      } catch {
+        return null;
+      }
+    },
 
-      createItem: async (item) => {
-        try {
-          // denormalize: camelCase → snake_case（后端 req.body 期望 snake_case）
-          const body = denormalizeFertilizer(item);
-          const response = await enhancedApiClient.post('/fertilizer', body);
-          // 响应：enhancedApiClient 已解包 data，queryToObjects 已转 camelCase
-          const newItem = (response.data ?? response) as FertilizerData;
-          set((state) => ({ items: [newItem, ...state.items] }));
-          return newItem;
-        } catch (err) {
-          set({ error: (err as Error).message });
-          return null;
-        }
-      },
+    createItem: async (item) => {
+      try {
+        const body = denormalizeFertilizer(item);
+        const response = await enhancedApiClient.post('/fertilizer', body);
+        const newItem = (response.data ?? response) as FertilizerData;
+        set((state) => ({ items: [newItem, ...state.items] }));
+        return newItem;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return null;
+      }
+    },
 
-      updateItem: async (id, updates) => {
-        try {
-          const body = denormalizeFertilizer(updates);
-          const response = await enhancedApiClient.put(`/fertilizer/${id}`, body);
-          // 响应：enhancedApiClient 已解包 data，queryToObjects 已转 camelCase
-          const updated = (response.data ?? response) as FertilizerData;
-          set((state) => ({
-            items: state.items.map((i) => (i.id === id ? updated : i)),
-          }));
-          return updated;
-        } catch (err) {
-          set({ error: (err as Error).message });
-          return null;
-        }
-      },
+    updateItem: async (id, updates) => {
+      try {
+        const body = denormalizeFertilizer(updates);
+        const response = await enhancedApiClient.put(`/fertilizer/${id}`, body);
+        const updated = (response.data ?? response) as FertilizerData;
+        set((state) => ({
+          items: state.items.map((i) => (i.id === id ? updated : i)),
+        }));
+        return updated;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return null;
+      }
+    },
 
-      deleteItem: async (id) => {
-        try {
-          await enhancedApiClient.delete(`/fertilizer/${id}`);
-          set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
-          return true;
-        } catch (err) {
-          set({ error: (err as Error).message });
-          return false;
-        }
-      },
+    deleteItem: async (id) => {
+      try {
+        await enhancedApiClient.delete(`/fertilizer/${id}`);
+        set((state) => ({ items: state.items.filter((i) => i.id !== id) }));
+        return true;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return false;
+      }
+    },
 
-      deleteItems: async (ids) => {
-        try {
-          const response = await enhancedApiClient.post('/fertilizer/batch-delete', { ids });
-          const result = response.data ?? response;
-          if (result.deleted > 0) {
-            set((state) => ({ items: state.items.filter((i) => !ids.includes(i.id)) }));
-          }
-          return { deleted: result.deleted ?? 0, skipped: result.skipped ?? 0 };
-        } catch (err) {
-          set({ error: (err as Error).message });
-          return { deleted: 0, skipped: ids.length };
+    deleteItems: async (ids) => {
+      try {
+        const response = await enhancedApiClient.post('/fertilizer/batch-delete', { ids });
+        const result = response.data ?? response;
+        if (result.deleted > 0) {
+          set((state) => ({ items: state.items.filter((i) => !ids.includes(i.id)) }));
         }
-      },
+        return { deleted: result.deleted ?? 0, skipped: result.skipped ?? 0 };
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return { deleted: 0, skipped: ids.length };
+      }
+    },
 
-      fetchStats: async (filters = {}) => {
-        try {
-          const params = new URLSearchParams();
-          Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
-          const response = await enhancedApiClient.get<any>(`/fertilizer/stats?${params.toString()}`);
-          set({ stats: Array.isArray(response.data ?? response) ? response.data ?? response : [] });
-        } catch (err) {
-          set({ error: (err as Error).message });
-        }
-      },
+    fetchStats: async (filters = {}) => {
+      try {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        const response = await enhancedApiClient.get<any>(`/fertilizer/stats?${params.toString()}`);
+        set({ stats: Array.isArray(response.data ?? response) ? response.data ?? response : [] });
+      } catch (err) {
+        set({ error: (err as Error).message });
+      }
+    },
 
-      ingestIotRecords: async (deviceId, records) => {
-        try {
-          const response = await enhancedApiClient.post('/fertilizer/iot-ingest', {
-            device_id: deviceId,
-            device_name: `设备${deviceId}`,
-            records,
-          });
-          return response.data ?? response;
-        } catch (err) {
-          set({ error: (err as Error).message });
-          return null;
-        }
-      },
+    ingestIotRecords: async (deviceId, records) => {
+      try {
+        const response = await enhancedApiClient.post('/fertilizer/iot-ingest', {
+          device_id: deviceId,
+          device_name: `设备${deviceId}`,
+          records,
+        });
+        return response.data ?? response;
+      } catch (err) {
+        set({ error: (err as Error).message });
+        return null;
+      }
+    },
 
-      generateCode: async () => {
-        try {
-          const response = await enhancedApiClient.get<any>('/fertilizer/generate-code');
-          return (response.data ?? response)?.data?.code ?? (response.data ?? response)?.code ?? '';
-        } catch {
-          return '';
-        }
-      },
-    }),
-    {
-      name: 'fertilizer-data-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    generateCode: async () => {
+      try {
+        const response = await enhancedApiClient.get<any>('/fertilizer/generate-code');
+        return (response.data ?? response)?.data?.code ?? (response.data ?? response)?.code ?? '';
+      } catch {
+        return '';
+      }
+    },
+  })
 );

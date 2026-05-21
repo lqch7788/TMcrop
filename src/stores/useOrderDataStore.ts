@@ -4,7 +4,6 @@
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '../types/crop';
 import * as orderService from '../services/apiCropOrderService';
 
@@ -33,8 +32,7 @@ interface OrderDataState {
 }
 
 export const useOrderDataStore = create<OrderDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       orders: [],
       isLoading: false,
       error: null,
@@ -97,10 +95,5 @@ export const useOrderDataStore = create<OrderDataState>()(
       syncPending: async () => {
         return await orderService.syncPendingOrders();
       },
-    }),
-    {
-      name: 'order-data-storage',
-      partialize: (state) => ({ orders: state.orders }),
-    }
-  )
+    })
 );

@@ -1,16 +1,10 @@
 /**
  * 考勤管理 Store - AttendanceStore
  *
- * Phase 2 参照模板
- *
- * 设计原则：
- * 1. 保留现有mock数据作为种子数据（不删除任何数据）
- * 2. 优先调用API，API失败时降级到本地存储
- * 3. 支持离线队列，联网后自动同步
+ * V2.1 架构 - 已简化
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -151,8 +145,7 @@ interface AttendanceState {
 // ========== Store 实现 ==========
 
 export const useAttendanceStore = create<AttendanceState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // 初始状态
       attendanceRecords: [],
       filters: {
@@ -173,10 +166,7 @@ export const useAttendanceStore = create<AttendanceState>()(
 
         try {
           // 尝试从API获取
-          const apiData = await enhancedApiClient.get<AttendanceRecord[]>('/attendance', {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const apiData = await enhancedApiClient.get<AttendanceRecord[]>('/attendance');
 
           if (apiData && Array.isArray(apiData) && apiData.length > 0) {
             set({ attendanceRecords: apiData, isLoading: false });
@@ -218,8 +208,7 @@ export const useAttendanceStore = create<AttendanceState>()(
           // 尝试调用API
           const savedRecord = await enhancedApiClient.post<AttendanceRecord>(
             '/attendance/batch',
-            { records: [record] },
-            { offlineQueue: true }
+            { records: [record] }
           );
 
           // API成功，用真实ID替换临时ID
@@ -251,9 +240,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         }));
 
         try {
-          await enhancedApiClient.post('/attendance/batch', { records }, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.post('/attendance/batch', { records });
         } catch (error) {
           console.warn('[AttendanceStore] 批量创建考勤API失败，已加入离线队列:', error);
           set(state => ({
@@ -271,9 +258,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/attendance/${id}`, updates, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.put(`/attendance/${id}`, updates);
         } catch (error) {
           console.warn('[AttendanceStore] 更新考勤API失败，已加入离线队列:', error);
           set(state => ({
@@ -289,9 +274,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         }));
 
         try {
-          await enhancedApiClient.delete('/attendance/batch', {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.delete('/attendance/batch');
         } catch (error) {
           console.warn('[AttendanceStore] 删除考勤API失败，已加入离线队列:', error);
           set(state => ({
@@ -308,17 +291,6 @@ export const useAttendanceStore = create<AttendanceState>()(
         }));
       },
 
-      // ========== 同步 ==========
-
-      syncPendingChanges: async () => {
-        try {
-          await enhancedApiClient.forcSync();
-          set({ pendingSyncCount: 0 });
-        } catch (error) {
-          console.warn('[AttendanceStore] 同步失败:', error);
-        }
-      },
-
       // ========== 内部方法 ==========
 
       _initializeSeedData: () => {
@@ -331,14 +303,6 @@ export const useAttendanceStore = create<AttendanceState>()(
 
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'attendance-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        attendanceRecords: state.attendanceRecords,
-        filters: state.filters,
-      }),
     }
   )
 );

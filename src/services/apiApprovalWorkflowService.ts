@@ -76,10 +76,7 @@ export interface NodeTemplate {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getWorkflows(): Promise<ApprovalWorkflow[]> {
-  const data = await enhancedApiClient.get<ApprovalWorkflow[]>('/approval-workflows', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ApprovalWorkflow[]>('/approval-workflows');
   return data || [];
 }
 
@@ -88,10 +85,7 @@ export async function getWorkflows(): Promise<ApprovalWorkflow[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getWorkflowsByType(businessType: string): Promise<ApprovalWorkflow[]> {
-  const data = await enhancedApiClient.get<ApprovalWorkflow[]>(`/approval-workflows/by-type/${encodeURIComponent(businessType)}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ApprovalWorkflow[]>(`/approval-workflows/by-type/${encodeURIComponent(businessType)}`);
   return data || [];
 }
 
@@ -101,10 +95,7 @@ export async function getWorkflowsByType(businessType: string): Promise<Approval
  */
 export async function getWorkflowById(id: string): Promise<ApprovalWorkflow | null> {
   try {
-    const data = await enhancedApiClient.get<ApprovalWorkflow>(`/approval-workflows/${id}`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    const data = await enhancedApiClient.get<ApprovalWorkflow>(`/approval-workflows/${id}`);
     return data;
   } catch {
     return null;
@@ -116,9 +107,7 @@ export async function getWorkflowById(id: string): Promise<ApprovalWorkflow | nu
  * 降级策略：API → 离线队列
  */
 export async function createWorkflow(workflow: Partial<ApprovalWorkflow>): Promise<ApprovalWorkflow> {
-  const result = await enhancedApiClient.post<ApprovalWorkflow>('/approval-workflows', workflow, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<ApprovalWorkflow>('/approval-workflows', workflow);
   return result;
 }
 
@@ -127,9 +116,7 @@ export async function createWorkflow(workflow: Partial<ApprovalWorkflow>): Promi
  * 降级策略：API → 离线队列
  */
 export async function updateWorkflow(id: string, workflow: Partial<ApprovalWorkflow>): Promise<void> {
-  await enhancedApiClient.put(`/approval-workflows/${id}`, workflow, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/approval-workflows/${id}`, workflow);
 }
 
 /**
@@ -137,9 +124,7 @@ export async function updateWorkflow(id: string, workflow: Partial<ApprovalWorkf
  * 降级策略：API → 离线队列
  */
 export async function deleteWorkflow(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/approval-workflows/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/approval-workflows/${id}`);
 }
 
 /**
@@ -147,9 +132,7 @@ export async function deleteWorkflow(id: string): Promise<void> {
  * 降级策略：API → 离线队列
  */
 export async function toggleWorkflow(id: string): Promise<string> {
-  const result = await enhancedApiClient.patch<{ status: string }>(`/approval-workflows/${id}/toggle`, undefined, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.patch<{ status: string }>(`/approval-workflows/${id}/toggle`);
   return result.status;
 }
 
@@ -158,9 +141,7 @@ export async function toggleWorkflow(id: string): Promise<string> {
  * 降级策略：API → 离线队列
  */
 export async function cloneWorkflow(id: string, newCode?: string, newName?: string): Promise<{ id: string }> {
-  const result = await enhancedApiClient.post<{ id: string }>(`/approval-workflows/${id}/clone`, { newCode, newName }, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>(`/approval-workflows/${id}/clone`, { newCode, newName });
   return result;
 }
 
@@ -192,9 +173,6 @@ export async function evaluateConditions(id: string, context: Record<string, unk
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getNodeTemplates(): Promise<NodeTemplate[]> {
-  const data = await enhancedApiClient.get<NodeTemplate[]>('/approval-workflows/node-templates/list', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<NodeTemplate[]>('/approval-workflows/node-templates/list');
   return data || [];
 }

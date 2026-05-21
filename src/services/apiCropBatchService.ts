@@ -18,10 +18,7 @@ import * as cropBatchService from './cropBatchService';
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getCropBatches(): Promise<CropBatch[]> {
-  const response = await enhancedApiClient.get<{ success: boolean; data: CropBatch[] }>('/production-plans', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<{ success: boolean; data: CropBatch[] }>('/production-plans');
   if (response.success && response.data) {
     return response.data;
   }
@@ -33,10 +30,7 @@ export async function getCropBatches(): Promise<CropBatch[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getCropBatchById(id: string): Promise<CropBatch | undefined> {
-  const response = await enhancedApiClient.get<{ success: boolean; data: CropBatch }>(`/production-plans/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<{ success: boolean; data: CropBatch }>(`/production-plans/${id}`);
   if (response.success && response.data) {
     return response.data;
   }
@@ -57,9 +51,7 @@ export async function getCropBatchByCode(batchCode: string): Promise<CropBatch |
  * 降级策略：API → 离线队列
  */
 export async function updateCropBatch(id: string, updates: Partial<CropBatch>): Promise<CropBatch | null> {
-  const response = await enhancedApiClient.put<{ success: boolean; message?: string }>(`/production-plans/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.put<{ success: boolean; message?: string }>(`/production-plans/${id}`, updates);
   if (response.success) {
     // 同步更新本地缓存
     cropBatchService.updateCropBatch(id, updates);
@@ -79,9 +71,7 @@ export async function endCropBatch(id: string, endType: 'normal' | 'abnormal'): 
     endType: endType,
   };
 
-  const response = await enhancedApiClient.put<{ success: boolean; message?: string }>(`/production-plans/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.put<{ success: boolean; message?: string }>(`/production-plans/${id}`, updates);
   if (response.success) {
     // 同步更新本地缓存
     cropBatchService.updateCropBatch(id, updates);

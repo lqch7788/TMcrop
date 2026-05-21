@@ -99,10 +99,7 @@ function transformSingle(item: BackendProductionPlan): ProductionPlan {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProductionPlans(): Promise<ProductionPlan[]> {
-  const data = await enhancedApiClient.get<BackendProductionPlan[]>('/production-plans', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendProductionPlan[]>('/production-plans');
   return transformProductionPlan(data) as ProductionPlan[];
 }
 
@@ -111,10 +108,7 @@ export async function getProductionPlans(): Promise<ProductionPlan[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProductionPlanById(id: string): Promise<ProductionPlan | undefined> {
-  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/${id}`);
   return transformProductionPlan(data) as ProductionPlan;
 }
 
@@ -123,10 +117,7 @@ export async function getProductionPlanById(id: string): Promise<ProductionPlan 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProductionPlanByCode(batchCode: string): Promise<ProductionPlan | undefined> {
-  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/code/${batchCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/code/${batchCode}`);
   return transformProductionPlan(data) as ProductionPlan;
 }
 
@@ -135,10 +126,7 @@ export async function getProductionPlanByCode(batchCode: string): Promise<Produc
  * 降级策略：API → 离线队列
  */
 export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promise<ProductionPlan> {
-  const result = await enhancedApiClient.post<ProductionPlan>('/production-plans', plan, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<ProductionPlan>('/production-plans', plan);
   // POST 响应现在返回经过 mapFieldsToFrontend 的完整数据
   return transformProductionPlan(result) as ProductionPlan;
 }
@@ -148,9 +136,7 @@ export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promi
  * 降级策略：API → 离线队列
  */
 export async function updateProductionPlan(id: string, updates: Partial<ProductionPlan>): Promise<ProductionPlan | null> {
-  const result = await enhancedApiClient.put<{ data: ProductionPlan }>(`/production-plans/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ data: ProductionPlan }>(`/production-plans/${id}`, updates);
   // PUT 响应现在返回经过 mapFieldsToFrontend 的完整更新数据
   return result?.data ? transformProductionPlan(result.data) as ProductionPlan : null;
 }
@@ -160,9 +146,7 @@ export async function updateProductionPlan(id: string, updates: Partial<Producti
  * 降级策略：API → 离线队列
  */
 export async function deleteProductionPlan(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/production-plans/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/production-plans/${id}`);
   return true;
 }
 
@@ -171,9 +155,7 @@ export async function deleteProductionPlan(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteProductionPlans(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`);
   return true;
 }
 

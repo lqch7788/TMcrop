@@ -1,14 +1,12 @@
 /**
  * 巡查记录 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/inspections
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型 ==========
@@ -101,8 +99,7 @@ interface InspectionDataState {
 }
 
 export const useInspectionDataStore = create<InspectionDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       records: [],
       isLoading: false,
       error: null,
@@ -129,7 +126,7 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       createRecord: async (record) => {
         try {
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
-            '/inspections', record, { priority: 0 }
+            '/inspections', record
           );
           const newId = (response as any)?.id || `INS${Date.now()}`;
           const newRecord = { ...record, id: newId } as InspectionData;
@@ -146,7 +143,7 @@ export const useInspectionDataStore = create<InspectionDataState>()(
           records: state.records.map((r) => (r.id === id ? { ...r, ...updates } : r)),
         }));
         try {
-          await enhancedApiClient.put(`/inspections/${id}`, updates, { priority: 0 });
+          await enhancedApiClient.put(`/inspections/${id}`, updates);
         } catch (error) {
           console.warn('[InspectionDataStore] 更新失败:', error);
         }
@@ -155,17 +152,13 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       deleteRecord: async (id) => {
         set((state) => ({ records: state.records.filter((r) => r.id !== id) }));
         try {
-          await enhancedApiClient.delete(`/inspections/${id}`, { priority: 0 });
+          await enhancedApiClient.delete(`/inspections/${id}`);
           return true;
         } catch (error) {
           console.warn('[InspectionDataStore] 删除失败:', error);
           return false;
         }
       },
-    }),
-    {
-      name: 'inspection-data-storage',
-      partialize: (state) => ({ records: state.records }),
     }
   )
 );

@@ -3,7 +3,6 @@
  * 管理审批级别配置、金额阈值、类型规则三类数据
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getApprovalLevelConfigs,
   updateApprovalLevelConfig,
@@ -52,8 +51,7 @@ interface ApprovalLevelStore {
 }
 
 export const useApprovalLevelStore = create<ApprovalLevelStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       levelConfigs: [],
       amountThresholds: [],
       typeRules: [],
@@ -190,23 +188,5 @@ export const useApprovalLevelStore = create<ApprovalLevelStore>()(
         set({ lastFetch: null });
         await get().loadAll();
       },
-    }),
-    {
-      name: 'approval_level_store',
-      partialize: (state) => ({
-        levelConfigs: state.levelConfigs,
-        amountThresholds: state.amountThresholds,
-        typeRules: state.typeRules,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (state && state.levelConfigs.length > 0) {
-          syncApprovalStoreData({
-            levelConfigs: state.levelConfigs,
-            amountThresholds: state.amountThresholds,
-            typeRules: state.typeRules,
-          });
-        }
-      },
-    }
-  )
+    })
 );

@@ -121,7 +121,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           body.id = data.id || `CK${Date.now()}`;
           const response = await enhancedApiClient.post<{
             success: boolean; data: { id: string | number; code: string }
-          }>('/material-executes', body, { offlineQueue: true });
+          }>('/material-executes', body);
 
           // enhancedApiClient 已自动提取 .data，response 直接就是 { id, code }
           const newId = (response as any)?.id || body.id;
@@ -149,7 +149,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/material-executes/${id}`, body, { offlineQueue: true });
+          await enhancedApiClient.put(`/material-executes/${id}`, body);
         } catch (error) {
           console.warn('[ExecuteStore] 更新失败，已加入离线队列:', error);
         }
@@ -162,7 +162,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/material-executes/${id}`, { offlineQueue: true });
+          await enhancedApiClient.delete(`/material-executes/${id}`);
           return true;
         } catch (error) {
           console.warn('[ExecuteStore] 删除失败，已加入离线队列:', error);
@@ -180,7 +180,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/material-executes/${id}`, { offlineQueue: true })
+                .delete(`/material-executes/${id}`)
                 .catch(() => {})
             )
           );

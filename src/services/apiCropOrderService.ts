@@ -128,10 +128,7 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
 export async function getOrders(): Promise<CropOrder[]> {
   // 第一级：尝试从 API 获取
   try {
-    const data = await enhancedApiClient.get<CropOrder[]>('/crop-orders', {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    const data = await enhancedApiClient.get<CropOrder[]>('/crop-orders');
 
     if (data && Array.isArray(data) && data.length > 0) {
       // API 成功，更新 localStorage 缓存
@@ -158,10 +155,7 @@ export async function getOrders(): Promise<CropOrder[]> {
  */
 export async function getOrderById(id: string): Promise<CropOrder | undefined> {
   try {
-    return await enhancedApiClient.get<CropOrder>(`/crop-orders/${id}`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<CropOrder>(`/crop-orders/${id}`);
   } catch (error) {
     console.warn('[apiCropOrderService] 获取订单详情失败:', error);
     // 尝试从本地存储查找
@@ -355,10 +349,7 @@ export async function getOrderStats(): Promise<OrderStats | null> {
       delivered: number;
       cancelled: number;
       total_amount: number;
-    }>('/crop-orders/stats/summary', {
-      useCache: true,
-      cacheStrategy: 'stale-while-revalidate',
-    });
+    }>('/crop-orders/stats/summary');
 
     return {
       total: backendStats.total,

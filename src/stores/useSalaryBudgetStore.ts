@@ -1,14 +1,12 @@
 /**
  * 工资预算 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/salary-budget
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -116,8 +114,7 @@ interface SalaryBudgetState {
 // ==================== 第五步：创建 Store ====================
 
 export const useSalaryBudgetStore = create<SalaryBudgetState>()(
-  persist(
-    (set) => ({
+  (set) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -158,7 +155,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           const response = await enhancedApiClient.post<{
             success: boolean;
             data: { id: string; budget_code: string };
-          }>('/salary-budget', body, { offlineQueue: true, priority: 0 });
+          }>('/salary-budget', body);
 
           const newId = (response as any)?.id || `SB${Date.now()}`;
           const newCode = (response as any)?.budget_code || `SB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-TMP`;
@@ -193,7 +190,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/salary-budget/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/salary-budget/${id}`, body);
         } catch (error) {
           console.warn('[SalaryBudgetStore] 更新失败，已加入离线队列:', error);
         }
@@ -206,7 +203,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/salary-budget/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/salary-budget/${id}`);
           return true;
         } catch (error) {
           console.warn('[SalaryBudgetStore] 删除失败，已加入离线队列:', error);
@@ -224,7 +221,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/salary-budget/${id}`, { offlineQueue: true, priority: 0 })
+                .delete(`/salary-budget/${id}`)
                 .catch(() => {})
             )
           );
@@ -246,7 +243,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           await enhancedApiClient.put(
             `/salary-budget/${id}`,
             { status: 'approved' },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[SalaryBudgetStore] 审批失败:', error);
@@ -265,16 +262,12 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           await enhancedApiClient.put(
             `/salary-budget/${id}`,
             { status: 'rejected' },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[SalaryBudgetStore] 驳回失败:', error);
         }
       },
-    }),
-    {
-      name: 'salary-budget-data-storage',
-      partialize: (state) => ({ items: state.items }),
     }
   )
 );

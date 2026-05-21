@@ -58,10 +58,7 @@ export interface Problem {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllProblems(): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>('/problems', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>('/problems');
 }
 
 /**
@@ -69,10 +66,7 @@ export async function getAllProblems(): Promise<Problem[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemById(id: number): Promise<Problem | undefined> {
-  return await enhancedApiClient.get<Problem>(`/problems/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem>(`/problems/${id}`);
 }
 
 /**
@@ -80,10 +74,7 @@ export async function getProblemById(id: number): Promise<Problem | undefined> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemByCode(problemCode: string): Promise<Problem | undefined> {
-  return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`);
 }
 
 /**
@@ -113,11 +104,9 @@ export async function getProblems(filters?: {
     if (filters.endDate) params.endDate = filters.endDate;
     if (filters.keyword) params.keyword = filters.keyword;
   }
-  return await enhancedApiClient.get<Problem[]>('/problems', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/problems?${paramsStr}` : '/problems';
+  return await enhancedApiClient.get<Problem[]>(url);
 }
 
 /**
@@ -125,10 +114,7 @@ export async function getProblems(filters?: {
  * 降级策略：API → 离线队列
  */
 export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' | 'createTime' | 'updateTime'>): Promise<Problem> {
-  return await enhancedApiClient.post<Problem>('/problems', problem, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<Problem>('/problems', problem);
 }
 
 /**
@@ -136,9 +122,7 @@ export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' 
  * 降级策略：API → 离线队列
  */
 export async function updateProblem(id: number, updates: Partial<Problem>): Promise<Problem | null> {
-  const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates);
   return result;
 }
 
@@ -147,9 +131,7 @@ export async function updateProblem(id: number, updates: Partial<Problem>): Prom
  * 降级策略：API → 离线队列
  */
 export async function deleteProblem(id: number): Promise<boolean> {
-  await enhancedApiClient.delete(`/problems/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/problems/${id}`);
   return true;
 }
 
@@ -158,9 +140,7 @@ export async function deleteProblem(id: number): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteProblems(ids: number[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -169,9 +149,7 @@ export async function deleteProblems(ids: number[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function assignProblem(id: number, handlerId: string, handlerName: string): Promise<Problem | null> {
-  return await enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
 }
 
 /**
@@ -179,9 +157,7 @@ export async function assignProblem(id: number, handlerId: string, handlerName: 
  * 降级策略：API → 离线队列
  */
 export async function startProcessing(id: number): Promise<Problem | null> {
-  return await enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`, undefined, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`, undefined);
 }
 
 /**
@@ -189,9 +165,7 @@ export async function startProcessing(id: number): Promise<Problem | null> {
  * 降级策略：API → 离线队列
  */
 export async function resolveProblem(id: number, handleResult?: string): Promise<Problem | null> {
-  return await enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult }, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
 }
 
 /**
@@ -199,10 +173,7 @@ export async function resolveProblem(id: number, handleResult?: string): Promise
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
 }
 
 /**
@@ -210,10 +181,7 @@ export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Pro
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`);
 }
 
 /**
@@ -221,10 +189,7 @@ export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProblemsBySource(sourceType: string, sourceId: string): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
 }
 
 /**
@@ -232,10 +197,7 @@ export async function getProblemsBySource(sourceType: string, sourceId: string):
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPendingProblems(): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>('/problems/pending', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>('/problems/pending');
 }
 
 /**
@@ -243,10 +205,7 @@ export async function getPendingProblems(): Promise<Problem[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getProcessingProblems(): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>('/problems/processing', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>('/problems/processing');
 }
 
 /**
@@ -254,10 +213,7 @@ export async function getProcessingProblems(): Promise<Problem[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getResolvedProblems(): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>('/problems/resolved', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>('/problems/resolved');
 }
 
 /**
@@ -265,10 +221,7 @@ export async function getResolvedProblems(): Promise<Problem[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeriousProblems(): Promise<Problem[]> {
-  return await enhancedApiClient.get<Problem[]>('/problems/serious', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Problem[]>('/problems/serious');
 }
 
 /**
@@ -297,7 +250,9 @@ export async function getProblemStats(filters?: {
   if (filters?.startDate) params.startDate = filters.startDate;
   if (filters?.endDate) params.endDate = filters.endDate;
   if (filters?.greenhouseId) params.greenhouseId = filters.greenhouseId;
-  return await enhancedApiClient.get('/problems/stats', { params });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/problems/stats?${paramsStr}` : '/problems/stats';
+  return await enhancedApiClient.get(url);
 }
 
 /**
@@ -305,9 +260,7 @@ export async function getProblemStats(filters?: {
  * 降级策略：API → 离线队列
  */
 export async function linkTask(problemId: number, taskId: string, taskCode: string): Promise<boolean> {
-  await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
   return true;
 }
 
@@ -321,8 +274,6 @@ export async function addProblemHandleRecord(problemId: number, record: {
   action: string;
   description?: string;
 }): Promise<boolean> {
-  await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/problems/${problemId}/handle-records`, record);
   return true;
 }

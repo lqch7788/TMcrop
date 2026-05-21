@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -178,8 +177,7 @@ interface OnboardingState {
 // ==================== 第五步：创建 Store ====================
 
 export const useOnboardingStore = create<OnboardingState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -224,7 +222,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           const response = await enhancedApiClient.post<{
             success: boolean;
             data: { id: string; oid: string; name: string };
-          }>('/onboarding', data, { offlineQueue: true, priority: 0 });
+          }>('/onboarding', data);
 
           const newId = (response as any)?.id || `OB${Date.now()}`;
           const newItem = normalize({ ...data, id: newId } as Record<string, unknown>);
@@ -249,7 +247,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/onboarding/${id}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/onboarding/${id}`, body);
         } catch (error) {
           console.warn('[OnboardingStore] 更新失败，已加入离线队列:', error);
         }
@@ -276,7 +274,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           await enhancedApiClient.post(
             `/onboarding/${id}/status`,
             { status, operatorId, operatorName },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[OnboardingStore] 状态更新失败，已加入离线队列:', error);
@@ -290,7 +288,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/onboarding/${id}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/onboarding/${id}`);
           return true;
         } catch (error) {
           console.warn('[OnboardingStore] 删除失败，已加入离线队列:', error);
@@ -308,7 +306,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           await enhancedApiClient.post(
             '/onboarding/batch-delete',
             { ids },
-            { offlineQueue: true, priority: 0 }
+            {}
           );
           return true;
         } catch (error) {
@@ -316,10 +314,5 @@ export const useOnboardingStore = create<OnboardingState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'onboarding-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

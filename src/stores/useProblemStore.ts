@@ -1,14 +1,12 @@
 /**
  * 问题管理 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/problems
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型 ==========
@@ -181,8 +179,7 @@ interface ProblemState {
 }
 
 export const useProblemStore = create<ProblemState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       problems: [],
       isLoading: false,
       error: null,
@@ -209,7 +206,7 @@ export const useProblemStore = create<ProblemState>()(
       createProblem: async (problem) => {
         try {
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: number } }>(
-            '/problems', problem, { priority: 0 }
+            '/problems', problem
           );
           const newId = (response as any)?.id || Date.now();
           const newProblem = { ...problem, id: newId } as ProblemData;
@@ -226,7 +223,7 @@ export const useProblemStore = create<ProblemState>()(
           problems: state.problems.map((p) => (p.id === id ? { ...p, ...updates } : p)),
         }));
         try {
-          await enhancedApiClient.put(`/problems/${id}`, updates, { priority: 0 });
+          await enhancedApiClient.put(`/problems/${id}`, updates);
         } catch (error) {
           console.warn('[ProblemStore] 更新失败:', error);
         }
@@ -235,7 +232,7 @@ export const useProblemStore = create<ProblemState>()(
       deleteProblem: async (id) => {
         set((state) => ({ problems: state.problems.filter((p) => p.id !== id) }));
         try {
-          await enhancedApiClient.delete(`/problems/${id}`, { priority: 0 });
+          await enhancedApiClient.delete(`/problems/${id}`);
           return true;
         } catch (error) {
           console.warn('[ProblemStore] 删除失败:', error);
@@ -247,15 +244,11 @@ export const useProblemStore = create<ProblemState>()(
         set((state) => ({ problems: state.problems.filter((p) => !ids.includes(p.id)) }));
         try {
           await Promise.all(ids.map((id) =>
-            enhancedApiClient.delete(`/problems/${id}`, { priority: 0 }).catch(() => {})
+            enhancedApiClient.delete(`/problems/${id}`).catch(() => {})
           ));
           return true;
         } catch { return false; }
       },
-    }),
-    {
-      name: 'problem-data-storage',
-      partialize: (state) => ({ problems: state.problems }),
     }
   )
 );

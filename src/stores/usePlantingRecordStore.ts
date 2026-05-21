@@ -1,9 +1,8 @@
 /**
- * 种植季记录 Store - Zustand 状态管理（基地空间架构 V1.0）
+ * 种植季记录 Store (V2.1 架构 - 已简化)
  * 统一管理种植季记录的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getPlantingRecords, getPlantingRecord, createPlantingRecord,
   updatePlantingRecord, endPlantingSeason, deletePlantingRecord,
@@ -14,7 +13,6 @@ interface PlantingRecordStore {
   records: PlantingRecord[];
   loading: boolean;
   error: string | null;
-  lastFetch: number | null;
 
   loadRecords: (query?: PlantingRecordQuery) => Promise<void>;
   addRecord: (data: {
@@ -31,89 +29,77 @@ interface PlantingRecordStore {
 }
 
 export const usePlantingRecordStore = create<PlantingRecordStore>()(
-  persist(
-    (set, get) => ({
-      records: [],
-      loading: false,
-      error: null,
-      lastFetch: null,
+  (set, get) => ({
+    records: [],
+    loading: false,
+    error: null,
 
-      loadRecords: async (query?: PlantingRecordQuery) => {
-        const now = Date.now();
-        const lastFetch = get().lastFetch;
-        if (lastFetch && now - lastFetch < 5 * 60 * 1000 && get().records.length > 0 && !query) return;
+    loadRecords: async (query?: PlantingRecordQuery) => {
+      set({ loading: true, error: null });
+      try {
+        const data = await getPlantingRecords(query);
+        set({ records: data, loading: false });
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '加载种植季记录失败', loading: false });
+      }
+    },
 
-        set({ loading: true, error: null });
-        try {
-          const data = await getPlantingRecords(query);
-          set({ records: data, loading: false, lastFetch: now });
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : '加载种植季记录失败', loading: false });
-        }
-      },
+    addRecord: async (data) => {
+      set({ loading: true, error: null });
+      try {
+        const created = await createPlantingRecord(data);
+        set((s) => ({ records: [created, ...s.records], loading: false }));
+        return created;
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '创建种植季记录失败', loading: false });
+        throw error;
+      }
+    },
 
-      addRecord: async (data) => {
-        set({ loading: true, error: null });
-        try {
-          const created = await createPlantingRecord(data);
-          set((s) => ({ records: [created, ...s.records], loading: false }));
-          return created;
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : '创建种植季记录失败', loading: false });
-          throw error;
-        }
-      },
+    editRecord: async (oid, data) => {
+      set({ loading: true, error: null });
+      try {
+        const updated = await updatePlantingRecord(oid, data);
+        set((s) => ({
+          records: s.records.map((r) => r.oid === oid ? updated : r),
+          loading: false,
+        }));
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '更新种植季记录失败', loading: false });
+        throw error;
+      }
+    },
 
-      editRecord: async (oid, data) => {
-        set({ loading: true, error: null });
-        try {
-          const updated = await updatePlantingRecord(oid, data);
-          set((s) => ({
-            records: s.records.map((r) => r.oid === oid ? updated : r),
-            loading: false,
-          }));
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : '更新种植季记录失败', loading: false });
-          throw error;
-        }
-      },
+    endSeason: async (oid, data) => {
+      set({ loading: true, error: null });
+      try {
+        const result = await endPlantingSeason(oid, data);
+        set((s) => ({
+          records: s.records.map((r) => r.oid === oid ? result : r),
+          loading: false,
+        }));
+        return result;
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '结束种植季失败', loading: false });
+        throw error;
+      }
+    },
 
-      endSeason: async (oid, data) => {
-        set({ loading: true, error: null });
-        try {
-          const result = await endPlantingSeason(oid, data);
-          set((s) => ({
-            records: s.records.map((r) => r.oid === oid ? result : r),
-            loading: false,
-          }));
-          return result;
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : '结束种植季失败', loading: false });
-          throw error;
-        }
-      },
+    removeRecord: async (oid) => {
+      set({ loading: true, error: null });
+      try {
+        await deletePlantingRecord(oid);
+        set((s) => ({ records: s.records.filter((r) => r.oid !== oid), loading: false }));
+      } catch (error) {
+        set({ error: error instanceof Error ? error.message : '删除种植季记录失败', loading: false });
+        throw error;
+      }
+    },
 
-      removeRecord: async (oid) => {
-        set({ loading: true, error: null });
-        try {
-          await deletePlantingRecord(oid);
-          set((s) => ({ records: s.records.filter((r) => r.oid !== oid), loading: false }));
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : '删除种植季记录失败', loading: false });
-          throw error;
-        }
-      },
-
-      refreshRecords: async () => {
-        set({ lastFetch: null });
-        await get().loadRecords();
-      },
-    }),
-    {
-      name: 'planting_record_store',
-      partialize: (state) => ({ records: state.records }),
-    }
-  )
+    refreshRecords: async () => {
+      await get().loadRecords();
+    },
+  })
 );
 
 /** 根据 oid 获取记录 */

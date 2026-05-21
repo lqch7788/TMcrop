@@ -1,18 +1,10 @@
 /**
  * 排班管理 Store - ScheduleStore
  *
- * Phase 0.4 参照模板
- *
- * 设计原则：
- * 1. 保留现有mock数据作为种子数据（不删除任何数据）
- * 2. 优先调用API，API失败时降级到本地存储
- * 3. 支持离线队列，联网后自动同步
- *
- * 后续Phase参照此模板进行改造
+ * V2.1 架构 - 已简化
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -193,8 +185,7 @@ interface ScheduleState {
 // ========== Store 实现 ==========
 
 export const useScheduleStore = create<ScheduleState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // 初始状态（staffList 从 useWorkerStore 动态加载，不再硬编码）
       schedules: [],
       shiftConfigs: DEFAULT_SHIFT_CONFIGS,
@@ -217,10 +208,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
         try {
           // 尝试从API获取
-          const apiSchedules = await enhancedApiClient.get<ScheduleRecord[]>('/schedules', {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const apiSchedules = await enhancedApiClient.get<ScheduleRecord[]>('/schedules');
 
           if (apiSchedules && Array.isArray(apiSchedules) && apiSchedules.length > 0) {
             set({ schedules: apiSchedules, isLoading: false });
@@ -267,8 +255,7 @@ export const useScheduleStore = create<ScheduleState>()(
           // 尝试调用API
           const savedRecord = await enhancedApiClient.post<ScheduleRecord>(
             '/schedules',
-            record,
-            { offlineQueue: true }
+            record
           );
 
           // API成功，用真实ID替换临时ID
@@ -301,9 +288,7 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/schedules/${id}`, updates, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.put(`/schedules/${id}`, updates);
         } catch (error) {
           console.warn('[ScheduleStore] 更新排班API失败，已加入离线队列:', error);
           set(state => ({
@@ -319,9 +304,7 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/schedules/${id}`, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.delete(`/schedules/${id}`);
         } catch (error) {
           console.warn('[ScheduleStore] 删除排班API失败，已加入离线队列:', error);
           set(state => ({
@@ -365,9 +348,7 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          await enhancedApiClient.post('/schedules/swap-requests', newRequest, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.post('/schedules/swap-requests', newRequest);
         } catch (error) {
           console.warn('[ScheduleStore] 提交调班申请API失败:', error);
         }
@@ -381,9 +362,7 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/schedules/swap-requests/${id}`, { status }, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.put(`/schedules/swap-requests/${id}`, { status });
 
           // 如果同意，执行调班
           if (status === '已同意') {
@@ -409,17 +388,6 @@ export const useScheduleStore = create<ScheduleState>()(
 
       setSelectedDate: (date) => set({ selectedDate: date }),
       setViewMode: (mode) => set({ viewMode: mode }),
-
-      // ========== 同步 ==========
-
-      syncPendingChanges: async () => {
-        try {
-          await enhancedApiClient.forcSync();
-          set({ pendingSyncCount: 0 });
-        } catch (error) {
-          console.warn('[ScheduleStore] 同步失败:', error);
-        }
-      },
 
       // ========== 内部方法 ==========
 
@@ -459,15 +427,6 @@ export const useScheduleStore = create<ScheduleState>()(
           console.warn('[ScheduleStore] 加载工人列表失败:', e);
         }
       },
-    }),
-    {
-      name: 'schedule-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        schedules: state.schedules,
-        shiftConfigs: state.shiftConfigs,
-        swapRequests: state.swapRequests,
-      }),
     }
   )
 );

@@ -3,7 +3,6 @@
  * 统一管理审批工作流的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, toggleWorkflow,
   type ApprovalWorkflow,
@@ -24,8 +23,7 @@ interface ApprovalWorkflowStore {
 }
 
 export const useApprovalWorkflowStore = create<ApprovalWorkflowStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       workflows: [],
       loading: false,
       error: null,
@@ -89,10 +87,5 @@ export const useApprovalWorkflowStore = create<ApprovalWorkflowStore>()(
       },
 
       refreshAll: async () => { set({ lastFetch: null }); await get().loadWorkflows(); },
-    }),
-    {
-      name: 'approval_workflow_store',
-      partialize: (s) => ({ workflows: s.workflows }),
-    }
-  )
+    })
 );

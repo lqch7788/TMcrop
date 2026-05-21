@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import {
   Approval,
@@ -180,8 +179,7 @@ interface ApprovalStore {
 }
 
 export const useApprovalStore = create<ApprovalStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // ========== 初始状态 ==========
       approvals: [],
       filters: {},
@@ -201,7 +199,7 @@ export const useApprovalStore = create<ApprovalStore>()(
         try {
           const response = await enhancedApiClient.get<{ success: boolean; data: unknown[] }>(
             API_BASE,
-            { useCache: true, cacheStrategy: 'stale-while-revalidate' }
+            {}
           );
           if (response.success && Array.isArray(response.data)) {
             const approvals = response.data.map(item => normalizeApproval(item as Record<string, unknown>));
@@ -417,13 +415,5 @@ export const useApprovalStore = create<ApprovalStore>()(
           throw error;
         }
       },
-    }),
-    {
-      name: 'approval-storage',
-      partialize: (state) => ({
-        approvals: state.approvals,
-        isLoaded: state.isLoaded,
-      }),
-    }
-  )
+    })
 );

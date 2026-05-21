@@ -17,10 +17,7 @@ import type { Notice } from '../pages/types/announcement.types';
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getNotices(): Promise<Notice[]> {
-  return await enhancedApiClient.get<Notice[]>('/announcements', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Notice[]>('/announcements');
 }
 
 /**
@@ -28,10 +25,7 @@ export async function getNotices(): Promise<Notice[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getNoticeById(id: string): Promise<Notice | undefined> {
-  return await enhancedApiClient.get<Notice>(`/announcements/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Notice>(`/announcements/${id}`);
 }
 
 /**
@@ -51,10 +45,7 @@ export async function getNoticesByIds(ids: string[]): Promise<Notice[]> {
 export async function createNotice(
   noticeData: Omit<Notice, 'id' | 'code'>
 ): Promise<Notice> {
-  return await enhancedApiClient.post<Notice>('/announcements', noticeData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<Notice>('/announcements', noticeData);
 }
 
 /**
@@ -62,9 +53,7 @@ export async function createNotice(
  * 降级策略：API → 离线队列
  */
 export async function updateNotice(id: string, updates: Partial<Notice>): Promise<Notice | null> {
-  const result = await enhancedApiClient.put<Notice>(`/announcements/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<Notice>(`/announcements/${id}`, updates);
   return result;
 }
 
@@ -73,9 +62,7 @@ export async function updateNotice(id: string, updates: Partial<Notice>): Promis
  * 降级策略：API → 离线队列
  */
 export async function deleteNotice(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/announcements/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/announcements/${id}`);
   return true;
 }
 
@@ -84,9 +71,7 @@ export async function deleteNotice(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteNotices(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/announcements/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/announcements/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -95,9 +80,7 @@ export async function deleteNotices(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function updateNoticeStatus(id: string, status: string): Promise<boolean> {
-  await enhancedApiClient.put(`/announcements/${id}/status`, { status }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/announcements/${id}/status`, { status });
   return true;
 }
 
@@ -106,9 +89,7 @@ export async function updateNoticeStatus(id: string, status: string): Promise<bo
  * 降级策略：API → 离线队列
  */
 export async function incrementReadCount(id: string): Promise<boolean> {
-  await enhancedApiClient.post(`/announcements/${id}/read`, undefined, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/announcements/${id}/read`);
   return true;
 }
 
@@ -117,7 +98,5 @@ export async function incrementReadCount(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function resetNotices(): Promise<void> {
-  await enhancedApiClient.post('/announcements/reset', undefined, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post('/announcements/reset');
 }

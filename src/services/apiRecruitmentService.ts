@@ -99,11 +99,9 @@ export async function getRecruitmentRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  const response = await enhancedApiClient.get<any>('/recruitment', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/recruitment?${paramsStr}` : '/recruitment';
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: RecruitmentRecord[] = (response.data || []).map((item: any) => ({
@@ -142,10 +140,7 @@ export async function getRecruitmentRecords(
  * 获取单个招聘申请
  */
 export async function getRecruitmentById(id: string): Promise<RecruitmentRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/recruitment/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/recruitment/${id}`);
 
   if (!response.data) return null;
 
@@ -198,9 +193,7 @@ export async function createRecruitmentRecord(recruitment: CreateRecruitmentPara
     apply_date: new Date().toISOString().slice(0, 10),
   };
 
-  const response = await enhancedApiClient.post<any>('/recruitment', snakeData, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.post<any>('/recruitment', snakeData);
 
   return {
     ...recruitment,
@@ -233,9 +226,7 @@ export async function updateRecruitmentRecord(id: string, updates: UpdateRecruit
   if (updates.remarks !== undefined) snakeData.remarks = updates.remarks;
   if (updates.status) snakeData.status = updates.status;
 
-  await enhancedApiClient.put(`/recruitment/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/recruitment/${id}`, snakeData);
 
   return true;
 }
@@ -244,8 +235,6 @@ export async function updateRecruitmentRecord(id: string, updates: UpdateRecruit
  * 删除招聘申请
  */
 export async function deleteRecruitmentRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/recruitment/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/recruitment/${id}`);
   return true;
 }

@@ -111,7 +111,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/area-systems', body, { offlineQueue: true, priority: 0 }
+            '/api/area-systems', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -130,7 +130,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/area-systems/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/area-systems/${oid}`, body);
         } catch (error) {
           console.warn('[AreaSystemStore] 更新失败:', error);
         }
@@ -139,7 +139,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try {
-          await enhancedApiClient.delete(`/api/area-systems/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/area-systems/${oid}`);
           return true;
         } catch (error) {
           console.warn('[AreaSystemStore] 删除失败:', error);

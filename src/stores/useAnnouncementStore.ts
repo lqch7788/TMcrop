@@ -83,7 +83,7 @@ export const useAnnouncementStore = create<AnnouncementStore>()(
         try {
           const apiData = await enhancedApiClient.get<{ success: boolean; data: ApiAnnouncement[]; meta?: { total: number } }>(
             '/announcements',
-            { useCache: false, cacheStrategy: 'network-first' }
+            {}
           );
           if (apiData && apiData.success && Array.isArray(apiData.data)) {
             set({ announcements: apiData.data, isLoading: false });

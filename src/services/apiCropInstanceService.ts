@@ -18,10 +18,7 @@ import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '
  * 降级策略：API → IndexedDB 缓存
  */
 export async function initInstances(): Promise<CropInstance[]> {
-  return await enhancedApiClient.get<CropInstance[]>('/crop-instances/init', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CropInstance[]>('/crop-instances/init');
 }
 
 /**
@@ -29,10 +26,7 @@ export async function initInstances(): Promise<CropInstance[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstances(): Promise<CropInstance[]> {
-  return await enhancedApiClient.get<CropInstance[]>('/crop-instances', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CropInstance[]>('/crop-instances');
 }
 
 /**
@@ -40,10 +34,7 @@ export async function getInstances(): Promise<CropInstance[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstanceById(id: string): Promise<CropInstance | undefined> {
-  return await enhancedApiClient.get<CropInstance>(`/crop-instances/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CropInstance>(`/crop-instances/${id}`);
 }
 
 /**
@@ -51,10 +42,7 @@ export async function getInstanceById(id: string): Promise<CropInstance | undefi
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstancesByIds(ids: string[]): Promise<CropInstance[]> {
-  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/batch?ids=${ids.join(',')}`);
 }
 
 /**
@@ -62,10 +50,7 @@ export async function getInstancesByIds(ids: string[]): Promise<CropInstance[]> 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInstancesByOrderId(orderId: string): Promise<CropInstance[]> {
-  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/order/${orderId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/order/${orderId}`);
 }
 
 /**
@@ -92,9 +77,6 @@ export async function createInstance(
     sourceOrigin,
     initialQuantity,
     options
-  }, {
-    offlineQueue: true,
-    useCache: true,
   });
 }
 
@@ -103,9 +85,7 @@ export async function createInstance(
  * 降级策略：API → 离线队列
  */
 export async function updateInstance(id: string, updates: Partial<CropInstance>): Promise<CropInstance | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/crop-instances/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-instances/${id}`, updates);
   return result ? { ...updates, id } as CropInstance : null;
 }
 
@@ -114,9 +94,7 @@ export async function updateInstance(id: string, updates: Partial<CropInstance>)
  * 降级策略：API → 离线队列
  */
 export async function deleteInstance(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/crop-instances/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/crop-instances/${id}`);
   return true;
 }
 
@@ -125,9 +103,7 @@ export async function deleteInstance(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteInstances(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/crop-instances/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/crop-instances/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -136,9 +112,7 @@ export async function deleteInstances(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function updateQuantity(id: string, type: 'seedling' | 'plant' | 'harvest', quantity: number): Promise<boolean> {
-  await enhancedApiClient.post(`/crop-instances/${id}/update-quantity`, { type, quantity }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/crop-instances/${id}/update-quantity`, { type, quantity });
   return true;
 }
 
@@ -147,9 +121,7 @@ export async function updateQuantity(id: string, type: 'seedling' | 'plant' | 'h
  * 降级策略：API → 离线队列
  */
 export async function updateStatus(id: string, status: CropInstanceStatus): Promise<boolean> {
-  await enhancedApiClient.put(`/crop-instances/${id}/status`, { status }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/crop-instances/${id}/status`, { status });
   return true;
 }
 
@@ -159,10 +131,7 @@ export async function updateStatus(id: string, status: CropInstanceStatus): Prom
  */
 export async function getTraceChain(id: string): Promise<CropTraceChain | null> {
   try {
-    return await enhancedApiClient.get<CropTraceChain>(`/crop-instances/${id}/trace-chain`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<CropTraceChain>(`/crop-instances/${id}/trace-chain`);
   } catch {
     return null;
   }

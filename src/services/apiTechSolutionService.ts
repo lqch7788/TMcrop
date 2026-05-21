@@ -89,10 +89,7 @@ function transformSingle(item: BackendTechSolution): TechSolution {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTechSolutions(): Promise<TechSolution[]> {
-  const data = await enhancedApiClient.get<BackendTechSolution[]>('/tech-solutions', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendTechSolution[]>('/tech-solutions');
   return transformTechSolution(data) as TechSolution[];
 }
 
@@ -101,10 +98,7 @@ export async function getTechSolutions(): Promise<TechSolution[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTechSolutionById(id: string): Promise<TechSolution | undefined> {
-  const data = await enhancedApiClient.get<BackendTechSolution>(`/tech-solutions/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendTechSolution>(`/tech-solutions/${id}`);
   return transformTechSolution(data) as TechSolution;
 }
 
@@ -113,10 +107,7 @@ export async function getTechSolutionById(id: string): Promise<TechSolution | un
  * 降级策略：API → 离线队列
  */
 export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
-  const result = await enhancedApiClient.post<{ id: string }>('/tech-solutions', solution, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/tech-solutions', solution);
   return { ...solution, id: result.id } as TechSolution;
 }
 
@@ -125,9 +116,7 @@ export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promi
  * 降级策略：API → 离线队列
  */
 export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/tech-solutions/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/tech-solutions/${id}`, updates);
   return result ? { ...updates, id } as TechSolution : null;
 }
 
@@ -136,9 +125,7 @@ export async function updateTechSolution(id: string, updates: Partial<TechSoluti
  * 降级策略：API → 离线队列
  */
 export async function deleteTechSolution(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/tech-solutions/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/tech-solutions/${id}`);
   return true;
 }
 
@@ -147,9 +134,7 @@ export async function deleteTechSolution(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteTechSolutions(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/tech-solutions/batch-delete', { ids }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post('/tech-solutions/batch-delete', { ids });
   return true;
 }
 

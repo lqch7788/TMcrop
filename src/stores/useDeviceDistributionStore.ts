@@ -78,7 +78,7 @@ export const useDeviceDistributionStore = create<DeviceDistributionState>()(
       createItem: async (data) => {
         try {
           const body = denormalize(data);
-          const response = await enhancedApiClient.post<{ success: boolean; data: any }>('/api/device-distributions', body, { offlineQueue: true, priority: 0 });
+          const response = await enhancedApiClient.post<{ success: boolean; data: any }>('/api/device-distributions', body);
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
           set((state) => ({ items: [newItem, ...state.items] }));
@@ -89,12 +89,12 @@ export const useDeviceDistributionStore = create<DeviceDistributionState>()(
       updateItem: async (oid, updates) => {
         const body = denormalize(updates);
         set((state) => ({ items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item) }));
-        try { await enhancedApiClient.put(`/api/device-distributions/${oid}`, body, { offlineQueue: true, priority: 0 }); } catch (error) {}
+        try { await enhancedApiClient.put(`/api/device-distributions/${oid}`, body); } catch (error) {}
       },
 
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
-        try { await enhancedApiClient.delete(`/api/device-distributions/${oid}`, { offlineQueue: true, priority: 0 }); return true; } catch (error) { return false; }
+        try { await enhancedApiClient.delete(`/api/device-distributions/${oid}`); return true; } catch (error) { return false; }
       },
     }),
     { name: 'device-distribution-storage', partialize: (state) => ({ items: state.items }) }

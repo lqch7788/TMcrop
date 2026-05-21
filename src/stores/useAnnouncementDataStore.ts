@@ -1,16 +1,13 @@
 /**
- * 公告数据 Zustand Store (V2.1 架构)
+ * 公告数据 Zustand Store (V2.1 架构 - 已简化)
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * 架构：enhancedApiClient → API
+ * 数据流：Store → 组件
  *
  * 对接后端: /api/announcements
- *
- * 设计模式参考: useTempTaskStore.ts (V2.1 标准模板)
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import { submitAnnouncementApproval } from '../services/approvalSubmitService';
 
@@ -120,8 +117,7 @@ interface AnnouncementDataState {
 // ========== Store ==========
 
 export const useAnnouncementDataStore = create<AnnouncementDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -180,7 +176,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
 
         try {
           const response = await enhancedApiClient.post<{ id: string; code: string }>(
-            '/announcements', body, { priority: 0 }
+            '/announcements', body
           );
           // POST 返回 { message, id, code }，enhancedApiClient 未提取 .data 所以返回完整对象
           const savedId = (response as any)?.id || localId;
@@ -211,7 +207,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           ),
         }));
         try {
-          await enhancedApiClient.put(`/announcements/${id}`, updates, { priority: 0 });
+          await enhancedApiClient.put(`/announcements/${id}`, updates);
         } catch (error) {
           console.warn('[AnnouncementDataStore] 更新公告API失败:', error);
         }
@@ -221,7 +217,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
       deleteItem: async (id) => {
         set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
         try {
-          await enhancedApiClient.delete(`/announcements/${id}`, { priority: 0 });
+          await enhancedApiClient.delete(`/announcements/${id}`);
           return true;
         } catch (error) {
           console.warn('[AnnouncementDataStore] 删除公告API失败:', error);
@@ -234,7 +230,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
         set((state) => ({ items: state.items.filter((item) => !ids.includes(item.id)) }));
         try {
           await Promise.all(ids.map((id) =>
-            enhancedApiClient.delete(`/announcements/${id}`, { priority: 0 }).catch(() => {})
+            enhancedApiClient.delete(`/announcements/${id}`).catch(() => {})
           ));
           return true;
         } catch {
@@ -290,10 +286,5 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'announcement-data-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );
