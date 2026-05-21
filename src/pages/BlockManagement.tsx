@@ -8,6 +8,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Grid3X3, Plus, Edit2, Trash2, Search, ChevronLeft, ChevronRight, MapPin, Layers, Loader2, AlertTriangle, Home } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
+import { Button } from '../components/ui/button';
+import { Pagination } from '../components/ui/Pagination';
 import { useGreenhouseStore, useZoneStore } from '../stores';
 import type { Zone } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -39,7 +41,7 @@ export default function BlockManagement() {
   const [baseFilter, setBaseFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [formData, setFormData] = useState<Partial<Zone>>({});
@@ -260,82 +262,91 @@ export default function BlockManagement() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">区域编码</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">区域名称</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">所属基地</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">区域类型</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">面积(亩)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">区域编码</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">区域名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">所属基地</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">区域类型</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">面积(亩)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedZones.map((zone) => (
-                <tr key={zone.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-amber-600">{zone.zoneCode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900 font-medium">{zone.zoneName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Home className="w-3 h-3" />
-                      {zone.baseName || '-'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {getZoneTypeName(zone.zoneType)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{(zone.area || 0).toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[zone.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-600'}`}>
-                      {zone.status === 'active' ? '在用' : '闲置'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenModal(zone)}
-                        className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                        title="编辑"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(zone.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            <tbody className="divide-y divide-gray-300">
+              {paginatedZones.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                    暂无数据
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedZones.map((zone) => (
+                  <tr key={zone.id} className="hover:bg-emerald-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-amber-600">{zone.zoneCode}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900">{zone.zoneName}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-gray-500">
+                        <Home className="w-3 h-3" />
+                        {zone.baseName || '-'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {getZoneTypeName(zone.zoneType)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {(zone.area || 0).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[zone.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-600'}`}>
+                        {zone.status === 'active' ? '在用' : '闲置'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenModal(zone)}
+                          className="text-amber-600 hover:bg-amber-50"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(zone.id)}
+                          className="text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
+        {/* 分页器 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <p className="text-sm text-gray-500">
-            显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredZones.length)} 条，共 {filteredZones.length} 条
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-3 py-1 text-sm font-medium">{currentPage} / {totalPages || 1}</span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages || 1}
+            onPageChange={(page) => setCurrentPage(page)}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[10, 20, 50, 100]}
+            showPageSize
+          />
         </div>
       </div>
 
@@ -344,7 +355,7 @@ export default function BlockManagement() {
           isOpen={showModal}
           onClose={handleCloseModal}
           title={editingZone ? '编辑区域' : '新增区域'}
-          onConfirm={handleSubmit}
+          onSubmit={handleSubmit}
         >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

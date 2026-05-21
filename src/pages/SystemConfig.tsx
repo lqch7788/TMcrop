@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2,
-  AlertTriangle, Download,
+  AlertTriangle, Download, Eye, CheckCircle, UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '../stores';
@@ -312,7 +312,7 @@ export default function SystemConfig() {
 
   /** 渲染单个配置行（全部/单个TAB共用） */
   const singleConfigRow = (config: SystemConfig, indented = false) => (
-    <div key={config.id} className={`px-4 py-3 hover:bg-green-50/50 transition-colors ${indented ? 'pl-14' : ''}`}>
+    <div key={config.id} className={`px-4 py-3 hover:bg-blue-100 transition-colors ${indented ? 'pl-14' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -324,8 +324,8 @@ export default function SystemConfig() {
           </div>
           <p className="text-xs text-gray-400 mt-0.5 font-mono truncate">{config.configKey}</p>
         </div>
-        <div className="flex items-center gap-4 ml-4 shrink-0">
-          <div className="min-w-[100px] flex justify-end">
+        <div className="flex items-center gap-4 ml-4 min-w-0">
+          <div className="flex-1 min-w-0">
             {renderValue(config)}
           </div>
           <div className="flex items-center gap-1">
@@ -369,7 +369,11 @@ export default function SystemConfig() {
           </select>
         );
       }
-      // ★ JSON类型用 textarea 编辑（大文本）
+      // ★ 委托规则列表（JSON）专用表格编辑界面
+      if (config.configType === 'json' && config.configKey === 'approval.delegation.rules') {
+        return <DelegationRulesEditor config={config} editValue={editValue} setEditValue={setEditValue} />;
+      }
+      // ★ 其他JSON类型用 textarea 编辑（大文本）
       if (config.configType === 'json') {
         return (
           <textarea
@@ -400,6 +404,13 @@ export default function SystemConfig() {
 
     // ★ JSON类型：截断预览 + 点击展开
     if (config.configType === 'json') {
+      // 委托规则列表特殊处理：显示为表格预览
+      if (config.configKey === 'approval.delegation.rules') {
+        return <DelegationRulesPreview config={config} onEdit={() => {
+          setEditValue(config.configValue);
+          setEditingId(config.id);
+        }} />;
+      }
       const maxLen = 150;
       const preview = config.configValue.length > maxLen
         ? config.configValue.substring(0, maxLen) + '…'
@@ -499,8 +510,8 @@ export default function SystemConfig() {
         </div>
       ) : (
         /* ===== 单个分类 TAB：平铺列表 + 滑块滚动 ===== */
-        <div className="bg-white rounded-lg shadow max-w-2xl">
-          <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
+        <div className="bg-white rounded-lg shadow max-w-4xl">
+          <div className="divide-y divide-gray-300 max-h-[520px] overflow-y-auto">
             {groupedConfigs[0].items.map((config) => singleConfigRow(config))}
           </div>
           {groupedConfigs[0].items.length > PAGE_SIZE && (
@@ -646,6 +657,232 @@ export default function SystemConfig() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ==================== 委托规则列表（JSON）专用组件 ====================
+
+/** 委托规则数据结构 */
+interface DelegationRule {
+  fromRole: string;
+  toRole: string;
+  enabled: boolean;
+  remark: string;
+}
+
+/** 角色选项 */
+const ROLE_OPTIONS = [
+  { value: 'manager', label: '经理' },
+  { value: 'department_head', label: '部门主管' },
+  { value: 'director', label: '总监' },
+  { value: 'hr', label: '人事专员' },
+  { value: 'hr_manager', label: '人事经理' },
+  { value: 'finance', label: '财务' },
+  { value: 'admin', label: '系统管理员' },
+];
+
+/** 委托规则预览组件（非编辑状态） */
+function DelegationRulesPreview({ config, onEdit }: { config: SystemConfig; onEdit: () => void }) {
+  let rules: DelegationRule[] = [];
+  try {
+    rules = JSON.parse(config.configValue || '[]');
+  } catch { rules = []; }
+
+  if (rules.length === 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-400">暂无规则</span>
+        <button onClick={onEdit} className="text-xs text-emerald-600 hover:text-emerald-800 underline">
+          点击添加
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {/* 表格形式预览 */}
+      <div className="bg-gray-50 rounded-lg overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-2 py-1.5 text-left font-medium text-gray-600">状态</th>
+              <th className="px-2 py-1.5 text-left font-medium text-gray-600">委托角色</th>
+              <th className="px-2 py-1.5 text-left font-medium text-gray-600">接收角色</th>
+              <th className="px-2 py-1.5 text-left font-medium text-gray-600">说明</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {rules.slice(0, 3).map((rule, idx) => (
+              <tr key={idx} className={!rule.enabled ? 'opacity-50' : ''}>
+                <td className="px-2 py-1.5">
+                  {rule.enabled ? (
+                    <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <span className="w-3.5 h-3.5 inline-block text-gray-300">○</span>
+                  )}
+                </td>
+                <td className="px-2 py-1.5 text-gray-700">
+                  {ROLE_OPTIONS.find(r => r.value === rule.fromRole)?.label || rule.fromRole}
+                </td>
+                <td className="px-2 py-1.5 text-gray-700">
+                  {ROLE_OPTIONS.find(r => r.value === rule.toRole)?.label || rule.toRole}
+                </td>
+                <td className="px-2 py-1.5 text-gray-500 truncate max-w-[200px]">{rule.remark}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rules.length > 3 && (
+        <p className="text-xs text-gray-400">...还有 {rules.length - 3} 条规则</p>
+      )}
+      <button
+        onClick={onEdit}
+        className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 mt-1"
+      >
+        <Edit className="w-3 h-3" />
+        编辑规则
+      </button>
+    </div>
+  );
+}
+
+/** 委托规则编辑器组件（编辑状态） */
+function DelegationRulesEditor({
+  config,
+  editValue,
+  setEditValue,
+}: {
+  config: SystemConfig;
+  editValue: string;
+  setEditValue: (val: string) => void;
+}) {
+  let rules: DelegationRule[] = [];
+  try {
+    rules = JSON.parse(editValue || '[]');
+  } catch { rules = []; }
+
+  const updateRule = (index: number, updates: Partial<DelegationRule>) => {
+    const newRules = [...rules];
+    newRules[index] = { ...newRules[index], ...updates };
+    setEditValue(JSON.stringify(newRules, null, 2));
+  };
+
+  const addRule = () => {
+    const newRule: DelegationRule = {
+      fromRole: 'manager',
+      toRole: 'department_head',
+      enabled: true,
+      remark: '',
+    };
+    setEditValue(JSON.stringify([...rules, newRule], null, 2));
+  };
+
+  const deleteRule = (index: number) => {
+    const newRules = rules.filter((_, i) => i !== index);
+    setEditValue(JSON.stringify(newRules, null, 2));
+  };
+
+  return (
+    <div className="w-full max-w-2xl space-y-3">
+      {/* 表头 */}
+      <div className="bg-emerald-50 rounded-lg overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-emerald-100">
+              <th className="px-2 py-2 text-left font-semibold text-emerald-800 w-10">状态</th>
+              <th className="px-2 py-2 text-left font-semibold text-emerald-800 w-36">委托角色</th>
+              <th className="px-2 py-2 text-left font-semibold text-emerald-800 w-36">接收角色</th>
+              <th className="px-2 py-2 text-left font-semibold text-emerald-800">说明</th>
+              <th className="px-2 py-2 text-center font-semibold text-emerald-800 w-16">操作</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+
+      {/* 规则列表 */}
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {rules.map((rule, idx) => (
+          <div key={idx} className={`flex items-center gap-2 p-2 rounded-lg border ${rule.enabled ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300'}`}>
+            {/* 启用开关 */}
+            <button
+              onClick={() => updateRule(idx, { enabled: !rule.enabled })}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                rule.enabled ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+              title={rule.enabled ? '已启用' : '已禁用'}
+            >
+              {rule.enabled ? <CheckCircle className="w-4 h-4" /> : <span className="w-4 h-4 inline-block border-2 border-current rounded-full" />}
+            </button>
+
+            {/* 委托角色 */}
+            <select
+              value={rule.fromRole}
+              onChange={(e) => updateRule(idx, { fromRole: e.target.value })}
+              className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {ROLE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+
+            {/* 箭头 */}
+            <div className="flex items-center text-gray-400">
+              <UserCheck className="w-4 h-4" />
+            </div>
+
+            {/* 接收角色 */}
+            <select
+              value={rule.toRole}
+              onChange={(e) => updateRule(idx, { toRole: e.target.value })}
+              className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {ROLE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+
+            {/* 说明 */}
+            <input
+              type="text"
+              value={rule.remark}
+              onChange={(e) => updateRule(idx, { remark: e.target.value })}
+              placeholder="规则说明..."
+              className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+
+            {/* 删除按钮 */}
+            <button
+              onClick={() => deleteRule(idx)}
+              className="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="删除规则"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* 添加按钮 */}
+      <button
+        onClick={addRule}
+        className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        添加委托规则
+      </button>
+
+      {/* JSON预览（可折叠） */}
+      <details className="mt-2">
+        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+          查看原始JSON
+        </summary>
+        <pre className="mt-1 p-2 text-xs bg-gray-100 rounded overflow-x-auto max-h-40">
+          {editValue}
+        </pre>
+      </details>
     </div>
   );
 }
