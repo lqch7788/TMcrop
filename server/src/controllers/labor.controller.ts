@@ -112,6 +112,19 @@ export class LaborController {
     }
   }
 
+  /**
+   * DELETE /labor/all
+   * 清空所有人工记录（用于重新迁移）
+   */
+  async deleteAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const count = await this.service.deleteAll();
+      res.json({ success: true, data: { deleted: count } });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==================== 员工操作 ====================
 
   /**

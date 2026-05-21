@@ -163,6 +163,13 @@ export class LaborService {
     return { id };
   }
 
+  /**
+   * 清空所有人工记录
+   */
+  async deleteAll(): Promise<number> {
+    return await this.repository.deleteAll();
+  }
+
   // ==================== 员工操作 ====================
 
   /**
