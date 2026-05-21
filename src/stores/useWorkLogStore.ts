@@ -1,7 +1,7 @@
 /**
- * 工作日志 Zustand Store (V2.0 架构改造)
+ * 工作日志 Zustand Store (V2.0 架构 - 恢复localStorage模式)
  *
- * 架构：Zustand persist → localStorage (无后端API，使用种子数据+本地持久化)
+ * 架构：Zustand persist → localStorage (临时恢复，对接API后需改回)
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  */
 import { create } from 'zustand';
@@ -140,3 +140,20 @@ export const useWorkLogStore = create<WorkLogState>()(
     }
   )
 );
+
+// ==================== 辅助函数 ====================
+
+/** 根据日期筛选 */
+export const getWorkLogsByDate = (date: string) => {
+  return useWorkLogStore.getState().workLogs.filter((log) => log.date === date);
+};
+
+/** 根据工人名称筛选 */
+export const getWorkLogsByWorker = (worker: string) => {
+  return useWorkLogStore.getState().workLogs.filter((log) => log.worker === worker);
+};
+
+/** 根据大棚筛选 */
+export const getWorkLogsByGreenhouse = (greenhouse: string) => {
+  return useWorkLogStore.getState().workLogs.filter((log) => log.greenhouse === greenhouse);
+};

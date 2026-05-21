@@ -63,4 +63,7 @@ router.get('/:id', (req, res, next) => laborController.getById(req, res, next));
 router.put('/:id', (req, res, next) => laborController.update(req, res, next));
 router.delete('/:id', (req, res, next) => laborController.delete(req, res, next));
 
+// 清空所有人工记录（需在 /:id 路由之后）
+router.delete('/all', (req, res, next) => laborController.deleteAll(req, res, next));
+
 export default router;

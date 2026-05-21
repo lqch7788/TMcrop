@@ -271,6 +271,21 @@ export class LaborRepository {
     saveDatabase();
   }
 
+  /**
+   * 清空所有人工记录
+   */
+  async deleteAll(): Promise<number> {
+    const db = getDatabase();
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM labor_records');
+    const countResult = countStmt.step() as unknown as { count: number } | false;
+    const count = countResult ? countResult.count : 0;
+    countStmt.free();
+
+    db.run('DELETE FROM labor_records');
+    saveDatabase();
+    return count;
+  }
+
   // ==================== 员工操作 ====================
 
   /**
