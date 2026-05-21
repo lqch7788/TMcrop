@@ -95,12 +95,9 @@ export default function BaseSettings() {
   const [companyGroups, setCompanyGroupsState] = useState<CompanyGroup[]>(loadCompanyGroups);
   const navigate = useNavigate();
 
-  // 当 companyGroups 更新时，同步更新 expandedCompanies
-  useEffect(() => {
-    if (companyGroups.length > 0) {
-      setExpandedCompanies(companyGroups.map(g => g.id));
-    }
-  }, [companyGroups]);
+  // editingItem 必须在使用它的 useEffect 之前声明
+  const [editingItem, setEditingItem] = useState<{type: 'company' | 'base', data: BaseData | CompanyGroup, companyId?: number} | null>(null);
+  const [editUnit, setEditUnit] = useState('亩'); // 编辑弹窗中单位字段的受控状态
 
   // 编辑弹窗打开/关闭时，同步单位字段状态
   useEffect(() => {
@@ -111,6 +108,13 @@ export default function BaseSettings() {
     }
   }, [editingItem]);
 
+  // 当 companyGroups 更新时，同步更新 expandedCompanies
+  useEffect(() => {
+    if (companyGroups.length > 0) {
+      setExpandedCompanies(companyGroups.map(g => g.id));
+    }
+  }, [companyGroups]);
+
   const [searchName, setSearchName] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cropFilter, setCropFilter] = useState('all');
@@ -120,7 +124,6 @@ export default function BaseSettings() {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [addType, setAddType] = useState<'company' | 'base'>('base');
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<{type: 'company' | 'base', data: BaseData | CompanyGroup, companyId?: number} | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     title: string;
@@ -131,7 +134,6 @@ export default function BaseSettings() {
   const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);
   const [exportMode, setExportMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [editUnit, setEditUnit] = useState('亩'); // 编辑弹窗中单位字段的受控状态
 
   // 更新状态并保存到 localStorage
   const setCompanyGroups = (newData: CompanyGroup[]) => {
