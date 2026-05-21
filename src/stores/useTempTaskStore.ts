@@ -1,14 +1,12 @@
 /**
  * 临时任务 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/temp-tasks
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -150,8 +148,7 @@ interface TempTaskState {
 }
 
 export const useTempTaskStore = create<TempTaskState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       tasks: [],
       isLoading: false,
       error: null,
@@ -180,7 +177,7 @@ export const useTempTaskStore = create<TempTaskState>()(
         try {
           const body = denormalizeTask(task);
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
-            '/temp-tasks', body, { priority: 0 }
+            '/temp-tasks', body
           );
           const newId = (response as any)?.id || `TT${Date.now()}`;
           const newTask = normalizeTask({ ...task, id: newId } as Record<string, unknown>);
@@ -200,7 +197,7 @@ export const useTempTaskStore = create<TempTaskState>()(
           tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
         }));
         try {
-          await enhancedApiClient.put(`/temp-tasks/${id}`, body, { priority: 0 });
+          await enhancedApiClient.put(`/temp-tasks/${id}`, body);
         } catch (error) {
           console.warn('[TempTaskStore] 更新任务API失败，已加入离线队列:', error);
         }
@@ -209,7 +206,7 @@ export const useTempTaskStore = create<TempTaskState>()(
       deleteTask: async (id) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
         try {
-          await enhancedApiClient.delete(`/temp-tasks/${id}`, { priority: 0 });
+          await enhancedApiClient.delete(`/temp-tasks/${id}`);
           return true;
         } catch (error) {
           console.warn('[TempTaskStore] 删除任务API失败，已加入离线队列:', error);
@@ -221,17 +218,13 @@ export const useTempTaskStore = create<TempTaskState>()(
         set((state) => ({ tasks: state.tasks.filter((t) => !ids.includes(t.id)) }));
         try {
           await Promise.all(ids.map((id) =>
-            enhancedApiClient.delete(`/temp-tasks/${id}`, { priority: 0 }).catch(() => {})
+            enhancedApiClient.delete(`/temp-tasks/${id}`).catch(() => {})
           ));
           return true;
         } catch {
           return false;
         }
       },
-    }),
-    {
-      name: 'temp-task-storage',
-      partialize: (state) => ({ tasks: state.tasks }),
     }
   )
 );

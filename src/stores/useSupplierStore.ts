@@ -1,12 +1,10 @@
 /**
- * 供应商管理 Zustand Store
+ * 供应商管理 Zustand Store (V2.1 架构 - 已简化)
  * 数据流：enhancedApiClient → Store → 页面组件
- * 三级降级：API → IndexedDB → localStorage
+ * 无缓存层，直接调用API
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Supplier } from '../components/supplier/types';
-import * as supplierService from '../services/apiSupplierService';
 import { enhancedApiClient } from '../lib/apiClient';
 
 interface SupplierState {
@@ -23,8 +21,6 @@ interface SupplierState {
 
 /**
  * 前端camelCase → 后端请求体snake_case映射
- * 数据库列名为snake_case（supplier_code, supplier_name等）
- * 写入时直接匹配DB列名，供API路由的INSERT/UPDATE使用
  */
 function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
   return {
@@ -32,7 +28,7 @@ function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
     supplier_name: item.name,
     contact_person: item.contact,
     mobile_phone: item.mobilePhone,
-    contact_phone: item.mobilePhone,    // 后端也接受contact_phone
+    contact_phone: item.mobilePhone,
     work_phone: item.workPhone,
     fax: item.fax,
     address: item.address,
@@ -53,8 +49,6 @@ function toBackendFields(item: Partial<Supplier>): Record<string, unknown> {
 
 /**
  * 后端API响应 → 前端camelCase映射
- * queryToObjects已将DB的snake_case转为camelCase（supplier_code→supplierCode）
- * 优先匹配camelCase（实际API返回格式），snake_case作为兜底
  */
 function fromBackendFields(record: Record<string, unknown>): Supplier {
   return {
@@ -64,110 +58,100 @@ function fromBackendFields(record: Record<string, unknown>): Supplier {
     supplierType: record.supplierType || record.supplier_type || record.supplierType || '',
     supplierAttribute: record.supplierAttribute || record.supplier_attribute || record.supplierAttribute || '',
     contact: record.contactPerson || record.contact_person || record.contact || '',
-    mobilePhone: record.mobilePhone || record.mobile_phone || record.contactPhone || record.contact_phone || record.mobilePhone || '',
-    workPhone: record.workPhone || record.work_phone || record.workPhone || '',
+    mobilePhone: record.mobilePhone || record.mobile_phone || record.contactPhone || record.contact_phone || '',
+    workPhone: record.workPhone || record.work_phone || '',
     fax: record.fax || '',
     status: record.status === 'active' ? '合作中' : record.status === 'inactive' ? '暂停' : record.status || '',
     country: record.country || '',
     province: record.province || '',
     city: record.city || '',
     address: record.address || '',
-    bankName: record.bankName || record.bank_name || record.bankName || '',
-    bankCardNumber: record.bankCardNumber || record.bank_card_number || record.bankCardNumber || '',
+    bankName: record.bankName || record.bank_name || '',
+    bankCardNumber: record.bankCardNumber || record.bank_card_number || '',
     organization: record.organization || '',
-    createDate: record.createDate || record.create_date || record.createDate || '',
+    createDate: record.createDate || record.create_date || '',
     remarks: record.remarks || '',
   };
 }
 
 export const useSupplierStore = create<SupplierState>()(
-  persist(
-    (set) => ({
-      items: [],
-      isLoading: false,
-      error: null,
+  (set) => ({
+    items: [],
+    isLoading: false,
+    error: null,
 
-      loadItems: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/suppliers?limit=200', {
-            useCache: true, cacheStrategy: 'network-first',
-          });
-          // enhancedApiClient 已提取 .data，resp 即为实际数据数组
-          const list = Array.isArray(resp) ? resp : [];
-          const mapped = (Array.isArray(list) ? list : []).map(fromBackendFields);
-          set({ items: mapped, isLoading: false });
-        } catch (error) {
-          console.error('[useSupplierStore] 获取供应商失败:', error);
-          set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
-        }
-      },
+    loadItems: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/suppliers?limit=200');
+        const list = Array.isArray(resp) ? resp : [];
+        const mapped = list.map(fromBackendFields);
+        set({ items: mapped, isLoading: false });
+      } catch (error) {
+        console.error('[useSupplierStore] 获取供应商失败:', error);
+        set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
+      }
+    },
 
-      addItem: async (item) => {
-        try {
-          const backendData = toBackendFields(item);
-          backendData.id = item.code || `SUP${Date.now()}`;
-          const result = await enhancedApiClient.post<Record<string, unknown>>('/suppliers', backendData, {
-            offlineQueue: true, useCache: true,
-          });
-          const newItem: Supplier = {
-            ...item,
-            id: result?.id || Date.now(),
-          };
-          set((s) => ({ items: [newItem, ...s.items] }));
-          return newItem;
-        } catch (error) {
-          console.error('[useSupplierStore] 添加供应商失败:', error);
-          return null;
-        }
-      },
+    addItem: async (item) => {
+      try {
+        const backendData = toBackendFields(item);
+        backendData.id = item.code || `SUP${Date.now()}`;
+        const result = await enhancedApiClient.post<Record<string, unknown>>('/suppliers', backendData);
+        const newItem: Supplier = {
+          ...item,
+          id: result?.id || Date.now(),
+        };
+        set((s) => ({ items: [newItem, ...s.items] }));
+        return newItem;
+      } catch (error) {
+        console.error('[useSupplierStore] 添加供应商失败:', error);
+        return null;
+      }
+    },
 
-      updateItem: async (id, updates) => {
-        try {
-          const backendUpdates = toBackendFields(updates);
-          await enhancedApiClient.put(`/suppliers/${id}`, backendUpdates, {
-            offlineQueue: true,
-          });
-          let found: Supplier | null = null;
-          set((s) => {
-            const updated = s.items.map((i) => i.id === id ? { ...i, ...updates } as Supplier : i);
-            found = updated.find((i) => i.id === id) || null;
-            return { items: updated };
-          });
-          return found;
-        } catch (error) {
-          console.error('[useSupplierStore] 更新供应商失败:', error);
-          return null;
-        }
-      },
+    updateItem: async (id, updates) => {
+      try {
+        const backendUpdates = toBackendFields(updates);
+        await enhancedApiClient.put(`/suppliers/${id}`, backendUpdates);
+        let found: Supplier | null = null;
+        set((s) => {
+          const updated = s.items.map((i) => i.id === id ? { ...i, ...updates } as Supplier : i);
+          found = updated.find((i) => i.id === id) || null;
+          return { items: updated };
+        });
+        return found;
+      } catch (error) {
+        console.error('[useSupplierStore] 更新供应商失败:', error);
+        return null;
+      }
+    },
 
-      deleteItem: async (id) => {
-        try {
-          await enhancedApiClient.delete(`/suppliers/${id}`, { offlineQueue: true });
-          set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
-          return true;
-        } catch (error) {
-          console.error('[useSupplierStore] 删除供应商失败:', error);
-          return false;
-        }
-      },
+    deleteItem: async (id) => {
+      try {
+        await enhancedApiClient.delete(`/suppliers/${id}`);
+        set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+        return true;
+      } catch (error) {
+        console.error('[useSupplierStore] 删除供应商失败:', error);
+        return false;
+      }
+    },
 
-      deleteItems: async (ids) => {
-        try {
-          const results = await Promise.all(
-            ids.map((id) =>
-              enhancedApiClient.delete(`/suppliers/${id}`, { offlineQueue: true }).then(() => true).catch(() => false)
-            )
-          );
-          const allSuccess = results.every(Boolean);
-          if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
-          return allSuccess;
-        } catch (error) {
-          console.error('[useSupplierStore] 批量删除供应商失败:', error);
-          return false;
-        }
-      },
-    }),
-    { name: 'supplier-storage', version: 1, partialize: (s) => ({ items: s.items }) }
-  )
+    deleteItems: async (ids) => {
+      try {
+        const results = await Promise.all(
+          ids.map((id) =>
+            enhancedApiClient.delete(`/suppliers/${id}`).then(() => true).catch(() => false)
+          )
+        );
+        const allSuccess = results.every(Boolean);
+        if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
+        return allSuccess;
+      } catch (error) {
+        console.error('[useSupplierStore] 批量删除供应商失败:', error);
+        return false;
+      }
+    },
+  })
 );

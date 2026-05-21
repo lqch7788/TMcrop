@@ -128,7 +128,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/energy-configs', body, { offlineQueue: true, priority: 0 }
+            '/api/energy-configs', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -147,7 +147,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/energy-configs/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/energy-configs/${oid}`, body);
         } catch (error) {
           console.warn('[EnergyConfigStore] 更新失败:', error);
         }
@@ -156,7 +156,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try {
-          await enhancedApiClient.delete(`/api/energy-configs/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/energy-configs/${oid}`);
           return true;
         } catch (error) {
           console.warn('[EnergyConfigStore] 删除失败:', error);

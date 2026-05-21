@@ -70,10 +70,7 @@ export interface SubVariety1Extension {
  * 获取所有类别扩展
  */
 export async function getAllCategoryExtensions(): Promise<CategoryExtension[]> {
-  return await enhancedApiClient.get<CategoryExtension[]>(`${API_BASE}/categories`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<CategoryExtension[]>(`${API_BASE}/categories`);
 }
 
 /**
@@ -86,9 +83,6 @@ export async function addCategoryExtension(
   return await enhancedApiClient.post<CategoryExtension>(`${API_BASE}/categories`, {
     category_code: categoryCode,
     category_name: categoryName
-  }, {
-    offlineQueue: true,
-    useCache: true,
   });
 }
 
@@ -96,9 +90,7 @@ export async function addCategoryExtension(
  * 删除类别扩展
  */
 export async function deleteCategoryExtension(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`${API_BASE}/categories/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`${API_BASE}/categories/${id}`);
   return true;
 }
 
@@ -115,8 +107,6 @@ export async function updateCategoryExtension(
     category_name: categoryName,
     sort_order: sortOrder,
     status
-  }, {
-    offlineQueue: true,
   });
   return true;
 }
@@ -128,10 +118,7 @@ export async function updateCategoryExtension(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllTypeExtensions(): Promise<TypeExtension[]> {
-  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types`);
 }
 
 /**
@@ -139,10 +126,7 @@ export async function getAllTypeExtensions(): Promise<TypeExtension[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTypeExtensionsByCategory(categoryCode: string): Promise<TypeExtension[]> {
-  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types/${categoryCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types/${categoryCode}`);
 }
 
 /**
@@ -160,9 +144,6 @@ export async function addTypeExtension(
     category_name: categoryName,
     type_code: typeCode,
     type_name: typeName
-  }, {
-    offlineQueue: true,
-    useCache: true,
   });
 }
 
@@ -171,9 +152,7 @@ export async function addTypeExtension(
  * 降级策略：API → 离线队列
  */
 export async function deleteTypeExtension(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`${API_BASE}/types/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`${API_BASE}/types/${id}`);
   return true;
 }
 
@@ -191,8 +170,6 @@ export async function updateTypeExtension(
     type_name: typeName,
     sort_order: sortOrder,
     status
-  }, {
-    offlineQueue: true,
   });
   return true;
 }
@@ -204,10 +181,7 @@ export async function updateTypeExtension(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
-  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties`);
 }
 
 /**
@@ -215,10 +189,7 @@ export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getVarietyExtensionsByType(categoryCode: string, typeCode: string): Promise<VarietyExtension[]> {
-  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties/${categoryCode}/${typeCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties/${categoryCode}/${typeCode}`);
 }
 
 /**
@@ -236,9 +207,6 @@ export async function addVarietyExtension(
     type_code: typeCode,
     variety_code: varietyCode,
     variety_name: varietyName
-  }, {
-    offlineQueue: true,
-    useCache: true,
   });
 }
 
@@ -247,9 +215,7 @@ export async function addVarietyExtension(
  * 降级策略：API → 离线队列
  */
 export async function deleteVarietyExtension(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`${API_BASE}/varieties/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`${API_BASE}/varieties/${id}`);
   return true;
 }
 
@@ -267,8 +233,6 @@ export async function updateVarietyExtension(
     variety_name: varietyName,
     sort_order: sortOrder,
     status
-  }, {
-    offlineQueue: true,
   });
   return true;
 }
@@ -280,10 +244,7 @@ export async function updateVarietyExtension(
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllSubVariety1Extensions(): Promise<SubVariety1Extension[]> {
-  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1`);
 }
 
 /**
@@ -295,10 +256,7 @@ export async function getSubVariety1ExtensionsByVariety(
   typeCode: string,
   varietyCode: string
 ): Promise<SubVariety1Extension[]> {
-  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1/${categoryCode}/${typeCode}/${varietyCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1/${categoryCode}/${typeCode}/${varietyCode}`);
 }
 
 /**
@@ -318,9 +276,6 @@ export async function addSubVariety1Extension(
     variety_code: varietyCode,
     sub_variety1_code: subVariety1Code,
     sub_variety1_name: subVariety1Name
-  }, {
-    offlineQueue: true,
-    useCache: true,
   });
 }
 
@@ -329,9 +284,7 @@ export async function addSubVariety1Extension(
  * 降级策略：API → 离线队列
  */
 export async function deleteSubVariety1Extension(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`${API_BASE}/subvariety1/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`${API_BASE}/subvariety1/${id}`);
   return true;
 }
 
@@ -349,8 +302,6 @@ export async function updateSubVariety1Extension(
     sub_variety1_name: subVariety1Name,
     sort_order: sortOrder,
     status
-  }, {
-    offlineQueue: true,
   });
   return true;
 }

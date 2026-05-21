@@ -71,10 +71,7 @@ export interface InboundRecord {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getMaterials(): Promise<Material[]> {
-  return await enhancedApiClient.get<Material[]>('/materials', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Material[]>('/materials');
 }
 
 /**
@@ -82,10 +79,7 @@ export async function getMaterials(): Promise<Material[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInboundRecords(): Promise<InboundRecord[]> {
-  return await enhancedApiClient.get<InboundRecord[]>('/materials/inbound', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InboundRecord[]>('/materials/inbound');
 }
 
 /**
@@ -93,10 +87,7 @@ export async function getInboundRecords(): Promise<InboundRecord[]> {
  * 降级策略：API → 离线队列
  */
 export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Promise<InboundRecord> {
-  return await enhancedApiClient.post<InboundRecord>('/materials/inbound', record, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<InboundRecord>('/materials/inbound', record);
 }
 
 /**
@@ -104,9 +95,7 @@ export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Pr
  * 降级策略：API → 离线队列
  */
 export async function updateInboundRecord(id: number, updates: Partial<InboundRecord>): Promise<InboundRecord | null> {
-  return await enhancedApiClient.put<InboundRecord>(`/materials/inbound/${id}`, updates, {
-    offlineQueue: true,
-  });
+  return await enhancedApiClient.put<InboundRecord>(`/materials/inbound/${id}`, updates);
 }
 
 /**
@@ -114,10 +103,7 @@ export async function updateInboundRecord(id: number, updates: Partial<InboundRe
  * 降级策略：API → 离线队列
  */
 export async function createMaterial(material: Omit<Material, 'id'>): Promise<{ id: number }> {
-  return await enhancedApiClient.post<{ id: number }>('/materials', material, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<{ id: number }>('/materials', material);
 }
 
 /**
@@ -125,9 +111,7 @@ export async function createMaterial(material: Omit<Material, 'id'>): Promise<{ 
  * 降级策略：API → 离线队列
  */
 export async function updateMaterial(id: number, updates: Partial<Material>): Promise<Material | null> {
-  const result = await enhancedApiClient.put<Material>(`/materials/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<Material>(`/materials/${id}`, updates);
   return result;
 }
 
@@ -136,9 +120,7 @@ export async function updateMaterial(id: number, updates: Partial<Material>): Pr
  * 降级策略：API → 离线队列
  */
 export async function deleteMaterial(id: number): Promise<boolean> {
-  await enhancedApiClient.delete(`/materials/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/materials/${id}`);
   return true;
 }
 
@@ -147,8 +129,6 @@ export async function deleteMaterial(id: number): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteInboundRecord(id: number): Promise<boolean> {
-  await enhancedApiClient.delete(`/materials/inbound/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/materials/inbound/${id}`);
   return true;
 }

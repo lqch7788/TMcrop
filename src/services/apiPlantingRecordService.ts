@@ -45,10 +45,7 @@ export async function getPlantingRecords(query?: PlantingRecordQuery): Promise<P
   }
   const qs = params.toString();
   const url = qs ? `/planting-records?${qs}` : '/planting-records';
-  const records = await enhancedApiClient.get<any[]>(url, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const records = await enhancedApiClient.get<any[]>(url);
   if (!records) return [];
   // 后端返回 snake_case，转换为 camelCase
   return records.map((r: any) => ({

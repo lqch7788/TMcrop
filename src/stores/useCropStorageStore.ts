@@ -1,9 +1,8 @@
 /**
- * 作物入库状态 Store - Zustand 替代 useCropStorageStore (localStorage + CustomEvent)
+ * 作物入库状态 Store (V2.1 架构 - 已简化)
  * 用于审批联动：审批通过后更新作物入库记录状态
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface CropStorageStatusUpdate {
   recordId: string;
@@ -37,34 +36,29 @@ interface CropStorageStore {
 }
 
 export const useCropStorageStore = create<CropStorageStore>()(
-  persist(
-    (set, get) => ({
-      statusUpdates: {},
+  (set, get) => ({
+    statusUpdates: {},
 
-      updateCropStorageStatus: (recordId, status, approvedBy, remark) => {
-        const update: CropStorageStatusUpdate = {
-          recordId,
-          status,
-          approvedBy,
-          approvedAt: new Date().toISOString(),
-          remark,
-        };
-        set((state) => ({
-          statusUpdates: { ...state.statusUpdates, [recordId]: update },
-        }));
-      },
+    updateCropStorageStatus: (recordId, status, approvedBy, remark) => {
+      const update: CropStorageStatusUpdate = {
+        recordId,
+        status,
+        approvedBy,
+        approvedAt: new Date().toISOString(),
+        remark,
+      };
+      set((state) => ({
+        statusUpdates: { ...state.statusUpdates, [recordId]: update },
+      }));
+    },
 
-      getCropStorageWithStatus: (record) => {
-        const update = get().statusUpdates[record.id];
-        return update ? { ...record, status: update.status } : record;
-      },
+    getCropStorageWithStatus: (record) => {
+      const update = get().statusUpdates[record.id];
+      return update ? { ...record, status: update.status } : record;
+    },
 
-      getStatusUpdates: () => get().statusUpdates,
+    getStatusUpdates: () => get().statusUpdates,
 
-      clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'crop_storage_status_updates',
-    }
-  )
+    clearAllUpdates: () => set({ statusUpdates: {} }),
+  })
 );

@@ -1,12 +1,10 @@
 /**
  * 分区管理 Zustand Store — iAGS GreenHouseArea 集成
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写 localStorage)
+ * V2.1 架构 - 已简化
  * 对接后端: /api/farm-partitions
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -120,8 +118,7 @@ interface FarmPartitionState {
 // ==================== 创建 Store ====================
 
 export const useFarmPartitionStore = create<FarmPartitionState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       tree: [],
       isLoading: false,
@@ -162,7 +159,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/farm-partitions', body, { offlineQueue: true, priority: 0 }
+            '/api/farm-partitions', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -181,7 +178,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/farm-partitions/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/farm-partitions/${oid}`, body);
         } catch (error) {
           console.warn('[FarmPartitionStore] 更新失败:', error);
         }
@@ -192,17 +189,13 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
           items: state.items.filter(item => item.oid !== oid && item.parentOid !== oid),
         }));
         try {
-          await enhancedApiClient.delete(`/api/farm-partitions/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/farm-partitions/${oid}`);
           return true;
         } catch (error) {
           console.warn('[FarmPartitionStore] 删除失败:', error);
           return false;
         }
       },
-    }),
-    {
-      name: 'farm-partition-storage',
-      partialize: (state) => ({ items: state.items, tree: state.tree }),
     }
   )
 );

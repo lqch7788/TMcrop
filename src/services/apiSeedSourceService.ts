@@ -159,10 +159,7 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedSources(): Promise<SeedSource[]> {
-  const data = await enhancedApiClient.get<BackendSeedSource[]>('/seed-sources', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedSource[]>('/seed-sources');
   return transformSeedSourceFromBackend(data) as SeedSource[];
 }
 
@@ -171,10 +168,7 @@ export async function getSeedSources(): Promise<SeedSource[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedSourceById(id: string): Promise<SeedSource | undefined> {
-  const data = await enhancedApiClient.get<BackendSeedSource>(`/seed-sources/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedSource>(`/seed-sources/${id}`);
   return transformSeedSourceFromBackend(data) as SeedSource;
 }
 
@@ -183,10 +177,7 @@ export async function getSeedSourceById(id: string): Promise<SeedSource | undefi
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedSourcesByIds(ids: string[]): Promise<SeedSource[]> {
-  const data = await enhancedApiClient.get<BackendSeedSource[]>(`/seed-sources/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedSource[]>(`/seed-sources/batch?ids=${ids.join(',')}`);
   return transformSeedSourceFromBackend(data) as SeedSource[];
 }
 
@@ -224,10 +215,7 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
     create_by: source.createBy,
   };
 
-  const result = await enhancedApiClient.post<{ id: string }>('/seed-sources', backendData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/seed-sources', backendData);
   return { ...source, id: result.id } as SeedSource;
 }
 
@@ -260,9 +248,7 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
   if (updates.status !== undefined) backendUpdates.status = updates.status;
   if (updates.remarks !== undefined) backendUpdates.remarks = updates.remarks;
 
-  const result = await enhancedApiClient.put<{ id: string }>(`/seed-sources/${id}`, backendUpdates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/seed-sources/${id}`, backendUpdates);
   return result ? { ...updates, id } as SeedSource : null;
 }
 
@@ -271,9 +257,7 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
  * 降级策略：API → 离线队列
  */
 export async function deleteSeedSource(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/seed-sources/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/seed-sources/${id}`);
   return true;
 }
 
@@ -282,9 +266,7 @@ export async function deleteSeedSource(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteSeedSources(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/seed-sources/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/seed-sources/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -293,9 +275,7 @@ export async function deleteSeedSources(ids: string[]): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function decreaseAvailableCount(id: string, count: number): Promise<boolean> {
-  await enhancedApiClient.post(`/seed-sources/${id}/decrease-available`, { count }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/seed-sources/${id}/decrease-available`, { count });
   return true;
 }
 
@@ -338,8 +318,7 @@ export async function generateSeedCode(dateStr: string): Promise<string> {
 export async function addPropagationRecord(seedSourceId: string, data: Partial<PropagationRecord>): Promise<PropagationRecord> {
   const result = await enhancedApiClient.post<PropagationRecord>(
     `/seed-sources/${seedSourceId}/propagation-records`,
-    data,
-    { offlineQueue: true }
+    data
   );
   return result;
 }
@@ -349,8 +328,7 @@ export async function addPropagationRecord(seedSourceId: string, data: Partial<P
  */
 export async function getPropagationRecords(seedSourceId: string): Promise<PropagationRecord[]> {
   const data = await enhancedApiClient.get<PropagationRecord[]>(
-    `/seed-sources/${seedSourceId}/propagation-records`,
-    { useCache: true, cacheStrategy: 'network-first' }
+    `/seed-sources/${seedSourceId}/propagation-records`
   );
   return data;
 }
@@ -361,8 +339,7 @@ export async function getPropagationRecords(seedSourceId: string): Promise<Propa
 export async function updatePropagationStage(seedSourceId: string, newStage: string): Promise<{ id: string; new_stage: string }> {
   const result = await enhancedApiClient.put<{ id: string; new_stage: string }>(
     `/seed-sources/${seedSourceId}/propagation-stage`,
-    { new_stage: newStage },
-    { offlineQueue: true }
+    { new_stage: newStage }
   );
   return result;
 }
@@ -373,8 +350,7 @@ export async function updatePropagationStage(seedSourceId: string, newStage: str
 export async function completePropagation(seedSourceId: string, quantity: number): Promise<{ id: string; quantity: number }> {
   const result = await enhancedApiClient.post<{ id: string; quantity: number }>(
     `/seed-sources/${seedSourceId}/complete-propagation`,
-    { quantity },
-    { offlineQueue: true }
+    { quantity }
   );
   return result;
 }
@@ -383,9 +359,6 @@ export async function completePropagation(seedSourceId: string, quantity: number
  * 获取可用于留种的种植记录
  */
 export async function getPlantingsForSeedSaving(): Promise<any[]> {
-  const data = await enhancedApiClient.get<any[]>('/seed-sources/available-for-seed-saving', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<any[]>('/seed-sources/available-for-seed-saving');
   return data;
 }

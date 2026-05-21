@@ -154,10 +154,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedlings(): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings');
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -166,10 +163,7 @@ export async function getSeedlings(): Promise<Seedling[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedlingById(id: string): Promise<Seedling | undefined> {
-  const data = await enhancedApiClient.get<BackendSeedling>(`/seedlings/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedling>(`/seedlings/${id}`);
   return transformSeedlingFromBackend(data) as Seedling;
 }
 
@@ -178,10 +172,7 @@ export async function getSeedlingById(id: string): Promise<Seedling | undefined>
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedlingsByIds(ids: string[]): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/batch?ids=${ids.join(',')}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/batch?ids=${ids.join(',')}`);
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -190,10 +181,7 @@ export async function getSeedlingsByIds(ids: string[]): Promise<Seedling[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSeedlingsBySourceId(sourceId: string): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/source/${sourceId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/source/${sourceId}`);
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -226,10 +214,7 @@ export async function generateSeedlingCodeByDate(date: Date | string): Promise<s
  * 降级策略：API → 离线队列
  */
 export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>): Promise<Seedling> {
-  const result = await enhancedApiClient.post<{ id: string }>('/seedlings', seedling, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/seedlings', seedling);
   return { ...seedling, id: result.id } as Seedling;
 }
 
@@ -238,9 +223,7 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
  * 降级策略：API → 离线队列
  */
 export async function updateSeedling(id: string, updates: Partial<Seedling>): Promise<Seedling | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, updates);
   return result ? { ...updates, id } as Seedling : null;
 }
 
@@ -249,9 +232,7 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
  * 降级策略：API → 离线队列
  */
 export async function deleteSeedling(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/seedlings/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/seedlings/${id}`);
   return true;
 }
 
@@ -260,9 +241,7 @@ export async function deleteSeedling(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteSeedlings(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/seedlings/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/seedlings/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -272,9 +251,7 @@ export async function deleteSeedlings(ids: string[]): Promise<boolean> {
  */
 export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>): Promise<DailyRecord | null> {
   try {
-    return await enhancedApiClient.post<DailyRecord>(`/seedlings/${seedlingId}/daily-records`, record, {
-      offlineQueue: true,
-    });
+    return await enhancedApiClient.post<DailyRecord>(`/seedlings/${seedlingId}/daily-records`, record);
   } catch {
     return null;
   }
@@ -285,9 +262,7 @@ export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecor
  * 降级策略：API → 离线队列
  */
 export async function deleteDailyRecord(seedlingId: string, recordId: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
   return true;
 }
 
@@ -296,9 +271,7 @@ export async function deleteDailyRecord(seedlingId: string, recordId: string): P
  * 降级策略：API → 离线队列
  */
 export async function updateDailyRecord(seedlingId: string, recordId: string, updates: Partial<DailyRecord>): Promise<boolean> {
-  await enhancedApiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
   return true;
 }
 
@@ -307,9 +280,7 @@ export async function updateDailyRecord(seedlingId: string, recordId: string, up
  * 降级策略：API → 离线队列
  */
 export async function increasePlantedCount(id: string, count: number): Promise<boolean> {
-  await enhancedApiClient.post(`/seedlings/${id}/increase-planted`, { count }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/seedlings/${id}/increase-planted`, { count });
   return true;
 }
 
@@ -318,10 +289,7 @@ export async function increasePlantedCount(id: string, count: number): Promise<b
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTransplantReadySeedlings(): Promise<Seedling[]> {
-  const data = await enhancedApiClient.get<Seedling[]>('/seedlings/transplant-ready', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Seedling[]>('/seedlings/transplant-ready');
   return transformSeedlingFromBackend(data) as Seedling[];
 }
 
@@ -375,8 +343,6 @@ export async function printLabel(
       printCount,
       operator,
       labelNumbers
-    }, {
-      offlineQueue: true,
     });
   } catch {
     return null;
@@ -389,9 +355,7 @@ export async function printLabel(
  */
 export async function batchPrintLabel(seedlingIds: string[], operator: string): Promise<PrintRecord[]> {
   try {
-    return await enhancedApiClient.post<PrintRecord[]>('/seedlings/batch-print', { seedlingIds, operator }, {
-      offlineQueue: true,
-    });
+    return await enhancedApiClient.post<PrintRecord[]>('/seedlings/batch-print', { seedlingIds, operator });
   } catch {
     return [];
   }
@@ -403,10 +367,7 @@ export async function batchPrintLabel(seedlingIds: string[], operator: string): 
  */
 export async function getPrintRecords(seedlingId: string): Promise<PrintRecord[]> {
   try {
-    return await enhancedApiClient.get<PrintRecord[]>(`/seedlings/${seedlingId}/print-records`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<PrintRecord[]>(`/seedlings/${seedlingId}/print-records`);
   } catch {
     return [];
   }
@@ -417,9 +378,7 @@ export async function getPrintRecords(seedlingId: string): Promise<PrintRecord[]
  * 降级策略：API → 离线队列
  */
 export async function updatePrintRecordLabelNumbers(seedlingId: string, printRecordId: string, labelNumbers: string[]): Promise<boolean> {
-  await enhancedApiClient.put(`/seedlings/${seedlingId}/print-records/${printRecordId}`, { labelNumbers }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/seedlings/${seedlingId}/print-records/${printRecordId}`, { labelNumbers });
   return true;
 }
 
@@ -431,9 +390,7 @@ export async function updatePrintRecordLabelNumbers(seedlingId: string, printRec
  */
 export async function addTransplantRecord(seedlingId: string, record: Omit<TransplantRecord, 'id' | 'createTime'>): Promise<TransplantRecord | null> {
   try {
-    return await enhancedApiClient.post<TransplantRecord>(`/seedlings/${seedlingId}/transplant-records`, record, {
-      offlineQueue: true,
-    });
+    return await enhancedApiClient.post<TransplantRecord>(`/seedlings/${seedlingId}/transplant-records`, record);
   } catch {
     return null;
   }
@@ -445,10 +402,7 @@ export async function addTransplantRecord(seedlingId: string, record: Omit<Trans
  */
 export async function getTransplantRecords(seedlingId: string): Promise<TransplantRecord[]> {
   try {
-    return await enhancedApiClient.get<TransplantRecord[]>(`/seedlings/${seedlingId}/transplant-records`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<TransplantRecord[]>(`/seedlings/${seedlingId}/transplant-records`);
   } catch {
     return [];
   }
@@ -463,9 +417,7 @@ export async function updateTransplantRecordStatus(
   recordId: string,
   status: string
 ): Promise<boolean> {
-  await enhancedApiClient.put(`/seedlings/${seedlingId}/transplant-records/${recordId}/status`, { status }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/seedlings/${seedlingId}/transplant-records/${recordId}/status`, { status });
   return true;
 }
 
@@ -481,9 +433,7 @@ export async function addTransplantHistoryItem(
   historyItem: Omit<TransplantHistory['history'][0], 'id'>
 ): Promise<TransplantHistory | null> {
   try {
-    return await enhancedApiClient.post<TransplantHistory>(`/seedlings/${seedlingId}/transplant-history/${labelNumber}`, historyItem, {
-      offlineQueue: true,
-    });
+    return await enhancedApiClient.post<TransplantHistory>(`/seedlings/${seedlingId}/transplant-history/${labelNumber}`, historyItem);
   } catch {
     return null;
   }
@@ -495,10 +445,7 @@ export async function addTransplantHistoryItem(
  */
 export async function getTransplantHistory(seedlingId: string): Promise<TransplantHistory[]> {
   try {
-    return await enhancedApiClient.get<TransplantHistory[]>(`/seedlings/${seedlingId}/transplant-history`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<TransplantHistory[]>(`/seedlings/${seedlingId}/transplant-history`);
   } catch {
     return [];
   }
@@ -510,10 +457,7 @@ export async function getTransplantHistory(seedlingId: string): Promise<Transpla
  */
 export async function getLabelTransplantHistory(seedlingId: string, labelNumber: string): Promise<TransplantHistory | undefined> {
   try {
-    return await enhancedApiClient.get<TransplantHistory>(`/seedlings/${seedlingId}/transplant-history/${labelNumber}`, {
-      useCache: true,
-      cacheStrategy: 'network-first',
-    });
+    return await enhancedApiClient.get<TransplantHistory>(`/seedlings/${seedlingId}/transplant-history/${labelNumber}`);
   } catch {
     return undefined;
   }
@@ -528,9 +472,7 @@ export async function updateLabelStatus(
   labelNumber: string,
   status: string
 ): Promise<boolean> {
-  await enhancedApiClient.put(`/seedlings/${seedlingId}/transplant-history/${labelNumber}/status`, { status }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/seedlings/${seedlingId}/transplant-history/${labelNumber}/status`, { status });
   return true;
 }
 

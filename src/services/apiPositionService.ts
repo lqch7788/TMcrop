@@ -60,10 +60,7 @@ export interface UpdatePositionParams {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPositions(): Promise<Position[]> {
-  return await enhancedApiClient.get<Position[]>('/basic-data/positions', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Position[]>('/basic-data/positions');
 }
 
 /**
@@ -71,10 +68,7 @@ export async function getPositions(): Promise<Position[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPositionById(id: string): Promise<Position | null> {
-  return await enhancedApiClient.get<Position>(`/basic-data/positions/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<Position>(`/basic-data/positions/${id}`);
 }
 
 /**
@@ -82,10 +76,7 @@ export async function getPositionById(id: string): Promise<Position | null> {
  * 降级策略：API → 离线队列
  */
 export async function createPosition(position: CreatePositionParams): Promise<Position> {
-  return await enhancedApiClient.post<Position>('/basic-data/positions', position, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<Position>('/basic-data/positions', position);
 }
 
 /**
@@ -93,9 +84,7 @@ export async function createPosition(position: CreatePositionParams): Promise<Po
  * 降级策略：API → 离线队列
  */
 export async function updatePosition(id: string, updates: UpdatePositionParams): Promise<Position | null> {
-  const result = await enhancedApiClient.put<Position>(`/basic-data/positions/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<Position>(`/basic-data/positions/${id}`, updates);
   return result;
 }
 
@@ -104,9 +93,7 @@ export async function updatePosition(id: string, updates: UpdatePositionParams):
  * 降级策略：API → 离线队列
  */
 export async function deletePosition(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/basic-data/positions/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/positions/${id}`);
   return true;
 }
 
@@ -115,8 +102,6 @@ export async function deletePosition(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deletePositions(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/basic-data/positions/batch-delete', { ids }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post('/basic-data/positions/batch-delete', { ids });
   return true;
 }

@@ -78,20 +78,17 @@ export async function getContractRenewalRecords(
   },
   pagination?: { page?: number; limit?: number }
 ): Promise<{ records: ContractRenewalRecord[]; pagination: { page: number; limit: number; total: number } }> {
-  const params: Record<string, string> = {};
-  if (filters?.employeeName) params.employee_name = filters.employeeName;
-  if (filters?.department) params.department = filters.department;
-  if (filters?.status) params.status = filters.status;
-  if (filters?.startDate) params.start_date = filters.startDate;
-  if (filters?.endDate) params.end_date = filters.endDate;
-  if (pagination?.page) params.page = String(pagination.page);
-  if (pagination?.limit) params.limit = String(pagination.limit);
+  const queryParams = new URLSearchParams();
+  if (filters?.employeeName) queryParams.set('employee_name', filters.employeeName);
+  if (filters?.department) queryParams.set('department', filters.department);
+  if (filters?.status) queryParams.set('status', filters.status);
+  if (filters?.startDate) queryParams.set('start_date', filters.startDate);
+  if (filters?.endDate) queryParams.set('end_date', filters.endDate);
+  if (pagination?.page) queryParams.set('page', String(pagination.page));
+  if (pagination?.limit) queryParams.set('limit', String(pagination.limit));
 
-  const response = await enhancedApiClient.get<any>('/contract-renewal', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const url = `/contract-renewal${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: ContractRenewalRecord[] = (response.data || []).map((item: any) => ({
@@ -125,10 +122,7 @@ export async function getContractRenewalRecords(
  * 获取单个合同续签记录
  */
 export async function getContractRenewalById(id: string): Promise<ContractRenewalRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/contract-renewal/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/contract-renewal/${id}`);
 
   if (!response.data) return null;
 
@@ -173,9 +167,7 @@ export async function createContractRenewalRecord(renewal: CreateContractRenewal
     remarks: renewal.remarks,
   };
 
-  const response = await enhancedApiClient.post<any>('/contract-renewal', snakeData, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.post<any>('/contract-renewal', snakeData);
 
   return {
     ...renewal,
@@ -199,9 +191,7 @@ export async function updateContractRenewalRecord(id: string, updates: UpdateCon
   if (updates.status) snakeData.status = updates.status;
   if (updates.remarks !== undefined) snakeData.remarks = updates.remarks;
 
-  await enhancedApiClient.put(`/contract-renewal/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/contract-renewal/${id}`, snakeData);
 
   return true;
 }
@@ -210,8 +200,6 @@ export async function updateContractRenewalRecord(id: string, updates: UpdateCon
  * 删除合同续签记录
  */
 export async function deleteContractRenewalRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/contract-renewal/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/contract-renewal/${id}`);
   return true;
 }

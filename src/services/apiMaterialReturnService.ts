@@ -41,9 +41,12 @@ export interface MaterialReturnItem {
 
 /** 获取退料列表 */
 export async function getMaterialReturns(params?: Record<string, string>): Promise<MaterialReturnRecord[]> {
-  const resp = await enhancedApiClient.get<MaterialReturnRecord[]>('/material-returns', {
-    useCache: true, cacheStrategy: 'network-first',
-  });
+  let url = '/material-returns';
+  if (params) {
+    const qs = new URLSearchParams(params).toString();
+    if (qs) url += `?${qs}`;
+  }
+  const resp = await enhancedApiClient.get<MaterialReturnRecord[]>(url);
   if (resp?.data) return resp.data;
   if (resp?.success && resp?.data) return resp.data;
   return Array.isArray(resp) ? resp : [];
@@ -51,21 +54,19 @@ export async function getMaterialReturns(params?: Record<string, string>): Promi
 
 /** 创建退料记录 */
 export async function createMaterialReturn(data: Omit<MaterialReturnRecord, 'id'>): Promise<MaterialReturnRecord | null> {
-  const result = await enhancedApiClient.post<MaterialReturnRecord>('/material-returns', data, {
-    offlineQueue: true, useCache: true,
-  });
+  const result = await enhancedApiClient.post<MaterialReturnRecord>('/material-returns', data);
   return result?.data || result;
 }
 
 /** 更新退料记录 */
 export async function updateMaterialReturn(id: string | number, updates: Partial<MaterialReturnRecord>): Promise<boolean> {
-  await enhancedApiClient.put(`/material-returns/${id}`, updates, { offlineQueue: true });
+  await enhancedApiClient.put(`/material-returns/${id}`, updates);
   return true;
 }
 
 /** 删除退料记录 */
 export async function deleteMaterialReturn(id: string | number): Promise<boolean> {
-  await enhancedApiClient.delete(`/material-returns/${id}`, { offlineQueue: true });
+  await enhancedApiClient.delete(`/material-returns/${id}`);
   return true;
 }
 

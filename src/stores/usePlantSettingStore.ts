@@ -1,10 +1,9 @@
 /**
- * 种植设置 Zustand Store — iAGS Plantset 集成
+ * 种植设置 Zustand Store (V2.1 架构 - 已简化)
  *
  * 对接后端: /api/plant-settings
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 export interface PlantSetting {
@@ -58,46 +57,43 @@ interface PlantSettingState {
 }
 
 export const usePlantSettingStore = create<PlantSettingState>()(
-  persist(
-    (set) => ({
-      items: [], isLoading: false, error: null,
+  (set) => ({
+    items: [], isLoading: false, error: null,
 
-      fetchItems: async (filters) => {
-        set({ isLoading: true, error: null });
-        try {
-          const params = new URLSearchParams();
-          if (filters) Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
-          const query = params.toString();
-          const response = await enhancedApiClient.get<{ success: boolean; data: any[] }>(`/api/plant-settings${query ? `?${query}` : ''}`);
-          const data = Array.isArray(response?.data) ? response.data : Array.isArray((response as any)?.data) ? (response as any).data : [];
-          set({ items: data.map(normalize), isLoading: false });
-        } catch (error) {
-          set({ error: (error as Error).message, isLoading: false });
-        }
-      },
+    fetchItems: async (filters) => {
+      set({ isLoading: true, error: null });
+      try {
+        const params = new URLSearchParams();
+        if (filters) Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+        const query = params.toString();
+        const response = await enhancedApiClient.get<{ success: boolean; data: any[] }>(`/api/plant-settings${query ? `?${query}` : ''}`);
+        const data = Array.isArray(response?.data) ? response.data : Array.isArray((response as any)?.data) ? (response as any).data : [];
+        set({ items: data.map(normalize), isLoading: false });
+      } catch (error) {
+        set({ error: (error as Error).message, isLoading: false });
+      }
+    },
 
-      createItem: async (data) => {
-        try {
-          const body = denormalize(data);
-          const response = await enhancedApiClient.post<{ success: boolean; data: any }>('/api/plant-settings', body, { offlineQueue: true, priority: 0 });
-          const saved = (response as any)?.data || response;
-          const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
-          set((state) => ({ items: [newItem, ...state.items] }));
-          return newItem;
-        } catch (error) { set({ error: (error as Error).message }); return null; }
-      },
+    createItem: async (data) => {
+      try {
+        const body = denormalize(data);
+        const response = await enhancedApiClient.post<{ success: boolean; data: any }>('/api/plant-settings', body);
+        const saved = (response as any)?.data || response;
+        const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
+        set((state) => ({ items: [newItem, ...state.items] }));
+        return newItem;
+      } catch (error) { set({ error: (error as Error).message }); return null; }
+    },
 
-      updateItem: async (oid, updates) => {
-        const body = denormalize(updates);
-        set((state) => ({ items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item) }));
-        try { await enhancedApiClient.put(`/api/plant-settings/${oid}`, body, { offlineQueue: true, priority: 0 }); } catch (error) {}
-      },
+    updateItem: async (oid, updates) => {
+      const body = denormalize(updates);
+      set((state) => ({ items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item) }));
+      try { await enhancedApiClient.put(`/api/plant-settings/${oid}`, body); } catch (error) {}
+    },
 
-      deleteItem: async (oid) => {
-        set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
-        try { await enhancedApiClient.delete(`/api/plant-settings/${oid}`, { offlineQueue: true, priority: 0 }); return true; } catch (error) { return false; }
-      },
-    }),
-    { name: 'plant-setting-storage', partialize: (state) => ({ items: state.items }) }
-  )
+    deleteItem: async (oid) => {
+      set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
+      try { await enhancedApiClient.delete(`/api/plant-settings/${oid}`); return true; } catch (error) { return false; }
+    },
+  })
 );

@@ -1,16 +1,10 @@
 /**
  * 人事管理 Store - PersonnelStore
  *
- * Phase 5: 人事管理模块
- *
- * 设计原则：
- * 1. 保留现有mock数据作为种子数据（不删除任何数据）
- * 2. 优先调用API，API失败时降级到本地存储
- * 3. 支持离线队列，联网后自动同步
+ * V2.1 架构 - 已简化
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -131,8 +125,7 @@ interface PersonnelState {
 // ========== Store 实现 ==========
 
 export const usePersonnelStore = create<PersonnelState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // 初始状态
       personnelRecords: [],
       filters: {},
@@ -147,10 +140,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiData = await enhancedApiClient.get<{ data: PersonnelRecord[] }>('/personnel', {
-            useCache: true,
-            cacheStrategy: 'network-first',
-          });
+          const apiData = await enhancedApiClient.get<{ data: PersonnelRecord[] }>('/personnel');
 
           if (apiData && Array.isArray(apiData) && apiData.length > 0) {
             set({ personnelRecords: apiData, isLoading: false });
@@ -196,8 +186,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         try {
           const savedRecord = await enhancedApiClient.post<PersonnelRecord>(
             '/personnel',
-            record,
-            { offlineQueue: true }
+            record
           );
 
           set(state => ({
@@ -224,9 +213,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/personnel/${id}`, updates, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.put(`/personnel/${id}`, updates);
         } catch (error) {
           console.warn('[PersonnelStore] 更新人员API失败，已加入离线队列:', error);
           set(state => ({
@@ -241,9 +228,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/personnel/${id}`, {
-            offlineQueue: true,
-          });
+          await enhancedApiClient.delete(`/personnel/${id}`);
         } catch (error) {
           console.warn('[PersonnelStore] 删除人员API失败，已加入离线队列:', error);
           set(state => ({
@@ -260,30 +245,12 @@ export const usePersonnelStore = create<PersonnelState>()(
         }));
       },
 
-      // ========== 同步 ==========
-
-      syncPendingChanges: async () => {
-        try {
-          await enhancedApiClient.forcSync();
-          set({ pendingSyncCount: 0 });
-        } catch (error) {
-          console.warn('[PersonnelStore] 同步失败:', error);
-        }
-      },
-
       // ========== 内部方法 ==========
 
       _initializeSeedData: () => {
         set({ isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'personnel-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        personnelRecords: state.personnelRecords,
-      }),
     }
   )
 );

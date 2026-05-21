@@ -64,10 +64,7 @@ export function getVarietyOptions(): CropVarietyOption[] {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllVarieties(): Promise<CropVariety[]> {
-  const data = await enhancedApiClient.get<Record<string, unknown>[]>('/crop-varieties', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Record<string, unknown>[]>('/crop-varieties');
   return data.map(item => snakeToCamel(item) as CropVariety);
 }
 
@@ -76,10 +73,7 @@ export async function getAllVarieties(): Promise<CropVariety[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getVarietyById(id: string): Promise<CropVariety | undefined> {
-  const data = await enhancedApiClient.get<any>(`/crop-varieties/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<any>(`/crop-varieties/${id}`);
   return snakeToCamel(data) as CropVariety;
 }
 
@@ -89,10 +83,7 @@ export async function getVarietyById(id: string): Promise<CropVariety | undefine
  */
 export async function createVariety(data: Partial<CropVariety>): Promise<string> {
   const snakeData = camelToSnake(data as Record<string, unknown>);
-  const result = await enhancedApiClient.post<{ id: string }>('/crop-varieties', snakeData, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<{ id: string }>('/crop-varieties', snakeData);
   return result.id;
 }
 
@@ -102,9 +93,7 @@ export async function createVariety(data: Partial<CropVariety>): Promise<string>
  */
 export async function updateVariety(id: string, data: Partial<CropVariety>): Promise<string | null> {
   const snakeData = camelToSnake(data as Record<string, unknown>);
-  const result = await enhancedApiClient.put<{ id: string }>(`/crop-varieties/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ id: string }>(`/crop-varieties/${id}`, snakeData);
   return result?.id || null;
 }
 
@@ -113,9 +102,7 @@ export async function updateVariety(id: string, data: Partial<CropVariety>): Pro
  * 降级策略：API → 离线队列
  */
 export async function deleteVariety(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/crop-varieties/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/crop-varieties/${id}`);
   return true;
 }
 
@@ -127,8 +114,7 @@ export async function bulkImportVarieties(varieties: Record<string, unknown>[]):
   const snakeData = varieties.map(v => camelToSnake(v));
   const result = await enhancedApiClient.post<{ inserted: number; skipped: number; total: number }>(
     '/crop-varieties/bulk',
-    { varieties: snakeData },
-    { offlineQueue: false, useCache: false }
+    { varieties: snakeData }
   );
   return result;
 }

@@ -17,10 +17,7 @@ import { InspectionRecord } from '../types/views';
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getAllInspections(): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>('/inspections', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>('/inspections');
 }
 
 /**
@@ -28,10 +25,7 @@ export async function getAllInspections(): Promise<InspectionRecord[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionById(id: string): Promise<InspectionRecord | undefined> {
-  return await enhancedApiClient.get<InspectionRecord>(`/inspections/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord>(`/inspections/${id}`);
 }
 
 /**
@@ -39,10 +33,7 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionByCode(recordCode: string): Promise<InspectionRecord | undefined> {
-  return await enhancedApiClient.get<InspectionRecord>(`/inspections/code/${recordCode}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord>(`/inspections/code/${recordCode}`);
 }
 
 /**
@@ -66,11 +57,9 @@ export async function getInspections(filters?: {
     if (filters.endDate) params.endDate = filters.endDate;
     if (filters.inspectionType) params.inspectionType = filters.inspectionType;
   }
-  return await enhancedApiClient.get<InspectionRecord[]>('/inspections', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/inspections?${paramsStr}` : '/inspections';
+  return await enhancedApiClient.get<InspectionRecord[]>(url);
 }
 
 /**
@@ -78,10 +67,7 @@ export async function getInspections(filters?: {
  * 降级策略：API → 离线队列
  */
 export async function createInspection(inspection: Omit<InspectionRecord, 'id' | 'recordCode'>): Promise<InspectionRecord> {
-  return await enhancedApiClient.post<InspectionRecord>('/inspections', inspection, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  return await enhancedApiClient.post<InspectionRecord>('/inspections', inspection);
 }
 
 /**
@@ -89,9 +75,7 @@ export async function createInspection(inspection: Omit<InspectionRecord, 'id' |
  * 降级策略：API → 离线队列
  */
 export async function updateInspection(id: string, updates: Partial<InspectionRecord>): Promise<InspectionRecord | null> {
-  const result = await enhancedApiClient.put<InspectionRecord>(`/inspections/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<InspectionRecord>(`/inspections/${id}`, updates);
   return result;
 }
 
@@ -100,9 +84,7 @@ export async function updateInspection(id: string, updates: Partial<InspectionRe
  * 降级策略：API → 离线队列
  */
 export async function deleteInspection(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/inspections/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/inspections/${id}`);
   return true;
 }
 
@@ -111,9 +93,7 @@ export async function deleteInspection(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deleteInspections(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/inspections/batch?ids=${ids.join(',')}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/inspections/batch?ids=${ids.join(',')}`);
   return true;
 }
 
@@ -122,10 +102,7 @@ export async function deleteInspections(ids: string[]): Promise<boolean> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/greenhouse/${greenhouseId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/greenhouse/${greenhouseId}`);
 }
 
 /**
@@ -133,10 +110,7 @@ export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionsByInspector(inspectorId: string): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/inspector/${inspectorId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/inspector/${inspectorId}`);
 }
 
 /**
@@ -144,10 +118,7 @@ export async function getInspectionsByInspector(inspectorId: string): Promise<In
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionsByDateRange(startDate: string, endDate: string): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/date-range?start=${startDate}&end=${endDate}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/date-range?start=${startDate}&end=${endDate}`);
 }
 
 /**
@@ -155,10 +126,7 @@ export async function getInspectionsByDateRange(startDate: string, endDate: stri
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'critical'): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/status/${status}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/status/${status}`);
 }
 
 /**
@@ -166,10 +134,7 @@ export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'c
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getCriticalInspections(): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>('/inspections/critical', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>('/inspections/critical');
 }
 
 /**
@@ -184,9 +149,7 @@ export async function generateInspectionCode(): Promise<string> {
  * 降级策略：API → 离线队列
  */
 export async function assignProblem(inspectionId: string, problemId: number): Promise<boolean> {
-  await enhancedApiClient.post(`/inspections/${inspectionId}/assign-problem`, { problemId }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/inspections/${inspectionId}/assign-problem`, { problemId });
   return true;
 }
 
@@ -195,9 +158,7 @@ export async function assignProblem(inspectionId: string, problemId: number): Pr
  * 降级策略：API → 离线队列
  */
 export async function createProblemFromInspection(inspectionId: string, problemData: Record<string, unknown>): Promise<number> {
-  const result = await enhancedApiClient.post<{ id: number }>(`/inspections/${inspectionId}/create-problem`, problemData, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<{ id: number }>(`/inspections/${inspectionId}/create-problem`, problemData);
   return result.id;
 }
 
@@ -218,7 +179,9 @@ export async function getInspectionStats(filters?: {
   if (filters?.startDate) params.startDate = filters.startDate;
   if (filters?.endDate) params.endDate = filters.endDate;
   if (filters?.greenhouseId) params.greenhouseId = filters.greenhouseId;
-  return await enhancedApiClient.get('/inspections/stats', { params });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/inspections/stats?${paramsStr}` : '/inspections/stats';
+  return await enhancedApiClient.get(url);
 }
 
 /**
@@ -226,10 +189,7 @@ export async function getInspectionStats(filters?: {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getInspectionsByBatch(batchId: string): Promise<InspectionRecord[]> {
-  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/batch/${batchId}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/batch/${batchId}`);
 }
 
 /**
@@ -237,8 +197,6 @@ export async function getInspectionsByBatch(batchId: string): Promise<Inspection
  * 降级策略：API → 离线队列
  */
 export async function linkTask(inspectionId: string, taskId: string, taskCode: string): Promise<boolean> {
-  await enhancedApiClient.post(`/inspections/${inspectionId}/link-task`, { taskId, taskCode }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post(`/inspections/${inspectionId}/link-task`, { taskId, taskCode });
   return true;
 }

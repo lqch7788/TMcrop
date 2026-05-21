@@ -1,14 +1,12 @@
 /**
  * 考勤补录 Zustand Store
  *
- * 架构：mock种子数据 + persist（后端API暂未实现，API服务返回空数据）
- * 数据流：Store → 组件 (组件不直接读写localStorage)
+ * V2.1 架构 - 已简化
  *
- * 对接后端: /api/attendance-repair (待后端实现，目前走本地mock)
+ * 对接后端: /api/attendance-repair
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -124,8 +122,7 @@ interface AttendanceRepairState {
 // ========== Store 实现 ==========
 
 export const useAttendanceRepairStore = create<AttendanceRepairState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -140,9 +137,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
             records: AttendanceRepairRecord[];
             pagination: { page: number; limit: number; total: number };
           }>('/attendance-repair', {
-            params: { ...filters, ...pagination },
-            useCache: true,
-            cacheStrategy: 'network-first',
+            params: { ...filters, ...pagination }
           });
 
           if (response?.records && Array.isArray(response.records) && response.records.length > 0) {
@@ -196,7 +191,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
         // 尝试API创建
         try {
           const saved = await enhancedApiClient.post<AttendanceRepairRecord>(
-            '/attendance-repair', params, { offlineQueue: true }
+            '/attendance-repair', params
           );
           if (saved?.id) {
             set((state) => ({
@@ -236,7 +231,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
 
         // 尝试API更新
         try {
-          await enhancedApiClient.put(`/attendance-repair/${id}`, updates, { offlineQueue: true });
+          await enhancedApiClient.put(`/attendance-repair/${id}`, updates);
           return true;
         } catch (error) {
           console.warn('[AttendanceRepairStore] API更新失败:', error);
@@ -249,16 +244,12 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
         set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
 
         try {
-          await enhancedApiClient.delete(`/attendance-repair/${id}`, { offlineQueue: true });
+          await enhancedApiClient.delete(`/attendance-repair/${id}`);
           return true;
         } catch {
           return false;
         }
       },
-    }),
-    {
-      name: 'attendance-repair-storage',
-      partialize: (state) => ({ items: state.items }),
     }
   )
 );

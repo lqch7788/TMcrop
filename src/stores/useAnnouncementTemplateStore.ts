@@ -156,7 +156,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
 
         try {
           const response = await enhancedApiClient.post<{ id: string; code: string }>(
-            '/announcements/templates', body, { priority: 0 }
+            '/announcements/templates', body
           );
           const savedId = (response as any)?.id || localId;
           const savedCode = (response as any)?.code || '';
@@ -196,7 +196,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
             delete normalized.contentTemplate;
           }
           const body = denormalizeItem(normalized as Partial<AnnouncementTemplate>);
-          await enhancedApiClient.put(`/announcements/templates/${id}`, body, { priority: 0 });
+          await enhancedApiClient.put(`/announcements/templates/${id}`, body);
         } catch (error) {
           // API失败：回滚乐观更新
           const errMsg = (error as Error)?.message || '更新模板失败';
@@ -215,7 +215,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
       deleteTemplate: async (id) => {
         set((state) => ({ templates: state.templates.filter((t) => t.id !== id) }));
         try {
-          await enhancedApiClient.delete(`/announcements/templates/${id}`, { priority: 0 });
+          await enhancedApiClient.delete(`/announcements/templates/${id}`);
           return true;
         } catch (error) {
           console.warn('[AnnouncementTemplateStore] 删除模板API失败:', error);

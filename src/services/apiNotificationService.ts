@@ -55,10 +55,7 @@ export interface NotificationRule {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getChannels(): Promise<NotificationChannel[]> {
-  const data = await enhancedApiClient.get<NotificationChannel[]>('/notifications/channels', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<NotificationChannel[]>('/notifications/channels');
   return data || [];
 }
 
@@ -67,9 +64,7 @@ export async function getChannels(): Promise<NotificationChannel[]> {
  * 降级策略：API → 离线队列
  */
 export async function createChannel(channel: Partial<NotificationChannel>): Promise<NotificationChannel> {
-  const result = await enhancedApiClient.post<NotificationChannel>('/notifications/channels', channel, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<NotificationChannel>('/notifications/channels', channel);
   return result;
 }
 
@@ -78,9 +73,7 @@ export async function createChannel(channel: Partial<NotificationChannel>): Prom
  * 降级策略：API → 离线队列
  */
 export async function updateChannel(id: string, channel: Partial<NotificationChannel>): Promise<void> {
-  await enhancedApiClient.put(`/notifications/channels/${id}`, channel, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/notifications/channels/${id}`, channel);
 }
 
 /**
@@ -88,9 +81,7 @@ export async function updateChannel(id: string, channel: Partial<NotificationCha
  * 降级策略：API → 离线队列
  */
 export async function deleteChannel(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/notifications/channels/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/notifications/channels/${id}`);
 }
 
 /**
@@ -98,9 +89,7 @@ export async function deleteChannel(id: string): Promise<void> {
  * 降级策略：API → 离线队列
  */
 export async function toggleChannel(id: string): Promise<void> {
-  await enhancedApiClient.patch(`/notifications/channels/${id}/toggle`, undefined, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.patch(`/notifications/channels/${id}/toggle`, undefined);
 }
 
 // ============================================
@@ -112,10 +101,7 @@ export async function toggleChannel(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getRules(): Promise<NotificationRule[]> {
-  const data = await enhancedApiClient.get<NotificationRule[]>('/notifications/rules', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<NotificationRule[]>('/notifications/rules');
   return data || [];
 }
 
@@ -124,9 +110,7 @@ export async function getRules(): Promise<NotificationRule[]> {
  * 降级策略：API → 离线队列
  */
 export async function createRule(rule: Partial<NotificationRule>): Promise<NotificationRule> {
-  const result = await enhancedApiClient.post<NotificationRule>('/notifications/rules', rule, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<NotificationRule>('/notifications/rules', rule);
   return result;
 }
 
@@ -135,9 +119,7 @@ export async function createRule(rule: Partial<NotificationRule>): Promise<Notif
  * 降级策略：API → 离线队列
  */
 export async function updateRule(id: string, rule: Partial<NotificationRule>): Promise<void> {
-  await enhancedApiClient.put(`/notifications/rules/${id}`, rule, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/notifications/rules/${id}`, rule);
 }
 
 /**
@@ -145,9 +127,7 @@ export async function updateRule(id: string, rule: Partial<NotificationRule>): P
  * 降级策略：API → 离线队列
  */
 export async function deleteRule(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/notifications/rules/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/notifications/rules/${id}`);
 }
 
 /**
@@ -155,9 +135,7 @@ export async function deleteRule(id: string): Promise<void> {
  * 降级策略：API → 离线队列
  */
 export async function toggleRule(id: string): Promise<void> {
-  await enhancedApiClient.patch(`/notifications/rules/${id}/toggle`, undefined, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.patch(`/notifications/rules/${id}/toggle`, undefined);
 }
 
 // ============================================
@@ -178,9 +156,7 @@ export interface NotificationPreferences {
 
 /** 获取用户通知偏好 */
 export async function getPreferences(userOid: string): Promise<NotificationPreferences> {
-  const data = await enhancedApiClient.get<NotificationPreferences>(`/notifications/preferences/${userOid}`, {
-    useCache: false,
-  });
+  const data = await enhancedApiClient.get<NotificationPreferences>(`/notifications/preferences/${userOid}`);
   return data || {
     userOid,
     approvalNotify: true,
@@ -195,7 +171,5 @@ export async function getPreferences(userOid: string): Promise<NotificationPrefe
 
 /** 保存用户通知偏好 */
 export async function savePreferences(userOid: string, prefs: Partial<NotificationPreferences>): Promise<void> {
-  await enhancedApiClient.put(`/notifications/preferences/${userOid}`, prefs, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/notifications/preferences/${userOid}`, prefs);
 }

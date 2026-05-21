@@ -1,13 +1,11 @@
 /**
- * 加班管理 Zustand Store (V2.0 架构改造)
+ * 加班管理 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写 localStorage)
+ * V2.1 架构 - 已简化
  *
  * 对接后端: /api/overtime
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -333,8 +331,7 @@ interface OvertimeState {
 // ==================== 第六步：创建 Store ====================
 
 export const useOvertimeStore = create<OvertimeState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       overtimeRecords: [],
       isLoading: false,
       error: null,
@@ -383,7 +380,7 @@ export const useOvertimeStore = create<OvertimeState>()(
           const response = await enhancedApiClient.post<{
             success: boolean;
             data: { id: string };
-          }>('/overtime', body, { offlineQueue: true, priority: 0 });
+          }>('/overtime', body);
 
           // enhancedApiClient 已自动提取 .data，response 直接就是 { id }
           const newId = (response as any)?.id || `OT${Date.now()}`;
@@ -426,10 +423,7 @@ export const useOvertimeStore = create<OvertimeState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/overtime/${id}`, body, {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/overtime/${id}`, body);
         } catch (error) {
           console.warn('[OvertimeStore] 更新加班记录失败，已加入离线队列:', error);
         }
@@ -442,10 +436,7 @@ export const useOvertimeStore = create<OvertimeState>()(
         }));
 
         try {
-          await enhancedApiClient.delete(`/overtime/${id}`, {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.delete(`/overtime/${id}`);
           return true;
         } catch (error) {
           console.warn('[OvertimeStore] 删除加班记录失败，已加入离线队列:', error);
@@ -465,7 +456,7 @@ export const useOvertimeStore = create<OvertimeState>()(
           await Promise.all(
             ids.map((id) =>
               enhancedApiClient
-                .delete(`/overtime/${id}`, { offlineQueue: true, priority: 0 })
+                .delete(`/overtime/${id}`)
                 .catch(() => {})
             )
           );
@@ -504,7 +495,7 @@ export const useOvertimeStore = create<OvertimeState>()(
           await enhancedApiClient.put(
             `/overtime/${id}`,
             denormalize({ ...updates, approver: approverName || '' }),
-            { offlineQueue: true, priority: 0 }
+            {}
           );
         } catch (error) {
           console.warn('[OvertimeStore] 审批加班失败:', error);
@@ -533,10 +524,7 @@ export const useOvertimeStore = create<OvertimeState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/overtime/${id}`, denormalize(updates), {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/overtime/${id}`, denormalize(updates));
         } catch (error) {
           console.warn('[OvertimeStore] 驳回加班失败:', error);
         }
@@ -563,10 +551,7 @@ export const useOvertimeStore = create<OvertimeState>()(
         }));
 
         try {
-          await enhancedApiClient.put(`/overtime/${id}`, denormalize(updates), {
-            offlineQueue: true,
-            priority: 0,
-          });
+          await enhancedApiClient.put(`/overtime/${id}`, denormalize(updates));
         } catch (error) {
           console.warn('[OvertimeStore] 取消加班失败:', error);
         }
@@ -579,14 +564,6 @@ export const useOvertimeStore = create<OvertimeState>()(
           filters: { ...state.filters, ...newFilters },
         }));
       },
-    }),
-    {
-      // ==================== 第七步：持久化配置 ====================
-      name: 'overtime-data-storage',
-      partialize: (state) => ({
-        overtimeRecords: state.overtimeRecords,
-        filters: state.filters,
-      }),
     }
   )
 );

@@ -146,10 +146,7 @@ function transformSingle(item: BackendPurchasePlan): PurchasePlan {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPurchasePlans(): Promise<PurchasePlan[]> {
-  const data = await enhancedApiClient.get<BackendPurchasePlan[]>('/purchase-plans', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPurchasePlan[]>('/purchase-plans');
   return transformPurchasePlan(data) as PurchasePlan[];
 }
 
@@ -158,10 +155,7 @@ export async function getPurchasePlans(): Promise<PurchasePlan[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPurchasePlanById(id: string): Promise<PurchasePlan | undefined> {
-  const data = await enhancedApiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`);
   return transformPurchasePlan(data) as PurchasePlan;
 }
 
@@ -170,10 +164,7 @@ export async function getPurchasePlanById(id: string): Promise<PurchasePlan | un
  * 降级策略：API → 离线队列
  */
 export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<PurchasePlan> {
-  const result = await enhancedApiClient.post<PurchasePlan>('/purchase-plans', plan, {
-    offlineQueue: true,
-    useCache: true,
-  });
+  const result = await enhancedApiClient.post<PurchasePlan>('/purchase-plans', plan);
   // POST 响应现在返回经过 mapToFrontendFormat 的完整数据
   return transformPurchasePlan(result) as PurchasePlan;
 }
@@ -183,9 +174,7 @@ export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<P
  * 降级策略：API → 离线队列
  */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
-  const result = await enhancedApiClient.put<{ data: PurchasePlan }>(`/purchase-plans/${id}`, updates, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.put<{ data: PurchasePlan }>(`/purchase-plans/${id}`, updates);
   // PUT 响应现在返回经过 mapToFrontendFormat 的完整更新数据
   return result?.data ? transformPurchasePlan(result.data) as PurchasePlan : null;
 }
@@ -195,9 +184,7 @@ export async function updatePurchasePlan(id: string, updates: Partial<PurchasePl
  * 降级策略：API → 离线队列
  */
 export async function deletePurchasePlan(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/purchase-plans/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/purchase-plans/${id}`);
   return true;
 }
 
@@ -206,9 +193,7 @@ export async function deletePurchasePlan(id: string): Promise<boolean> {
  * 降级策略：API → 离线队列
  */
 export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/purchase-plans/batch-delete', { ids }, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.post('/purchase-plans/batch-delete', { ids });
   return true;
 }
 

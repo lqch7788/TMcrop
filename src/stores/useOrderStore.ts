@@ -3,7 +3,6 @@
  * 用于审批联动：审批通过后更新订单状态为已确认
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface OrderStatusUpdate {
   orderId: string;
@@ -45,8 +44,7 @@ interface OrderStore {
 }
 
 export const useOrderStore = create<OrderStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       statusUpdates: {},
 
       updateOrderStatus: (orderId, status, updatedBy) => {
@@ -69,9 +67,5 @@ export const useOrderStore = create<OrderStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'order_status_updates',
-    }
-  )
+    })
 );

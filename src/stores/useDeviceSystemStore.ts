@@ -111,7 +111,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/device-systems', body, { offlineQueue: true, priority: 0 }
+            '/api/device-systems', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -130,7 +130,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/device-systems/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/device-systems/${oid}`, body);
         } catch (error) {
           console.warn('[DeviceSystemStore] 更新失败:', error);
         }
@@ -139,7 +139,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try {
-          await enhancedApiClient.delete(`/api/device-systems/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/device-systems/${oid}`);
           return true;
         } catch (error) {
           console.warn('[DeviceSystemStore] 删除失败:', error);

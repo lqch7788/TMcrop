@@ -81,11 +81,9 @@ export async function getSalaryBudgetRecords(
   if (pagination?.page) params.page = String(pagination.page);
   if (pagination?.limit) params.limit = String(pagination.limit);
 
-  const response = await enhancedApiClient.get<any>('/salary-budget', {
-    params,
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const paramsStr = new URLSearchParams(params).toString();
+  const url = paramsStr ? `/salary-budget?${paramsStr}` : '/salary-budget';
+  const response = await enhancedApiClient.get<any>(url);
 
   // 转换后端数据格式为前端格式
   const records: SalaryBudgetRecord[] = (response.data || []).map((item: any) => ({
@@ -118,10 +116,7 @@ export async function getSalaryBudgetRecords(
  * 获取单个工资预算记录
  */
 export async function getSalaryBudgetById(id: string): Promise<SalaryBudgetRecord | null> {
-  const response = await enhancedApiClient.get<any>(`/salary-budget/${id}`, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const response = await enhancedApiClient.get<any>(`/salary-budget/${id}`);
 
   if (!response.data) return null;
 
@@ -165,9 +160,7 @@ export async function createSalaryBudgetRecord(budget: CreateSalaryBudgetParams)
     applicant_name: budget.applicantName,
   };
 
-  const response = await enhancedApiClient.post<any>('/salary-budget', snakeData, {
-    offlineQueue: true,
-  });
+  const response = await enhancedApiClient.post<any>('/salary-budget', snakeData);
 
   return {
     ...budget,
@@ -195,9 +188,7 @@ export async function updateSalaryBudgetRecord(id: string, updates: UpdateSalary
   if (updates.remark !== undefined) snakeData.remark = updates.remark;
   if (updates.status) snakeData.status = updates.status;
 
-  await enhancedApiClient.put(`/salary-budget/${id}`, snakeData, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/salary-budget/${id}`, snakeData);
 
   return true;
 }
@@ -206,8 +197,6 @@ export async function updateSalaryBudgetRecord(id: string, updates: UpdateSalary
  * 删除工资预算记录
  */
 export async function deleteSalaryBudgetRecord(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/salary-budget/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/salary-budget/${id}`);
   return true;
 }

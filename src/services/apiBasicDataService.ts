@@ -245,33 +245,24 @@ export interface Device {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getDepartments(): Promise<Department[]> {
-  const data = await enhancedApiClient.get<Department[]>('/basic-data/departments', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Department[]>('/basic-data/departments');
   return data || [];
 }
 
 /** 创建部门 */
 export async function createDepartment(dept: Partial<Department>): Promise<Department> {
-  const result = await enhancedApiClient.post<Department>('/basic-data/departments', dept, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Department>('/basic-data/departments', dept);
   return result;
 }
 
 /** 更新部门 */
 export async function updateDepartment(id: string, dept: Partial<Department>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/departments/${id}`, dept, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/departments/${id}`, dept);
 }
 
 /** 删除部门 */
 export async function deleteDepartment(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/departments/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/departments/${id}`);
 }
 
 // ============================================
@@ -283,10 +274,7 @@ export async function deleteDepartment(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getWarehouses(): Promise<Warehouse[]> {
-  const data = await enhancedApiClient.get<Warehouse[]>('/basic-data/warehouses', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Warehouse[]>('/basic-data/warehouses');
   return data || [];
 }
 
@@ -295,9 +283,7 @@ export async function getWarehouses(): Promise<Warehouse[]> {
  * 降级策略：API → 离线队列
  */
 export async function createWarehouse(warehouse: Partial<Warehouse>): Promise<Warehouse> {
-  const result = await enhancedApiClient.post<Warehouse>('/basic-data/warehouses', warehouse, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Warehouse>('/basic-data/warehouses', warehouse);
   return result;
 }
 
@@ -306,9 +292,7 @@ export async function createWarehouse(warehouse: Partial<Warehouse>): Promise<Wa
  * 降级策略：API → 离线队列
  */
 export async function updateWarehouse(id: string, warehouse: Partial<Warehouse>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/warehouses/${id}`, warehouse, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/warehouses/${id}`, warehouse);
 }
 
 /**
@@ -316,9 +300,7 @@ export async function updateWarehouse(id: string, warehouse: Partial<Warehouse>)
  * 降级策略：API → 离线队列
  */
 export async function deleteWarehouse(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/warehouses/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/warehouses/${id}`);
 }
 
 // ============================================
@@ -330,10 +312,7 @@ export async function deleteWarehouse(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getGreenhouses(): Promise<Greenhouse[]> {
-  const data = await enhancedApiClient.get<Greenhouse[]>('/basic-data/greenhouses', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Greenhouse[]>('/basic-data/greenhouses');
   return data || [];
 }
 
@@ -342,9 +321,7 @@ export async function getGreenhouses(): Promise<Greenhouse[]> {
  * 降级策略：API → 离线队列
  */
 export async function createGreenhouse(greenhouse: Partial<Greenhouse>): Promise<Greenhouse> {
-  const result = await enhancedApiClient.post<Greenhouse>('/basic-data/greenhouses', greenhouse, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Greenhouse>('/basic-data/greenhouses', greenhouse);
   return result;
 }
 
@@ -353,9 +330,7 @@ export async function createGreenhouse(greenhouse: Partial<Greenhouse>): Promise
  * 降级策略：API → 离线队列
  */
 export async function updateGreenhouse(id: string, greenhouse: Partial<Greenhouse>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/greenhouses/${id}`, greenhouse, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/greenhouses/${id}`, greenhouse);
 }
 
 /**
@@ -363,9 +338,7 @@ export async function updateGreenhouse(id: string, greenhouse: Partial<Greenhous
  * 降级策略：API → 离线队列
  */
 export async function deleteGreenhouse(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/greenhouses/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/greenhouses/${id}`);
 }
 
 // ============================================
@@ -377,10 +350,7 @@ export async function deleteGreenhouse(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getZones(): Promise<Zone[]> {
-  const data = await enhancedApiClient.get<Zone[]>('/basic-data/zones', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Zone[]>('/basic-data/zones');
   return data || [];
 }
 
@@ -389,9 +359,7 @@ export async function getZones(): Promise<Zone[]> {
  * 降级策略：API → 离线队列
  */
 export async function createZone(zone: Partial<Zone>): Promise<Zone> {
-  const result = await enhancedApiClient.post<Zone>('/basic-data/zones', zone, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Zone>('/basic-data/zones', zone);
   return result;
 }
 
@@ -400,9 +368,7 @@ export async function createZone(zone: Partial<Zone>): Promise<Zone> {
  * 降级策略：API → 离线队列
  */
 export async function updateZone(id: string, zone: Partial<Zone>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/zones/${id}`, zone, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/zones/${id}`, zone);
 }
 
 /**
@@ -410,9 +376,7 @@ export async function updateZone(id: string, zone: Partial<Zone>): Promise<void>
  * 降级策略：API → 离线队列
  */
 export async function deleteZone(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/zones/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/zones/${id}`);
 }
 
 // ============================================
@@ -424,10 +388,7 @@ export async function deleteZone(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getBlocks(): Promise<Block[]> {
-  const data = await enhancedApiClient.get<Block[]>('/basic-data/blocks', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Block[]>('/basic-data/blocks');
   return data || [];
 }
 
@@ -436,9 +397,7 @@ export async function getBlocks(): Promise<Block[]> {
  * 降级策略：API → 离线队列
  */
 export async function createBlock(block: Partial<Block>): Promise<Block> {
-  const result = await enhancedApiClient.post<Block>('/basic-data/blocks', block, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Block>('/basic-data/blocks', block);
   return result;
 }
 
@@ -447,9 +406,7 @@ export async function createBlock(block: Partial<Block>): Promise<Block> {
  * 降级策略：API → 离线队列
  */
 export async function updateBlock(id: string, block: Partial<Block>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/blocks/${id}`, block, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/blocks/${id}`, block);
 }
 
 /**
@@ -457,9 +414,7 @@ export async function updateBlock(id: string, block: Partial<Block>): Promise<vo
  * 降级策略：API → 离线队列
  */
 export async function deleteBlock(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/blocks/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/blocks/${id}`);
 }
 
 // ============================================
@@ -471,10 +426,7 @@ export async function deleteBlock(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getCodeRules(): Promise<CodeRule[]> {
-  const data = await enhancedApiClient.get<CodeRule[]>('/basic-data/code-rules', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<CodeRule[]>('/basic-data/code-rules');
   return data || [];
 }
 
@@ -487,10 +439,7 @@ export async function getCodeRules(): Promise<CodeRule[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getSystemConfigs(): Promise<SystemConfig[]> {
-  const data = await enhancedApiClient.get<SystemConfig[]>('/basic-data/system-configs', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<SystemConfig[]>('/basic-data/system-configs');
   return data || [];
 }
 
@@ -499,9 +448,7 @@ export async function getSystemConfigs(): Promise<SystemConfig[]> {
  * 降级策略：API → 离线队列
  */
 export async function createSystemConfig(config: Partial<SystemConfig>): Promise<SystemConfig> {
-  const result = await enhancedApiClient.post<SystemConfig>('/basic-data/system-configs', config, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<SystemConfig>('/basic-data/system-configs', config);
   return result;
 }
 
@@ -510,9 +457,7 @@ export async function createSystemConfig(config: Partial<SystemConfig>): Promise
  * 降级策略：API → 离线队列
  */
 export async function updateSystemConfig(id: string, config: Partial<SystemConfig>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/system-configs/${id}`, config, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/system-configs/${id}`, config);
 }
 
 /**
@@ -520,9 +465,7 @@ export async function updateSystemConfig(id: string, config: Partial<SystemConfi
  * 降级策略：API → 离线队列
  */
 export async function deleteSystemConfig(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/system-configs/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/system-configs/${id}`);
 }
 
 // ============================================
@@ -538,9 +481,7 @@ export async function deleteSystemConfig(id: string): Promise<void> {
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
   // 临时禁用缓存，确保获取最新数据
-  const response = await enhancedApiClient.get<Record<string, any>[]>('/dictionary/dictionaries', {
-    useCache: false,
-  });
+  const response = await enhancedApiClient.get<Record<string, any>[]>('/dictionary/dictionaries');
 
   if (!response) return [];
 
@@ -564,10 +505,7 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getDictionaryCategories(): Promise<string[]> {
-  const data = await enhancedApiClient.get<string[]>('/dictionary/dictionaries/categories', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<string[]>('/dictionary/dictionaries/categories');
   return data || [];
 }
 
@@ -580,10 +518,7 @@ export async function getDictionaryCategories(): Promise<string[]> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getTeams(): Promise<Team[]> {
-  const data = await enhancedApiClient.get<Team[]>('/basic-data/teams', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Team[]>('/basic-data/teams');
   return data || [];
 }
 
@@ -592,9 +527,7 @@ export async function getTeams(): Promise<Team[]> {
  * 降级策略：API → 离线队列
  */
 export async function createTeam(team: Partial<Team>): Promise<Team> {
-  const result = await enhancedApiClient.post<Team>('/basic-data/teams', team, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Team>('/basic-data/teams', team);
   return result;
 }
 
@@ -603,9 +536,7 @@ export async function createTeam(team: Partial<Team>): Promise<Team> {
  * 降级策略：API → 离线队列
  */
 export async function updateTeam(id: string, team: Partial<Team>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/teams/${id}`, team, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/teams/${id}`, team);
 }
 
 /**
@@ -613,9 +544,7 @@ export async function updateTeam(id: string, team: Partial<Team>): Promise<void>
  * 降级策略：API → 离线队列
  */
 export async function deleteTeam(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/teams/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/teams/${id}`);
 }
 
 // ============================================
@@ -627,10 +556,7 @@ export async function deleteTeam(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getPositions(): Promise<Position[]> {
-  const data = await enhancedApiClient.get<Position[]>('/basic-data/positions', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Position[]>('/basic-data/positions');
   return data || [];
 }
 
@@ -639,9 +565,7 @@ export async function getPositions(): Promise<Position[]> {
  * 降级策略：API → 离线队列
  */
 export async function createPosition(position: Partial<Position>): Promise<Position> {
-  const result = await enhancedApiClient.post<Position>('/basic-data/positions', position, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Position>('/basic-data/positions', position);
   return result;
 }
 
@@ -650,9 +574,7 @@ export async function createPosition(position: Partial<Position>): Promise<Posit
  * 降级策略：API → 离线队列
  */
 export async function updatePosition(id: string, position: Partial<Position>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/positions/${id}`, position, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/positions/${id}`, position);
 }
 
 /**
@@ -660,9 +582,7 @@ export async function updatePosition(id: string, position: Partial<Position>): P
  * 降级策略：API → 离线队列
  */
 export async function deletePosition(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/positions/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/positions/${id}`);
 }
 
 // ============================================
@@ -674,10 +594,7 @@ export async function deletePosition(id: string): Promise<void> {
  * 降级策略：API → IndexedDB 缓存
  */
 export async function getDevices(): Promise<Device[]> {
-  const data = await enhancedApiClient.get<Device[]>('/basic-data/devices', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Device[]>('/basic-data/devices');
   return data || [];
 }
 
@@ -686,9 +603,7 @@ export async function getDevices(): Promise<Device[]> {
  * 降级策略：API → 离线队列
  */
 export async function createDevice(device: Partial<Device>): Promise<Device> {
-  const result = await enhancedApiClient.post<Device>('/basic-data/devices', device, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Device>('/basic-data/devices', device);
   return result;
 }
 
@@ -697,9 +612,7 @@ export async function createDevice(device: Partial<Device>): Promise<Device> {
  * 降级策略：API → 离线队列
  */
 export async function updateDevice(id: string, device: Partial<Device>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/devices/${id}`, device, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/devices/${id}`, device);
 }
 
 /**
@@ -707,9 +620,7 @@ export async function updateDevice(id: string, device: Partial<Device>): Promise
  * 降级策略：API → 离线队列
  */
 export async function deleteDevice(id: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/devices/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/devices/${id}`);
 }
 
 // ============================================
@@ -737,33 +648,24 @@ export interface ProcessDefinition {
 
 /** 获取所有工序定义 */
 export async function getProcessDefinitions(): Promise<ProcessDefinition[]> {
-  const data = await enhancedApiClient.get<ProcessDefinition[]>('/basic-data/process-definitions', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ProcessDefinition[]>('/basic-data/process-definitions');
   return data || [];
 }
 
 /** 创建工序定义 */
 export async function createProcessDefinition(item: Partial<ProcessDefinition>): Promise<ProcessDefinition> {
-  const result = await enhancedApiClient.post<ProcessDefinition>('/basic-data/process-definitions', item, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<ProcessDefinition>('/basic-data/process-definitions', item);
   return result;
 }
 
 /** 更新工序定义 */
 export async function updateProcessDefinition(id: number | string, item: Partial<ProcessDefinition>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/process-definitions/${id}`, item, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/process-definitions/${id}`, item);
 }
 
 /** 删除工序定义 */
 export async function deleteProcessDefinition(id: number | string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/process-definitions/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/process-definitions/${id}`);
 }
 
 // ============================================
@@ -787,18 +689,13 @@ export interface ApprovalLevelConfigItem {
 
 /** 获取所有审批级别配置 */
 export async function getApprovalLevelConfigs(): Promise<ApprovalLevelConfigItem[]> {
-  const data = await enhancedApiClient.get<ApprovalLevelConfigItem[]>('/basic-data/approval-level-configs', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ApprovalLevelConfigItem[]>('/basic-data/approval-level-configs');
   return data || [];
 }
 
 /** 更新审批级别配置 */
 export async function updateApprovalLevelConfig(id: number, item: Partial<ApprovalLevelConfigItem>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/approval-level-configs/${id}`, item, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/approval-level-configs/${id}`, item);
 }
 
 // ============================================
@@ -818,33 +715,24 @@ export interface ApprovalAmountThresholdItem {
 
 /** 获取所有金额阈值 */
 export async function getApprovalAmountThresholds(): Promise<ApprovalAmountThresholdItem[]> {
-  const data = await enhancedApiClient.get<ApprovalAmountThresholdItem[]>('/basic-data/approval-amount-thresholds', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ApprovalAmountThresholdItem[]>('/basic-data/approval-amount-thresholds');
   return data || [];
 }
 
 /** 创建金额阈值 */
 export async function createApprovalAmountThreshold(item: Partial<ApprovalAmountThresholdItem>): Promise<ApprovalAmountThresholdItem> {
-  const result = await enhancedApiClient.post<ApprovalAmountThresholdItem>('/basic-data/approval-amount-thresholds', item, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<ApprovalAmountThresholdItem>('/basic-data/approval-amount-thresholds', item);
   return result;
 }
 
 /** 更新金额阈值 */
 export async function updateApprovalAmountThreshold(id: number, item: Partial<ApprovalAmountThresholdItem>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/approval-amount-thresholds/${id}`, item, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/approval-amount-thresholds/${id}`, item);
 }
 
 /** 删除金额阈值 */
 export async function deleteApprovalAmountThreshold(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/approval-amount-thresholds/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/approval-amount-thresholds/${id}`);
 }
 
 // ============================================
@@ -868,18 +756,13 @@ export interface ApprovalTypeRuleItem {
 
 /** 获取所有审批类型规则 */
 export async function getApprovalTypeRules(): Promise<ApprovalTypeRuleItem[]> {
-  const data = await enhancedApiClient.get<ApprovalTypeRuleItem[]>('/basic-data/approval-type-rules', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<ApprovalTypeRuleItem[]>('/basic-data/approval-type-rules');
   return data || [];
 }
 
 /** 更新审批类型规则 */
 export async function updateApprovalTypeRule(id: number, item: Partial<ApprovalTypeRuleItem>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/approval-type-rules/${id}`, item, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/approval-type-rules/${id}`, item);
 }
 
 // ============================================
@@ -903,33 +786,24 @@ export interface Shift {
 
 /** 获取所有班次 */
 export async function getShifts(): Promise<Shift[]> {
-  const data = await enhancedApiClient.get<Shift[]>('/basic-data/shifts', {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Shift[]>('/basic-data/shifts');
   return data || [];
 }
 
 /** 创建班次 */
 export async function createShift(shift: Partial<Shift>): Promise<Shift> {
-  const result = await enhancedApiClient.post<Shift>('/basic-data/shifts', shift, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Shift>('/basic-data/shifts', shift);
   return result;
 }
 
 /** 更新班次 */
 export async function updateShift(id: number, shift: Partial<Shift>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/shifts/${id}`, shift, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/shifts/${id}`, shift);
 }
 
 /** 删除班次 */
 export async function deleteShift(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/shifts/${id}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/shifts/${id}`);
 }
 
 // ============================================
@@ -968,41 +842,37 @@ export interface CostBudgetItem {
 }
 
 export async function getCostCategories(): Promise<CostCategoryItem[]> {
-  const data = await enhancedApiClient.get<CostCategoryItem[]>('/basic-data/cost-categories', {
-    useCache: true, cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<CostCategoryItem[]>('/basic-data/cost-categories');
   return data || [];
 }
 
 export async function createCostCategory(item: Partial<CostCategoryItem>): Promise<CostCategoryItem> {
-  return await enhancedApiClient.post<CostCategoryItem>('/basic-data/cost-categories', item, { offlineQueue: true });
+  return await enhancedApiClient.post<CostCategoryItem>('/basic-data/cost-categories', item);
 }
 
 export async function updateCostCategory(id: number, item: Partial<CostCategoryItem>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/cost-categories/${id}`, item, { offlineQueue: true });
+  await enhancedApiClient.put(`/basic-data/cost-categories/${id}`, item);
 }
 
 export async function deleteCostCategory(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/cost-categories/${id}`, { offlineQueue: true });
+  await enhancedApiClient.delete(`/basic-data/cost-categories/${id}`);
 }
 
 export async function getCostBudgets(): Promise<CostBudgetItem[]> {
-  const data = await enhancedApiClient.get<CostBudgetItem[]>('/basic-data/cost-budgets', {
-    useCache: true, cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<CostBudgetItem[]>('/basic-data/cost-budgets');
   return data || [];
 }
 
 export async function createCostBudget(item: Partial<CostBudgetItem>): Promise<CostBudgetItem> {
-  return await enhancedApiClient.post<CostBudgetItem>('/basic-data/cost-budgets', item, { offlineQueue: true });
+  return await enhancedApiClient.post<CostBudgetItem>('/basic-data/cost-budgets', item);
 }
 
 export async function updateCostBudget(id: number, item: Partial<CostBudgetItem>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/cost-budgets/${id}`, item, { offlineQueue: true });
+  await enhancedApiClient.put(`/basic-data/cost-budgets/${id}`, item);
 }
 
 export async function deleteCostBudget(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/cost-budgets/${id}`, { offlineQueue: true });
+  await enhancedApiClient.delete(`/basic-data/cost-budgets/${id}`);
 }
 
 // ========== 物料类型 & API ==========
@@ -1023,22 +893,20 @@ export interface MaterialType {
 }
 
 export async function getMaterialTypes(): Promise<MaterialType[]> {
-  const data = await enhancedApiClient.get<MaterialType[]>('/basic-data/material-types', {
-    useCache: true, cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<MaterialType[]>('/basic-data/material-types');
   return data || [];
 }
 
 export async function createMaterialType(item: Partial<MaterialType>): Promise<MaterialType> {
-  return await enhancedApiClient.post<MaterialType>('/basic-data/material-types', item, { offlineQueue: true });
+  return await enhancedApiClient.post<MaterialType>('/basic-data/material-types', item);
 }
 
 export async function updateMaterialType(id: number, item: Partial<MaterialType>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/material-types/${id}`, item, { offlineQueue: true });
+  await enhancedApiClient.put(`/basic-data/material-types/${id}`, item);
 }
 
 export async function deleteMaterialType(id: number): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/material-types/${id}`, { offlineQueue: true });
+  await enhancedApiClient.delete(`/basic-data/material-types/${id}`);
 }
 
 // ============================================
@@ -1075,31 +943,22 @@ export interface Base {
 export async function getBases(companyOid?: string): Promise<Base[]> {
   let url = '/basic-data/bases';
   if (companyOid) url += `?company_oid=${companyOid}`;
-  const data = await enhancedApiClient.get<Base[]>(url, {
-    useCache: true,
-    cacheStrategy: 'network-first',
-  });
+  const data = await enhancedApiClient.get<Base[]>(url);
   return data || [];
 }
 
 /** 创建基地 */
 export async function createBase(base: Partial<Base>): Promise<Base> {
-  const result = await enhancedApiClient.post<Base>('/basic-data/bases', base, {
-    offlineQueue: true,
-  });
+  const result = await enhancedApiClient.post<Base>('/basic-data/bases', base);
   return result;
 }
 
 /** 更新基地 */
 export async function updateBase(oid: string, base: Partial<Base>): Promise<void> {
-  await enhancedApiClient.put(`/basic-data/bases/${oid}`, base, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.put(`/basic-data/bases/${oid}`, base);
 }
 
 /** 删除基地 */
 export async function deleteBase(oid: string): Promise<void> {
-  await enhancedApiClient.delete(`/basic-data/bases/${oid}`, {
-    offlineQueue: true,
-  });
+  await enhancedApiClient.delete(`/basic-data/bases/${oid}`);
 }

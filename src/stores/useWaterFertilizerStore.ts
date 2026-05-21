@@ -138,7 +138,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
         try {
           const body = denormalize(data);
           const response = await enhancedApiClient.post<{ success: boolean; data: any }>(
-            '/api/water-fertilizer', body, { offlineQueue: true, priority: 0 }
+            '/api/water-fertilizer', body
           );
           const saved = (response as any)?.data || response;
           const newItem = normalize({ ...data, ...saved } as Record<string, unknown>);
@@ -157,7 +157,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
           items: state.items.map(item => item.oid === oid ? { ...item, ...updates } : item),
         }));
         try {
-          await enhancedApiClient.put(`/api/water-fertilizer/${oid}`, body, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.put(`/api/water-fertilizer/${oid}`, body);
         } catch (error) {
           console.warn('[WaterFertilizerStore] 更新失败:', error);
         }
@@ -166,7 +166,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
       deleteItem: async (oid) => {
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try {
-          await enhancedApiClient.delete(`/api/water-fertilizer/${oid}`, { offlineQueue: true, priority: 0 });
+          await enhancedApiClient.delete(`/api/water-fertilizer/${oid}`);
           return true;
         } catch (error) {
           console.warn('[WaterFertilizerStore] 删除失败:', error);
