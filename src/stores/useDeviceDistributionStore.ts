@@ -6,7 +6,6 @@
  * 预留端口 — V1.1 暂无真实IoT设备
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import type { DeviceDistribution } from '../services/apiDeviceDistributionService';
 
@@ -57,8 +56,7 @@ interface DeviceDistributionState {
 }
 
 export const useDeviceDistributionStore = create<DeviceDistributionState>()(
-  persist(
-    (set) => ({
+  (set) => ({
       items: [], isLoading: false, error: null,
 
       fetchItems: async (filters) => {
@@ -96,7 +94,5 @@ export const useDeviceDistributionStore = create<DeviceDistributionState>()(
         set((state) => ({ items: state.items.filter(item => item.oid !== oid) }));
         try { await enhancedApiClient.delete(`/api/device-distributions/${oid}`); return true; } catch (error) { return false; }
       },
-    }),
-    { name: 'device-distribution-storage', partialize: (state) => ({ items: state.items }) }
-  )
+    })
 );

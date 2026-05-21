@@ -7,7 +7,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 /** API 响应包装类型（兼容嵌套 {success, data} 和扁平数组两种格式） */
@@ -107,8 +106,7 @@ interface SystemConfigState {
 // ==================== 第五步：创建 Store ====================
 
 export const useSystemConfigStore = create<SystemConfigState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       configs: [],
       loading: false,
       error: null,
@@ -214,10 +212,5 @@ export const useSystemConfigStore = create<SystemConfigState>()(
         set({ lastFetch: null });
         await get().loadConfigs();
       },
-    }),
-    {
-      name: 'system-config-storage',
-      partialize: (state) => ({ configs: state.configs }),
-    }
-  )
+    })
 );

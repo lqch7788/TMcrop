@@ -6,7 +6,6 @@
  * 对接后端: /api/cameras
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -97,8 +96,7 @@ interface CameraState {
 // ==================== 创建 Store ====================
 
 export const useCameraStore = create<CameraState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -161,10 +159,5 @@ export const useCameraStore = create<CameraState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'camera-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

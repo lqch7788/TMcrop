@@ -5,7 +5,6 @@
  * 对接后端: /api/water-fertilizer
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -109,8 +108,7 @@ interface WaterFertilizerState {
 }
 
 export const useWaterFertilizerStore = create<WaterFertilizerState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -183,10 +181,5 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'water-fertilizer-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

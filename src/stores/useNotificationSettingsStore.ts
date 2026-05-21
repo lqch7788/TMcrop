@@ -3,7 +3,6 @@
  * 统一管理通知渠道、规则和用户偏好
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getChannels, createChannel, updateChannel, deleteChannel, toggleChannel,
   getRules, createRule, updateRule, deleteRule, toggleRule,
@@ -41,8 +40,7 @@ interface NotificationSettingsStore {
 }
 
 export const useNotificationSettingsStore = create<NotificationSettingsStore>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       channels: [],
       rules: [],
       preferences: null,
@@ -180,10 +178,5 @@ export const useNotificationSettingsStore = create<NotificationSettingsStore>()(
         set({ lastFetch: null });
         await get().loadAll();
       },
-    }),
-    {
-      name: 'notification_settings_store',
-      partialize: (s) => ({ channels: s.channels, rules: s.rules, preferences: s.preferences }),
-    }
-  )
+    })
 );

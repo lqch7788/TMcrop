@@ -6,7 +6,6 @@
  * 对接后端: /api/area-systems
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义 ====================
@@ -82,8 +81,7 @@ interface AreaSystemState {
 // ==================== 创建 Store ====================
 
 export const useAreaSystemStore = create<AreaSystemState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       error: null,
@@ -146,10 +144,5 @@ export const useAreaSystemStore = create<AreaSystemState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'area-system-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );
