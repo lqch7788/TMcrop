@@ -3,11 +3,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon,
+  ChevronDown, ChevronRight as ChevronRightIcon,
   CheckCircle, XCircle, Eye, ClipboardList
 } from 'lucide-react';
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/Pagination';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
 
 interface MaterialApprovalTableProps {
@@ -403,39 +404,15 @@ export function MaterialApprovalTable({
   // 分页组件
   const renderPagination = () => (
     filteredData.length > 0 && (
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="text-sm text-gray-500">
-          共 {filteredData.length} 条记录，第 {currentPage}/{totalPages || 1} 页
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          {[...Array(totalPages || 1)].map((_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setCurrentPage(i + 1)}
-              className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                currentPage === i + 1
-                  ? 'bg-emerald-600 text-white'
-                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
-            disabled={currentPage === (totalPages || 1)}
-            className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages || 1}
+          onPageChange={setCurrentPage}
+          pageSize={20}
+          onPageSizeChange={() => {}}
+          showPageSize={false}
+        />
       </div>
     )
   );

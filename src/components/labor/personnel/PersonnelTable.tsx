@@ -3,6 +3,7 @@ import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface PersonnelTableProps {
   workers: Worker[];
@@ -19,6 +20,12 @@ interface PersonnelTableProps {
   canEdit?: boolean;
   canDelete?: boolean;
   canExport?: boolean;
+  // 分页props
+  currentPage?: number;
+  pageSize?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
 }
 
 export function PersonnelTable({
@@ -34,7 +41,14 @@ export function PersonnelTable({
   canEdit = true,
   canDelete = true,
   canExport = true,
+  currentPage = 1,
+  pageSize = 10,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
 }: PersonnelTableProps) {
+  const total = totalCount ?? workers.length;
+  const totalPages = Math.ceil(total / pageSize) || 1;
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* 表格标题栏 */}
@@ -170,40 +184,18 @@ export function PersonnelTable({
         )}
 
         {/* 分页 */}
-        <div className="flex items-center justify-between mt-4 px-4 pb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>每页</span>
-            <select
-              value={10}
-              onChange={(e) => {}}
-              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10条</option>
-              <option value={20}>20条</option>
-              <option value={50}>50条</option>
-            </select>
+        {onPageChange && onPageSizeChange && (
+          <div className="px-4 pb-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              pageSize={pageSize}
+              onPageSizeChange={onPageSizeChange}
+              showPageSize={true}
+            />
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>共 {workers.length} 条</span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {}}
-              disabled={true}
-            >
-              &lt;
-            </Button>
-            <span className="text-sm font-medium text-emerald-600">1/1</span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {}}
-              disabled={true}
-            >
-              &gt;
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Label } from '@/components/ui/label';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -447,35 +448,15 @@ export const PieceworkPage: React.FC = () => {
         />
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-500">
-            共 {total} 条记录，第 {pagination.currentPage} / {Math.ceil(total / pagination.pageSize)} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={pagination.pageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="px-2 py-1 text-sm border border-gray-300 rounded"
-            >
-              <option value={10}>10条/页</option>
-              <option value={20}>20条/页</option>
-              <option value={50}>50条/页</option>
-            </select>
-            <Button
-              variant="secondary"
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
-            >
-              上一页
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage >= Math.ceil(total / pagination.pageSize)}
-            >
-              下一页
-            </Button>
-          </div>
+        <div className="px-4 pb-4">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={Math.ceil(total / pagination.pageSize)}
+            onPageChange={handlePageChange}
+            pageSize={pagination.pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            showPageSize={true}
+          />
         </div>
       </div>
 

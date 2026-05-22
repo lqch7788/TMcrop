@@ -1,7 +1,7 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface StatMaterialTableProps {
   activeTab: 'monthly' | 'material';
@@ -73,42 +73,15 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
         </TableBody>
       </Table>
       {/* 分页 */}
-      <div className="flex items-center justify-between mt-4 px-4 pb-4">
-        <div className="text-sm text-gray-500">
-          显示第 {startIdx + 1} 至 {endIdx} 条，共 {totalItems} 条
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-            const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
-            return (
-              <Button
-                key={i}
-                variant={currentPage === startPage + i ? 'default' : 'outline'}
-                size="icon"
-                onClick={() => onPageChange(startPage + i)}
-                className={currentPage === startPage + i ? 'shadow-md shadow-emerald-500/30' : ''}
-              >
-                {startPage + i}
-              </Button>
-            );
-          })}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="px-4 pb-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => onPageChange(1)}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

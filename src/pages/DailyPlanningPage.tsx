@@ -7,9 +7,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, CheckCircle, Clock, AlertTriangle,
   Bot, AlertCircle, RotateCw, Send,
-  ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+  ChevronDown, ChevronLeft } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { showAlert } from '@/lib/dialogService';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
@@ -28,7 +29,7 @@ interface TaskProgressTableProps {
 
 function TaskProgressTable({ title, description, data }: TaskProgressTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize);
 
   const paginatedData = useMemo(() => {
@@ -96,23 +97,15 @@ function TaskProgressTable({ title, description, data }: TaskProgressTableProps)
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <span className="text-sm text-gray-500">共 {data.length} 条</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );
@@ -127,7 +120,7 @@ interface WorkerLoadTableProps {
 
 function WorkerLoadTable({ data }: WorkerLoadTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize);
 
   const paginatedData = useMemo(() => {
@@ -201,23 +194,15 @@ function WorkerLoadTable({ data }: WorkerLoadTableProps) {
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
         <span className="text-sm text-gray-500">共 {data.length} 条</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages}
-            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

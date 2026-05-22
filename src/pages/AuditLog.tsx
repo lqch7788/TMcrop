@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Search, Eye, Download, AlertTriangle, ArrowLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 import { enhancedApiClient } from '../lib/apiClient';
 
 interface OperationLog {
@@ -341,41 +342,18 @@ export default function AuditLog() {
         )}
       </div>
 
-      {/* 分页 — 与生产计划表格一致 */}
+      {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { setCurrentPage(1); }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredLogs.length} 条</span>
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages || 1}</span>
-          <Button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
-            disabled={currentPage >= totalPages}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <div className="text-sm text-gray-500">共 {filteredLogs.length} 条</div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages || 1}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setCurrentPage(1); }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
 
       {/* 日志详情弹窗 */}

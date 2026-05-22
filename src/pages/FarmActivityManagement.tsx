@@ -6,13 +6,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Sprout, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight,
+  Sprout, Plus, Edit, Trash2, Search, ChevronLeft,
   Calendar, User, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Loader2, AlertTriangle
 } from 'lucide-react';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useFarmActivityStore, useZoneStore, useWorkerStore } from '../stores';
 import type { FarmActivity } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { Pagination } from '@/components/ui/Pagination';
 
 const ACTIVITY_TYPES: Record<string, { label: string; color: string }> = {
   WATERING: { label: '灌溉', color: 'bg-blue-100 text-blue-700' },
@@ -49,7 +50,7 @@ export default function FarmActivityManagement() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [showModal, setShowModal] = useState(false);
   const [editingActivity, setEditingActivity] = useState<FarmActivity | null>(null);
   const [formData, setFormData] = useState<Partial<FarmActivity>>({});
@@ -272,11 +273,15 @@ export default function FarmActivityManagement() {
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <p className="text-sm text-gray-500">显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredActivities.length)} 条，共 {filteredActivities.length} 条</p>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" /></button>
-            <span className="px-3 py-1 text-sm font-medium">{currentPage} / {totalPages || 1}</span>
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"><ChevronRight className="w-4 h-4" /></button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

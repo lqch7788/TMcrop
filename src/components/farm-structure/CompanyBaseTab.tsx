@@ -3,9 +3,10 @@
  * 左侧公司列表 + 右侧基地表格，支持 CRUD
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, Building2, MapPin } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Building2, MapPin } from 'lucide-react';
 import { Button, Input, TextArea, Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import { useBaseStore } from '../../stores';
 import type { Base } from '../../services/apiBasicDataService';
 import { showAlert } from '@/lib/dialogService';
@@ -246,21 +247,17 @@ export default function CompanyBaseTab() {
 
             {/* 分页 */}
             {filteredBases.length > 0 && (
-              <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <span>每页 {PAGE_SIZE} 条</span>
-                  <span>|</span>
-                  <span>共 {filteredBases.length} 条</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="px-2">{currentPage} / {Math.max(totalPages, 1)}</span>
-                  <Button variant="ghost" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between mt-3 px-4 py-3 border-t border-gray-100">
+                <div className="text-sm text-gray-500">共 {filteredBases.length} 条</div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  pageSize={PAGE_SIZE}
+                  onPageSizeChange={() => {}}
+                  pageSizeOptions={[10, 20, 50]}
+                  showPageSize={false}
+                />
               </div>
             )}
           </>

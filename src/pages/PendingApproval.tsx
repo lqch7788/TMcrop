@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useState, useMemo } from 'react';
-import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, Search, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import { useApproval, usePendingApprovals } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { useAuthPermission } from '../hooks/usePermission';
@@ -18,6 +18,7 @@ import {
   Label,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 export default function PendingApproval() {
   const { approve, reject } = useApproval();
@@ -30,9 +31,9 @@ export default function PendingApproval() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [detailApproval, setDetailApproval] = useState<Approval | null>(null);
   const { data: businessData, isLoading: businessLoading } = useApprovalBusinessDetail(detailApproval);
-  const pageSize = 5;
 
   // 筛选
   const filteredApprovals = useMemo(() => {
@@ -181,43 +182,15 @@ export default function PendingApproval() {
         {filteredApprovals.length === 0 && (
           <div className="p-8 text-center text-gray-500">暂无待审批单据</div>
         )}
-        {/* 分页组件 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {filteredApprovals.length} 条记录，第 {currentPage}/{totalPages || 1} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages || 1)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
-              disabled={currentPage === (totalPages || 1)}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredApprovals.length / pageSize) || 1}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          showPageSize
+        />
       </div>
 
       {/* 审批详情弹窗 */}

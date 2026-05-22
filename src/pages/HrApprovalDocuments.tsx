@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Search, Plus, Edit, Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Search, Plus, Edit, Eye, CheckCircle, XCircle, ChevronLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Label } from '../components/ui/label';
+import { Pagination } from '@/components/ui/Pagination';
 
 const hrDocuments = [
   { id: 1, code: 'DOC20240315', type: '补签卡', applicant: '李明轩', dept: '生产部', applyDate: '2024-03-15', targetTime: '2024-03-15 08:15', reason: '上班途中遇到交通事故', status: '待审批', statusClass: 'pending' },
@@ -18,7 +19,7 @@ export default function HrApprovalDocuments() {
   const [typeFilter, setTypeFilter] = useState('全部');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(hrDocuments.length / pageSize);
   const paginatedDocuments = hrDocuments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -174,37 +175,16 @@ export default function HrApprovalDocuments() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {hrDocuments.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                size="sm"
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {hrDocuments.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

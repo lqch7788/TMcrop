@@ -2,8 +2,9 @@
  * 仓库物料表格组件
  * 显示物料库存列表
  */
-import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 import type { Material } from '../../types/materials.types';
 
 interface MaterialsTableProps {
@@ -109,66 +110,15 @@ export default function MaterialsTable({
 
       {/* 分页控件 */}
       {filteredMaterials.length > 0 && (
-        <div className="mt-4 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              共 <span className="text-emerald-600 font-medium">{filteredMaterials.length}</span> 条记录
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-emerald-500 bg-white"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-sm text-gray-600">条</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(1)}
-              disabled={currentPage === 1}
-              className="text-gray-600"
-            >
-              首页
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="text-gray-600"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-gray-600">
-              第 <span className="text-emerald-600 font-medium">{currentPage}</span> / {totalPages} 页
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="text-gray-600"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              className="text-gray-600"
-            >
-              末页
-            </Button>
-          </div>
+        <div className="px-4 py-3 border-t border-gray-100">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            pageSize={pageSize}
+            onPageSizeChange={onPageSizeChange}
+            showPageSize={true}
+          />
         </div>
       )}
     </>

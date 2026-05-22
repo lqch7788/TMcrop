@@ -2,10 +2,10 @@
  * 指标表格组件
  * 显示指标列表，支持选择、分页和操作
  */
-import { BarChart3, Eye, Edit, Trash2, Target, TrendingUp, TrendingDown, Minus, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
+import { BarChart3, Eye, Edit, Trash2, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Checkbox } from '../../../components/ui/checkbox';
+import { Pagination } from '@/components/ui/Pagination';
 import type { Indicator } from '../../types/indicators.types';
 import { getProgressColor, getAchievementColor, calcAchievementRate } from '../../hooks/useIndicators';
 
@@ -39,37 +39,6 @@ function TrendIcon({ trend }: { trend: string }) {
   }
 }
 
-// 渲染分页按钮
-function renderPagination(currentPage: number, totalPages: number, onPageChange: (page: number) => void) {
-  const pages = [];
-  const maxVisible = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-  const endPage = Math.min(totalPages, startPage + maxVisible - 1);
-
-  if (endPage - startPage + 1 < maxVisible) {
-    startPage = Math.max(1, endPage - maxVisible + 1);
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(
-      <Button
-        key={i}
-        size="sm"
-        variant={i === currentPage ? "default" : "outline"}
-        onClick={() => onPageChange(i)}
-        className={
-          i === currentPage
-            ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 font-medium'
-            : 'text-gray-700 hover:bg-blue-50 border-gray-300'
-        }
-      >
-        {i}
-      </Button>
-    );
-  }
-  return pages;
-}
-
 export default function IndicatorsTable({
   indicators,
   selectedIds,
@@ -87,7 +56,6 @@ export default function IndicatorsTable({
   onEdit,
   onDelete,
 }: IndicatorsTableProps) {
-  const pageSizeOptions = [5, 10, 20, 50];
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -195,65 +163,15 @@ export default function IndicatorsTable({
 
       {/* 分页控件 */}
       {indicators.length > 0 && (
-        <div className="mt-4 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              共 <span className="text-blue-600 font-medium">{totalCount}</span> 条记录
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">每页</span>
-              <Select value={String(pageSize)} onValueChange={(val) => onPageSizeChange(Number(val))}>
-                <SelectTrigger className="w-20 h-8 px-2"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map(opt => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-gray-600">条</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(1)}
-              disabled={currentPage === 1}
-              className="text-gray-600"
-            >
-              <DoubleLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="text-gray-600"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {renderPagination(currentPage, totalPages, onPageChange)}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="text-gray-600"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              className="text-gray-600"
-            >
-              <DoubleRight className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-gray-600 ml-2">
-              第 <span className="text-blue-600 font-medium">{currentPage}</span> / {totalPages} 页
-            </span>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[5, 10, 20, 50]}
+          showPageSize
+        />
       )}
     </>
   );

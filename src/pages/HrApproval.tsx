@@ -15,12 +15,13 @@ import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprova
 import ProModal from '../components/common/modal/ProModal';
 import ProTable, { Column } from '../components/common/table/ProTable';
 import StatusBadge from '../components/common/badge/StatusBadge';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { TextArea } from '../components/ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { DatePicker } from '../components/ui/DatePicker';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { TextArea } from '@/components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Pagination } from '@/components/ui/Pagination';
 
 // ============================================================
 // 审批类型选项（10种类型）
@@ -606,41 +607,15 @@ export default function HrApproval() {
         />
         {/* 分页 */}
         {totalCount > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <div className="text-sm text-gray-500">
-              共 {totalCount} 条记录，第 {currentPage}/{totalPages || 1} 页
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              {[...Array(totalPages || 1)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                    currentPage === i + 1
-                      ? 'bg-emerald-600 text-white'
-                      : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
-                disabled={currentPage === (totalPages || 1)}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+              showPageSize={true}
+            />
           </div>
         )}
         {totalCount === 0 && (

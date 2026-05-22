@@ -6,6 +6,7 @@ import { TaskModeBadge } from './TaskModeBadge';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -261,39 +262,15 @@ export function TasksTable({
       )}
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10条</option>
-            <option value={20}>20条</option>
-            <option value={50}>50条</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>共 {tasks.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            &lt;
-          </Button>
-          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            &gt;
-          </Button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/ui/Pagination'
 import { cn } from '@/lib/utils'
 
 // 列配置类型
@@ -216,40 +217,15 @@ export function LaborTable<T>({
 
         {/* 分页 */}
         {pagination && (
-          <div className="flex items-center justify-between mt-4 px-4 pb-4">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>每页</span>
-              <select
-                value={pagination.pageSize}
-                onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
-                className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-              >
-                {pageSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size}条
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>共 {pagination.total} 条</span>
-              <button
-                onClick={() => onPageChange?.(Math.max(1, pagination.page - 1))}
-                disabled={pagination.page <= 1}
-                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                &lt;
-              </button>
-              <span className="text-sm font-medium text-emerald-600">{pagination.page}/{totalPages}</span>
-              <button
-                onClick={() => onPageChange?.(Math.min(totalPages, pagination.page + 1))}
-                disabled={pagination.page >= totalPages}
-                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={totalPages}
+            pageSize={pagination.pageSize}
+            onPageChange={(page) => onPageChange?.(page)}
+            onPageSizeChange={(size) => onPageSizeChange?.(size)}
+            pageSizeOptions={pageSizeOptions}
+            showPageSize
+          />
         )}
       </div>
     </div>

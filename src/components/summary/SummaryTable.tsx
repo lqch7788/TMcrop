@@ -4,7 +4,7 @@
 
 import { Eye } from 'lucide-react';
 import { TableColumn } from './types';
-import { Pagination } from './Pagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '../ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 import { Checkbox } from '../ui/checkbox';
@@ -111,7 +111,6 @@ export function SummaryTable<T extends { id: number | string }>({
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        totalCount={totalCount}
         onPageChange={onPageChange}
       />
     </div>

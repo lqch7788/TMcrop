@@ -17,9 +17,9 @@ import {
   AlertTriangle,
   Zap,
   ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import { useProductionPlanStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
@@ -42,7 +42,7 @@ interface TaskTypeSummary {
 // ============================================
 function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize);
 
   const paginatedData = useMemo(() => {
@@ -106,23 +106,15 @@ function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
       {data.length > pageSize && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       )}
     </div>
@@ -134,7 +126,7 @@ function WeeklySummaryTable({ data }: { data: WeeklySummary[] }) {
 // ============================================
 function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize);
 
   const paginatedData = useMemo(() => {
@@ -194,23 +186,15 @@ function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
       {data.length > pageSize && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       )}
     </div>
@@ -222,7 +206,7 @@ function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
 // ============================================
 function WorkerTable({ data }: { data: WorkerRequirement[] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalPages = Math.ceil(data.length / pageSize);
 
   const paginatedData = useMemo(() => {
@@ -266,23 +250,15 @@ function WorkerTable({ data }: { data: WorkerRequirement[] }) {
       {data.length > pageSize && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">共 {data.length} 条</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       )}
     </div>
@@ -318,7 +294,7 @@ export default function MonthlyPlanningPage() {
 
   // 批次选择表格分页
   const [batchPage, setBatchPage] = useState(1);
-  const batchPageSize = 5;
+  const [batchPageSize, setBatchPageSize] = useState(5);
   const batchTotalPages = Math.ceil(availableBatches.length / batchPageSize) || 1;
   const paginatedBatches = availableBatches.slice(
     (batchPage - 1) * batchPageSize,
@@ -600,23 +576,15 @@ export default function MonthlyPlanningPage() {
         {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">共 {availableBatches.length} 条</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setBatchPage(p => Math.max(1, p - 1))}
-              disabled={batchPage === 1}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-gray-600">{batchPage} / {batchTotalPages}</span>
-            <button
-              onClick={() => setBatchPage(p => Math.min(batchTotalPages, p + 1))}
-              disabled={batchPage >= batchTotalPages}
-              className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <Pagination
+            currentPage={batchPage}
+            totalPages={batchTotalPages}
+            onPageChange={setBatchPage}
+            pageSize={batchPageSize}
+            onPageSizeChange={(size) => { setBatchPageSize(size); setBatchPage(1); }}
+            pageSizeOptions={[5, 10, 20]}
+            showPageSize
+          />
         </div>
       </div>
 

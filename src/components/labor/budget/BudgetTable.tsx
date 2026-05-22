@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { Eye, Edit2, Trash2, Download, Plus } from 'lucide-react';
 import type { MonthlyBudget } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface BudgetTableProps {
   data: MonthlyBudget[];
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   showCheckbox?: boolean;
   exportMode?: boolean;
   batchEditMode?: boolean;
@@ -24,6 +29,10 @@ interface BudgetTableProps {
 
 export const BudgetTable: React.FC<BudgetTableProps> = ({
   data,
+  currentPage,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   showCheckbox = false,
   exportMode = false,
   batchEditMode = false,
@@ -40,8 +49,6 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
   onCancelBatch,
   onAddClick,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12;
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const paginatedData = data.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const allSelected = selectedRows.length === data.length && data.length > 0;
@@ -284,38 +291,15 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
       )}
 
       {/* 分页 */}
-      <div className="flex items-center justify-between mt-4 px-4 pb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => setCurrentPage(1)}
-            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={12}>12条</option>
-            <option value={6}>6条</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>共 {data.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
-          >
-            &lt;
-          </Button>
-          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            &gt;
-          </Button>
-        </div>
+      <div className="px-4 pb-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

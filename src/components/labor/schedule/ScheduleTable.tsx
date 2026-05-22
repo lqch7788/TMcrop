@@ -5,10 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface ScheduleTableProps {
   scheduleList: ScheduleRecord[];
   shiftConfigs: ShiftConfig[];
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   onScheduleClick?: (record: ScheduleRecord) => void;
   onExport?: () => void;
   onAddClick?: () => void;
@@ -40,6 +46,11 @@ function getShiftColor(shift: string, configs: ShiftConfig[]): string {
 export function ScheduleTable({
   scheduleList,
   shiftConfigs,
+  currentPage,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
   onScheduleClick,
   onExport,
   onAddClick,
@@ -73,8 +84,6 @@ export function ScheduleTable({
       end: new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     };
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
@@ -432,44 +441,16 @@ export function ScheduleTable({
       </div>
 
       {/* 分页 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-4 pb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setCurrentPage(1);
-              }}
-              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10条</option>
-              <option value={20}>20条</option>
-              <option value={50}>50条</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>共 {filteredData.length} 条</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </Button>
-            <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-            >
-              &gt;
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="px-4 pb-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
+      </div>
     </div>
   );
 }

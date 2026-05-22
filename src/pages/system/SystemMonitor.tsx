@@ -8,8 +8,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search, Download, RefreshCw, Server, Cpu, HardDrive, Wifi,
-  Activity, Clock, CheckCircle, AlertTriangle, ChevronLeft, Loader2, Eye,
+  Activity, Clock, CheckCircle, AlertTriangle, Loader2, Eye,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import { enhancedApiClient } from '../../lib/apiClient';
 
 interface SystemInfo {
@@ -362,18 +363,12 @@ const SystemMonitor: React.FC = () => {
         </table>
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-            <div className="text-sm text-gray-500">共 {filteredServices.length} 条</div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">上一页</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button key={page} onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-1 rounded ${currentPage === page ? 'bg-blue-600 text-white' : 'border hover:bg-gray-50'}`}>{page}</button>
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
-                className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50">下一页</button>
-            </div>
+          <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

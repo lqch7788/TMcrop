@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Megaphone, Plus, Edit, Eye, Trash2, Target, DollarSign, TrendingUp, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Megaphone, Plus, Edit, Eye, Trash2, Target, DollarSign, TrendingUp, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 export interface Announcement {
   id: number;
@@ -363,17 +364,16 @@ export function AnnouncementPage() {
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select>
-            <span className="text-sm text-gray-500">条</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {filteredAnnouncements.length} 条</span>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-            <span className="text-sm">{currentPage} / {Math.ceil(filteredAnnouncements.length / pageSize)}</span>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(Math.ceil(filteredAnnouncements.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredAnnouncements.length / pageSize)}><ChevronRight className="w-4 h-4" /></Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {filteredAnnouncements.length} 条</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredAnnouncements.length / pageSize) || 1}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

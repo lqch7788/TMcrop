@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ScrollText, Plus, Edit, Trash2, ArrowLeft, ChevronRight, Search } from 'lucide-react';
+import { ScrollText, Plus, Edit, Trash2, ArrowLeft, Search } from 'lucide-react';
 import { useProcessDefinitionStore, useDictionaryStore, getDictItems } from '../stores';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Modal } from '../components/ui/modal';
-import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import type { ProcessDefinition } from '../services/apiBasicDataService';
 
 // 工序类型选项（从字典读取，备用硬编码）
@@ -421,44 +422,17 @@ export default function ProcessManagement() {
         {/* 分页 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="text-sm text-gray-500">
-            共 {filteredData.length} 条记录，第 {filteredData.length === 0 ? 0 : currentPage}/{totalPages || 1} 页
+            共 {filteredData.length} 条记录
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(Math.min(totalPages, 7))].map((_, i) => {
-              // 显示页码逻辑：始终显示第一页+最后一页+当前页附近
-              const pageNum = i + 1;
-              if (totalPages <= 7) {
-                return (
-                  <Button
-                    key={pageNum}
-                    size="sm"
-                    variant={currentPage === pageNum ? 'default' : 'ghost'}
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              }
-              // 超过7页时简化显示
-              return null;
-            })}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

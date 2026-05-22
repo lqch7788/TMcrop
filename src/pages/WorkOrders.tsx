@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ClipboardCheck, Plus, Search, Eye, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { ClipboardCheck, Plus, Search, Eye, Edit } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 const workOrders = [
   { id: 1, code: 'WO20240301', name: '张伟民', workerId: 'W001', area: '1号棚', process: '授粉', workload: '500株', date: '2024-03-01', status: '已完成', statusClass: 'normal' },
@@ -157,31 +158,18 @@ export default function WorkOrders() {
               ))}
             </tbody>
           </table>
-          {/* Pagination */}
+          {/* 分页组件 */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">每页</span>
-              <select
-                value={pageSize}
-                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="px-2 py-1 border border-gray-200 rounded text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-sm text-gray-500">条</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">共 {workOrders.length} 条</span>
-              <Button size="icon" variant="ghost" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm">{currentPage} / {Math.ceil(workOrders.length / pageSize) || 1}</span>
-              <Button size="icon" variant="ghost" onClick={() => setCurrentPage(Math.min(Math.ceil(workOrders.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(workOrders.length / pageSize)}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <div className="text-sm text-gray-500">共 {workOrders.length} 条</div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(workOrders.length / pageSize) || 1}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+              pageSizeOptions={[10, 20, 50]}
+              showPageSize
+            />
           </div>
         </div>
       </div>

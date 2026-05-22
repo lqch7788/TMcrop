@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
 import { showConfirm } from '@/lib/dialogService';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface TeamTableProps {
   onBack?: () => void;
@@ -236,38 +237,15 @@ export function TeamTable({
       </div>
 
       {/* 分页 */}
-      <div className="bg-white px-4 py-3 border-t flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>每页</span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10条</option>
-            <option value={20}>20条</option>
-            <option value={50}>50条</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
-            disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-          >
-            &gt;
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage(Math.ceil(pagination.total / pagination.pageSize))}
-            disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-          >
-            &gt;&gt;
-          </Button>
-        </div>
+      <div className="bg-white px-4 py-3 border-t">
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={Math.ceil(pagination.total / pagination.pageSize) || 1}
+          onPageChange={setPage}
+          pageSize={pagination.pageSize}
+          onPageSizeChange={setPageSize}
+          showPageSize={true}
+        />
       </div>
 
       {/* 分配弹窗 */}

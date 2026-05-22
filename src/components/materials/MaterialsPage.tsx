@@ -1,6 +1,7 @@
 // 物料管理主页面组件
 import { useState, useMemo } from 'react';
 import { Plus, Download, X, Search, RefreshCw } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import MaterialsHeader from './MaterialsHeader';
 import MaterialsFilters from './MaterialsFilters';
 import MaterialsTable from './MaterialsTable';
@@ -700,69 +701,16 @@ export default function MaterialsPage() {
 
             {/* 入库记录分页 */}
             <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">每页</span>
-                <select
-                  value={inboundPageSize}
-                  onChange={(e) => {
-                    setInboundPageSize(Number(e.target.value));
-                    setInboundPage(1);
-                  }}
-                  className="px-2 py-1 border border-gray-200 rounded text-sm"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="text-sm text-gray-500">条</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  共 {inboundRecords.length} 条，第 {inboundPage} / {Math.ceil(inboundRecords.length / inboundPageSize) || 1} 页
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setInboundPage(1)}
-                    disabled={inboundPage === 1}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                    title="首页"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setInboundPage(Math.max(1, inboundPage - 1))}
-                    disabled={inboundPage === 1}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setInboundPage(Math.min(Math.ceil(inboundRecords.length / inboundPageSize), inboundPage + 1))
-                    }
-                    disabled={inboundPage >= Math.ceil(inboundRecords.length / inboundPageSize)}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setInboundPage(Math.ceil(inboundRecords.length / inboundPageSize) || 1)}
-                    disabled={inboundPage >= Math.ceil(inboundRecords.length / inboundPageSize)}
-                    className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
-                    title="末页"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              <div className="text-sm text-gray-500">共 {inboundRecords.length} 条</div>
+              <Pagination
+                currentPage={inboundPage}
+                totalPages={Math.ceil(inboundRecords.length / inboundPageSize) || 1}
+                onPageChange={setInboundPage}
+                pageSize={inboundPageSize}
+                onPageSizeChange={(size) => { setInboundPageSize(size); setInboundPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
             </div>
           </div>
         </>

@@ -20,7 +20,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { PageHeader, KpiCard, KpiCardGrid, DetailDrawer } from '../../components/summary';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '@/components/ui';
 import { useSummaryDataStore, type BatchStatItem, type ChainStageStat } from '../../stores/useSummaryDataStore';
 
 // ========== 常量 ==========
@@ -220,6 +220,10 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
   const [selectedBatch, setSelectedBatch] = useState<BatchStatItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // ========== 分页状态 ==========
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   useEffect(() => {
     fetchBatchStats({});
     fetchChainOverview();
@@ -246,6 +250,25 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
   const totalBatches = batchItems.length;
   const completedBatches = batchItems.filter((b) => b.status === 'completed').length;
   const inProgressBatches = batchItems.filter((b) => b.status === 'in_progress').length;
+
+  // ========== 分页数据 ==========
+  const totalCount = batchItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const paginatedBatches = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return batchItems.slice(start, end);
+  }, [batchItems, currentPage, pageSize]);
+
+  // 分页变化处理
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const handleViewBatch = (batch: BatchStatItem) => {
     setSelectedBatch(batch);
@@ -352,7 +375,7 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
                   </TableCell>
                 </TableRow>
               ) : (
-                batchItems.map((batch) => {
+                paginatedBatches.map((batch) => {
                   const stage = CHAIN_STAGES.find((s) => s.key === getBatchStage(batch));
                   return (
                     <TableRow
@@ -398,6 +421,23 @@ export default function ChainTraceability({ hideHeader }: ChainTraceabilityProps
             </TableBody>
           </Table>
         </div>
+
+        {/* 分页 */}
+        {totalCount > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              显示 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} 条，共 {totalCount} 条
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              pageSize={pageSize}
+              onPageSizeChange={handlePageSizeChange}
+              showPageSize={true}
+            />
+          </div>
+        )}
       </div>
 
       {/* 批次详情抽屉 */}

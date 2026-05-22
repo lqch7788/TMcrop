@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, AlertCircle, AlertOctagon, Clock, CheckCircle, CheckSquare, Square, X, Trash2, Plus, Edit2, Download } from 'lucide-react';
 import type { RiskAlert, AlertLevel } from './types';
 import { AlertLevelNames } from './types';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface RiskAlertListProps {
   alerts: RiskAlert[];
@@ -265,32 +266,18 @@ export function RiskAlertList({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between mt-4 px-4 pb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-          >
-            <option value={10}>10条</option>
-            <option value={20}>20条</option>
-            <option value={50}>50条</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>共 {alerts.length} 条</span>
-          <Button variant="ghost" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
-            &lt;
-          </Button>
-          <span className="text-sm font-medium text-emerald-600">{currentPage}/{totalPages}</span>
-          <Button variant="ghost" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
-            &gt;
-          </Button>
-        </div>
+      <div className="px-4 pb-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

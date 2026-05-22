@@ -5,12 +5,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
+import { Package, Search, Plus, Edit, Trash2, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useMaterialTypeStore } from '../stores';
 import type { MaterialType } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { Pagination } from '@/components/ui/Pagination';
 
 const CATEGORY_OPTIONS = ['肥料', '农药', '农膜', '工具', '种子', '其他'];
 
@@ -207,15 +208,16 @@ export default function MaterialManagement() {
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">共 {filtered.length} 条记录，第 {currentPage}/{totalPages || 1} 页</div>
-          <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-              const page = i + 1;
-              return <Button key={page} size="sm" variant={currentPage === page ? 'default' : 'ghost'} onClick={() => setCurrentPage(page)}>{page}</Button>;
-            })}
-            <Button size="icon" variant="ghost" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}><ChevronRight className="w-4 h-4" /></Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {filtered.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[8, 16, 24, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

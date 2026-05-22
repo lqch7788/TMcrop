@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import { X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/Pagination';
+import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { showAlert } from '@/lib/dialogService';
 
 export interface InboundMaterial {
@@ -638,31 +639,16 @@ export function MaterialInboundTab({
         </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <Select value={String(pageSize)} onValueChange={(val) => { onPageSizeChange(Number(val)); onPageChange(1); }}>
-              <SelectTrigger className="h-8 px-2 py-1 border border-gray-200 rounded text-sm">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-gray-500">条</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {records.length} 条</span>
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1}>
-              <ChevronRight className="w-4 h-4 rotate-180" />
-            </Button>
-            <span className="text-sm">{page} / {totalPages}</span>
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { onPageSizeChange(size); onPageChange(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { MaterialReturnHeader } from './MaterialReturnHeader';
 import { MaterialReturnSearch } from './MaterialReturnSearch';
 import { MaterialReturnTable } from './MaterialReturnTable';
-import { MaterialReturnPagination } from './MaterialReturnPagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { DetailModal } from './modals/DetailModal';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
@@ -175,13 +175,14 @@ export function MaterialReturnPage() {
         />
 
         {/* 分页 */}
-        <MaterialReturnPagination
+        <Pagination
           currentPage={hook.currentPage}
           totalPages={hook.totalPages}
           pageSize={hook.pageSize}
-          totalCount={hook.filteredReturns.length}
           onPageChange={hook.setCurrentPage}
           onPageSizeChange={hook.setPageSize}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
         />
       </div>
 

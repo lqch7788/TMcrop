@@ -3,8 +3,9 @@
  * 种植季记录 CRUD + 结束种植季 + 历史查询
  */
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, Leaf, CalendarCheck, History } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Leaf, CalendarCheck, History } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 import { usePlantingRecordStore } from '../../stores/usePlantingRecordStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
@@ -260,14 +261,16 @@ export default function PlantingRecordTab() {
 
           {filtered.length > 0 && (
             <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <span>每页 {PAGE_SIZE} 条</span><span>|</span><span>共 {filtered.length} 条</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
-                <span className="px-2">{currentPage} / {Math.max(totalPages, 1)}</span>
-                <Button variant="ghost" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
-              </div>
+              <div className="text-sm text-gray-500">共 {filtered.length} 条</div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(totalPages, 1)}
+                onPageChange={setCurrentPage}
+                pageSize={PAGE_SIZE}
+                onPageSizeChange={(size) => { setCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
             </div>
           )}
         </>
