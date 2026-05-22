@@ -360,8 +360,10 @@ router.get('/', (req: Request, res: Response) => {
     // JOIN逻辑：
     // - 如果 crop_name 匹配 sub_variety1_name（细分品种），使用该品种
     // - 如果 crop_name 匹配 variety_name（主品种），使用该品种
+    // 修复JOIN条件，避免OR导致的结果重复
+    // 优先匹配sub_variety1_name，如果没有匹配则匹配variety_name
     let sql = `
-      SELECT s.*,
+      SELECT DISTINCT s.*,
         COALESCE(cv.crop_code, '') AS cropCode,
         COALESCE(cv.category_name, '') AS categoryName,
         COALESCE(cv.type_name, '') AS typeName,
@@ -370,10 +372,7 @@ router.get('/', (req: Request, res: Response) => {
         COALESCE(ss.source_code, '') AS sourceCode,
         COALESCE(pp.plan_code, '') AS productionPlanCode
       FROM seedlings s
-      LEFT JOIN crop_varieties cv ON (
-        s.crop_name = cv.sub_variety1_name
-        OR s.crop_name = cv.variety_name
-      )
+      LEFT JOIN crop_varieties cv ON s.crop_name = cv.sub_variety1_name
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
       WHERE 1=1

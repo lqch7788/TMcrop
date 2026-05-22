@@ -338,8 +338,8 @@ export function SeedSourceTable({
               )}
               {canPrint && (
                 <Button
-                  variant="default"
                   size="sm"
+                  className="bg-purple-600 text-white hover:bg-purple-700"
                   onClick={() => { onPrintModeChange(true); }}
                 >
                   <Printer className="w-4 h-4" />

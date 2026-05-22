@@ -400,6 +400,42 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 /**
+ * 批量删除生产计划
+ * DELETE /api/production-plans/batch?ids=id1,id2,id3
+ * 注意：此路由必须放在 /:id 路由之前，否则 /batch 会被当作 :id 参数
+ */
+router.delete('/batch', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.query;
+    if (!ids || typeof ids !== 'string') {
+      return res.status(400).json({ success: false, error: '缺少ids参数' });
+    }
+
+    const idArray = ids.split(',').map(id => id.trim()).filter(Boolean);
+    if (idArray.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids参数格式错误' });
+    }
+
+    const db = getDatabase();
+
+    // 批量删除（不再检查状态）
+    const stmt = db.prepare(`DELETE FROM production_plans WHERE id = ?`);
+    for (const id of idArray) {
+      stmt.bind([id]);
+      stmt.step();
+      stmt.reset();
+    }
+    stmt.free();
+    saveDatabase();
+
+    res.json({ success: true, message: `成功删除${idArray.length}条生产计划` });
+  } catch (error) {
+    console.error('批量删除生产计划失败:', error);
+    res.status(500).json({ success: false, error: '批量删除生产计划失败' });
+  }
+});
+
+/**
  * 删除生产计划
  * DELETE /api/production-plans/:id
  */
@@ -421,10 +457,10 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '生产计划不存在' });
     }
 
-    // 只允许删除草稿或已取消的计划（检查 batch_status 字段）
-    if (plan.batch_status !== 'draft' && plan.batch_status !== 'cancelled') {
-      return res.status(400).json({ success: false, error: '只允许删除草稿或已取消的生产计划' });
-    }
+    // 所有状态的生产计划都可以删除
+    // if (plan.batch_status !== 'draft' && plan.batch_status !== 'cancelled') {
+    //   return res.status(400).json({ success: false, error: '只允许删除草稿或已取消的生产计划' });
+    // }
 
     db.run('DELETE FROM production_plans WHERE id = ?', [id]);
     saveDatabase();

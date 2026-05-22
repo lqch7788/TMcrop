@@ -1,19 +1,16 @@
 /**
- * 育苗标签打印弹窗
+ * 育苗标签打印弹窗（完全参照种源管理实现）
  * 支持单标签打印、多标签打印、批量生成、导出Excel
- * 导出用URL链接替代QR码图片，避免文件过大导致系统卡死
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { Seedling } from '../../../../types/crop';
-import * as apiService from '../../../../services/apiSeedlingService';
-import { usePlantLabelStore } from '../../../../stores';
 import { useUserStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { showAlert } from '@/lib/dialogService';
 
@@ -31,38 +28,30 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [previewLabel, setPreviewLabel] = useState('');
   const [allLabelNumbers, setAllLabelNumbers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [generatedLabels, setGeneratedLabels] = useState<any[]>([]);
   const [printLabels, setPrintLabels] = useState<string[]>([]);
 
-  // 操作员
+  // 获取当前操作员
   const storeUsers = useUserStore((s) => s.users);
   const currentOperator = storeUsers.length > 0 ? storeUsers[0]?.name : (localStorage.getItem('username') || '系统管理员');
 
-  // 标签Store
-  const generateBatchLabels = usePlantLabelStore((s) => s.generateBatchLabels);
-
-  // 加载已有标签编号
+  // 初始化标签编号列表（直接从record字段生成，不依赖API或Store）
   useEffect(() => {
-    if (isOpen && record.id) {
-      setLoading(true);
-      apiService.generateAllLabelNumbers(record.id).then((nums) => {
-        if (nums.length > 0) {
-          setAllLabelNumbers(nums);
-          setPreviewLabel(nums[0]);
-        } else {
-          // 降级：从育苗编号生成
-          const fallback: string[] = [];
-          for (let i = 0; i < record.survivalCount; i++) {
-            fallback.push(`${record.seedlingCode}-${String(i + 1).padStart(4, '0')}`);
-          }
-          setAllLabelNumbers(fallback);
-          setPreviewLabel(fallback[0] || '');
-        }
-      }).finally(() => setLoading(false));
+    if (!isOpen || !record?.id) return;
+    const seedlingCode = record.seedlingCode || '';
+    // 使用成活数量作为标签数量上限
+    const count = record.survivalCount || record.initialCount || 0;
+    if (seedlingCode && count > 0) {
+      const nums: string[] = [];
+      const maxLabels = Math.min(count, 200);
+      for (let i = 0; i < maxLabels; i++) {
+        nums.push(`${seedlingCode}-${String(i + 1).padStart(4, '0')}`);
+      }
+      setAllLabelNumbers(nums);
+      setPreviewLabel(nums[0]);
     }
-  }, [isOpen, record.id, record.seedlingCode, record.survivalCount]);
+  }, [isOpen, record?.id, record?.seedlingCode, record?.survivalCount, record?.initialCount]);
 
-  // printLabels更新后触发打印（等待DOM渲染完成）
+  // printLabels更新后触发打印
   useEffect(() => {
     if (printLabels.length > 0) {
       const timer = setTimeout(() => {
@@ -73,47 +62,45 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     }
   }, [printLabels]);
 
-  // 剩余数量
-  const remainingCount = record.initialCount - record.lossCount;
+  // 剩余可用数量
+  const remainingCount = record?.survivalCount || record?.initialCount || 0;
 
   // 处理打印
-  const handlePrint = async () => {
+  const handlePrint = () => {
     setLoading(true);
     try {
       let labelsToPrint: string[] = [];
 
       if (printMode === 'single') {
-        if (!previewLabel) { await showAlert('请选择要打印的标签'); return; }
+        if (!previewLabel) { showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [previewLabel];
-        await apiService.printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
       } else if (printMode === 'multi') {
-        if (selectedLabels.length === 0) { await showAlert('请选择要打印的标签'); return; }
+        if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [...selectedLabels];
-        await apiService.printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
       } else {
-        const result = await generateBatchLabels({
-          seedling_id: record.id,
-          count: printCount,
-          crop_name: record.cropName,
-          area_name: record.siteName,
-          start_date: record.startDate,
-        });
-        if (result) {
-          labelsToPrint = result.labels.map((l: any) => l.labelNumber);
-          setGeneratedLabels(result.labels);
-          const nums = await apiService.generateAllLabelNumbers(record.id);
-          setAllLabelNumbers(nums);
+        // 批量生成
+        const startIdx = allLabelNumbers.length;
+        for (let i = 0; i < printCount; i++) {
+          labelsToPrint.push(`${record.seedlingCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
         }
-        await apiService.printLabel(record.id, 'new', printCount, currentOperator);
+        // 刷新标签列表
+        const totalCount = allLabelNumbers.length + printCount;
+        const refreshed: string[] = [];
+        const maxShow = Math.min(totalCount, 200);
+        for (let i = 0; i < maxShow; i++) {
+          refreshed.push(`${record.seedlingCode}-${String(i + 1).padStart(4, '0')}`);
+        }
+        setAllLabelNumbers(refreshed);
       }
+
       setPrintLabels(labelsToPrint);
     } finally {
       setLoading(false);
     }
   };
 
-  // 导出Excel（扫描功能码列为URL链接，不嵌入QR码图片）
-  const handleExportExcel = useCallback(async () => {
+  // 导出Excel
+  const handleExportExcel = () => {
     setLoading(true);
     try {
       let labelsToExport: string[] = [];
@@ -123,30 +110,14 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       } else if (printMode === 'multi' && selectedLabels.length > 0) {
         labelsToExport = selectedLabels;
       } else {
-        // 批量模式：先生成标签再导出
-        const result = await generateBatchLabels({
-          seedling_id: record.id,
-          count: printCount,
-          crop_name: record.cropName,
-          area_name: record.siteName,
-          start_date: record.startDate,
-        });
-        if (result) {
-          labelsToExport = result.labels.map((l: any) => l.labelNumber);
-          setGeneratedLabels(result.labels);
-          const nums = await apiService.generateAllLabelNumbers(record.id);
-          setAllLabelNumbers(nums);
-        } else {
-          // 降级：本地生成编号
-          for (let i = 0; i < printCount; i++) {
-            labelsToExport.push(`${record.seedlingCode}-${String(i + 1).padStart(4, '0')}`);
-          }
+        const startIdx = allLabelNumbers.length;
+        for (let i = 0; i < printCount; i++) {
+          labelsToExport.push(`${record.seedlingCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
         }
       }
 
-      if (labelsToExport.length === 0) { await showAlert('没有可导出的标签'); return; }
+      if (labelsToExport.length === 0) { showAlert('没有可导出的标签'); return; }
 
-      // 构建标签URL（扫描功能码 = URL链接，人工可在线生成QR码）
       const baseUrl = 'https://tm-crop.com/ResumeTimeline';
       const rows = labelsToExport.map((label, i) => ({
         index: i + 1,
@@ -174,18 +145,18 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     <thead><tr>
       <th>序号</th>
       <th>作物名称</th>
-      <th>大棚位置</th>
+      <th>场地</th>
       <th>扫描功能码</th>
-      <th>种植序号</th>
-      <th>种植日期</th>
+      <th>育苗批号</th>
+      <th>育苗日期</th>
     </tr></thead>
     <tbody>${rows.map(r => `<tr>
       <td>${r.index}</td>
       <td>${record.cropName}</td>
-      <td>${record.siteName}</td>
+      <td>${record.siteName || '-'}</td>
       <td><a href="${r.url}" target="_blank">${r.url}</a></td>
       <td style="font-family:monospace;font-size:11px;">${r.label}</td>
-      <td>${record.startDate}</td>
+      <td>${record.startDate || '-'}</td>
     </tr>`).join('')}</tbody>
   </table>
 </body></html>`;
@@ -200,7 +171,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
     } finally {
       setLoading(false);
     }
-  }, [printMode, previewLabel, selectedLabels, printCount, record, generateBatchLabels]);
+  };
 
   // 切换选择标签
   const toggleLabel = (label: string) => {
@@ -208,11 +179,9 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   };
 
   const toggleSelectAll = () => {
-    if (selectedLabels.length === allLabelNumbers.length) {
-      setSelectedLabels([]);
-    } else {
-      setSelectedLabels([...allLabelNumbers]);
-    }
+    setSelectedLabels(prev =>
+      prev.length === allLabelNumbers.length ? [] : [...allLabelNumbers]
+    );
   };
 
   // 二维码内容
@@ -237,31 +206,33 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
           <div></div>
           <div className="flex gap-2">
-            <Button onClick={onClose} variant="secondary" size="sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onClose}
+            >
               取消
             </Button>
             <Button
-              onClick={handleExportExcel}
-              disabled={loading}
               variant="blue"
               size="sm"
+              onClick={handleExportExcel}
+              disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <Download className="w-4 h-4" />
               导出Excel
             </Button>
             <Button
-              onClick={handlePrint}
-              disabled={loading}
               variant="default"
               size="sm"
+              onClick={handlePrint}
+              disabled={loading}
             >
               {loading ? '处理中...' : '打印'}
             </Button>
           </div>
         </div>
       }
-      cancelText="取消"
-      submitDisabled={loading}
     >
       <div className="space-y-4">
         {/* 打印模式选择 */}
@@ -284,7 +255,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           {printMode === 'single' && (
             <div className="flex items-center gap-4">
               <div>
-                <Label className="text-xs text-gray-600">选择标签编号</Label>
+                <Label className="text-gray-600 text-xs">选择标签编号</Label>
                 <Select value={previewLabel} onValueChange={(val) => setPreviewLabel(val)}>
                   <SelectTrigger className="w-48 px-3 py-1 border border-gray-300 rounded text-sm">
                     <SelectValue placeholder="选择标签" />
@@ -302,8 +273,8 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           {printMode === 'multi' && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs text-gray-600">选择标签（已选 {selectedLabels.length} 个）</Label>
-                <Button onClick={toggleSelectAll} variant="link" size="sm" className="text-xs">
+                <Label className="text-gray-600 text-xs">选择标签（已选 {selectedLabels.length} 个）</Label>
+                <Button variant="link" size="sm" onClick={toggleSelectAll}>
                   {selectedLabels.length === allLabelNumbers.length ? '取消全选' : '全选'}
                 </Button>
               </div>
@@ -327,24 +298,17 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
 
           {/* 批量生成模式 */}
           {printMode === 'batch' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-4">
-                <div>
-                  <Label className="text-xs text-gray-600">生成数量</Label>
-                  <Input type="number" min="1" max={remainingCount}
-                    value={printCount}
-                    onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
-                    className="w-24 px-3 py-1 border border-gray-300 rounded text-sm" />
-                </div>
-                <div className="text-xs text-gray-500">
-                  将生成 {printCount} 个标签（剩余：{remainingCount}，已打印：{allLabelNumbers.length}）
-                </div>
+            <div className="flex items-center gap-4">
+              <div>
+                <Label className="text-gray-600 text-xs">生成数量</Label>
+                <Input type="number" min="1" max={remainingCount}
+                  value={printCount}
+                  onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
+                  className="w-24 px-3 py-1 border border-gray-300 rounded text-sm" />
               </div>
-              {generatedLabels.length > 0 && (
-                <div className="text-xs text-emerald-600">
-                  已生成 {generatedLabels.length} 个标签（编号：{generatedLabels[0]?.labelNumber} ~ {generatedLabels[generatedLabels.length - 1]?.labelNumber}）
-                </div>
-              )}
+              <div className="text-xs text-gray-500">
+                将生成 {printCount} 个标签（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
+              </div>
             </div>
           )}
         </div>
@@ -407,13 +371,13 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                     <div className="text-gray-500">作物名称：</div><div className="text-gray-900 font-medium">{record.cropName}</div>
                     <div className="text-gray-500">作物品种：</div><div className="text-gray-900">{record.cropVariety}</div>
                     <div className="text-gray-500">场地：</div><div className="text-gray-900">{record.siteName}</div>
-                    <div className="text-gray-500">种源批号：</div><div className="text-gray-900 font-mono text-xs">{record.sourceCode}</div>
+                    <div className="text-gray-500">育苗批号：</div><div className="text-gray-900 font-mono text-xs">{record.seedlingCode}</div>
                   </div>
                 </div>
                 <div className="ml-4 flex flex-col justify-center border-l border-gray-200 pl-4">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <div className="text-gray-500">初始数量：</div><div className="text-gray-900">{record.initialCount.toLocaleString()}</div>
-                    <div className="text-gray-500">剩余数量：</div><div className="text-emerald-600 font-bold">{remainingCount.toLocaleString()}</div>
+                    <div className="text-gray-500">初始数量：</div><div className="text-gray-900">{record.initialCount?.toLocaleString()}</div>
+                    <div className="text-gray-500">成活数量：</div><div className="text-emerald-600 font-bold">{record.survivalCount?.toLocaleString()}</div>
                     <div className="text-gray-500">成活率：</div><div className="text-emerald-600">{record.survivalRate}%</div>
                     <div className="text-gray-500">育苗日期：</div><div className="text-gray-900">{record.startDate}</div>
                   </div>
@@ -422,12 +386,11 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
             )}
           </div>
         </div>
-
       </div>
 
-      {/* 打印容器：正常隐藏，打印时显示所有选中标签 */}
+      {/* 打印容器 */}
       <div className="hidden print-container">
-        {printLabels.map((label, index) => (
+        {printLabels.map((label) => (
           <div key={label} className="print-label-card">
             <div className="bg-white p-3 border border-gray-300 rounded-lg">
               <QRCodeSVG value={getQrCodeValue(label)} size={80} />

@@ -108,7 +108,9 @@ export default function PlantingPage() {
   // 初始化数据（从 Store 加载）
   useEffect(() => {
     loadItems();
-  }, [loadItems]);
+    // loadItems 是稳定的 store 函数，不需要作为依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -198,12 +200,12 @@ export default function PlantingPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
-    // 删除前检查标签履历关联（方案3.2）
+    // 删除前检查标签履历关联
     for (const id of ids) {
       try {
-        const res = await enhancedApiClient.get(`/plantings/${id}/check-deletable`);
-        if (!res.data?.deletable) {
-          await showAlert(`种植记录已被 ${res.data?.labelCount || '多个'} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
+        const res = await enhancedApiClient.get<{success: boolean; data: {deletable: boolean; labelCount: number}}>(`/plantings/${id}/check-deletable`);
+        if (res.data && !res.data.deletable) {
+          await showAlert(`种植记录已被 ${res.data.labelCount} 个标签引用，无法删除。\n请先清理标签关联后再删除。`);
           return;
         }
       } catch {
@@ -213,6 +215,8 @@ export default function PlantingPage() {
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
+    } else {
+      await showAlert('删除失败，请重试。');
     }
   };
 

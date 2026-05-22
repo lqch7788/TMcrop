@@ -663,11 +663,7 @@ export default function ProductionPage() {
 
   // 单条删除处理
   const handleSingleDelete = async (batch: CropBatch) => {
-    // 草稿和已作废状态可以删除
-    if (batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled') {
-      showAlert('只有草稿或已作废状态的生产计划才能删除');
-      return;
-    }
+    // 所有状态都可以删除
     try {
       if (USE_API) {
         await deletePlan(batch.id);
@@ -682,12 +678,8 @@ export default function ProductionPage() {
   const handleDeleteConfirm = async () => {
     setShowDeleteWarning(false);
     setBatchDeleteMode(false);
-    // selectedRows 是 id 数组，需要用 id 查找实际的 batch
-    // 草稿和已作废状态都可以删除
-    const toDelete = selectedRows
-      .map(id => batches.find(b => b.id === id))
-      .filter(batch => batch && (batch.batchStatus === 'draft' || batch.batchStatus === 'cancelled'))
-      .map(batch => batch.id);
+    // selectedRows 是 id 数组，所有选中都可以删除
+    const toDelete = selectedRows;
 
     if (toDelete.length === 0) {
       setSelectedRows([]);
@@ -699,6 +691,7 @@ export default function ProductionPage() {
         await deletePlans(toDelete);
       }
       setSelectedRows([]);
+      await showAlert('删除成功');
     } catch (error) {
       console.error('删除生产计划失败:', error);
       await showAlert('删除失败，请重试');

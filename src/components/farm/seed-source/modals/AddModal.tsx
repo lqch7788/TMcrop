@@ -447,10 +447,10 @@ export function AddModal({
             <Label className="text-gray-900">入库方式</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '从供应商采购入库', Icon: ShoppingCart },
-                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '育种计划产出的种子', Icon: Dna },
-                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '从种植作物上留种', Icon: Sprout },
-                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '扦插/嫁接/分株/组培', Icon: Scissors },
+                { value: PropagationType.EXTERNAL, label: '外购入库', Icon: ShoppingCart },
+                { value: PropagationType.BREEDING, label: '育种计划产出', Icon: Dna },
+                { value: PropagationType.SEED_SAVING, label: '种植留种', Icon: Sprout },
+                { value: PropagationType.ASEXUAL, label: '无性繁殖', Icon: Scissors },
               ].map((opt) => {
                 const IconComponent = opt.Icon;
                 return (
@@ -469,11 +469,10 @@ export function AddModal({
                       : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-white'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="flex items-center gap-1.5">
                     <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
                     <span className="text-sm font-medium text-gray-900">{opt.label}</span>
                   </div>
-                  <div className="text-xs text-gray-500">{opt.desc}</div>
                 </Button>
                 );
               })}

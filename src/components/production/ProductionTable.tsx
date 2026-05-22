@@ -50,8 +50,8 @@ export function ProductionTable({
   // Check states for select all
   const allSelectedForExport = selectedRows.length === filteredBatches.length && filteredBatches.length > 0;
   const allSelectedForBatchEdit = selectedRows.length === filteredBatches.filter(b => b.batchStatus !== 'completed' && b.batchStatus !== 'cancelled').length;
-  // 可删除的状态：草稿和已作废
-  const deletableBatches = filteredBatches.filter(b => b.batchStatus === 'draft' || b.batchStatus === 'cancelled');
+  // 所有批次都可以删除
+  const deletableBatches = filteredBatches;
   const allSelectedForBatchDelete = selectedRows.length === deletableBatches.length;
 
   const getRowClassName = (batch: CropBatch) => {
@@ -59,10 +59,7 @@ export function ProductionTable({
     if (batchEditMode && (batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled')) {
       className += 'bg-gray-50 ';
     }
-    // 草稿和已作废状态可以删除，非这两种状态显示灰色背景
-    if (batchDeleteMode && batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled') {
-      className += 'bg-gray-100 ';
-    }
+    // 所有状态都可以删除，移除灰色背景限制
     return className;
   };
 
@@ -142,12 +139,7 @@ export function ProductionTable({
                   <td className="px-4 py-3">
                     <Checkbox
                       checked={selectedRows.includes(batch.id)}
-                      onCheckedChange={() => {
-                        if (batch.batchStatus === 'draft' || batch.batchStatus === 'cancelled') {
-                          onSelectRow(batch.id);
-                        }
-                      }}
-                      disabled={batch.batchStatus !== 'draft' && batch.batchStatus !== 'cancelled'}
+                      onCheckedChange={() => onSelectRow(batch.id)}
                     />
                   </td>
                 )}
@@ -219,34 +211,29 @@ export function ProductionTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
                     {batch.batchStatus !== 'completed' && batch.batchStatus !== 'cancelled' && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(batch)}
-                          className="text-gray-600 hover:text-blue-600"
-                          title="编辑"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={async () => {
-                            if (await showConfirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
-                              onDelete(batch);
-                            }
-                          }}
-                          className="text-gray-600 hover:text-red-600"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(batch)}
+                        className="text-gray-600 hover:text-blue-600"
+                        title="编辑"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                     )}
-                    {(batch.batchStatus === 'completed' || batch.batchStatus === 'cancelled') && (
-                      <span className="text-xs text-gray-400">已归档</span>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={async () => {
+                        if (await showConfirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
+                          onDelete(batch);
+                        }
+                      }}
+                      className="text-gray-600 hover:text-red-600"
+                      title="删除"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </td>
               </tr>
