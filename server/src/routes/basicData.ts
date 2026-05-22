@@ -4,8 +4,9 @@
  */
 
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 import { exportBasicData } from '../db/seedBasicData';
+import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
 
@@ -2396,16 +2397,7 @@ router.get('/bases', (req, res) => {
       params.push(company_oid);
     }
     sql += ' ORDER BY created_at DESC';
-    const result = db.exec(sql, params);
-
-    if (result.length === 0) return res.json({ success: true, data: [] });
-
-    const columns = result[0].columns;
-    const bases = result[0].values.map(row => {
-      const obj: any = {};
-      columns.forEach((col, i) => { obj[col] = row[i]; });
-      return obj;
-    });
+    const bases = queryToObjects(db, sql, params);
     res.json({ success: true, data: bases });
   } catch (error) {
     console.error('获取基地列表失败:', error);
@@ -2417,14 +2409,11 @@ router.get('/bases', (req, res) => {
 router.get('/bases/:oid', (req, res) => {
   try {
     const db = getDatabase();
-    const result = db.exec('SELECT * FROM bases WHERE oid = ? AND deleted_at IS NULL', [req.params.oid]);
-    if (result.length === 0 || result[0].values.length === 0) {
+    const bases = queryToObjects(db, 'SELECT * FROM bases WHERE oid = ? AND deleted_at IS NULL', [req.params.oid]);
+    if (bases.length === 0) {
       return res.status(404).json({ success: false, error: '基地不存在' });
     }
-    const columns = result[0].columns;
-    const base: any = {};
-    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
-    res.json({ success: true, data: base });
+    res.json({ success: true, data: bases[0] });
   } catch (error) {
     console.error('获取基地详情失败:', error);
     res.status(500).json({ success: false, error: '获取基地详情失败' });
@@ -2446,11 +2435,9 @@ router.post('/bases', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [oid, code || '', name, companyOid, companyName || '', area || 0, unit || '亩', province || '', city || '', lng || 0, lat || 0, manager || '', phone || '', soilType || '', ph || 0, intro || '', now, now]);
 
-    const result = db.exec('SELECT * FROM bases WHERE oid = ?', [oid]);
-    const columns = result[0].columns;
-    const base: any = {};
-    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
-    res.json({ success: true, data: base, message: '基地创建成功' });
+    saveDatabase(); // 保存数据库到文件
+    const bases = queryToObjects<any>(db, 'SELECT * FROM bases WHERE oid = ?', [oid]);
+    res.json({ success: true, data: bases[0], message: '基地创建成功' });
   } catch (error) {
     console.error('创建基地失败:', error);
     res.status(500).json({ success: false, error: '创建基地失败' });
@@ -2527,11 +2514,9 @@ router.put('/bases/:oid', (req, res) => {
     values.push(req.params.oid);
     db.run(`UPDATE bases SET ${setClauses.join(', ')} WHERE oid = ? AND deleted_at IS NULL`, values);
 
-    const result = db.exec('SELECT * FROM bases WHERE oid = ?', [req.params.oid]);
-    const columns = result[0].columns;
-    const base: any = {};
-    columns.forEach((col, i) => { base[col] = result[0].values[0][i]; });
-    res.json({ success: true, data: base, message: '基地更新成功' });
+    saveDatabase(); // 保存数据库到文件
+    const bases = queryToObjects<any>(db, 'SELECT * FROM bases WHERE oid = ?', [req.params.oid]);
+    res.json({ success: true, data: bases[0], message: '基地更新成功' });
   } catch (error) {
     console.error('更新基地失败:', error);
     res.status(500).json({ success: false, error: '更新基地失败' });
@@ -2543,6 +2528,7 @@ router.delete('/bases/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('UPDATE bases SET deleted_at = ?, updated_at = ? WHERE oid = ?', [new Date().toISOString(), new Date().toISOString(), req.params.oid]);
+    saveDatabase(); // 保存数据库到文件
     res.json({ success: true, message: '基地已删除' });
   } catch (error) {
     console.error('删除基地失败:', error);
