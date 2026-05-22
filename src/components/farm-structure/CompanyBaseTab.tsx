@@ -33,11 +33,11 @@ export default function CompanyBaseTab() {
     loadBases();
   }, [loadBases]);
 
-  // 从基地数据中提取唯一公司列表（临时方案，后续可能独立建表）
+  // 从基地数据中提取唯一公司列表（同时检查 companyOid 和 companyName）
   const companyMap = new Map<string, CompanyGroup>();
   bases.forEach((b) => {
-    if (b.companyOid && !companyMap.has(b.companyOid)) {
-      companyMap.set(b.companyOid, { id: b.companyOid, name: b.companyName || '未命名公司' });
+    if (b.companyOid && b.companyName && !companyMap.has(b.companyOid)) {
+      companyMap.set(b.companyOid, { id: b.companyOid, name: b.companyName });
     }
   });
   const companies = Array.from(companyMap.values());
@@ -82,6 +82,7 @@ export default function CompanyBaseTab() {
         const companyOid = formData.companyOid || `company_${Date.now()}`;
         await addBase({ ...formData, companyOid });
       }
+      // addBase 已经更新了本地 store，不需要再调用 loadBases
       setShowModal(false);
       setEditingBase(null);
     } catch (err) {
