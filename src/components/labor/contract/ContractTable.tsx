@@ -8,6 +8,7 @@ import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 导出格式弹窗 - 使用 UnifiedModal 包装
 interface ExportFormatModalProps {
@@ -624,39 +625,15 @@ export function ContractTable() {
         </div>
 
         {/* 分页 */}
-        <div className="flex items-center justify-between mt-4 px-4 pb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>每页</span>
-            <select
-              value={pagination.pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10条</option>
-              <option value={20}>20条</option>
-              <option value={50}>50条</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>共 {pagination.total} 条</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setPage(Math.max(1, pagination.currentPage - 1))}
-              disabled={pagination.currentPage === 1}
-            >
-              &lt;
-            </Button>
-            <span className="text-sm font-medium text-emerald-600">{pagination.currentPage}/{Math.ceil(pagination.total / pagination.pageSize)}</span>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setPage(Math.min(Math.ceil(pagination.total / pagination.pageSize), pagination.currentPage + 1))}
-              disabled={pagination.currentPage >= Math.ceil(pagination.total / pagination.pageSize)}
-            >
-              &gt;
-            </Button>
-          </div>
+        <div className="px-4 pb-4">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={Math.ceil(pagination.total / pagination.pageSize)}
+            onPageChange={setPage}
+            pageSize={pagination.pageSize}
+            onPageSizeChange={setPageSize}
+            showPageSize={true}
+          />
         </div>
       </div>
 

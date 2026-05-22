@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Pagination } from '../../../ui/Pagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface AgricultureRecordPaginationProps {
   currentPage: number;

@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useState, useMemo } from 'react';
-import { FileText, Search, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Search, Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { useApproval, useMyApprovals } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, Approval } from '../types/approval';
@@ -17,6 +17,7 @@ import {
   Label,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 export default function MyApproval() {
   const { cancel } = useApproval();
@@ -212,41 +213,15 @@ export default function MyApproval() {
         {filteredList.length === 0 && (
           <div className="p-8 text-center text-gray-500">暂无审批记录</div>
         )}
-        {/* 分页组件 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {filteredList.length} 条记录，第 {currentPage}/{totalPages || 1} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[...Array(totalPages || 1)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages || 1, p + 1))}
-              disabled={currentPage === (totalPages || 1)}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredList.length / pageSize) || 1}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          showPageSize
+        />
       </div>
 
       {/* 审批详情弹窗 */}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, Thermometer, Droplets, Wind, Bug, Info, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Thermometer, Droplets, Wind, Bug, Info, CheckCircle, XCircle } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 
 const alertData = [
   { id: 'A001', type: '温度', level: 'warning', title: '温度偏高预警', message: '1号温室-A区当前温度32°C，超过28°C阈值', time: '2026-03-14 10:25', status: '待处理' },
@@ -10,7 +11,7 @@ const alertData = [
 
 export default function AlertInfo() {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(alertData.length / pageSize);
   const paginatedData = alertData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const getLevelStyle = (level: string) => {
@@ -76,38 +77,16 @@ export default function AlertInfo() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {alertData.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <div className="text-sm text-gray-500">共 {alertData.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

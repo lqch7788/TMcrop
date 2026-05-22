@@ -18,6 +18,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Pagination,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
 
@@ -226,29 +227,15 @@ export default function MyApplications() {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              显示 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredData.length)} 条，共 {filteredData.length} 条
-            </p>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                上一页
-              </Button>
-              <span className="px-3 py-1 text-sm">第 {currentPage} / {totalPages} 页</span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                下一页
-              </Button>
-            </div>
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+              showPageSize={true}
+            />
           </div>
         )}
 

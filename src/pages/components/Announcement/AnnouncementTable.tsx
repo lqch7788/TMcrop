@@ -2,10 +2,10 @@
  * 公告表格组件
  * 显示公告列表，支持展开行、分页和操作
  */
-import { Megaphone, Eye, Edit, Trash2, Send, ChevronLeft, ChevronRight, ChevronRight as DoubleRight, ChevronLeft as DoubleLeft } from 'lucide-react';
+import { Megaphone, Eye, Edit, Trash2, Send } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import type { Notice } from '../../types/announcement.types';
 import { getStatusColor, getPriorityColor } from './utils';
 
@@ -27,32 +27,6 @@ interface AnnouncementTableProps {
   onSend: (item: Notice) => void;
   onEdit: (item: Notice) => void;
   onDelete: (item: Notice) => void;
-}
-
-// 渲染分页按钮
-function renderPagination(currentPage: number, totalPages: number, onPageChange: (page: number) => void) {
-  const pages = [];
-  const maxVisible = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-  const endPage = Math.min(totalPages, startPage + maxVisible - 1);
-
-  if (endPage - startPage + 1 < maxVisible) {
-    startPage = Math.max(1, endPage - maxVisible + 1);
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(
-      <Button
-        key={i}
-        variant={i === currentPage ? 'default' : 'outline'}
-        size="sm"
-        onClick={() => onPageChange(i)}
-      >
-        {i}
-      </Button>
-    );
-  }
-  return pages;
 }
 
 export default function AnnouncementTable({
@@ -217,69 +191,15 @@ export default function AnnouncementTable({
 
       {/* 分页控件 */}
       {notices.length > 0 && (
-        <div className="mt-4 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              共 <span className="text-blue-600 font-medium">{totalCount}</span> 条记录
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">每页</span>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(val) => onPageSizeChange(Number(val))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-gray-600">条</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(1)}
-              disabled={currentPage === 1}
-            >
-              <DoubleLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {renderPagination(currentPage, totalPages, onPageChange)}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
-            >
-              <DoubleRight className="w-4 h-4" />
-            </Button>
-            <span className="text-sm text-gray-600 ml-2">
-              第 <span className="text-blue-600 font-medium">{currentPage}</span> / {totalPages} 页
-            </span>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[5, 10, 20, 50]}
+          showPageSize
+        />
       )}
     </>
   );

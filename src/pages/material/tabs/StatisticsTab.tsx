@@ -13,7 +13,7 @@ import { MonthlyFilters } from './components/MonthlyFilters';
 import { MonthlyTable } from './components/MonthlyTable';
 import { MaterialFilters } from './components/MaterialFilters';
 import { MaterialTable } from './components/MaterialTable';
-import { StatPagination } from './components/StatPagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 弹窗组件
 import { ExportTypeModal } from '../../../components/materialReceiving/modals/ExportTypeModal';
@@ -183,12 +183,14 @@ export default function StatisticsTab() {
 
           {/* 分页组件 */}
           {hook.statActiveTab === 'material' && (
-            <StatPagination
+            <Pagination
               currentPage={hook.statCurrentPage}
+              totalPages={Math.ceil(hook.materialStatFilteredData.length / hook.statPageSize) || 1}
               pageSize={hook.statPageSize}
-              totalCount={hook.materialStatFilteredData.length}
               onPageChange={hook.setStatCurrentPage}
               onPageSizeChange={hook.setStatPageSize}
+              pageSizeOptions={[10, 20, 50]}
+              showPageSize
             />
           )}
         </div>

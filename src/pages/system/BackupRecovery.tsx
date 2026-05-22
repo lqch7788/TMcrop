@@ -8,9 +8,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Database, Clock, CheckCircle, XCircle, Download, Upload, Trash2, Play,
-  Pause, Settings, Search, ChevronLeft, ChevronRight, AlertCircle,
+  Pause, Settings, Search, AlertCircle,
   Server, Plus, Loader2,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import { enhancedApiClient } from '../../lib/apiClient';
 import { showAlert, showConfirm } from '../../lib/dialogService';
 
@@ -417,15 +418,12 @@ const BackupRecovery: React.FC = () => {
             </tbody>
           </table>
           {/* 分页 */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-            <div className="text-sm text-gray-500">共 {filteredRecords.length} 条记录</div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"><ChevronLeft size={16} /></button>
-              {[...Array(totalPages)].map((_, i) => (
-                <button key={i + 1} onClick={() => setCurrentPage(i + 1)} className={`w-8 h-8 rounded text-sm ${currentPage === i + 1 ? 'bg-emerald-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{i + 1}</button>
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"><ChevronRight size={16} /></button>
-            </div>
+          <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
       )}

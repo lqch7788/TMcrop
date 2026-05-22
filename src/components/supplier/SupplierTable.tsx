@@ -1,10 +1,10 @@
 // 供应商表格组件
-import { ChevronLeft, ChevronRight, Eye, Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Supplier } from './types';
 import { getSupplierTypeName } from './data';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface SupplierTableProps {
   suppliers: Supplier[];
@@ -132,34 +132,15 @@ export default function SupplierTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(val) => { onPageSizeChange(Number(val)); onPageChange(1); }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm">
-              <SelectValue placeholder="10" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {suppliers.length} 条</span>
-          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
-          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
       </div>
     </>
   );

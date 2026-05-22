@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Target, Plus, Edit, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Target, Plus, Edit, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 
 export interface Indicator {
   id: number;
@@ -420,21 +421,16 @@ export function IndicatorsPage() {
           </table>
         </div>
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <Select value={String(pageSize)} onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}>
-              <SelectTrigger className="w-20 h-8 px-2"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {pageSizeOptions.map(opt => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-gray-500">条</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">共 {indicators.length} 条，第 {currentPage} / {Math.ceil(indicators.length / pageSize)} 页</span>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(Math.ceil(indicators.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(indicators.length / pageSize)}><ChevronRight className="w-4 h-4" /></Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {indicators.length} 条</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(indicators.length / pageSize) || 1}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={pageSizeOptions}
+            showPageSize
+          />
         </div>
       </div>
     </div>

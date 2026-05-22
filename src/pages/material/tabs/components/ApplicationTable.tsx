@@ -1,9 +1,9 @@
 // ApplicationTable 组件
 // 领料申请单的主表格和展开行
-import { Plus, Edit, Trash2, Download, ChevronDown, ChevronRight as ChevronRightIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Download, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
 import { showAlert } from '@/lib/dialogService';
 import type { UseApplicationTabReturn } from '../hooks/useApplicationTab';
@@ -307,44 +307,16 @@ export function ApplicationTable({
       )}
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto inline-flex">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredData.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {computedTotalPages || 1}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.min(computedTotalPages, currentPage + 1))}
-            disabled={currentPage >= computedTotalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={computedTotalPages || 1}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { onPageSizeChange(size); onPageChange(1); }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

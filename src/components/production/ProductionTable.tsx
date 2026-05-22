@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/ui/Pagination';
 import { showConfirm } from '@/lib/dialogService';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels } from './constants';
 
@@ -45,7 +45,6 @@ export function ProductionTable({
   onDelete,
   totalCount,
 }: ProductionTableProps) {
-  const pageCount = Math.ceil(filteredBatches.length / pageSize);
   const displayedBatches = filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Check states for select all
@@ -288,46 +287,16 @@ export function ProductionTable({
         )}
       </div>
 
-      {/* Pagination - 固定在表格外部底部 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}
-          >
-            <SelectTrigger className="w-20 h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredBatches.length} 条</span>
-          <Button
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {pageCount || 1}</span>
-          <Button
-            onClick={() => onPageChange(Math.min(pageCount || 1, currentPage + 1))}
-            disabled={currentPage >= pageCount}
-            variant="ghost"
-            size="icon"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      {/* Pagination - 使用标准分页组件 */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={Math.ceil(totalCount / pageSize) || 1}
+        onPageChange={onPageChange}
+        pageSize={pageSize}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[10, 20, 50]}
+        showPageSize
+      />
     </div>
   );
 }

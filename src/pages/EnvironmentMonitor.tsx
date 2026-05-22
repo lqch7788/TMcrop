@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useIotStore, useProductionPlanStore } from '@/stores';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 const sensorTrend = [
   { time: '06:00', temp: 18, humi: 75 },
@@ -361,29 +362,16 @@ export default function EnvironmentMonitor() {
             </div>
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">每页</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                  className="px-2 py-1 border border-gray-200 rounded text-sm"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-                <span className="text-sm text-gray-500">条</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条</span>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm">{currentPage} / {totalGreenhousePages || 1}</span>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentPage(Math.min(totalGreenhousePages, currentPage + 1))} disabled={currentPage >= totalGreenhousePages}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
+              <div className="text-sm text-gray-500">共 {greenhouseEnvData.length} 条记录</div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalGreenhousePages}
+                onPageChange={setCurrentPage}
+                pageSize={pageSize}
+                onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
             </div>
           </div>
 

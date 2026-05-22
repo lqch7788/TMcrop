@@ -7,9 +7,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Grid3X3, Plus, Edit2, Trash2, Search, ArrowLeft, ChevronRight, MapPin, Layers, Loader2, AlertTriangle, Home } from 'lucide-react';
-import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
-import { Button } from '../components/ui/button';
-import { Pagination } from '../components/ui/Pagination';
+import { Modal, FormField, Input, Textarea } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 import { useGreenhouseStore, useZoneStore } from '../stores';
 import type { Zone } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';

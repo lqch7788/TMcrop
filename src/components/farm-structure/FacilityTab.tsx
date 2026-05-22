@@ -3,8 +3,9 @@
  * 温室/大棚/拱棚等设施的 CRUD，支持按基地筛选
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Loader2, MapPin } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 import { useGreenhouseStore } from '../../stores';
 import { useBaseStore } from '../../stores/useBaseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
@@ -177,14 +178,16 @@ export default function FacilityTab() {
 
           {filtered.length > 0 && (
             <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <span>每页 {PAGE_SIZE} 条</span><span>|</span><span>共 {filtered.length} 条</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
-                <span className="px-2">{currentPage} / {Math.max(totalPages, 1)}</span>
-                <Button variant="ghost" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
-              </div>
+              <div className="text-sm text-gray-500">共 {filtered.length} 条</div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(totalPages, 1)}
+                onPageChange={setCurrentPage}
+                pageSize={PAGE_SIZE}
+                onPageSizeChange={(size) => { setCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
             </div>
           )}
         </>

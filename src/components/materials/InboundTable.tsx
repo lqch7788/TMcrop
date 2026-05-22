@@ -1,6 +1,7 @@
 // 物料入库记录表格组件
-import { Eye, Edit, ChevronLeft, ChevronsLeft, ChevronRight, ChevronsRight, Plus } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Eye, Edit, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 // 入库记录类型
 interface InboundRecord {
@@ -115,45 +116,16 @@ export default function InboundTable({
 
       {/* 分页 */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
-              onPageChange(1);
-            }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
-            共 {records.length} 条，第 {currentPage} / {totalPages} 页
-          </span>
-          <div className="flex items-center gap-1">
-            {/* 首页 */}
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(1)} disabled={currentPage === 1} title="首页">
-              <ChevronsLeft className="w-4 h-4" />
-            </Button>
-            {/* 上一页 */}
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {/* 下一页 */}
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            {/* 末页 */}
-            <Button variant="ghost" size="icon" onClick={() => onPageChange(totalPages)} disabled={currentPage >= totalPages} title="末页">
-              <ChevronsRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <div className="text-sm text-gray-500">共 {records.length} 条</div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
+        />
       </div>
     </div>
   );

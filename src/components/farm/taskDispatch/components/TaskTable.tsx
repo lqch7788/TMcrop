@@ -5,11 +5,11 @@
 
 import React from 'react';
 import { Download, Plus, Edit, Trash2 } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Table, TableHeader, TableBody } from '../../../ui/table';
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody } from '@/components/ui/table';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
-import { Pagination } from '../../../ui/Pagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { EDITABLE_STATUSES, DELETABLE_STATUSES, STATUS_MAP } from '../constants/taskDispatchConstants';
 
 interface Task {

@@ -2,13 +2,14 @@
  * 采购计划数据表格组件
  */
 import React from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon, Plus, Edit, Trash2, Download, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRightIcon, Plus, Edit, Trash2, Download, Pencil } from 'lucide-react';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -432,28 +433,14 @@ export function PurchasePlanTable({
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select value={String(pageSize)} onValueChange={(v) => { onPageSizeChange(Number(v)); onPageChange(1); }}>
-            <SelectTrigger className="w-20 h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredAndSortedData.length} 条</span>
-          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {totalPages}</span>
-          <Button variant="ghost" size="icon" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Settings, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, Play } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 
 const strategies = [
   { id: 1, name: '高温预警通风', area: '1号温室', condition: '温度>28°C', action: '开启通风扇', status: '运行中' },
@@ -9,7 +10,7 @@ const strategies = [
 
 export default function EnvControl() {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(strategies.length / pageSize);
   const paginatedData = strategies.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
@@ -52,38 +53,16 @@ export default function EnvControl() {
         </table>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {strategies.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  currentPage === i + 1
-                    ? 'bg-emerald-600 text-white'
-                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          <div className="text-sm text-gray-500">共 {strategies.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, ChevronLeft, ChevronRight, Upload, Leaf } from 'lucide-react';
+import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, Upload, Leaf } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Label } from '../ui/label';
@@ -14,6 +14,7 @@ import { getDictionaries } from '../../services/dictionaryService';
 import { useTechSolutionStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
+import { Pagination } from '@/components/ui/Pagination';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 
 // 技术方案类型定义
@@ -861,30 +862,16 @@ export function TechSolutionPage() {
         </div>
       </div>
 
-      {/* Pagination - 固定在表格外部底部 */}
+      {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <UISelect value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setCurrentPage(1); }}>
-            <SelectTrigger className="w-20 h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </UISelect>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredTechSolutions.length} 条</span>
-          <Button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} variant="ghost" size="icon">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{currentPage} / {Math.ceil(filteredTechSolutions.length / pageSize) || 1}</span>
-          <Button onClick={() => setCurrentPage(Math.min(Math.ceil(filteredTechSolutions.length / pageSize), currentPage + 1))} disabled={currentPage >= Math.ceil(filteredTechSolutions.length / pageSize)} variant="ghost" size="icon">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredTechSolutions.length / pageSize) || 1}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          showPageSize={true}
+        />
       </div>
 
       {/* View Modal */}

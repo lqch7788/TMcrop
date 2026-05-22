@@ -12,6 +12,7 @@ import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui/Pagination';
 
 // ==================== 组件 ====================
 
@@ -350,15 +351,13 @@ export default function UserManagement() {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-2 border-t bg-blue-50/30">
-            <span className="text-xs text-gray-500">共 {filteredUsers.length} 名用户</span>
-            <div className="flex items-center gap-1">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}
-                className="h-7 px-2 text-xs border border-gray-200 rounded disabled:opacity-30">上一页</button>
-              <span className="text-xs text-gray-500 px-2">{currentPage} / {totalPages}</span>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}
-                className="h-7 px-2 text-xs border border-gray-200 rounded disabled:opacity-30">下一页</button>
-            </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-blue-50/30">
+            <span className="text-sm text-gray-500">共 {filteredUsers.length} 名用户</span>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

@@ -11,7 +11,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  ChevronLeft,
   ArrowLeft,
   Search,
   RefreshCw,
@@ -19,6 +18,7 @@ import {
   Save,
   Building2,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import {
   Warehouse,
   getWarehouses,
@@ -255,29 +255,14 @@ export default function WarehouseManagement() {
 
         {/* 分页 */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              显示 {(currentPage - 1) * pageSize + 1} 到 {Math.min(currentPage * pageSize, filteredWarehouses.length)} 条，共 {filteredWarehouses.length} 条
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-200 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                上一页
-              </button>
-              <span className="text-sm text-gray-600">
-                第 {currentPage} / {totalPages} 页
-              </span>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-200 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                下一页
-              </button>
-            </div>
+          <div className="px-4 py-3 border-t border-gray-100">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              showPageSize={false}
+            />
           </div>
         )}
       </div>

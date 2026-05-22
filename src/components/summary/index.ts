@@ -10,7 +10,6 @@ export { PageHeader } from './PageHeader';
 export { StatCards } from './StatCards';
 export { Filters } from './Filters';
 export { SummaryTable } from './SummaryTable';
-export { Pagination } from './Pagination';
 export { ExportModal } from './ExportModal';
 export { ReportTabs } from './ReportTabs';
 export { ReportCharts } from './ReportCharts';

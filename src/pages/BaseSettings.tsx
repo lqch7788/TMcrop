@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Search, Filter, Plus, Eye, Edit, ArrowLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Clock, X, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { TextArea } from '../components/ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { TextArea } from '@/components/ui/TextArea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 
 // localStorage key
 const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
@@ -487,69 +488,21 @@ export default function BaseSettings() {
 
         {/* 分页 */}
         <div className="px-4 py-3 border-t border-blue-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">每页</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(val) => {
-                setPageSize(Number(val));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-sm text-gray-500">条</span>
+          <div className="text-sm text-gray-500">
+            第 {currentPage} / {totalPages} 页，共 {totalItems} 条
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
-              第 {currentPage} / {totalPages} 页，共 {totalItems} 条
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                title="首页"
-              >
-                <ChevronUp className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                title="上一页"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                title="下一页"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages || totalPages === 0}
-                title="末页"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages || 1}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

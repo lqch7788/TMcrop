@@ -1,6 +1,7 @@
 // 物料管理表格组件
 import { Eye, Edit, Download } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface MaterialsTableProps {
   filteredMaterials: Array<{
@@ -126,49 +127,15 @@ export default function MaterialsTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              onPageSizeChange(Number(e.target.value));
-              onPageChange(1);
-            }}
-            className="px-2 py-1 border border-gray-200 rounded text-sm"
-          >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-          </select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredMaterials.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Button>
-          <span className="text-sm">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          pageSize={pageSize}
+          onPageSizeChange={onPageSizeChange}
+          showPageSize={true}
+        />
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, Plus, Edit, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { ClipboardCheck, Plus, Edit, Eye, ChevronLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 const positions = [
   { id: 1, code: 'J001', name: '总经理', dept: '管理层', level: '高层', salary: 15000, staffCount: 1, description: '公司全面管理', status: '启用', statusClass: 'normal' },
@@ -14,7 +15,7 @@ const positions = [
 
 export default function PositionManagement() {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(positions.length / pageSize);
   const paginatedPositions = positions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
@@ -121,37 +122,16 @@ export default function PositionManagement() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {positions.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                size="sm"
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {positions.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

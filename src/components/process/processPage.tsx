@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ScrollText, Plus, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
+import { ScrollText, Plus, Edit, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 export interface Process {
   id: number;
@@ -141,37 +142,16 @@ export function ProcessPage() {
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {processData.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              variant="ghost"
-              size="icon"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                onClick={() => setCurrentPage(i + 1)}
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                size="sm"
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              variant="ghost"
-              size="icon"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {processData.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

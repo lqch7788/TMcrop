@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { FileText, Power, Wifi, AlertCircle, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { FileText, Power, Wifi, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/Pagination';
 
 const deviceData = [
   { id: 'D001', name: '温室1号通风扇', type: '通风设备', location: '1号温室-A区', status: '运行中', online: true, lastUpdate: '2026-03-14 10:30' },
@@ -12,7 +13,7 @@ const deviceData = [
 
 export default function DeviceMonitor() {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(deviceData.length / pageSize);
   const paginatedData = deviceData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
@@ -59,26 +60,16 @@ export default function DeviceMonitor() {
         </table>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            共 {deviceData.length} 条记录，第 {currentPage}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button variant="ghost" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          <div className="text-sm text-gray-500">共 {deviceData.length} 条记录</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
     </div>

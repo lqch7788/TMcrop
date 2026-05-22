@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Eye, Edit2, Trash2, ChevronLeft, ChevronRight, List, GitBranch } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2, List, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/Pagination';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   getCategoryOptions,
@@ -304,44 +305,16 @@ export function CropVarietyTable({
       </div>
 
       {/* 分页 */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">每页</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(val) => { setPageSize(Number(val)); setCurrentPage(1); }}
-          >
-            <SelectTrigger className="px-2 py-1 border border-gray-200 rounded text-sm w-auto">
-              <SelectValue placeholder="20" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-gray-500">条</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">共 {filteredVarieties.length} 条</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm">{totalPages > 0 ? `${currentPage} / ${totalPages}` : '0 / 0'}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          showPageSize
+          pageSizeOptions={[10, 20, 50]}
+        />
       </div>
     </div>
   );

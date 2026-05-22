@@ -17,7 +17,7 @@ import { useOperationRecords } from '../../../hooks/useOperationRecords';
 
 // 导入子组件
 import { TaskFilterTabs } from './TaskFilterTabs';
-import { TaskPagination } from './TaskPagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { TempTaskTableRow } from './TempTaskTableRow';
 import { ProblemTaskTableRow } from './ProblemTaskTableRow';
 import { ProductionTaskTableRow } from './ProductionTaskTableRow';
@@ -876,16 +876,17 @@ export function MyTasksPage() {
         </div>
 
         {/* 分页 */}
-        <TaskPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          totalCount={filteredTasks.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={(size) => {
             setPageSize(size);
             setCurrentPage(1);
           }}
+          pageSizeOptions={[10, 20, 50]}
+          showPageSize
         />
       </div>
 
