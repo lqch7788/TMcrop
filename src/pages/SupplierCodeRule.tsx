@@ -144,14 +144,14 @@ export default function SupplierCodeRule() {
 
   return (
     <div className="space-y-6">
-      {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </Button>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <Hash className="w-6 h-6 text-white" />
             </div>
             <div>

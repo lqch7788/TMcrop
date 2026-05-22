@@ -14,7 +14,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon, title, description, backTo, backTitle }: PageHeaderProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
+    <div className="bg-white rounded-xl p-6 shadow-none">
       <div className="flex items-center gap-3">
         {backTo && (
           <a

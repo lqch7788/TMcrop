@@ -17,6 +17,7 @@ import {
   X,
   Save,
   Users,
+  ArrowLeft,
 } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import { Role } from '../types/authority';
@@ -107,16 +108,31 @@ export default function RoleManagement() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">角色管理</h1>
+              <p className="text-gray-500">管理系统角色和权限配置</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-gray-900">角色管理</span>
-          <span className="text-xs text-gray-400 hidden sm:inline">管理系统角色和权限配置</span>
-        </div>
         <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{roles.length} 个角色</span>
         <div className="flex items-center gap-2 ml-auto">
           <div className="relative">

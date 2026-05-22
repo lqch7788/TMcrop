@@ -630,7 +630,7 @@ export default function HrApprovalDetail({ approvalId, isModal = false, onClose 
 
       {/* 头部（仅非弹窗模式显示） */}
       {!isModal && (
-        <div className="bg-white rounded-xl p-6 shadow-sm mb-4 no-print">
+        <div className="bg-white rounded-xl p-6 shadow-none mb-4 no-print">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button

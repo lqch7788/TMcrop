@@ -5,8 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Monitor, Search, Plus, Edit2, Trash2, Wifi, WifiOff, Settings, ChevronLeft, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useDeviceStore } from '../stores';
 import type { Device } from '../services/apiBasicDataService';
@@ -132,20 +131,26 @@ export default function DeviceManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <h2 className="text-xl font-bold text-gray-900">设备管理</h2>
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Monitor className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">设备管理</h1>
+              <p className="text-gray-500">设备信息管理与状态监控</p>
+            </div>
+          </div>
         </div>
-        <Button
-          variant="default"
-          onClick={() => { setEditingDevice(null); setNewDevice({ status: 'online' }); setShowModal(true); }}
-        >
-          <Plus className="w-4 h-4" />
-          新增设备
-        </Button>
       </div>
 
       {/* 统计卡片 */}

@@ -94,17 +94,16 @@ export default function MyApplications() {
   return (
     <div className="space-y-6">
       {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link to="/approvals" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <ClipboardList className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">我的申请</h1>
-            <p className="text-gray-500">查看我提交的所有审批申请</p>
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <ClipboardList className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">我的申请</h1>
+              <p className="text-gray-500">查看我提交的所有审批申请</p>
+            </div>
           </div>
         </div>
       </div>

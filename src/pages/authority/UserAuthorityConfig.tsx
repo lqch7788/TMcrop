@@ -170,16 +170,31 @@ export default function UserAuthorityConfig() {
   const allProcesses = useMemo(() => flattenProcesses(processes), [processes]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <UserCog className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">用户特殊权限配置</h1>
+              <p className="text-gray-500">对单个用户进行权限增强或限制，覆盖角色权限</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
-            <UserCog className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-gray-900">用户特殊权限配置</span>
-          <span className="text-xs text-gray-400 hidden sm:inline">对单个用户进行权限增强或限制，覆盖角色权限</span>
-        </div>
         <div className="flex items-center gap-2 ml-auto">
           <label className="text-xs font-medium text-gray-600 whitespace-nowrap">选择用户:</label>
           <div className="relative">

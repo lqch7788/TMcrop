@@ -1083,7 +1083,7 @@ export function TempTaskPage() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
             <AlertTriangle className="w-6 h-6 text-white" />

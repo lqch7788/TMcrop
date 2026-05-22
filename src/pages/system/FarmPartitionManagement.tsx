@@ -155,17 +155,25 @@ export default function FarmPartitionManagement() {
   // ========== 渲染 ==========
   return (
     <div className="space-y-6">
-      {/* 页头 */}
-      <div className="flex items-center gap-4">
-        <Link to="/settings" className="text-gray-400 hover:text-gray-600 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div className="p-2 bg-emerald-100 rounded-lg">
-          <Grid3X3 className="w-6 h-6 text-emerald-600" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">分区管理</h1>
-          <p className="text-sm text-gray-500">大棚和种植分区层级管理 · 传感器/水肥/摄像头关联</p>
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Grid3X3 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">分区管理</h1>
+              <p className="text-gray-500">大棚和种植分区层级管理 · 传感器/水肥/摄像头关联</p>
+            </div>
+          </div>
         </div>
       </div>
 

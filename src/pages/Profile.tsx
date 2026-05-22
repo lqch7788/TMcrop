@@ -139,7 +139,7 @@ const rolePermissions = {
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '环境监测', icon: Activity, path: '/environment-monitor', desc: '环境数据展示' },
       { label: '生产概览', icon: BarChart3, path: '/production', desc: '生产进度总览' },
-      { label: '溯源查询', icon: Leaf, path: '/traceability', desc: '农产品溯源' },
+      { label: '溯源查询', icon: Leaf, path: '/crop/instance', desc: '农产品溯源' },
     ]
   }
 };
@@ -219,42 +219,49 @@ export default function Profile() {
         </div>
       )}
 
-      {/* 页面标题 + 身份切换器 */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">个人中心</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {permission.profileAccess === 'locked' ? '演示模式 · 仅供浏览' : '管理您的账户信息和查看工作概览'}
-          </p>
-        </div>
-
-        {/* 身份切换器 */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
-          <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <span className="text-sm text-gray-600">身份切换：</span>
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            className="text-sm font-medium text-emerald-700 bg-transparent border-none focus:outline-none cursor-pointer min-w-[120px]"
-          >
-            {roleOptions.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2 pl-3 border-l border-emerald-200">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-              selectedRole === 'admin' ? 'bg-blue-500' :
-              selectedRole === 'manager' ? 'bg-purple-500' :
-              selectedRole === 'supervisor' ? 'bg-amber-500' :
-              selectedRole === 'technician' ? 'bg-emerald-500' :
-              selectedRole === 'worker' ? 'bg-cyan-500' :
-              'bg-gray-500'
-            }`}>
-              {user.avatar}
+      {/* Page Header - 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <User className="w-6 h-6 text-white" />
             </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.position}</p>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">个人中心</h1>
+              <p className="text-gray-500">
+                {permission.profileAccess === 'locked' ? '演示模式 · 仅供浏览' : '管理您的账户信息和查看工作概览'}
+              </p>
+            </div>
+          </div>
+
+          {/* 身份切换器 */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+            <Eye className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span className="text-sm text-gray-600">身份切换：</span>
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="text-sm font-medium text-emerald-700 bg-transparent border-none focus:outline-none cursor-pointer min-w-[120px]"
+            >
+              {roleOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2 pl-3 border-l border-emerald-200">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                selectedRole === 'admin' ? 'bg-blue-500' :
+                selectedRole === 'manager' ? 'bg-purple-500' :
+                selectedRole === 'supervisor' ? 'bg-amber-500' :
+                selectedRole === 'technician' ? 'bg-emerald-500' :
+                selectedRole === 'worker' ? 'bg-cyan-500' :
+                'bg-gray-500'
+              }`}>
+                {user.avatar}
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.position}</p>
+              </div>
             </div>
           </div>
         </div>

@@ -320,15 +320,16 @@ export function ParkArchivePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-100 to-indigo-100 relative">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.05)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
 
-      <div className="relative z-10 p-6">
-        <div className="mb-6">
+      {/* Page Header - 页面头部，与基地总览页面保持一致 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/40">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <Map className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">园区导览</h1>
-              <p className="text-sm text-gray-600">地块与园区全景档案管理</p>
+              <h1 className="text-2xl font-bold text-gray-900">园区导览</h1>
+              <p className="text-gray-500">地块与园区全景档案管理</p>
             </div>
           </div>
         </div>

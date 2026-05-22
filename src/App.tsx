@@ -66,9 +66,9 @@ import WaterFertilizerManagement from './pages/system/WaterFertilizerManagement'
 import ProjectDebugManagement from './pages/system/ProjectDebugManagement';
 import PlantSettingManagement from './pages/system/PlantSettingManagement';
 import DeviceDistributionManagement from './pages/system/DeviceDistributionManagement';
+import DataMigration from './pages/system/DataMigration';
 
 import BaseSettings from './pages/BaseSettings';
-import Traceability from './pages/Traceability';
 import DeviceMonitor from './pages/DeviceMonitor';
 import AlertInfo from './pages/AlertInfo';
 import Indicators from './pages/Indicators';
@@ -94,7 +94,6 @@ import PendingApproval from './pages/PendingApproval';
 import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
-import PlantAreaManagement from './pages/PlantAreaManagement';
 import FarmStructureManagement from './pages/farm/FarmStructureManagement';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
@@ -146,8 +145,6 @@ const Order = lazy(() => import('./pages/crop/Order'));
 const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const Fertilizer = lazy(() => import('./pages/crop/Fertilizer'));
-const SyncDataPage = lazy(() => import('./pages/sync/SyncDataPage'));
-
 // 生产汇总表 V1.0 - 8页面重构 → V1.1 合并为5页面
 const SummaryOverview = lazy(() => import('./pages/summary/SummaryOverview'));
 const BusinessAnalysis = lazy(() => import('./pages/summary/BusinessAnalysis'));
@@ -256,8 +253,6 @@ function AppContent() {
             <Route path="team" element={<TeamManagement />} />
             <Route path="cost-accounting" element={<CostAccounting />} />
             <Route path="audit-log" element={<AuditLog />} />
-            <Route path="regions" element={<PlantAreaManagement />} />
-
             <Route path="crop-variety" element={<CropVarietyManagement />} />
 
             <Route path="processes" element={<ProcessManagement />} />
@@ -308,7 +303,6 @@ function AppContent() {
           <Route path="/crop-inventory" element={<ProduceInventory />} />
           <Route path="/crop/order" element={<Order />} />
           <Route path="/crop/instance" element={<Instance />} />
-          <Route path="/sync-data" element={<SyncDataPage />} />
           <Route path="/production" element={<Production />} />
           <Route path="/tech-solution" element={<TechSolution />} />
           <Route path="/purchase-plan" element={<PurchasePlan />} />
@@ -369,7 +363,6 @@ function AppContent() {
           <Route path="/agriculture-record" element={<AgricultureRecord />} />
           <Route path="/dispatch" element={<DispatchPage />} />
           <Route path="/task-dispatch" element={<Navigate to="/farm-hub" replace />} />
-          <Route path="/traceability" element={<Traceability />} />
           <Route path="/device-monitor" element={<DeviceMonitor />} />
           <Route path="/alert-info" element={<AlertInfo />} />
           <Route path="/indicators" element={<Indicators />} />
@@ -401,6 +394,9 @@ function AppContent() {
           <Route path="/messages" element={<Messages />} />
           <Route path="/code-rule" element={<CodeRule />} />
           <Route path="/supplier-code-rule" element={<SupplierCodeRule />} />
+
+          {/* 数据迁移工具 */}
+          <Route path="/data-migration" element={<DataMigration />} />
         </Routes>
       </Suspense>
     </MainLayout>

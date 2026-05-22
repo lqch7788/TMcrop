@@ -200,16 +200,6 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <Settings className="w-4 h-4" />
                     系统设置
                   </Link>
-                  <a
-                    href="/sync.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    数据同步
-                  </a>
                   <hr className="my-1" />
                   <button
                     onClick={handleLogout}

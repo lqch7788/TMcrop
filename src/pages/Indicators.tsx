@@ -74,12 +74,12 @@ export default function Indicators() {
   } = useIndicators();
 
   return (
-    <div className="p-6 bg-[#F2F6FA] min-h-screen">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Page Header - 页面头部，与基地总览页面保持一致 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -133,7 +133,7 @@ export default function Indicators() {
       </div>
 
       {/* 标签页导航 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 mb-6 shadow-sm">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 shadow-sm">
         <TabsList className="grid w-full grid-cols-4 gap-1 p-1 bg-gray-100/80 rounded-xl">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />指标列表

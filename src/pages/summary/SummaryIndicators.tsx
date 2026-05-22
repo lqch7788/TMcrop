@@ -263,7 +263,7 @@ export default function SummaryIndicators() {
   }
 
   return (
-    <div className="space-y-6 bg-[#F2F6FA]">
+    <div className="space-y-6">
       {/* 页面标题 */}
       <PageHeader
         icon={<Gauge className="w-6 h-6 text-white" />}

@@ -12,7 +12,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title = '农事任务派发', subtitle = '智能排程与任务调度管理中心' }: PageHeaderProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
+    <div className="bg-white rounded-xl p-6 shadow-none">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
           <Send className="w-6 h-6 text-white" />

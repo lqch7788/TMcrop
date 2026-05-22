@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Leaf, Sprout, Copy, Check, RefreshCw, ChevronDown, ChevronRight, List, GitBranch } from 'lucide-react';
+import { ChevronLeft, Leaf, Sprout, Copy, Check, RefreshCw, ChevronDown, ChevronRight, List, GitBranch, ArrowLeft } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../../types/cropVariety';
 import { CropVarietyTable } from './CropVarietyTable';
@@ -433,21 +433,25 @@ export default function CropVarietyManagement() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 flex flex-col">
+    <div className="space-y-6">
       {/* 头部 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* 左侧标题 */}
           <div className="flex items-center gap-3">
-            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </Link>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Sprout className="w-5 h-5 text-white" />
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Sprout className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">作物品种库管理</h1>
-              <p className="text-gray-500 text-sm">统一管理系统中所有作物品种的编码和分类信息</p>
+              <h1 className="text-2xl font-bold text-gray-900">作物品种库管理</h1>
+              <p className="text-gray-500">统一管理系统中所有作物品种的编码和分类信息</p>
             </div>
           </div>
 

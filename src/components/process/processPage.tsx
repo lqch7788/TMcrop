@@ -32,7 +32,7 @@ export function ProcessPage() {
   const paginatedData = processData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-600" />

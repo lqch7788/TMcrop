@@ -36,7 +36,7 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
   if (reportType === 'yield') {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-4">月度产量趋势</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -50,7 +50,7 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-4">作物产量占比</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -87,7 +87,7 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
   if (reportType === 'cost' && costAnalysis) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-4">成本构成分析</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -112,7 +112,7 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-4">成本明细</h3>
           <div className="space-y-3">
             {costAnalysis.map((item, index) => (
@@ -135,7 +135,7 @@ export function ReportCharts({ reportType, yieldStats, costAnalysis, monthlyLabo
 
   if (reportType === 'labor' && monthlyLabor) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-4">月度工时统计</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
