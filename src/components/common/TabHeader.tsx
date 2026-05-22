@@ -30,7 +30,7 @@ export function TabHeader({
   onTabChange,
 }: TabHeaderProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
+    <div className="bg-white rounded-xl p-6 shadow-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {icon && (

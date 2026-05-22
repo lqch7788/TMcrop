@@ -45,7 +45,7 @@ export default function PersonnelManagement() {
   const paginatedPositions = transformedPositions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center gap-3">
           <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ChevronLeft className="w-6 h-6 text-gray-600" />
@@ -66,7 +66,7 @@ export default function PersonnelManagement() {
           <Link
             key={index}
             to={item.path}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all group"
+            className="bg-white rounded-xl p-6 shadow-none border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all group"
           >
             <div className="flex items-start gap-4">
               <div className="p-3 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">

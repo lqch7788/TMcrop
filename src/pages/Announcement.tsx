@@ -208,22 +208,24 @@ export default function Announcement() {
   };
 
   return (
-    <div className="p-6 bg-[#F2F6FA] min-h-screen">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
-            <Megaphone className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">公告管理</h1>
-            <p className="text-gray-500">管理和发布各类生产与行政公告</p>
+    <div className="space-y-6">
+      {/* Page Header - 页面头部，与基地总览页面保持一致 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Megaphone className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">公告管理</h1>
+              <p className="text-gray-500">管理和发布各类生产与行政公告</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* TAB 导航 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 mb-6 shadow-sm">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-xl p-1 shadow-sm">
         <TabsList className="grid w-full grid-cols-2 gap-1 p-1 bg-gray-100/80 rounded-xl">
           <TabsTrigger value="list" className="flex items-center gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
             <Megaphone className="w-4 h-4" />公告列表

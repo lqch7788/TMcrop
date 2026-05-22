@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useNavigate } from 'react-router-dom';
+import { Database, ArrowLeft } from 'lucide-react';
 
 interface MigrationItem {
   key: string;
@@ -888,19 +889,30 @@ export default function DataMigrationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* 页面标题 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">数据迁移工具</h1>
-            <p className="text-gray-500 mt-1">将 localStorage 中的业务数据迁移到后端数据库</p>
+    <div className="space-y-6">
+      {/* 页面标题 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Database className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">数据迁移工具</h1>
+              <p className="text-gray-500">将 localStorage 中的业务数据迁移到后端数据库</p>
+            </div>
           </div>
-          <Button variant="outline" onClick={() => navigate('/system-config')}>
-            返回系统设置
-          </Button>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* 注意事项 */}
         <Card className="border-amber-200 bg-amber-50">
           <CardHeader>

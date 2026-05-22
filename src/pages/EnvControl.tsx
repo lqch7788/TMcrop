@@ -14,7 +14,7 @@ export default function EnvControl() {
   const paginatedData = strategies.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
             <Settings className="w-6 h-6 text-white" />

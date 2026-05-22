@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Settings, Plus, Edit, Trash2, Save, X, ChevronLeft, Loader2,
+  Settings, Plus, Edit, Trash2, Save, X, ArrowLeft, Loader2,
   AlertTriangle, Download, Eye, CheckCircle, UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -457,10 +457,14 @@ export default function SystemConfig() {
       {/* 页面头部 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+          <a
+            href="/settings"
+            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+            title="返回系统设置"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </a>
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
             <Settings className="w-6 h-6 text-white" />
           </div>
           <div>

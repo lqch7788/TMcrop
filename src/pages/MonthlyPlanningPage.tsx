@@ -16,7 +16,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Zap,
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -401,22 +400,17 @@ export default function MonthlyPlanningPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="flex items-center gap-3">
-          <a
-            href="/farm-hub"
-            className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition-colors"
-            title="返回农事任务中心"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </a>
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">月度任务规划</h1>
-            <p className="text-xs text-gray-500">基于作物生长周期和生产批次，生成未来一个月的任务规划、物资需求和成本预估</p>
+      {/* Page Header - 页面头部，与基地总览页面保持一致 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">月度任务规划</h1>
+              <p className="text-gray-500">基于作物生长周期和生产批次，生成未来一个月的任务规划、物资需求和成本预估</p>
+            </div>
           </div>
         </div>
       </div>

@@ -2670,9 +2670,9 @@ function seedSystemConfigs() {
     { id: 'cfg-045', config_key: 'show_tutorial', config_value: 'true', config_type: 'boolean', category: 'demo', description: '是否显示新手引导' },
 
     // 系统设置补充（旧 TAB 还原）
-    { id: 'cfg-046', config_key: 'system_name', config_value: '智慧种植生产管理系统', config_type: 'string', category: 'system', description: '系统显示名称' },
+    { id: 'cfg-046', config_key: 'system_name', config_value: '弘讯智能种植云', config_type: 'string', category: 'system', description: '系统显示名称' },
     // ★ V3.0 Phase 1: 新增命名空间键 system.name（与 system_name 共存，逐步迁移）
-    { id: 'cfg-046n', config_key: 'system.name', config_value: '智慧种植生产管理系统', config_type: 'string', category: 'system', description: '系统显示名称（新命名空间）' },
+    { id: 'cfg-046n', config_key: 'system.name', config_value: '弘讯智能种植云', config_type: 'string', category: 'system', description: '系统显示名称（新命名空间）' },
     { id: 'cfg-047', config_key: 'system_version', config_value: 'V1.1', config_type: 'string', category: 'system', description: '当前系统版本' },
     { id: 'cfg-048', config_key: 'auto_save_interval', config_value: '5000', config_type: 'number', category: 'system', description: '自动保存间隔（毫秒）' },
     { id: 'cfg-049', config_key: 'data_retention_days', config_value: '365', config_type: 'number', category: 'system', description: '本地数据保留天数' },

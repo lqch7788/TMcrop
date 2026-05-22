@@ -60,3 +60,23 @@ Thumbs.db
 
 # 文档（非系统运行必需）
 docs/
+
+# Electron 桌面端（不提交）
+electron/
+
+# 其他临时资料（不提交）
+others/
+temp_backup/
+
+# 数据库备份文件（不提交）
+server/data/backups/
+server/data/yuanxingtu_backup_*.db
+
+# 后端脚本（不提交）
+server/src/scripts/
+
+# SQLite 工具（不提交）
+sqlite3.exe
+
+# TypeScript 构建缓存（不提交）
+tsconfig.tsbuildinfo

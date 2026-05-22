@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronDown,
   ChevronRight,
+  ArrowLeft,
   Search,
   RefreshCw,
   X,
@@ -186,15 +187,19 @@ export default function DictionaryManagement() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ChevronLeft className="w-6 h-6 text-gray-600" />
-            </Link>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <Book className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -202,6 +207,8 @@ export default function DictionaryManagement() {
               <p className="text-gray-500">管理系统数据字典配置</p>
             </div>
           </div>
+        </div>
+      </div>
           <div className="flex items-center gap-2">
             <button
               onClick={expandAll}
@@ -232,8 +239,6 @@ export default function DictionaryManagement() {
               新增分类
             </button>
           </div>
-        </div>
-      </div>
 
       {/* 搜索栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm">

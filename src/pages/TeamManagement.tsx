@@ -4,8 +4,7 @@
  * 数据流：组件 → useTeamStore/useShiftStore → API → SQLite
  */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2, AlertTriangle, Clock } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2, AlertTriangle, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useTeamStore, useShiftStore } from '../stores';
 import type { Team } from '../services/apiBasicDataService';
@@ -123,23 +122,24 @@ export default function TeamManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <h2 className="text-xl font-bold text-gray-900">班组管理</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="搜索..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <a
+              href="/settings"
+              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+              title="返回系统设置"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </a>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">班组管理</h1>
+              <p className="text-gray-500">班组与班次信息管理</p>
+            </div>
           </div>
         </div>
       </div>

@@ -70,7 +70,7 @@ export default function ProduceCodeRule() {
   return (
     <div className="space-y-6">
       {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

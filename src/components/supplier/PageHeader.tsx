@@ -8,7 +8,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title = '供应商管理', subtitle }: PageHeaderProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm">
+    <div className="bg-white rounded-xl p-6 shadow-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">

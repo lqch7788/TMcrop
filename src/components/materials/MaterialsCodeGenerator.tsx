@@ -104,7 +104,7 @@ export default function MaterialsCodeGenerator({
         </div>
       ) : (
         /* 编码生成器 - 展开状态 */
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="bg-white rounded-xl p-6 shadow-none">
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={onToggleCollapse}

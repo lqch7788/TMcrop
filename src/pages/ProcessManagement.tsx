@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ScrollText, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ScrollText, Plus, Edit, Trash2, ArrowLeft, ChevronRight, Search } from 'lucide-react';
 import { useProcessDefinitionStore, useDictionaryStore, getDictItems } from '../stores';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -246,11 +246,15 @@ export default function ProcessManagement() {
   return (
     <div className="space-y-6">
       {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
+      <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
+          <a
+            href="/settings"
+            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+            title="返回系统设置"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </a>
           <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
             <ScrollText className="w-6 h-6 text-white" />
           </div>

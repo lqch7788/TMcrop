@@ -161,20 +161,22 @@ export default function WarehouseManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <h2 className="text-xl font-bold text-gray-900">仓库管理</h2>
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link to="/settings" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </Link>
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Warehouse className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">仓库管理</h1>
+              <p className="text-gray-500">仓库信息与库存管理</p>
+            </div>
+          </div>
         </div>
-        <Button
-          variant="default"
-          onClick={() => { setEditingWarehouse(null); setNewWarehouse({ status: 'active' }); setShowModal(true); }}
-        >
-          <Plus className="w-4 h-4" />
-          新增仓库
-        </Button>
       </div>
 
       {/* 统计卡片 */}

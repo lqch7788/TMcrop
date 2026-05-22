@@ -54,7 +54,7 @@ export function FarmHubHeader({
   onOpenMonthlyPlan,
 }: FarmHubHeaderProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+    <div className="bg-white rounded-xl p-6 shadow-none mb-6">
       {/* 顶部导航栏 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

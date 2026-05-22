@@ -24,7 +24,7 @@ export function WeatherWidget() {
       <div className="flex border-b border-gray-100">
         <button
           onClick={() => setWeatherTab('forecast')}
-          className={`flex-1 py-2 text-sm font-bold transition-colors ${
+          className={`flex-1 py-2 text-sm font-bold text-center transition-colors ${
             weatherTab === 'forecast'
               ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -34,7 +34,7 @@ export function WeatherWidget() {
         </button>
         <button
           onClick={() => setWeatherTab('station')}
-          className={`flex-1 py-2 text-sm font-bold transition-colors ${
+          className={`flex-1 py-2 text-sm font-bold text-center transition-colors ${
             weatherTab === 'station'
               ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'

@@ -23,7 +23,6 @@ const basicDataSections = [
 const farmStructureSections = [
   { icon: Building2, label: '基地设置', path: '/settings/bases', desc: '管理基地信息配置' },
   { icon: Sprout, label: '基地架构', path: '/settings/farm-structure', desc: '公司基地 · 设施管理 · 区块划分 · 种植记录' },
-  { icon: MapPin, label: '种植区域', path: '/settings/regions', desc: '管理温室和大棚区域' },
   { icon: Layers, label: '区块管理', path: '/settings/block', desc: '管理基地下的种植区块' },
   { icon: Grid3X3, label: '分区管理', path: '/settings/partitions', desc: '大棚和种植分区层级管理 · 传感器/水肥/摄像头关联', isIags: true },
   { icon: Radio, label: '区域系统', path: '/settings/area-systems', desc: '分区与设备系统的关联映射配置', isIags: true },
@@ -101,7 +100,7 @@ export default function Settings() {
       {/* 组7: 运营管理 */}
       <SectionGroup title="运营管理" subtitle="仓库、班组与人事" sections={operationSections} />
 
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-4">系统信息</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -141,7 +140,7 @@ function SectionGroup({ title, subtitle, sections }: {
           <Link
             key={index}
             to={section.path}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all group"
+            className="bg-white rounded-xl p-6 shadow-none border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all group"
           >
             <div className="flex items-start gap-4">
               <div className="p-3 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">

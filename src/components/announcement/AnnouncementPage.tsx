@@ -129,14 +129,16 @@ export function AnnouncementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Megaphone className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">公告发布</h1>
-            <p className="text-gray-500">发布年度或季度的经营方向、产量目标、成本控制指标、效益分析预测等信息</p>
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Megaphone className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">公告发布</h1>
+              <p className="text-gray-500">发布年度或季度的经营方向、产量目标、成本控制指标、效益分析预测等信息</p>
+            </div>
           </div>
         </div>
       </div>

@@ -492,7 +492,7 @@ export default function MaterialsPage() {
       {activeTab === 'inbound' && (
         <>
           {/* 编码规则生成器 */}
-          <div className="bg-white rounded-xl p-6 shadow-sm mb-6">
+          <div className="bg-white rounded-xl p-6 shadow-none mb-6">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-lg font-semibold text-gray-900">物料编码生成</h3>
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
