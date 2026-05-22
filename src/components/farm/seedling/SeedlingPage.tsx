@@ -67,16 +67,27 @@ export default function SeedlingPage() {
   // 种源数据（用于筛选和关联）
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
 
-  // 作物品种数据（从品种库服务获取）
+  // 作物品种选项（从育苗记录中实际存在的品种提取，用于筛选）
+  const cropNames = useMemo(() => {
+    // 从育苗记录中提取不重复的作物品种
+    const seen = new Set<string>();
+    const uniqueCrops: Array<{ value: string; label: string }> = [];
+    seedlings.forEach(item => {
+      if (item.cropName && !seen.has(item.cropName)) {
+        seen.add(item.cropName);
+        uniqueCrops.push({ value: item.cropName, label: item.cropName });
+      }
+    });
+    // 按名称排序
+    uniqueCrops.sort((a, b) => a.label.localeCompare(b.label, 'zh-CN'));
+    return uniqueCrops;
+  }, [seedlings]);
+
+  // 作物品种数据（从品种库服务获取，供弹窗使用）
   const cropVarietyOptions = useMemo(() => {
     cropVarietyService.initVarieties();
     return cropVarietyService.getVarietyOptions();
   }, []);
-
-  // 用于页面筛选的作物品种选项（从品种库转换）
-  const cropNames = useMemo(() => {
-    return cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
-  }, [cropVarietyOptions]);
 
   // 字典数据转换（使用 Zustand store 获取）
   // 育苗方式选项

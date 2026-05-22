@@ -150,61 +150,20 @@ export function PlantingFilter({
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      {/* 第二行：方案3.3 组织筛选 + 定植数量范围 */}
-      <div className="flex flex-wrap gap-4 items-end mt-3">
-        {/* 组织 */}
-        <div className="min-w-[140px]">
-          <Label className="text-gray-700">组织</Label>
-          <Input
-            type="text"
-            value={filters.orgName || ''}
-            onChange={(e) => onChange({ ...filters, orgName: e.target.value })}
-            placeholder="输入组织名称"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
-        {/* 定植数量最小值 */}
-        <div className="min-w-[120px]">
-          <Label className="text-gray-700">定植数量≥</Label>
-          <Input
-            type="number"
-            value={filters.countMin || ''}
-            onChange={(e) => onChange({ ...filters, countMin: e.target.value ? Number(e.target.value) : undefined })}
-            placeholder="最小值"
-            min="0"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-
-        {/* 定植数量最大值 */}
-        <div className="min-w-[120px]">
-          <Label className="text-gray-700">定植数量≤</Label>
-          <Input
-            type="number"
-            value={filters.countMax || ''}
-            onChange={(e) => onChange({ ...filters, countMax: e.target.value ? Number(e.target.value) : undefined })}
-            placeholder="最大值"
-            min="0"
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
-          />
-        </div>
 
         {/* 按钮行 */}
-        <div className="flex gap-2 ml-auto">
+        <div className="flex gap-2 items-end">
           {onAdd && (
-            <Button onClick={onAdd}>
+            <Button onClick={onAdd} size="sm">
               <Plus className="w-4 h-4" />
               新增
             </Button>
           )}
-          <Button variant="secondary" onClick={onReset}>
+          <Button variant="secondary" onClick={onReset} size="sm">
             <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          <Button onClick={onSearch}>
+          <Button onClick={onSearch} size="sm">
             <Search className="w-4 h-4" />
             搜索
           </Button>

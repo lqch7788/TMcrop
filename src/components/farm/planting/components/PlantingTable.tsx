@@ -2,7 +2,7 @@
  * 种植数据表格组件
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Trash2, Printer, Image, CheckCircle, Download, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Planting, PlantingStatus } from '../../../../types/crop';
@@ -96,6 +96,11 @@ export function PlantingTable({
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
+  // 使用 ref 保存最新的 selectedRows，避免闭包问题
+  const selectedRowsRef = useRef(selectedRows);
+  useEffect(() => {
+    selectedRowsRef.current = selectedRows;
+  }, [selectedRows]);
 
   // 加载品种数据
   useEffect(() => {
@@ -221,8 +226,8 @@ export function PlantingTable({
   const endIndex = Math.min(startIndex + pagination.pageSize, data.length);
   const currentData = data.slice(startIndex, endIndex);
 
-  // 判断是否需要显示复选框列（导出模式、打印模式、非正常操作模式）
-  const showCheckbox = exportMode || printMode;
+  // 判断是否需要显示复选框列（编辑模式、删除模式、导出模式、打印模式）
+  const showCheckbox = operationMode === 'edit' || operationMode === 'delete' || exportMode || printMode;
 
   // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
   const statusMap = {
@@ -241,21 +246,21 @@ export function PlantingTable({
       render?: (value: unknown, record: Planting) => React.ReactNode;
     }> = [];
 
-    // 选择列（仅导出模式显示）
+    // 选择列（编辑/删除/导出/打印模式显示）
     if (showCheckbox) {
       cols.push({
         title: '',
         dataIndex: 'id',
         width: 50,
-        render: (id: string) => (
+        render: (_: unknown, record: Planting) => (
           <Input
             type="checkbox"
-            checked={selectedRows.includes(id)}
+            checked={selectedRows.includes(record.id)}
             onChange={(e) => {
               if (e.target.checked) {
-                onSelectionChange([...selectedRows, id]);
+                onSelectionChange([...selectedRows, record.id]);
               } else {
-                onSelectionChange(selectedRows.filter(k => k !== id));
+                onSelectionChange(selectedRows.filter(k => k !== record.id));
               }
             }}
             className="w-4 h-4 text-emerald-600 rounded border-gray-300"
@@ -410,14 +415,6 @@ export function PlantingTable({
         width: 250,
         render: (_: unknown, record: Planting) => (
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEdit(record)}
-              title="编辑"
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
             {!record.isHarvest && (
               <Button
                 variant="ghost"
@@ -438,14 +435,6 @@ export function PlantingTable({
                 <Image className="w-4 h-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete([record.id])}
-              title="删除"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -519,7 +508,7 @@ export function PlantingTable({
   };
 
   // 执行业务操作
-  const executeOperation = (op: PlantingOperationMode) => {
+  const executeOperation = async (op: PlantingOperationMode) => {
     const record = getFirstSelectedRecord();
     if (!record) {
       showAlert('请先在表格中选择一条记录');
@@ -552,8 +541,11 @@ export function PlantingTable({
         }
         break;
       case 'delete':
-        if (onDelete) onDelete(selectedRows);
-        break;
+        if (onDelete) await onDelete(selectedRows);
+        // 删除操作需要等待完成后再重置模式，避免API调用期间用户界面异常
+        if (onOperationModeChange) onOperationModeChange('normal');
+        onSelectionChange([]);
+        return;  // 删除操作已自行处理重置，这里直接返回
     }
     // 操作完成后重置模式
     if (onOperationModeChange) onOperationModeChange('normal');
@@ -665,6 +657,48 @@ export function PlantingTable({
                 取消
               </Button>
             </>
+          ) : operationMode === 'edit' ? (
+            /* 编辑模式 */
+            <>
+              <span className="text-sm text-gray-500 mr-2">请在表格中选择一条记录</span>
+              <Button
+                variant="blue"
+                size="sm"
+                onClick={() => executeOperation('edit')}
+                disabled={selectedRows.length === 0}
+              >
+                <Edit2 className="w-4 h-4" />
+                确认编辑
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={cancelOperation}
+              >
+                取消
+              </Button>
+            </>
+          ) : operationMode === 'delete' ? (
+            /* 删除模式 */
+            <>
+              <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => executeOperation('delete')}
+                disabled={selectedRows.length === 0}
+              >
+                <Trash2 className="w-4 h-4" />
+                确认删除
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={cancelOperation}
+              >
+                取消
+              </Button>
+            </>
           ) : (
             /* 正常模式 */
             <>
@@ -676,6 +710,26 @@ export function PlantingTable({
                 >
                   <Plus className="w-4 h-4" />
                   新增
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  variant="blue"
+                  size="sm"
+                  onClick={() => { if (onOperationModeChange) onOperationModeChange('edit'); }}
+                >
+                  <Edit2 className="w-4 h-4" />
+                  编辑
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => { if (onOperationModeChange) onOperationModeChange('delete'); }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除
                 </Button>
               )}
               {canExport && onExportClick && (
@@ -707,34 +761,209 @@ export function PlantingTable({
         <Table className="min-w-[1900px]">
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <TableRow className="hover:from-blue-500 hover:to-blue-600">
-              {columns.map((col, index) => (
-                <TableHead
-                  key={index}
-                  className="px-4 py-3 text-white whitespace-nowrap font-semibold"
-                  style={{ minWidth: col.width }}
-                >
-                  {col.title}
+              {showCheckbox && (
+                <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
+                  <Input
+                    type="checkbox"
+                    checked={selectedRows.length === data.length && data.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onSelectionChange(data.map(item => item.id));
+                      } else {
+                        onSelectionChange([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
                 </TableHead>
-              ))}
+              )}
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植批号</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">关联生产计划</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植区域</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植日期</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤PH</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤EC</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">损耗率</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 16 : 15} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
             ) : (
               currentData.map((record) => (
                 <TableRow key={record.id} className="hover:bg-gray-50">
-                  {columns.map((col, index) => (
-                    <TableCell key={index} className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap" style={{ minWidth: col.width }}>
-                      {col.render
-                        ? col.render(record[col.dataIndex as keyof Planting] as never, record)
-                        : (record[col.dataIndex as keyof Planting] as never)}
+                  {showCheckbox && (
+                    <TableCell className="px-4 py-3">
+                      <Input
+                        type="checkbox"
+                        checked={selectedRows.includes(record.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            onSelectionChange([...selectedRowsRef.current, record.id]);
+                          } else {
+                            onSelectionChange(selectedRowsRef.current.filter(k => k !== record.id));
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
                     </TableCell>
-                  ))}
+                  )}
+                  <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                    <span
+                      className="font-mono text-blue-600 font-semibold cursor-pointer hover:text-blue-800 hover:underline"
+                      onClick={() => onDetail(record)}
+                      title="点击查看详情"
+                    >
+                      {record.plantCode}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {record.productionPlanCode ? (
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium">
+                        {record.productionPlanCode}
+                      </span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
+                    <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                    {getCropVarietyName(record)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {getVarietyPath(record)}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{record.areaName}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
+                    {(record.plantingCount || 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.plantingDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                    {record.soilPH != null && record.soilPH > 0 ? record.soilPH.toFixed(1) : '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                    {record.soilEC != null && record.soilEC > 0 ? record.soilEC.toFixed(1) : '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    {record.attritionRate != null && record.attritionRate > 0 ? (
+                      <span className="text-amber-600 font-medium">{record.attritionRate.toFixed(1)}%</span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap">
+                    {(record.harvestQuantity || 0).toLocaleString()}{record.unit || ''}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    {(() => {
+                      const harvestQty = record.harvestQuantity || 0;
+                      const target = record.targetYield;
+                      if (!target || target === 0) return <span className="text-gray-400">-</span>;
+                      const rate = harvestQty / target;
+                      return (
+                        <span className={`font-medium ${
+                          rate >= 0.8 ? 'text-green-600' : rate >= 0.5 ? 'text-amber-600' : 'text-red-600'
+                        }`}>
+                          {Math.round(rate * 100)}%
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}>
+                      {statusMap[record.status as keyof typeof statusMap]?.label || record.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex gap-1">
+                      {!record.isHarvest && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onHarvest(record)}
+                          title="采收登记"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {record.pictures && record.pictures.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onImageClick(record.pictures)}
+                          title="查看图片"
+                        >
+                          <Image className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEnd(record, 'normal')}
+                        title="正常结束"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEnd(record, 'abnormal')}
+                        title="异常结束"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                      {onLabelDetail && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onLabelDetail(record)}
+                          title="标签详情"
+                        >
+                          <Tag className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {onMove && !record.isHarvest && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onMove(record)}
+                          title="移入/移出"
+                        >
+                          <MoveRight className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {onMark && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onMark(record)}
+                          title="标记管理"
+                        >
+                          <Bookmark className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {onSeedSaving && record.status === 'harvested' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onSeedSaving(record)}
+                          title="留种"
+                        >
+                          <Sprout className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -744,8 +973,8 @@ export function PlantingTable({
 
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        {/* 导出/打印模式下显示选择状态 */}
-        {(exportMode || printMode) && (
+        {/* 编辑/删除/导出/打印模式下显示选择状态和全选按钮 */}
+        {(operationMode === 'edit' || operationMode === 'delete' || exportMode || printMode) && (
           <div className="flex items-center gap-4">
             {onExportSelectAll && (
               <Button

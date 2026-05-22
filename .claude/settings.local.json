@@ -279,7 +279,17 @@
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, real_name, status FROM users LIMIT 10;\")",
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, substr\\(password_hash, 1, 30\\) as hash_preview FROM users WHERE username='陆启闯';\")",
       "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT oid, username, password_hash, status FROM users WHERE username='陆启闯';\")",
-      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT * FROM organizations;\")"
+      "Bash(./sqlite3.exe server/data/yuanxingtu.db \"SELECT * FROM organizations;\")",
+      "Bash(grep -v \"import\\\\|Label\\\\b\\\\|label_number\\\\|labelPage\\\\|setLabelPage\\\\|labelTotalPages\\\\|//label\\\\|labelNumber\\\\|labelCode\\\\|labelInfo\\\\|setLabel\\\\|getLabel\\\\|selectedLabel\\\\|handleLabel\\\\|label.*Resume\\\\|labelResume\\\\|_label\\\\|label_color\\\\|labelDate\\\\|label_\\\\.\\\\*\\\\|label_id\\\\|'label'\\\\|LABEL\\\\|@@label\\\\|className=.\\\\|className=''\")",
+      "Bash(grep -v \"import\\\\|Label\\\\b\\\\|label_number\\\\|labelPage\\\\|setLabelPage\\\\|labelTotalPages\\\\|//label\\\\|labelNumber\\\\|labelCode\\\\|labelInfo\\\\|setLabel\\\\|getLabel\\\\|selectedLabel\\\\|handleLabel\\\\|label.*Resume\\\\|labelResume\\\\|_label\\\\|label_color\\\\|labelDate\\\\|label_\\\\.\\\\*\\\\|label_id\\\\|'label'\\\\|LABEL\\\\|@@label\\\\|className=.\\\\|className='\")",
+      "Bash(npx --yes vite build)",
+      "Bash(where nvm *)",
+      "Bash(where nvm-windows *)",
+      "Bash(where fnm *)",
+      "Bash(NODE_PATH=\"D:/iAGS/yujiang.Foil.Node.Npm/node_modules;D:/iAGS/yujiang.Foil.Node.Npm/win64-node8.15.1/node_modules\" node start.js)",
+      "Bash(npx vue-tsc *)",
+      "Bash(D:/TMcrop/yuanxingtu/V1.1/sqlite3.exe *)",
+      "Bash(grep -E \"\\\\.tsx$\")"
     ]
   }
 }

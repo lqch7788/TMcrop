@@ -1,9 +1,9 @@
 /**
  * DatePicker 日期选择器
- * 支持单个日期选择和快捷选项
+ * 支持单个日期选择、快捷选项、直接选择年份和月份
  */
 import * as React from "react"
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface DatePickerProps {
@@ -22,8 +22,25 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
     const [isOpen, setIsOpen] = React.useState(false)
     const [viewDate, setViewDate] = React.useState(selected || new Date())
     const containerRef = React.useRef<HTMLDivElement>(null)
+    const [showYearPicker, setShowYearPicker] = React.useState(false)
+    const [showMonthPicker, setShowMonthPicker] = React.useState(false)
+    const yearPickerRef = React.useRef<HTMLDivElement>(null)
+    const monthPickerRef = React.useRef<HTMLDivElement>(null)
 
     const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+    const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+
+    // 生成年份范围（当前年份前后10年）
+    const currentYear = new Date().getFullYear()
+    const years = React.useMemo(() => {
+      const minYear = minDate ? minDate.getFullYear() : currentYear - 20
+      const maxYear = maxDate ? maxDate.getFullYear() : currentYear + 10
+      const result = []
+      for (let y = maxYear; y >= minYear; y--) {
+        result.push(y)
+      }
+      return result
+    }, [minDate, maxDate])
 
     const getDaysInMonth = (date: Date) => {
       const year = date.getFullYear()
@@ -72,12 +89,34 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
     }
 
     const prevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1))
-    const nextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1))
+    const nextMonth = () => setDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1))
+
+    const setDate = (date: Date) => {
+      setViewDate(date)
+      setShowYearPicker(false)
+      setShowMonthPicker(false)
+    }
+
+    const handleYearSelect = (year: number) => {
+      setViewDate(new Date(year, viewDate.getMonth()))
+      setShowYearPicker(false)
+    }
+
+    const handleMonthSelect = (month: number) => {
+      setViewDate(new Date(viewDate.getFullYear(), month))
+      setShowMonthPicker(false)
+    }
 
     React.useEffect(() => {
       const handleClickOutside = (e: MouseEvent) => {
         if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
           setIsOpen(false)
+        }
+        if (yearPickerRef.current && !yearPickerRef.current.contains(e.target as Node)) {
+          setShowYearPicker(false)
+        }
+        if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
+          setShowMonthPicker(false)
         }
       }
       if (isOpen) {
@@ -110,7 +149,7 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 mt-2 p-4 bg-white rounded-xl border border-gray-200 shadow-lg w-[280px]">
+          <div className="absolute z-50 mt-2 p-4 bg-white rounded-xl border border-gray-200 shadow-lg w-[300px]">
             {/* 快捷选项 */}
             {shortcuts && shortcuts.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-100">
@@ -126,7 +165,7 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
               </div>
             )}
 
-            {/* 月份导航 */}
+            {/* 年份和月份导航 */}
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={prevMonth}
@@ -134,9 +173,77 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-medium">
-                {viewDate.getFullYear()}年{viewDate.getMonth() + 1}月
-              </span>
+
+              <div className="flex items-center gap-2">
+                {/* 年份选择 */}
+                <div className="relative" ref={yearPickerRef}>
+                  <button
+                    onClick={() => {
+                      setShowYearPicker(!showYearPicker)
+                      setShowMonthPicker(false)
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-sm font-medium rounded hover:bg-gray-100 transition-colors"
+                  >
+                    {viewDate.getFullYear()}年
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showYearPicker && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 p-2 bg-white rounded-lg border border-gray-200 shadow-lg w-[120px] max-h-[200px] overflow-y-auto z-50">
+                      <div className="grid grid-cols-2 gap-1">
+                        {years.map((year) => (
+                          <button
+                            key={year}
+                            onClick={() => handleYearSelect(year)}
+                            className={cn(
+                              "px-2 py-1 text-xs rounded transition-colors",
+                              viewDate.getFullYear() === year
+                                ? "bg-emerald-600 text-white"
+                                : "hover:bg-gray-100"
+                            )}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 月份选择 */}
+                <div className="relative" ref={monthPickerRef}>
+                  <button
+                    onClick={() => {
+                      setShowMonthPicker(!showMonthPicker)
+                      setShowYearPicker(false)
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-sm font-medium rounded hover:bg-gray-100 transition-colors"
+                  >
+                    {viewDate.getMonth() + 1}月
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {showMonthPicker && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 p-2 bg-white rounded-lg border border-gray-200 shadow-lg w-[120px] z-50">
+                      <div className="grid grid-cols-3 gap-1">
+                        {months.map((month, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleMonthSelect(index)}
+                            className={cn(
+                              "px-1 py-1 text-xs rounded transition-colors",
+                              viewDate.getMonth() === index
+                                ? "bg-emerald-600 text-white"
+                                : "hover:bg-gray-100"
+                            )}
+                          >
+                            {month}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <button
                 onClick={nextMonth}
                 className="p-1 rounded hover:bg-gray-100 transition-colors"
