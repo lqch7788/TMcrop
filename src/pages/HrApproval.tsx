@@ -8,7 +8,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Search, Calendar, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Search, Calendar, Clock, CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useHrApprovals } from '../hooks/useApproval';
 import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprovalStatusName } from '../types/approval';
@@ -22,6 +22,7 @@ import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Pagination } from '@/components/ui/Pagination';
+import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 // ============================================================
 // 审批类型选项（10种类型）
@@ -49,50 +50,6 @@ const APPROVAL_STATUS_OPTIONS = [
   { value: ApprovalStatus.APPROVED, label: '已通过' },
   { value: ApprovalStatus.REJECTED, label: '已拒绝' },
 ];
-
-// ============================================================
-// BatchActionBar 批量操作栏组件
-// ============================================================
-interface BatchActionBarProps {
-  selectedCount: number;
-  onBatchApprove: () => void;
-  onBatchReject: () => void;
-  onCancel: () => void;
-}
-
-function BatchActionBar({ selectedCount, onBatchApprove, onBatchReject, onCancel }: BatchActionBarProps) {
-  if (selectedCount === 0) return null;
-
-  return (
-    <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
-      <div className="text-sm text-gray-600">
-        已选择 <strong className="text-emerald-600">{selectedCount}</strong> 项
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onBatchApprove}
-          className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 flex items-center gap-2"
-        >
-          <CheckCircle className="w-4 h-4" />
-          批量通过
-        </button>
-        <button
-          onClick={onBatchReject}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 flex items-center gap-2"
-        >
-          <XCircle className="w-4 h-4" />
-          批量驳回
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium"
-        >
-          取消
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // HrApproval 主组件
@@ -246,6 +203,39 @@ export default function HrApproval() {
   const handleCancelBatch = useCallback(() => {
     setSelectedRowKeys([]);
   }, []);
+
+  // 批量导出
+  const handleExport = useCallback(() => {
+    if (selectedRowKeys.length === 0) return;
+    const selectedData = paginatedData.filter(d => selectedRowKeys.includes(d.id));
+    const exportData = selectedData.map(d => ({
+      单号: d.code,
+      标题: d.title,
+      申请人: d.applicantName,
+      部门: d.applicantDepartment,
+      申请时间: d.applyDate,
+      状态: d.status
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `人事审批_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [selectedRowKeys, paginatedData]);
+
+  // 全选/取消全选
+  const handleSelectAll = useCallback((selectAll: boolean) => {
+    if (selectAll) {
+      const pendingIds = paginatedData
+        .filter(d => d.status === ApprovalStatus.PENDING)
+        .map(d => d.id);
+      setSelectedRowKeys(pendingIds);
+    } else {
+      setSelectedRowKeys([]);
+    }
+  }, [paginatedData]);
 
   // 行选择变化
   const handleRowSelectionChange = useCallback((keys: React.Key[], rows: Approval[]) => {
@@ -475,52 +465,36 @@ export default function HrApproval() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-              <p className="text-xs text-gray-500">待审批</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
-              <p className="text-xs text-gray-500">已通过</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
-              <p className="text-xs text-gray-500">已拒绝</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
-              <p className="text-xs text-gray-500">总记录</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <KpiCardGrid columns={4} compact>
+        <KpiCard
+          icon={<Clock className="w-4 h-4 text-white" />}
+          label="待审批"
+          value={stats.pending}
+          colorScheme="amber"
+          compact
+        />
+        <KpiCard
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
+          label="已通过"
+          value={stats.approved}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<XCircle className="w-4 h-4 text-white" />}
+          label="已拒绝"
+          value={stats.rejected}
+          colorScheme="red"
+          compact
+        />
+        <KpiCard
+          icon={<Users className="w-4 h-4 text-white" />}
+          label="总记录"
+          value={totalCount}
+          colorScheme="blue"
+          compact
+        />
+      </KpiCardGrid>
 
       {/* 筛选栏 */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -584,16 +558,57 @@ export default function HrApproval() {
         </div>
       </div>
 
-      {/* 批量操作栏 */}
-      <BatchActionBar
-        selectedCount={selectedRowKeys.length}
-        onBatchApprove={handleBatchApprove}
-        onBatchReject={handleBatchReject}
-        onCancel={handleCancelBatch}
-      />
-
       {/* 数据表格 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        {/* 表格标题栏 */}
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">人事审批</h3>
+          {/* 批量操作按钮 */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleBatchApprove}
+              disabled={selectedRowKeys.length === 0}
+              className={`
+                ${selectedRowKeys.length === 0
+                  ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              批量通过
+            </Button>
+            <Button
+              onClick={handleBatchReject}
+              disabled={selectedRowKeys.length === 0}
+              className={`
+                ${selectedRowKeys.length === 0
+                  ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <XCircle className="w-3 h-3 mr-1" />
+              批量拒绝
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={selectedRowKeys.length === 0}
+              className={`
+                ${selectedRowKeys.length === 0
+                  ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              批量导出
+            </Button>
+          </div>
+        </div>
         <ProTable
           columns={columns}
           dataSource={paginatedData}
@@ -604,6 +619,7 @@ export default function HrApproval() {
             onChange: handleRowSelectionChange,
           }}
           scroll={{ x: 800 }}
+          headerClassName="bg-gradient-to-r from-blue-500 to-blue-600 text-white"
         />
         {/* 分页 */}
         {totalCount > 0 && (

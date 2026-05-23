@@ -25,7 +25,6 @@ import Harvest from './pages/Harvest';
 import ProduceInventory from './pages/ProduceInventory';
 import ProduceCodeRule from './pages/ProduceCodeRule';
 // Reports 已迁移至 /summary/overview（生产汇总表 V1.0）
-import Approvals from './pages/Approvals';
 import MaterialApproval from './pages/MaterialApproval';
 import ProductionApproval from './pages/ProductionApproval';
 import FarmApproval from './pages/FarmApproval';
@@ -381,7 +380,6 @@ function AppContent() {
           <Route path="/summary/labor" element={<Navigate to="/summary/business-analysis" replace />} />
           <Route path="/summary/batch" element={<Navigate to="/summary/batch-management" replace />} />
           <Route path="/summary/chain" element={<Navigate to="/summary/batch-management" replace />} />
-          <Route path="/approvals" element={<Approvals />} />
           <Route path="/material-approval" element={<MaterialApproval />} />
           <Route path="/production-approval" element={<ProductionApproval />} />
           <Route path="/farm-approval" element={<FarmApproval />} />

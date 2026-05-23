@@ -67,12 +67,10 @@ const summarySubItems = [
 ];
 
 const approvalSubItems = [
-  { icon: CheckSquare, label: '审批中心', path: '/approvals' },
   { icon: Package, label: '物料审批', path: '/material-approval' },
   { icon: Sprout, label: '生产审批', path: '/production-approval' },
   { icon: ClipboardCheck, label: '农事审批', path: '/farm-approval' },
   { icon: BarChart3, label: '指标预算审批', path: '/indicator-budget-approval' },
-  { icon: FileText, label: '我的申请', path: '/my-applications' },
   { icon: Users, label: '人事审批', path: '/hr-approval' },
 ];
 
