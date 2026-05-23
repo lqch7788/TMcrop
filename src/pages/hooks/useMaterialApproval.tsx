@@ -277,6 +277,8 @@ export function useMaterialApproval(): UseMaterialApprovalReturn {
     handleCancelReject,
 
     handleApprove,
+    approve,
+    reject,
 
     getCategoryByCode,
     getStatusBadge,

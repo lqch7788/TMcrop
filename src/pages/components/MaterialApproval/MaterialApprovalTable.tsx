@@ -4,11 +4,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight as ChevronRightIcon,
-  CheckCircle, XCircle, Eye, ClipboardList
+  CheckCircle, XCircle, Eye, ClipboardList, Download
 } from 'lucide-react';
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/button';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
 
 interface MaterialApprovalTableProps {
@@ -38,6 +39,13 @@ interface MaterialApprovalTableProps {
   getStatusBadge: (status: ApprovalStatus) => JSX.Element;
   getReturnStatusBadge: (status: ApprovalStatus) => JSX.Element;
   getReturnType: (item: Approval) => string;
+
+  // 批量操作
+  selectedIds?: Set<string>;
+  onSelectAll?: (selectAll: boolean) => void;
+  onBatchApprove?: () => void;
+  onBatchReject?: () => void;
+  onExport?: () => void;
 }
 
 /**
@@ -62,6 +70,11 @@ export function MaterialApprovalTable({
   getStatusBadge,
   getReturnStatusBadge,
   getReturnType,
+  selectedIds,
+  onSelectAll,
+  onBatchApprove,
+  onBatchReject,
+  onExport,
 }: MaterialApprovalTableProps) {
   // 领料审批表格
   const renderMaterialTable = () => (
@@ -422,12 +435,63 @@ export function MaterialApprovalTable({
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">{tabs.find(t => t.key === activeTab)?.label}</h3>
-        <Link
-          to={tabs.find(t => t.key === activeTab)?.path || '/'}
-          className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-        >
-          查看全部 →
-        </Link>
+        {/* 批量操作按钮 */}
+        <div className="flex items-center gap-2">
+          {onBatchApprove && (
+            <Button
+              onClick={onBatchApprove}
+              disabled={!selectedIds || selectedIds.size === 0}
+              className={`
+                ${!selectedIds || selectedIds.size === 0
+                  ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              批量通过
+            </Button>
+          )}
+          {onBatchReject && (
+            <Button
+              onClick={onBatchReject}
+              disabled={!selectedIds || selectedIds.size === 0}
+              className={`
+                ${!selectedIds || selectedIds.size === 0
+                  ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <XCircle className="w-3 h-3 mr-1" />
+              批量拒绝
+            </Button>
+          )}
+          {onExport && (
+            <Button
+              onClick={onExport}
+              disabled={!selectedIds || selectedIds.size === 0}
+              className={`
+                ${!selectedIds || selectedIds.size === 0
+                  ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              批量导出
+            </Button>
+          )}
+          <Link
+            to={tabs.find(t => t.key === activeTab)?.path || '/'}
+            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium ml-2"
+          >
+            查看全部 →
+          </Link>
+        </div>
       </div>
 
       {/* 表格内容 */}

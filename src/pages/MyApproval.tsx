@@ -18,6 +18,7 @@ import {
 } from '../components/ui';
 import { Button } from '../components/ui/button';
 import { Pagination } from '@/components/ui/Pagination';
+import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function MyApproval() {
   const { cancel } = useApproval();
@@ -78,41 +79,29 @@ export default function MyApproval() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
-              <p className="text-xs text-gray-500">待审批</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{approvedCount}</p>
-              <p className="text-xs text-gray-500">已通过</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{rejectedCount}</p>
-              <p className="text-xs text-gray-500">已拒绝</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <KpiCardGrid columns={3} compact>
+        <KpiCard
+          icon={<Clock className="w-4 h-4 text-white" />}
+          label="待审批"
+          value={pendingCount}
+          colorScheme="amber"
+          compact
+        />
+        <KpiCard
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
+          label="已通过"
+          value={approvedCount}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<XCircle className="w-4 h-4 text-white" />}
+          label="已拒绝"
+          value={rejectedCount}
+          colorScheme="red"
+          compact
+        />
+      </KpiCardGrid>
 
       <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
@@ -149,16 +138,16 @@ export default function MyApproval() {
           <h3 className="text-lg font-semibold text-gray-900">我的申请列表</h3>
         </div>
         <Table>
-          <TableHeader className="bg-gray-50">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">申请单号</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">类型</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">标题</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">提交时间</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">当前审批人</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">审批流程</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">状态</TableHead>
-              <TableHead className="px-4 py-3 text-sm font-semibold text-gray-900">操作</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请单号</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">类型</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">标题</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">提交时间</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">当前审批人</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审批流程</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

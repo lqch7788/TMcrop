@@ -58,6 +58,7 @@ interface ProTableProps {
   onFilter?: (filters: Record<string, any>) => void;
   rowSelection?: RowSelection;
   scroll?: { x?: number | string; y?: number | string };
+  headerClassName?: string;
 }
 
 /**
@@ -74,6 +75,7 @@ const ProTable: React.FC<ProTableProps> = ({
   onFilter,
   rowSelection,
   scroll,
+  headerClassName,
 }) => {
   // 排序状态
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -208,7 +210,7 @@ const ProTable: React.FC<ProTableProps> = ({
       <div className="space-y-4">
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className={cn("bg-gray-50", headerClassName)}>
               <tr>
                 {columns.map((col, index) => (
                   <th
@@ -251,7 +253,7 @@ const ProTable: React.FC<ProTableProps> = ({
         style={{ maxHeight: scroll?.y }}
       >
         <Table style={{ minWidth: scroll?.x }}>
-          <TableHeader>
+          <TableHeader className={headerClassName}>
             <TableRow>
               {/* 行选择列 */}
               {rowSelection && (

@@ -106,16 +106,27 @@ export function BatchActionBar({
               <Button
                 onClick={onBatchApprove}
                 disabled={selectedBatchApprovals.length === 0}
-                className={selectedBatchApprovals.length === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
+                className={`
+                  ${selectedBatchApprovals.length === 0
+                    ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
+                    : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
+                  }
+                  transition-all duration-200 font-medium
+                `}
               >
                 <CheckCircle className="w-4 h-4" />
                 批量通过
               </Button>
               <Button
-                variant="destructive"
                 onClick={onBatchReject}
                 disabled={selectedBatchApprovals.length === 0}
-                className={selectedBatchApprovals.length === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
+                className={`
+                  ${selectedBatchApprovals.length === 0
+                    ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
+                    : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
+                  }
+                  transition-all duration-200 font-medium
+                `}
               >
                 <XCircle className="w-4 h-4" />
                 批量拒绝
@@ -127,10 +138,15 @@ export function BatchActionBar({
             <>
               <div className="h-6 w-px bg-gray-200" />
               <Button
-                variant="blue"
                 onClick={onExport}
                 disabled={selectedIds.size === 0}
-                className={selectedIds.size === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
+                className={`
+                  ${selectedIds.size === 0
+                    ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
+                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
+                  }
+                  transition-all duration-200 font-medium
+                `}
               >
                 <Download className="w-4 h-4" />
                 批量导出

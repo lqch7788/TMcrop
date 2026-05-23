@@ -21,6 +21,7 @@ import {
   Pagination,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
+import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function MyApplications() {
   const { approvals, approve, reject } = useApproval();
@@ -109,26 +110,37 @@ export default function MyApplications() {
         </div>
       </div>
 
-      {/* 统计 */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { key: 'pending', label: '待审批', value: stats.pending, color: 'amber' },
-          { key: 'approved', label: '已通过', value: stats.approved, color: 'emerald' },
-          { key: 'rejected', label: '已拒绝', value: stats.rejected, color: 'red' },
-          { key: 'all', label: '全部', value: stats.total, color: 'gray' },
-        ].map(item => (
-          <button
-            key={item.key}
-            onClick={() => { setActiveTab(item.key as typeof activeTab); setCurrentPage(1); }}
-            className={`bg-white rounded-xl p-4 shadow-sm border-2 transition-colors ${
-              activeTab === item.key ? `border-${item.color}-500` : 'border-transparent hover:border-gray-200'
-            }`}
-          >
-            <p className="text-sm text-gray-500">{item.label}</p>
-            <p className={`text-2xl font-bold text-${item.color}-600`}>{item.value}</p>
-          </button>
-        ))}
-      </div>
+      {/* 统计卡片 */}
+      <KpiCardGrid columns={4} compact>
+        <KpiCard
+          icon={<Clock className="w-4 h-4 text-white" />}
+          label="待审批"
+          value={stats.pending}
+          colorScheme="amber"
+          compact
+        />
+        <KpiCard
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
+          label="已通过"
+          value={stats.approved}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<XCircle className="w-4 h-4 text-white" />}
+          label="已拒绝"
+          value={stats.rejected}
+          colorScheme="red"
+          compact
+        />
+        <KpiCard
+          icon={<ClipboardList className="w-4 h-4 text-white" />}
+          label="全部"
+          value={stats.total}
+          colorScheme="slate"
+          compact
+        />
+      </KpiCardGrid>
 
       {/* 搜索筛选 */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -168,15 +180,15 @@ export default function MyApplications() {
       {/* 数据列表 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <TableRow>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">审批单号</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">标题</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">类型</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请人</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">申请时间</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">状态</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500">操作</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审批单号</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">标题</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">类型</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请时间</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

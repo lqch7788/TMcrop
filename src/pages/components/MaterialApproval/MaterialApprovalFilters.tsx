@@ -138,14 +138,15 @@ export function MaterialApprovalFilters({
 
         {/* 按钮区域 */}
         <div className="flex gap-2">
-          <Button className="flex-1 h-10" size="sm">搜索</Button>
+          <Button variant="default" className="h-8 px-4">
+            搜索
+          </Button>
           <Button
             onClick={onReset}
-            className="flex-1 h-10"
-            size="sm"
-            variant="secondary"
+            variant="outline"
+            className="h-8 px-4"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 mr-1" />
             重置
           </Button>
         </div>

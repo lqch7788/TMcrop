@@ -5,14 +5,18 @@
 // 使用真实数据：从ApprovalContext获取
 // ============================================================
 
+import { useState } from 'react';
 import { Package, CheckCircle, XCircle, Clock, ClipboardList } from 'lucide-react';
 import { useMaterialApproval } from './hooks/useMaterialApproval';
+import { Approval, ApprovalStatus } from '@/types/approval';
+import { showConfirm } from '@/lib/dialogService';
 import {
   MaterialApprovalFilters,
   MaterialApprovalTable,
   DetailModal,
   RejectModal
 } from './components/MaterialApproval';
+import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function MaterialApproval() {
   const {
@@ -56,15 +60,82 @@ export default function MaterialApproval() {
     handleCancelReject,
 
     handleApprove,
+    approve,
+    reject,
 
     getCategoryByCode,
     getStatusBadge,
     getReturnStatusBadge,
     getReturnType,
+    getCurrentData,
   } = useMaterialApproval();
 
   // 权限检查
   const canApprove = true;
+
+  // 批量选择状态
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 批量操作处理
+  const handleSelectAll = (selectAll: boolean) => {
+    if (selectAll) {
+      const pendingIds = paginatedData
+        .filter(d => d.status === ApprovalStatus.PENDING)
+        .map(d => d.id);
+      setSelectedIds(new Set(pendingIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBatchApprove = async () => {
+    if (selectedIds.size === 0) return;
+    if (await showConfirm(`确定要批量通过 ${selectedIds.size} 项审批吗？`)) {
+      selectedIds.forEach(id => approve(id));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBatchReject = async () => {
+    if (selectedIds.size === 0) return;
+    if (await showConfirm(`确定要批量拒绝 ${selectedIds.size} 项审批吗？`)) {
+      selectedIds.forEach(id => reject(id, '批量拒绝'));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleExport = () => {
+    if (selectedIds.size === 0) return;
+    const selectedData = paginatedData.filter(d => selectedIds.has(d.id));
+    const exportData = selectedData.map(d => ({
+      单号: d.code,
+      标题: d.title,
+      申请人: d.applicantName,
+      部门: d.applicantDepartment,
+      申请时间: d.applyDate,
+      状态: d.status
+    }));
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `物料审批_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 获取待审批数据用于批量操作栏
+  const pendingApprovals = getCurrentData.filter(d => d.status === ApprovalStatus.PENDING);
 
   // 重置筛选
   const handleReset = () => {
@@ -76,6 +147,7 @@ export default function MaterialApproval() {
     setSearchDateEnd('');
     setStatusFilter('全部');
     setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
   return (
@@ -96,52 +168,36 @@ export default function MaterialApproval() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <ClipboardList className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">总申请数</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-              <p className="text-xs text-gray-500">待审批</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
-              <p className="text-xs text-gray-500">已通过</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
-              <p className="text-xs text-gray-500">已拒绝</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <KpiCardGrid columns={4} compact>
+        <KpiCard
+          icon={<ClipboardList className="w-4 h-4 text-white" />}
+          label="总申请数"
+          value={stats.total}
+          colorScheme="blue"
+          compact
+        />
+        <KpiCard
+          icon={<Clock className="w-4 h-4 text-white" />}
+          label="待审批"
+          value={stats.pending}
+          colorScheme="amber"
+          compact
+        />
+        <KpiCard
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
+          label="已通过"
+          value={stats.approved}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<XCircle className="w-4 h-4 text-white" />}
+          label="已拒绝"
+          value={stats.rejected}
+          colorScheme="red"
+          compact
+        />
+      </KpiCardGrid>
 
       {/* Tab切换 */}
       <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
@@ -202,6 +258,11 @@ export default function MaterialApproval() {
         getStatusBadge={getStatusBadge}
         getReturnStatusBadge={getReturnStatusBadge}
         getReturnType={getReturnType}
+        selectedIds={selectedIds}
+        onSelectAll={handleSelectAll}
+        onBatchApprove={handleBatchApprove}
+        onBatchReject={handleBatchReject}
+        onExport={handleExport}
       />
 
       {/* 详情弹窗 */}

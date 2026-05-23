@@ -10,13 +10,12 @@ import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, ShoppingCart
+  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, ShoppingCart, Download
 } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
 import { showConfirm } from '@/lib/dialogService';
-import BatchActionBar from '../components/approval/BatchActionBar';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -25,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function ProductionApproval() {
   const { approvals, approve, reject } = useApproval();
@@ -237,52 +237,36 @@ export default function ProductionApproval() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">总申请数</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-              <p className="text-xs text-gray-500">待审批</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
-              <p className="text-xs text-gray-500">已通过</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
-              <p className="text-xs text-gray-500">已拒绝</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <KpiCardGrid columns={4} compact>
+        <KpiCard
+          icon={<FileText className="w-4 h-4 text-white" />}
+          label="总申请数"
+          value={stats.total}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<Clock className="w-4 h-4 text-white" />}
+          label="待审批"
+          value={stats.pending}
+          colorScheme="amber"
+          compact
+        />
+        <KpiCard
+          icon={<CheckCircle className="w-4 h-4 text-white" />}
+          label="已通过"
+          value={stats.approved}
+          colorScheme="emerald"
+          compact
+        />
+        <KpiCard
+          icon={<XCircle className="w-4 h-4 text-white" />}
+          label="已拒绝"
+          value={stats.rejected}
+          colorScheme="red"
+          compact
+        />
+      </KpiCardGrid>
 
       {/* Tab切换 */}
       <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
@@ -339,47 +323,83 @@ export default function ProductionApproval() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">{tabs.find(t => t.key === activeTab)?.label}</h3>
-          <Link
-            to={tabs.find(t => t.key === activeTab)?.path || '/'}
-            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-          >
-            查看全部 →
-          </Link>
+          {/* 批量操作按钮 */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleBatchApprove}
+              disabled={selectedIds.size === 0}
+              className={`
+                ${selectedIds.size === 0
+                  ? 'bg-emerald-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <CheckCircle className="w-3 h-3 mr-1" />
+              批量通过
+            </Button>
+            <Button
+              onClick={handleBatchReject}
+              disabled={selectedIds.size === 0}
+              className={`
+                ${selectedIds.size === 0
+                  ? 'bg-red-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <XCircle className="w-3 h-3 mr-1" />
+              批量拒绝
+            </Button>
+            <Button
+              onClick={handleExport}
+              disabled={selectedIds.size === 0}
+              className={`
+                ${selectedIds.size === 0
+                  ? 'bg-blue-500 text-white cursor-not-allowed opacity-60'
+                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-sm'
+                }
+                transition-all duration-200 font-medium h-8 px-3 text-xs
+              `}
+            >
+              <Download className="w-3 h-3 mr-1" />
+              批量导出
+            </Button>
+            <Link
+              to={tabs.find(t => t.key === activeTab)?.path || '/'}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium ml-2"
+            >
+              查看全部 →
+            </Link>
+          </div>
         </div>
-        {/* 批量操作栏 */}
-        <BatchActionBar
-          selectedIds={selectedIds}
-          allIds={paginatedData.map(d => d.id)}
-          pendingApprovals={pendingApprovals}
-          onSelectAll={handleSelectAll}
-          onBatchApprove={handleBatchApprove}
-          onBatchReject={handleBatchReject}
-          onExport={handleExport}
-        />
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <TableRow>
-                <TableHead className="w-12">
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap w-12">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleSelectAll(selectedIds.size !== pendingApprovals.length)}
+                    className="text-white hover:bg-blue-400"
                   >
                     {selectedIds.size === pendingApprovals.length && pendingApprovals.length > 0 ? (
-                      <CheckSquareIcon className="w-4 h-4 text-emerald-600" />
+                      <CheckSquareIcon className="w-4 h-4 text-white" />
                     ) : (
-                      <Square className="w-4 h-4 text-gray-400" />
+                      <Square className="w-4 h-4 text-white" />
                     )}
                   </Button>
                 </TableHead>
-                <TableHead>申请单号</TableHead>
-                <TableHead>申请人</TableHead>
-                <TableHead>部门</TableHead>
-                <TableHead>申请标题</TableHead>
-                <TableHead>申请时间</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>操作</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请单号</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">部门</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请标题</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请时间</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+                <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

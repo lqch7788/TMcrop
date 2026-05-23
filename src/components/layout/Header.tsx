@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw
+  Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw, ClipboardList
 } from 'lucide-react';
 import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
 import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
@@ -191,6 +191,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                   >
                     <Bell className="w-4 h-4" />
                     消息中心
+                  </Link>
+                  <Link
+                    to="/my-applications"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    我的申请
                   </Link>
                   <Link
                     to="/settings"
