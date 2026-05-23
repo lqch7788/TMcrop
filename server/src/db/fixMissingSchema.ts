@@ -942,6 +942,18 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 35. production_plans 表添加 planting_area_unit 列（种植面积单位）
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN planting_area_unit TEXT DEFAULT 'm²'`);
+    console.log('✓ production_plans 表添加 planting_area_unit 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• production_plans.planting_area_unit 列已存在');
+    } else {
+      console.log('• production_plans.planting_area_unit:', e.message);
+    }
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

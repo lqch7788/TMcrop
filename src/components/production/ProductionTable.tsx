@@ -171,8 +171,8 @@ export function ProductionTable({
                   {batch.planType === PlanType.SEED_BREEDING
                     ? `${batch.seedQuantity || 0} ${batch.unit || 'kg'}`
                     : batch.planType === PlanType.SEEDLING
-                    ? `${batch.targetSeedlingCount || 0} 株`
-                    : `${batch.targetQuantity || 0} kg`}
+                    ? `${batch.targetSeedlingCount || 0} ${batch.unit || '株'}`
+                    : `${batch.targetQuantity || 0} ${batch.unit || 'kg'}`}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>

@@ -236,6 +236,7 @@ router.post('/', (req: Request, res: Response) => {
       planDetail,
       planDetailFileName,
       plantingArea,
+      plantingAreaUnit,
       plantingMode,
       supplierName,
       seedlingSiteName,
@@ -257,9 +258,9 @@ router.post('/', (req: Request, res: Response) => {
         planting_date, expected_harvest_date, actual_harvest_date,
         status, priority, remarks, create_by, create_time, update_time,
         responsible_person, unit, publish_date, batch_status,
-        plan_detail, plan_detail_file_name, planting_area, planting_mode,
+        plan_detail, plan_detail_file_name, planting_area, planting_area_unit, planting_mode,
         supplier_name, seedling_site_name, seed_quantity, target_seedling_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -287,6 +288,7 @@ router.post('/', (req: Request, res: Response) => {
       planDetail || '',
       planDetailFileName || '',
       plantingArea || 0,
+      plantingAreaUnit || 'm²',
       plantingMode || '',
       supplierName || '',
       seedlingSiteName || '',
@@ -355,6 +357,7 @@ router.put('/:id', (req: Request, res: Response) => {
       planDetail: 'plan_detail',
       planDetailFileName: 'plan_detail_file_name',
       plantingArea: 'planting_area',
+      plantingAreaUnit: 'planting_area_unit',
       plantingMode: 'planting_mode',
       supplierName: 'supplier_name',
       seedlingSiteName: 'seedling_site_name',

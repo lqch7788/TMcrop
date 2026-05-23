@@ -13,6 +13,17 @@ const gradeColors: Record<string, string> = {
   'C': '#FF4D4F', // 红色
 };
 
+// 等级中文名称映射
+const gradeNames: Record<string, string> = {
+  'A': 'A',
+  'B': 'B',
+  'C': 'C',
+  'excellent': '优',
+  'good': '良',
+  'average': '中',
+  'poor': '差',
+};
+
 // 状态颜色映射
 const statusColors: Record<string, string> = {
   'pending': '#FAAD14',       // 待采收 - 黄色
@@ -38,13 +49,15 @@ const statusNames: Record<string, string> = {
  * 使用 span 元素和 Tailwind 类保持样式一致
  */
 export function getGradeBadge(grade: string) {
-  const color = gradeColors[grade] || '#D9D9D9';
+  const normalizedGrade = grade?.toUpperCase() || 'A';
+  const color = gradeColors[normalizedGrade] || '#D9D9D9';
+  const gradeText = gradeNames[normalizedGrade] || gradeNames[grade?.toLowerCase()] || grade;
   return (
     <span
       className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold text-white"
       style={{ backgroundColor: color }}
     >
-      {grade}级
+      {gradeText}级
     </span>
   );
 }

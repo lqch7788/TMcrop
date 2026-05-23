@@ -4,8 +4,13 @@
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
+import { inventoryController } from '../controllers/inventory.controller';
 
 const router = Router();
+
+// 新增端点（必须在 /:id 之前定义，否则 /inbound 会被当作 :id 参数）
+router.post('/inbound', inventoryController.inbound.bind(inventoryController));
+router.get('/transaction/:instanceId', inventoryController.getTransactions.bind(inventoryController));
 
 /**
  * 获取所有库存记录

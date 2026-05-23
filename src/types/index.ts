@@ -55,6 +55,7 @@ export interface CropBatch {
   greenhouseId: string;
   greenhouseName: string;
   plantingArea: number;
+  plantingAreaUnit?: string;     // 种植面积单位（m²、亩等）
   stage: 'seedling' | 'vegetative' | 'flowering' | 'fruiting' | 'harvest';
   stageName: string;
   startDate: string;

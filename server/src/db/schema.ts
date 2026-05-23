@@ -2626,6 +2626,81 @@ export function initializeDatabase() {
 
   console.log('数据库表初始化完成');
 
+  // ========== V12.0: 库存中心表（采收入库联动）==========
+
+  // 库存中心表 - 存储所有库存实例
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_stock (
+      id TEXT PRIMARY KEY,
+      instance_id TEXT UNIQUE NOT NULL,
+      stock_type TEXT NOT NULL,
+      business_id TEXT,
+      business_type TEXT,
+      business_code TEXT,
+      crop_id TEXT,
+      crop_name TEXT,
+      variety_id TEXT,
+      variety_name TEXT,
+      current_quantity REAL DEFAULT 0,
+      frozen_quantity REAL DEFAULT 0,
+      available_quantity REAL DEFAULT 0,
+      unit TEXT,
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      inbound_date TEXT,
+      source_type TEXT,
+      production_plan_code TEXT,
+      source_instance_id TEXT,
+      status TEXT DEFAULT 'in_stock',
+      version INTEGER DEFAULT 1,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
+  // 库存流水表 - 记录所有库存变动
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_transaction (
+      id TEXT PRIMARY KEY,
+      transaction_id TEXT UNIQUE NOT NULL,
+      instance_id TEXT NOT NULL,
+      stock_type TEXT,
+      transaction_type TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      balance_before REAL DEFAULT 0,
+      balance_after REAL NOT NULL,
+      business_id TEXT,
+      business_type TEXT,
+      business_code TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      operate_date TEXT,
+      remarks TEXT,
+      create_time TEXT
+    )
+  `);
+
+  // 创建索引（幂等）
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_instance ON inventory_stock(instance_id)`); } catch (e) {}
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_type ON inventory_stock(stock_type)`); } catch (e) {}
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_business ON inventory_stock(business_id, business_type)`); } catch (e) {}
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_stock_warehouse ON inventory_stock(warehouse_id)`); } catch (e) {}
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_tx_instance ON inventory_transaction(instance_id)`); } catch (e) {}
+  try { db.run(`CREATE INDEX IF NOT EXISTS idx_inventory_tx_type ON inventory_transaction(transaction_type)`); } catch (e) {}
+
+  // 数据迁移：更新现有仓库的 warehouse_type
+  try { db.run(`UPDATE warehouses SET warehouse_type = 'cold_storage' WHERE warehouse_type IS NULL AND name LIKE '%冷库%'`); } catch (e) {}
+  try { db.run(`UPDATE warehouses SET warehouse_type = 'normal' WHERE warehouse_type IS NULL AND name LIKE '%常温%'`); } catch (e) {}
+  try { db.run(`UPDATE warehouses SET warehouse_type = 'seed_storage' WHERE warehouse_type IS NULL AND name LIKE '%种子%'`); } catch (e) {}
+  try { db.run(`UPDATE warehouses SET warehouse_type = 'hazardous' WHERE warehouse_type IS NULL AND name LIKE '%农药%'`); } catch (e) {}
+
+  // 新增种苗库
+  try {
+    db.run(`INSERT OR IGNORE INTO warehouses (id, oid, code, name, warehouse_type, location, status) VALUES ('WH-SEEDLING-001', 'ORG001', 'SM-001', '种苗库', 'seedling', '待定', 'active')`);
+  } catch (e) {}
+
+  console.log('库存中心表初始化完成');
+
   // 创建索引
   try {
     createIndexes();

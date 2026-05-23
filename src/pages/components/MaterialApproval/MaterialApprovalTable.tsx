@@ -405,6 +405,68 @@ export function MaterialApprovalTable({
     </Table>
   );
 
+  // 通用表格渲染（后备用于其他Tab）
+  const renderGenericTable = () => (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <TableRow>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap w-12"></TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">审批单号</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">标题</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">部门</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">申请时间</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+            <TableHead className="text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="px-4 py-8 text-center text-gray-500">暂无数据</TableCell>
+            </TableRow>
+          ) : paginatedData.map((item) => (
+            <TableRow key={item.id} className="hover:bg-gray-50">
+              <TableCell>
+                <button onClick={() => toggleExpandRow(item.id)} className="p-1 hover:bg-gray-100 rounded">
+                  {expandedRows.has(item.id) ? (
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <ChevronRightIcon className="w-4 h-4 text-gray-500" />
+                  )}
+                </button>
+              </TableCell>
+              <TableCell className="text-blue-600 font-medium cursor-pointer hover:text-blue-800 underline whitespace-nowrap">{item.code}</TableCell>
+              <TableCell className="text-gray-900">{item.title || '-'}</TableCell>
+              <TableCell className="text-gray-600">{item.applicantName || '-'}</TableCell>
+              <TableCell className="text-gray-600">{item.applicantDepartment || '-'}</TableCell>
+              <TableCell className="text-gray-600">{item.applyDate || '-'}</TableCell>
+              <TableCell>{getStatusBadge(item.status)}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  {item.status === ApprovalStatus.PENDING && canApprove && (
+                    <>
+                      <button onClick={() => approve(item.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="通过">
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleRejectClick(item)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors" title="拒绝">
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => handleViewDetail(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="查看详情">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   // 空状态
   const renderEmptyState = () => (
     <div className="p-12 text-center text-gray-500">
@@ -499,6 +561,8 @@ export function MaterialApprovalTable({
         {activeTab === 'material' && renderMaterialTable()}
         {activeTab === 'return' && renderReturnTable()}
         {activeTab === 'purchase' && renderPurchaseTable()}
+        {/* 其他Tab使用通用表格 */}
+        {!['material', 'return', 'purchase'].includes(activeTab) && renderGenericTable()}
       </div>
 
       {/* 空状态 */}

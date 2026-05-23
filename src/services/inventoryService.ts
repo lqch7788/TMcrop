@@ -321,7 +321,7 @@ export function calculateAvailableQuantity(stock: InventoryStock): number {
 }
 
 /**
- * 入库操作
+ * 入库操作（调用后端 API）
  * @param request 入库请求
  * @param operatorId 操作人ID
  * @param operatorName 操作人姓名
@@ -332,65 +332,54 @@ export async function inbound(
   operatorName: string
 ): Promise<InventoryOperationResult> {
   try {
-    const instanceId = generateInstanceId(request.stockType);
-    const now = new Date().toISOString();
-
-    // 1. 创建库存记录
-    const stock = await stockRepo.create({
-      instanceId,
-      stockType: request.stockType,
-      businessId: request.businessId,
-      businessType: request.businessType,
-      cropId: request.cropId,
-      cropName: request.cropName,
-      varietyId: request.varietyId,
-      varietyName: request.varietyName,
-      currentQuantity: request.quantity,
-      frozenQuantity: 0,
-      availableQuantity: request.quantity,
-      unit: request.unit,
-      sourceType: request.sourceType,
-      supplierId: request.supplierId,
-      supplierName: request.supplierName,
-      baseId: request.baseId,
-      baseName: request.baseName,
-      productionPlanId: request.productionPlanId,
-      productionPlanCode: request.productionPlanCode,
-      sourceInstanceId: request.sourceInstanceId,
-      sourceBusinessId: request.sourceBusinessId,
-      sourceBusinessType: request.sourceBusinessType,
-      status: InventoryStatus.IN_STOCK,
-      inboundDate: now,
-      expiryDate: request.extensions?.expiryDate as string || undefined,
+    // 调用后端 API
+    const response = await fetch('/api/inventory/inbound', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        stockType: request.stockType,
+        businessId: request.businessId,
+        businessType: request.businessType,
+        businessCode: request.businessCode,
+        cropId: request.cropId,
+        cropName: request.cropName,
+        varietyId: request.varietyId,
+        varietyName: request.varietyName,
+        quantity: request.quantity,
+        unit: request.unit,
+        warehouseId: request.extensions?.warehouseId || '',
+        warehouseName: request.extensions?.warehouseName || '',
+        inboundDate: request.extensions?.inboundDate || new Date().toISOString().slice(0, 10),
+        sourceType: request.sourceType,
+        sourceInstanceId: request.sourceInstanceId,
+        productionPlanCode: request.productionPlanCode,
+        remarks: request.remarks,
+        operatorId,
+        operatorName,
+      }),
     });
 
-    // 2. 创建交易流水（同一事务中）
-    await txRepo.create({
-      instanceId,
-      stockType: request.stockType,
-      transactionType: TransactionType.INBOUND,
-      quantity: request.quantity,
-      balanceBefore: 0,
-      balanceAfter: request.quantity,
-      businessId: request.businessId,
-      businessType: request.businessType,
-      businessCode: request.businessCode,
-      operatorId,
-      operatorName,
-      operateDate: now,
-      remarks: request.remarks,
-      extensions: request.extensions,
-    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      return {
+        success: false,
+        error: result.error || `请求失败: ${response.status}`,
+      };
+    }
 
     return {
       success: true,
-      instanceId,
-      newQuantity: stock.currentQuantity,
+      instanceId: result.data.instanceId,
+      newQuantity: result.data.currentQuantity,
     };
   } catch (error) {
+    console.error('[inventoryService] inbound 失败:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : '入库失败',
+      error: error instanceof Error ? error.message : '网络错误，请重试',
     };
   }
 }
