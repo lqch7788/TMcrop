@@ -98,7 +98,7 @@ export function ImageUploader({
           {images.map((img, idx) => (
             <div
               key={idx}
-              className="relative rounded-lg overflow-hidden border border-gray-300 group"
+              className="relative rounded-lg overflow-hidden border border-gray-400 group"
               style={{ width: imageSize, height: imageSize }}
             >
               <img
@@ -126,7 +126,7 @@ export function ImageUploader({
       {canUpload && !disabled && (
         <Label
           className={`flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg border-2 border-dashed transition-colors ${
-            useCameraIcon ? 'border-gray-300 hover:border-red-500 hover:bg-red-50' : 'border-gray-400'
+            useCameraIcon ? 'border-gray-400 hover:border-red-500 hover:bg-red-50' : 'border-gray-400'
           }`}
           style={{ width: imageSize, height: imageSize }}
         >
@@ -198,7 +198,7 @@ export function SingleImageUploader({
     <div className={`space-y-3 ${className}`}>
       {image && (
         <div
-          className="relative rounded-lg overflow-hidden border border-gray-300 group"
+          className="relative rounded-lg overflow-hidden border border-gray-400 group"
           style={{ width: imageSize, height: imageSize }}
         >
           <img src={image} alt="预览" className="w-full h-full object-cover" />

@@ -150,7 +150,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
             checked={isSelected}
             disabled={!isSelectable}
             onChange={onSelect}
-            className={`w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 ${!isSelectable ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 ${!isSelectable ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={!isSelectable ? selectableReason : ''}
           />
         </td>

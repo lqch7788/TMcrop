@@ -114,7 +114,7 @@ export function ProduceInventoryBatchEditModal({
           const idx = selectedRows.indexOf(val);
           onItemSelect(idx >= 0 ? idx : 0);
         }}>
-          <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+          <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
             <SelectValue placeholder="选择产品" />
           </SelectTrigger>
           <SelectContent>
@@ -179,7 +179,7 @@ export function ProduceInventoryBatchEditModal({
               min="0"
               value={currentEditedData.quantity ?? ''}
               onChange={(e) => onFieldChange(currentItemId, 'quantity', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div>
@@ -189,7 +189,7 @@ export function ProduceInventoryBatchEditModal({
               min="0"
               value={currentEditedData.alertSettings?.minStock ?? ''}
               onChange={(e) => handleAlertFieldChange(currentItemId, 'minStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div>
@@ -199,7 +199,7 @@ export function ProduceInventoryBatchEditModal({
               min="0"
               value={currentEditedData.alertSettings?.maxStock ?? ''}
               onChange={(e) => handleAlertFieldChange(currentItemId, 'maxStock', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
         </div>
@@ -212,7 +212,7 @@ export function ProduceInventoryBatchEditModal({
               value={currentEditedData.storageLocation || ''}
               onChange={(e) => onFieldChange(currentItemId, 'storageLocation', e.target.value)}
               placeholder="例如：A区-01-03"
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div>
@@ -222,7 +222,7 @@ export function ProduceInventoryBatchEditModal({
               min="0"
               value={currentEditedData.alertSettings?.expirationDays ?? ''}
               onChange={(e) => handleAlertFieldChange(currentItemId, 'expirationDays', Number(e.target.value))}
-              className="w-full h-8 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div className="bg-gray-100 rounded-lg p-2">

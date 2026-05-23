@@ -179,7 +179,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
             onDrop={handleFileDrop}
             onDragOver={(e) => e.preventDefault()}
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-              importFile ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 hover:border-gray-400'
+              importFile ? 'border-emerald-400 bg-emerald-50' : 'border-gray-400 hover:border-gray-400'
             }`}
           >
             <Input

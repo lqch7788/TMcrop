@@ -30,8 +30,8 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
     const lineClass = cn(
       "flex-1",
       type === 'solid' && "border-gray-200",
-      type === 'dashed' && "border-dashed border-gray-300",
-      type === 'dotted' && "border-dotted border-gray-300"
+      type === 'dashed' && "border-dashed border-gray-400",
+      type === 'dotted' && "border-dotted border-gray-400"
     )
 
     const orientationClass = {
@@ -49,8 +49,8 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
             className={cn(
               "w-full border-t my-4",
               type === 'solid' && "border-gray-200",
-              type === 'dashed' && "border-dashed border-gray-300",
-              type === 'dotted' && "border-dotted border-gray-300",
+              type === 'dashed' && "border-dashed border-gray-400",
+              type === 'dotted' && "border-dotted border-gray-400",
               className
             )}
             {...props}
@@ -64,8 +64,8 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
           className={cn(
             "h-full border-l mx-4",
             type === 'solid' && "border-gray-200",
-            type === 'dashed' && "border-dashed border-gray-300",
-            type === 'dotted' && "border-dotted border-gray-300",
+            type === 'dashed' && "border-dashed border-gray-400",
+            type === 'dotted' && "border-dotted border-gray-400",
             className
           )}
           {...props}
@@ -81,7 +81,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
           className={cn("flex items-center my-4", className)}
           {...props}
         >
-          <div className={cn(lineClass, "border-t", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-300", type === 'dotted' && "border-dotted border-gray-300")} />
+          <div className={cn(lineClass, "border-t", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-400", type === 'dotted' && "border-dotted border-gray-400")} />
           <span className={cn(
             "px-3 text-sm text-gray-500 whitespace-nowrap",
             orientation === 'left' && "order-first pl-0",
@@ -90,7 +90,7 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
           )}>
             {children}
           </span>
-          <div className={cn(lineClass, "border-t", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-300", type === 'dotted' && "border-dotted border-gray-300")} />
+          <div className={cn(lineClass, "border-t", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-400", type === 'dotted' && "border-dotted border-gray-400")} />
         </div>
       )
     }
@@ -102,11 +102,11 @@ const Divider = React.forwardRef<HTMLDivElement, DividerProps>(
         className={cn("inline-flex items-center", className)}
         {...props}
       >
-        <div className={cn("w-full border-l", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-300", type === 'dotted' && "border-dotted border-gray-300")} />
+        <div className={cn("w-full border-l", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-400", type === 'dotted' && "border-dotted border-gray-400")} />
         <span className="px-2 text-sm text-gray-500 whitespace-nowrap">
           {children}
         </span>
-        <div className={cn("w-full border-l", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-300", type === 'dotted' && "border-dotted border-gray-300")} />
+        <div className={cn("w-full border-l", type === 'solid' && "border-gray-200", type === 'dashed' && "border-dashed border-gray-400", type === 'dotted' && "border-dotted border-gray-400")} />
       </div>
     )
   }

@@ -226,7 +226,7 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
         </div>
       )}
       {record.status === 'voided' && (
-        <div className="mb-4 p-3 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+        <div className="mb-4 p-3 bg-gray-100 border border-gray-400 rounded-lg flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-gray-500 flex-shrink-0" />
           <span className="text-sm text-gray-600">此记录已作废，仅供查看，无法编辑。</span>
         </div>
@@ -573,7 +573,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
           </div>
         )}
         {currentRecord.status === 'voided' && (
-          <div className="mb-3 p-2 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+          <div className="mb-3 p-2 bg-gray-100 border border-gray-400 rounded-lg flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-gray-500 flex-shrink-0" />
             <span className="text-xs text-gray-600">此记录已作废，仅供查看，无法编辑。</span>
           </div>
@@ -1254,7 +1254,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
               exportFormat === format.value
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-gray-400'
             }`}
           >
             <Input
@@ -1263,7 +1263,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
               value={format.value}
               checked={exportFormat === format.value}
               onChange={(e) => setExportFormat(e.target.value)}
-              className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+              className="w-4 h-4 text-emerald-600 border-gray-400 focus:ring-emerald-500"
             />
             <div className="ml-3">
               <span className="block text-sm font-medium text-gray-900">{format.label}</span>

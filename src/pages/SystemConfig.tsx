@@ -362,7 +362,7 @@ export default function SystemConfig() {
           <select
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="true">是</option>
             <option value="false">否</option>
@@ -380,7 +380,7 @@ export default function SystemConfig() {
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             rows={6}
-            className="w-full min-w-[300px] px-3 py-1.5 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+            className="w-full min-w-[300px] px-3 py-1.5 text-xs font-mono border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
           />
         );
       }
@@ -389,7 +389,7 @@ export default function SystemConfig() {
           type={config.configType === 'number' ? 'number' : 'text'}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       );
     }
@@ -573,7 +573,7 @@ export default function SystemConfig() {
                     type="text"
                     value={newConfig.configKey || ''}
                     onChange={(e) => setNewConfig({ ...newConfig, configKey: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="如：task_accept_warning_hours"
                   />
                 </div>
@@ -584,7 +584,7 @@ export default function SystemConfig() {
                       value={newConfig.configValue || ''}
                       onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
                       rows={5}
-                      className="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-3 py-2 text-xs font-mono border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder='JSON格式，如：{"key": "value"}'
                     />
                   ) : (
@@ -592,7 +592,7 @@ export default function SystemConfig() {
                       type="text"
                       value={newConfig.configValue || ''}
                       onChange={(e) => setNewConfig({ ...newConfig, configValue: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder="配置值"
                     />
                   )}
@@ -602,7 +602,7 @@ export default function SystemConfig() {
                   <select
                     value={newConfig.configType || 'string'}
                     onChange={(e) => setNewConfig({ ...newConfig, configType: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="string">文本</option>
                     <option value="number">数字</option>
@@ -615,7 +615,7 @@ export default function SystemConfig() {
                   <select
                     value={newConfig.category || 'system'}
                     onChange={(e) => setNewConfig({ ...newConfig, category: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     {CATEGORY_TABS.filter(t => t.value !== 'all').map(t => (
                       <option key={t.value} value={t.value}>{t.label}</option>
@@ -629,7 +629,7 @@ export default function SystemConfig() {
                   value={newConfig.description || ''}
                   onChange={(e) => setNewConfig({ ...newConfig, description: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="参数用途说明"
                 />
               </div>
@@ -809,7 +809,7 @@ function DelegationRulesEditor({
       {/* 规则列表 */}
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {rules.map((rule, idx) => (
-          <div key={idx} className={`flex items-center gap-2 p-2 rounded-lg border ${rule.enabled ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300'}`}>
+          <div key={idx} className={`flex items-center gap-2 p-2 rounded-lg border ${rule.enabled ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-400'}`}>
             {/* 启用开关 */}
             <button
               onClick={() => updateRule(idx, { enabled: !rule.enabled })}
@@ -825,7 +825,7 @@ function DelegationRulesEditor({
             <select
               value={rule.fromRole}
               onChange={(e) => updateRule(idx, { fromRole: e.target.value })}
-              className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-36 px-2 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               {ROLE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -841,7 +841,7 @@ function DelegationRulesEditor({
             <select
               value={rule.toRole}
               onChange={(e) => updateRule(idx, { toRole: e.target.value })}
-              className="w-36 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-36 px-2 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               {ROLE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -854,7 +854,7 @@ function DelegationRulesEditor({
               value={rule.remark}
               onChange={(e) => updateRule(idx, { remark: e.target.value })}
               placeholder="规则说明..."
-              className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-2 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
 
             {/* 删除按钮 */}

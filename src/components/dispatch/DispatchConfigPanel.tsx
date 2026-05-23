@@ -339,7 +339,7 @@ function ThresholdItem({ label, desc, value, min, max, suffix, onChange }: Thres
           max={max}
           value={value}
           onChange={e => onChange(parseInt(e.target.value) || min)}
-          className="w-16 px-2 py-1 border border-gray-300 rounded text-center font-medium"
+          className="w-16 px-2 py-1 border border-gray-400 rounded text-center font-medium"
         />
         <span className="text-sm text-gray-500 w-8">{suffix}</span>
       </div>

@@ -284,7 +284,7 @@ export default function ApprovalWorkflowConfig() {
                 type="text"
                 value={newWorkflow.name || ''}
                 onChange={(e) => setNewWorkflow({ ...newWorkflow, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -293,7 +293,7 @@ export default function ApprovalWorkflowConfig() {
                 type="text"
                 value={newWorkflow.code || ''}
                 onChange={(e) => setNewWorkflow({ ...newWorkflow, code: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
@@ -302,7 +302,7 @@ export default function ApprovalWorkflowConfig() {
             <TextArea
               value={newWorkflow.description || ''}
               onChange={(e) => setNewWorkflow({ ...newWorkflow, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               rows={2}
             />
           </div>
@@ -310,7 +310,7 @@ export default function ApprovalWorkflowConfig() {
             <div>
               <Label className="text-gray-700">所属模块</Label>
               <Select value={newWorkflow.module || ''} onValueChange={(val) => setNewWorkflow({ ...newWorkflow, module: val })}>
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,7 +327,7 @@ export default function ApprovalWorkflowConfig() {
                 type="text"
                 value={newWorkflow.triggerCondition || ''}
                 onChange={(e) => setNewWorkflow({ ...newWorkflow, triggerCondition: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
@@ -367,7 +367,7 @@ export default function ApprovalWorkflowConfig() {
                         type="text"
                         value={node.name || ''}
                         onChange={(e) => updateNode(node.id, { name: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        className="w-full px-2 py-1.5 border border-gray-400 rounded text-sm"
                       />
                     </div>
                     <div>
@@ -376,7 +376,7 @@ export default function ApprovalWorkflowConfig() {
                         type="text"
                         value={node.approverRole || ''}
                         onChange={(e) => updateNode(node.id, { approverRole: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        className="w-full px-2 py-1.5 border border-gray-400 rounded text-sm"
                       />
                     </div>
                     <div>
@@ -385,7 +385,7 @@ export default function ApprovalWorkflowConfig() {
                         value={node.timeoutHours}
                         onChange={(val) => updateNode(node.id, { timeoutHours: parseInt(val) || 0 })}
                         decimals={0}
-                        className="px-2 py-1.5 border border-gray-300 rounded text-sm"
+                        className="px-2 py-1.5 border border-gray-400 rounded text-sm"
                       />
                     </div>
                     <div className="space-y-2">

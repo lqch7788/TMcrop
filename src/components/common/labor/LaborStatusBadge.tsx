@@ -175,13 +175,13 @@ export const LaborStatusOutlineBadge = React.memo<LaborStatusOutlineBadgeProps>(
   }
 
   const colorMap: Record<LaborStatusType, string> = {
-    pending: 'border-gray-300 text-gray-600',
+    pending: 'border-gray-400 text-gray-600',
     in_progress: 'border-blue-300 text-blue-600',
     completed: 'border-green-300 text-green-600',
     cancelled: 'border-red-300 text-red-600',
     paused: 'border-yellow-300 text-yellow-600',
     overdue: 'border-orange-300 text-orange-600',
-    draft: 'border-gray-300 text-gray-500',
+    draft: 'border-gray-400 text-gray-500',
     approved: 'border-emerald-300 text-emerald-600',
     rejected: 'border-red-300 text-red-600',
   }
@@ -191,7 +191,7 @@ export const LaborStatusOutlineBadge = React.memo<LaborStatusOutlineBadgeProps>(
       className={cn(
         'inline-flex items-center rounded-full border font-medium',
         sizeClasses[size],
-        config ? colorMap[status as LaborStatusType] : 'border-gray-300 text-gray-600',
+        config ? colorMap[status as LaborStatusType] : 'border-gray-400 text-gray-600',
         className
       )}
     >

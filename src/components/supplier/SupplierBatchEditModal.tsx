@@ -180,7 +180,7 @@ export default function SupplierBatchEditModal({
               if (idx >= 0) onSupplierSelect(idx);
             }}
           >
-            <SelectTrigger className="flex-1 h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="flex-1 h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="请选择供应商" />
             </SelectTrigger>
             <SelectContent>
@@ -317,7 +317,7 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 联系信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">联系信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">联系信息</h4>
           <div className="grid grid-cols-4 gap-3 mb-4">
             <div>
               <Label className="block text-xs font-medium text-gray-700 mb-1">联系人</Label>
@@ -362,7 +362,7 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 地区信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">地区信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">地区信息</h4>
           <div className="grid grid-cols-3 gap-3 mb-4">
             <div>
               <Label className="block text-xs font-medium text-gray-700 mb-1">国家</Label>
@@ -407,7 +407,7 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 财务信息 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">财务信息</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">财务信息</h4>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
               <Label className="block text-xs font-medium text-gray-700 mb-1">开户行</Label>
@@ -432,7 +432,7 @@ export default function SupplierBatchEditModal({
           </div>
 
           {/* 备注 */}
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-300">备注</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 pb-1 border-b border-gray-400">备注</h4>
           <div>
             <TextArea
               value={getValue('remarks')}
@@ -445,7 +445,7 @@ export default function SupplierBatchEditModal({
         </div>
 
         {/* 底部操作按钮 */}
-        <div className="p-4 border-t border-gray-300 flex justify-between gap-3 flex-shrink-0">
+        <div className="p-4 border-t border-gray-400 flex justify-between gap-3 flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
             取消
           </Button>

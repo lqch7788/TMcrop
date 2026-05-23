@@ -204,7 +204,7 @@ export function SelectExecutorModal({
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
               dispatchMode === 'ai_assisted'
                 ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
             }`}
           >
             <Sparkles className="w-4 h-4" />
@@ -217,7 +217,7 @@ export function SelectExecutorModal({
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all ${
               dispatchMode === 'manual'
                 ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
             }`}
           >
             <UserPlus className="w-4 h-4" />

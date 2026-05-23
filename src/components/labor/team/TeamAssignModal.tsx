@@ -44,7 +44,7 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
               className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                 selectedWorkers.includes(worker.id)
                   ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 hover:border-gray-400'
               }`}
             >
               <div className="flex items-center justify-between">

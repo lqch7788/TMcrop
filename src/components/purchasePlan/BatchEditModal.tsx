@@ -576,7 +576,7 @@ export function BatchEditModal({
               )}
 
               {showEditItemsExpanded && batchEditItems.length === 0 && (
-                <div className="mt-3 text-center py-4 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
+                <div className="mt-3 text-center py-4 text-gray-500 text-sm border border-dashed border-gray-400 rounded-lg">
                   暂无物料明细，请点击"新增物料"按钮添加
                 </div>
               )}

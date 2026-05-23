@@ -78,7 +78,7 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                 type="checkbox"
                 checked={selectedRows.length === tasks.length}
                 onChange={onSelectAll}
-                className="rounded border-gray-300"
+                className="rounded border-gray-400"
               />
             </th>
             <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -132,7 +132,7 @@ export const TempTaskTable: React.FC<TempTaskTableProps> = ({
                     checked={selectedRows.includes(index)}
                     disabled={!EDITABLE_STATUSES.includes(task.status)}
                     onChange={() => onRowSelect(index)}
-                    className="rounded border-gray-300"
+                    className="rounded border-gray-400"
                   />
                 </td>
                 <td className="px-3 py-3 text-sm font-medium text-gray-900">

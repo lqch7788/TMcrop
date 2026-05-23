@@ -154,10 +154,10 @@ export function HarvestFilterToolbar({
 
         {/* 按钮行 - 放同一行后面 */}
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={onReset}>
+          <Button variant="secondary" size="sm" onClick={onReset}>
             重置
           </Button>
-          <Button onClick={onSearch}>
+          <Button size="sm" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
           </Button>

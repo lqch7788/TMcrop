@@ -368,7 +368,7 @@ function ModeSelector({ currentMode, onModeChange, disabled }: ModeSelectorProps
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
           disabled
             ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-            : 'bg-white border-gray-300 hover:bg-gray-50'
+            : 'bg-white border-gray-400 hover:bg-gray-50'
         }`}
       >
         {ModeIcon[currentMode]}
@@ -420,7 +420,7 @@ function ModeCard({ mode, selected, enabled, onSelect, disabled }: ModeCardProps
         selected
           ? 'border-emerald-500 bg-emerald-50'
           : enabled
-          ? 'border-gray-200 bg-white hover:border-gray-300'
+          ? 'border-gray-200 bg-white hover:border-gray-400'
           : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
       }`}
     >

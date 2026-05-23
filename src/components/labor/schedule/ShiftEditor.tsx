@@ -58,7 +58,7 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
             key={config.name}
             className={`
               p-4 rounded-lg border-2 transition-all
-              ${editingShift === config.name ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
+              ${editingShift === config.name ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-400'}
             `}
           >
             {editingShift === config.name ? (

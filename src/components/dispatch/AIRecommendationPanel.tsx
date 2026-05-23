@@ -96,7 +96,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
             : isTop1
             ? 'border-emerald-500 bg-emerald-50 hover:border-emerald-600'
-            : 'border-gray-200 hover:border-gray-300'
+            : 'border-gray-200 hover:border-gray-400'
         }`}
         onClick={() => handleSelectWorker(rec)}
       >

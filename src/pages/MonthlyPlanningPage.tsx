@@ -171,7 +171,7 @@ function MaterialTableWithSummary({ data }: { data: MaterialRequirement[] }) {
           </tbody>
           {/* 合计行 */}
           <tfoot>
-            <tr className="bg-gray-50 border-t-2 border-gray-300">
+            <tr className="bg-gray-50 border-t-2 border-gray-400">
               <td className="px-4 py-3 text-center"></td>
               <td className="px-4 py-3 text-center"></td>
               <td className="px-4 py-3 text-center"></td>
@@ -527,7 +527,7 @@ export default function MonthlyPlanningPage() {
                             }
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600"
+                          className="w-4 h-4 rounded border-gray-400 text-emerald-600"
                         />
                       </td>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center whitespace-nowrap">

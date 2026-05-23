@@ -125,7 +125,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 value={isHarvest}
                 onValueChange={(val) => handleIsHarvestChange(val as 'yes' | 'no')}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,7 +143,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 selected={formData.harvestDate ? new Date(formData.harvestDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, harvestDate: date.toISOString().split('T')[0] })}
                 disabled={isHarvest === 'no'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               {isHarvest === 'no' && (
                 <p className="mt-1 text-xs text-gray-400">选择"是"后将自动填充当天日期</p>
@@ -156,7 +156,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 value={formData.harvestYield || ''}
                 onChange={(e) => setFormData({ ...formData, harvestYield: Number(e.target.value) })}
                 placeholder="请输入采收产量"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div className="col-span-2">
@@ -165,7 +165,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 placeholder="请输入备注信息"
               />
             </div>

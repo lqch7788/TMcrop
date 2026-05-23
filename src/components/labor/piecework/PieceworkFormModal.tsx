@@ -97,7 +97,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
         <select
           value={formData.workerId}
           onChange={(e) => setFormData({ ...formData, workerId: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           <option value="">请选择员工</option>
           {useTempWorkerStore.getState().workers
@@ -118,7 +118,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
         <select
           value={formData.taskId}
           onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           <option value="">请选择任务</option>
           {taskOptions.map((task) => (
@@ -138,7 +138,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
           <select
             value={formData.unit}
             onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           >
             {unitOptions.map((unit) => (
               <option key={unit} value={unit}>
@@ -196,7 +196,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
         <textarea
           value={formData.remarks || ''}
           onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           rows={2}
           placeholder="可选"
         />

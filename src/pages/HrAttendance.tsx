@@ -248,7 +248,7 @@ export default function HrAttendance() {
                     type="checkbox"
                     checked={selectedRows.length === attendanceData.length && attendanceData.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工号</th>
@@ -270,7 +270,7 @@ export default function HrAttendance() {
                         type="checkbox"
                         checked={selectedRows.includes(record.id)}
                         onChange={() => handleSelectRow(record.id)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                       />
                     </td>
                   )}
@@ -348,7 +348,7 @@ export default function HrAttendance() {
                       className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                         exportFormat === format.value
                           ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : 'border-gray-200 hover:border-gray-400'
                       }`}
                     >
                       <input
@@ -357,7 +357,7 @@ export default function HrAttendance() {
                         value={format.value}
                         checked={exportFormat === format.value}
                         onChange={(e) => setExportFormat(e.target.value)}
-                        className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                        className="w-4 h-4 text-emerald-600 border-gray-400 focus:ring-emerald-500"
                       />
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-900">{format.label}</p>

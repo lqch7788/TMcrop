@@ -623,7 +623,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 )}
                 {/* 下拉表格 Popover */}
                 {sourcePopoverOpen && (
-                  <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden"
+                  <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
                     style={{ minWidth: '500px', left: 0 }}
                   >
                     {/* 表头 */}
@@ -675,7 +675,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.sourceType || '请先选择种源'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
               />
             </div>
 
@@ -686,7 +686,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.supplierName || '请先选择种源'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
               />
             </div>
 
@@ -710,7 +710,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.cropName ? `${formData.cropName} - ${formData.cropVariety}` : '请选择作物品种'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
               />
             </div>
           </div>
@@ -821,7 +821,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
               />
             </div>
 
@@ -908,7 +908,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
                 />
               </div>
             </div>
@@ -977,7 +977,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     type="text"
                     value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
                   />
                   <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
                 </div>
@@ -1007,7 +1007,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
                 />
                 <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
               </div>

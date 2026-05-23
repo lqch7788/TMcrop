@@ -262,7 +262,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               <div>
                 <Label className="text-gray-600 text-xs">选择标签编号</Label>
                 <Select value={previewLabel} onValueChange={(val) => setPreviewLabel(val)}>
-                  <SelectTrigger className="w-48 px-3 py-1 border border-gray-300 rounded text-sm">
+                  <SelectTrigger className="w-48 px-3 py-1 border border-gray-400 rounded text-sm">
                     <SelectValue placeholder="选择标签" />
                   </SelectTrigger>
                   <SelectContent>
@@ -309,7 +309,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <Input type="number" min="1" max={remainingCount}
                   value={printCount}
                   onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
-                  className="w-24 px-3 py-1 border border-gray-300 rounded text-sm" />
+                  className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
               </div>
               <div className="text-xs text-gray-500">
                 将生成 {printCount} 个标签（可用库存：{remainingCount}，已打印：{allLabelNumbers.length}）
@@ -327,7 +327,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           <div>
             <Label className="text-gray-700">模板选择</Label>
             <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm">
                 <SelectValue placeholder="详情标签" />
               </SelectTrigger>
               <SelectContent>
@@ -340,7 +340,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
         </div>
 
         {/* 标签预览 */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+        <div className="border-2 border-dashed border-gray-400 rounded-lg p-4 bg-gray-50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">标签预览 {previewLabel && `- ${previewLabel}`}</span>
           </div>
@@ -395,7 +395,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       <div className="hidden print-container">
         {printLabels.map((label, index) => (
           <div key={label} className="print-label-card">
-            <div className="bg-white p-3 border border-gray-300 rounded-lg">
+            <div className="bg-white p-3 border border-gray-400 rounded-lg">
               <QRCodeSVG value={getQrCodeValue(label)} size={80} />
             </div>
             <div style={{ textAlign: 'center', marginTop: 4 }}>

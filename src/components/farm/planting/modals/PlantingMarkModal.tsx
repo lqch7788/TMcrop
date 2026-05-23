@@ -261,10 +261,10 @@ export default function PlantingMarkModal({
 
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" size="sm" onClick={onClose}>
             取消
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button size="sm" onClick={handleSubmit}>
             确认标记
           </Button>
         </div>

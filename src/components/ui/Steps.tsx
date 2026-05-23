@@ -35,7 +35,7 @@ const Steps = React.forwardRef<HTMLDivElement, StepsProps>(
                     "flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium transition-colors",
                     index < currentStep && "bg-emerald-600 border-emerald-600 text-white",
                     index === currentStep && "border-emerald-600 text-emerald-600 bg-white",
-                    index > currentStep && "border-gray-300 text-gray-400 bg-white"
+                    index > currentStep && "border-gray-400 text-gray-400 bg-white"
                   )}
                 >
                   {index < currentStep ? (

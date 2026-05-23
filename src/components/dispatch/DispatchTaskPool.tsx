@@ -91,7 +91,7 @@ export const DispatchTaskPool: React.FC<DispatchTaskPoolProps> = ({
               className={`p-3 mb-2 rounded-lg border-2 cursor-pointer transition-all ${
                 selectedTaskId === task.id
                   ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
               }`}
             >
               {/* 顶部：优先级 + 来源标签 */}

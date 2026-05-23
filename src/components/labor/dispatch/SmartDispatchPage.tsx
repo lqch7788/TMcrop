@@ -96,7 +96,7 @@ export const SmartDispatchPage: React.FC = () => {
                   className={`p-3 mb-2 rounded-lg border-2 cursor-pointer transition-all ${
                     selectedTask?.id === task.id
                       ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">

@@ -354,7 +354,7 @@ export function CreatePlanModal({
             />
           </div>
           {createItems.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
+            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-gray-400 rounded-lg">
               暂无物料，请点击"添加物料"按钮添加
             </div>
           ) : (

@@ -120,7 +120,7 @@ export function ReassignTaskModal({
               value={selectedAssignee}
               onValueChange={(val) => setSelectedAssignee(val)}
             >
-              <SelectTrigger className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className="w-full pl-10 pr-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="请选择执行人" />
               </SelectTrigger>
               <SelectContent>                {availableAssignees.map(user => (

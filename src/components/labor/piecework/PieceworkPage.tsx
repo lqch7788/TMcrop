@@ -42,10 +42,10 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             key={format.value}
             onClick={() => onFormatChange(format.value)}
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
             }`}
           >
-            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-400'}`}>
               {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
             </div>
             <div className="ml-3">
@@ -386,14 +386,14 @@ export const PieceworkPage: React.FC = () => {
             placeholder="员工姓名"
             value={filters.workerName || ''}
             onChange={(e) => updateFilters({ workerName: e.target.value })}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
           <input
             type="text"
             placeholder="任务名称"
             value={filters.taskName || ''}
             onChange={(e) => updateFilters({ taskName: e.target.value })}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
           <DatePicker
             selected={filters.startDate ? new Date(filters.startDate) : undefined}
@@ -408,7 +408,7 @@ export const PieceworkPage: React.FC = () => {
           <select
             value={filters.status || ''}
             onChange={(e) => updateFilters({ status: e.target.value as PieceRate['status'] || undefined })}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           >
             <option value="">全部状态</option>
             <option value="待确认">待确认</option>

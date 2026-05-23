@@ -384,14 +384,14 @@ export function ProduceCodeRuleTable({
                                       onChange={(e) => onNewSubVariety1CodeChange(e.target.value)}
                                       placeholder="代码(3位)"
                                       maxLength={3}
-                                      className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                      className="w-24 px-2 py-1 border border-gray-400 rounded text-sm"
                                     />
                                     <input
                                       type="text"
                                       value={newSubVariety1Name}
                                       onChange={(e) => onNewSubVariety1NameChange(e.target.value)}
                                       placeholder="子品种名称"
-                                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                                      className="w-32 px-2 py-1 border border-gray-400 rounded text-sm"
                                     />
                                     <Button
                                       variant="default"
@@ -445,14 +445,14 @@ export function ProduceCodeRuleTable({
                                 value={newSubCode}
                                 onChange={(e) => onNewSubCodeChange(e.target.value)}
                                 placeholder="品种代码"
-                                className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                                className="w-24 px-2 py-1 border border-gray-400 rounded text-sm"
                               />
                               <input
                                 type="text"
                                 value={newSubName}
                                 onChange={(e) => onNewSubNameChange(e.target.value)}
                                 placeholder="品种名称"
-                                className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                                className="w-32 px-2 py-1 border border-gray-400 rounded text-sm"
                               />
                               <Button
                                 variant="default"
@@ -513,14 +513,14 @@ export function ProduceCodeRuleTable({
                           value={newTypeCode}
                           onChange={(e) => onNewTypeCodeChange(e.target.value)}
                           placeholder="类型代码"
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-24 px-2 py-1 border border-gray-400 rounded text-sm"
                         />
                         <input
                           type="text"
                           value={newTypeName}
                           onChange={(e) => onNewTypeNameChange(e.target.value)}
                           placeholder="类型名称"
-                          className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-32 px-2 py-1 border border-gray-400 rounded text-sm"
                         />
                         <Button
                           variant="default"
@@ -575,14 +575,14 @@ export function ProduceCodeRuleTable({
               onChange={(e) => onNewCategoryCodeChange(e.target.value.toUpperCase())}
               placeholder="大类代码（2位大写字母）"
               maxLength={2}
-              className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-40 px-3 py-2 border border-gray-400 rounded-lg text-sm"
             />
             <input
               type="text"
               value={newCategoryName}
               onChange={(e) => onNewCategoryNameChange(e.target.value)}
               placeholder="大类名称"
-              className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-40 px-3 py-2 border border-gray-400 rounded-lg text-sm"
             />
             <Button variant="default" onClick={onAddCategory}>
               添加

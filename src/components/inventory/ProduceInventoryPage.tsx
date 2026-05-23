@@ -410,7 +410,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
               type="checkbox"
               checked={settings.enableStorageTimeAlert}
               onChange={(e) => setSettings({ ...settings, enableStorageTimeAlert: e.target.checked })}
-              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
             />
           </div>
           {settings.enableStorageTimeAlert && (
@@ -421,7 +421,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
                 min="1"
                 value={settings.storageTimeThreshold}
                 onChange={(e) => setSettings({ ...settings, storageTimeThreshold: parseInt(e.target.value) || 0 })}
-                className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-20 px-2 py-1 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               <span className="text-sm text-gray-600">天预警</span>
             </div>
@@ -439,7 +439,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
               type="checkbox"
               checked={settings.enableQuantityAlert}
               onChange={(e) => setSettings({ ...settings, enableQuantityAlert: e.target.checked })}
-              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+              className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
             />
           </div>
           {settings.enableQuantityAlert && (
@@ -450,7 +450,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
                 min="0"
                 value={settings.minQuantityThreshold}
                 onChange={(e) => setSettings({ ...settings, minQuantityThreshold: parseInt(e.target.value) || 0 })}
-                className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-20 px-2 py-1 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               <span className="text-sm text-gray-600">{inventory.unit} 或高于</span>
               <Input
@@ -458,7 +458,7 @@ function AlertSettingsModal({ isOpen, inventory, onClose, onSave }: {
                 min="0"
                 value={settings.maxQuantityThreshold}
                 onChange={(e) => setSettings({ ...settings, maxQuantityThreshold: parseInt(e.target.value) || 0 })}
-                className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-20 px-2 py-1 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
               <span className="text-sm text-gray-600">{inventory.unit}预警</span>
             </div>
@@ -1013,33 +1013,9 @@ export default function ProduceInventoryPage() {
                 placeholder="搜索产品编码、作物名称、批次号..."
                 value={searchText}
                 onChange={(e) => { setSearchText(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
             </div>
-          </div>
-
-          {/* 搜索和重置按钮 */}
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                setSearchText('');
-                setFilters({ ...filters, warehouseId: '', cropName: '', grade: '', status: '' });
-                setCurrentPage(1);
-              }}
-            >
-              <RefreshCw className="w-4 h-4" />
-              重置
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setCurrentPage(1);
-              }}
-            >
-              <Search className="w-4 h-4" />
-              搜索
-            </Button>
           </div>
 
           {/* 仓库筛选 */}
@@ -1093,6 +1069,30 @@ export default function ProduceInventoryPage() {
                 { value: 'out_of_stock', label: '缺货' },
               ]}
             />
+          </div>
+
+          {/* 搜索和重置按钮 */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setSearchText('');
+                setFilters({ ...filters, warehouseId: '', cropName: '', grade: '', status: '' });
+                setCurrentPage(1);
+              }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setCurrentPage(1);
+              }}
+            >
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
           </div>
 
         </div>
@@ -1149,7 +1149,7 @@ export default function ProduceInventoryPage() {
                       type="checkbox"
                       checked={isAllSelected}
                       onChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
                   </th>
                 )}
@@ -1187,7 +1187,7 @@ export default function ProduceInventoryPage() {
                           type="checkbox"
                           checked={selectedRows.includes(item.id)}
                           onChange={() => handleSelectRow(item.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                         />
                       </td>
                     )}

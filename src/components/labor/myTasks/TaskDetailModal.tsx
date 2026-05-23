@@ -295,7 +295,7 @@ export function TaskDetailModal({
                   </div>
                   {/* 显示子记录（children） */}
                   {(record.children as Array<Record<string, unknown>>)?.length > 0 && (
-                    <div className="mt-3 pl-4 border-l-2 border-gray-300 space-y-3">
+                    <div className="mt-3 pl-4 border-l-2 border-gray-400 space-y-3">
                       {(record.children as Array<Record<string, unknown>>).map((child: Record<string, unknown>, childIdx: number) => (
                         <div key={childIdx} className="bg-white rounded p-3 shadow-sm">
                           <div className="flex items-center justify-between mb-1">

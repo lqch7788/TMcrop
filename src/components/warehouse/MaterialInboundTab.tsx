@@ -525,7 +525,7 @@ export function MaterialInboundTab({
                     <Checkbox
                       checked={isAllSelected}
                       onCheckedChange={handleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
                   </TableHead>
                 )}
@@ -550,7 +550,7 @@ export function MaterialInboundTab({
                           <Checkbox
                             checked={selectedRows.includes(record.id)}
                             onCheckedChange={() => handleSelectRow(record.id)}
-                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                            className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                           />
                         )}
                       </TableCell>

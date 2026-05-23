@@ -103,7 +103,7 @@ export default function InstancePage() {
             />
           </div>
           <div className="flex items-end">
-            <Button variant="default" className="flex items-center gap-2">
+            <Button variant="default" size="sm" className="flex items-center gap-2">
               <Search className="w-4 h-4" />
               查询
             </Button>

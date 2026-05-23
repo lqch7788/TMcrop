@@ -111,7 +111,7 @@ export function ApprovalTimeline({ records, approvers, currentStep }: ApprovalTi
                     <User className="w-5 h-5 text-yellow-600" />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-400 flex items-center justify-center">
                     <Clock className="w-5 h-5 text-gray-400" />
                   </div>
                 )}

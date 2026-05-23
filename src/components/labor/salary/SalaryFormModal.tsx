@@ -114,7 +114,7 @@ export function SalaryFormModal({
             <select
               value={formData.staffId}
               onChange={(e) => handleStaffChange(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="">请选择员工</option>
               {staffOptions.map(staff => (
@@ -130,7 +130,7 @@ export function SalaryFormModal({
               type="month"
               value={formData.month}
               onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -140,7 +140,7 @@ export function SalaryFormModal({
             <select
               value={formData.calcType}
               onChange={(e) => setFormData(prev => ({ ...prev, calcType: e.target.value as SalaryCalcType }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               {calcTypes.map(type => (
                 <option key={type} value={type}>{type}</option>
@@ -154,7 +154,7 @@ export function SalaryFormModal({
             <select
               value={formData.status}
               onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SalaryStatus }))}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               {statusOptions.map(status => (
                 <option key={status} value={status}>{status}</option>
@@ -264,7 +264,7 @@ export function SalaryFormModal({
           {/* 实发工资（只读） */}
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">实发工资</Label>
-            <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
+            <div className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               ¥{calculateNetSalary().toLocaleString()}
             </div>
           </div>

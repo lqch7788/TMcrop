@@ -323,7 +323,7 @@ export function SkillTable({
                     <Checkbox
                       checked={allSelected}
                       onCheckedChange={onSelectAll as (checked: boolean) => void}
-                      className="border-gray-300"
+                      className="border-gray-400"
                     />
                   </TableHead>
                 )}

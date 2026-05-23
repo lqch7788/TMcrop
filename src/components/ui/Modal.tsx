@@ -429,7 +429,7 @@ export function Select({ error, options, className = '', value, onChange, placeh
           }
         }}
       >
-        <SelectTrigger className={`${error ? 'border-red-500' : 'border-gray-300'} ${className}`}>
+        <SelectTrigger className={`${error ? 'border-red-500' : 'border-gray-400'} ${className}`}>
           <SelectValue placeholder={placeholder || '请选择'} />
         </SelectTrigger>
         <SelectContent>

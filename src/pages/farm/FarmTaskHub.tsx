@@ -784,7 +784,7 @@ export function FarmTaskHub() {
                   const opt = staffOptions.find(s => s.value === e.target.value);
                   setBatchDispatchTarget({ id: e.target.value, name: opt?.label || '' });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">-- 请选择执行人 --</option>
                 {staffOptions.map(s => (
@@ -795,7 +795,7 @@ export function FarmTaskHub() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowBatchDispatchModal(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm border border-gray-400 rounded-lg hover:bg-gray-50"
               >
                 取消
               </button>
@@ -825,7 +825,7 @@ export function FarmTaskHub() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowBatchVerifyConfirm(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm border border-gray-400 rounded-lg hover:bg-gray-50"
               >
                 取消
               </button>
@@ -856,7 +856,7 @@ export function FarmTaskHub() {
                   const opt = staffOptions.find(s => s.value === e.target.value);
                   setBatchReassignTarget({ id: e.target.value, name: opt?.label || '' });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">-- 请选择新执行人 --</option>
                 {staffOptions.map(s => (
@@ -867,7 +867,7 @@ export function FarmTaskHub() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowBatchReassignModal(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm border border-gray-400 rounded-lg hover:bg-gray-50"
               >
                 取消
               </button>

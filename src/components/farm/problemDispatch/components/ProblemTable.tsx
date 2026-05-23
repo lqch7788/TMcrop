@@ -144,7 +144,7 @@ export function ProblemTable({
                           type="checkbox"
                           checked={selectedProblems.includes(problem.id)}
                           onChange={() => onToggleSelect(problem.id)}
-                          className="w-4 h-4 rounded border-gray-300"
+                          className="w-4 h-4 rounded border-gray-400"
                         />
                       ) : null
                     ) : (batchDeleteMode || exportMode) ? (
@@ -152,7 +152,7 @@ export function ProblemTable({
                         type="checkbox"
                         checked={selectedRows.includes(problem.id)}
                         onChange={() => onToggleSelect(problem.id)}
-                        className="w-4 h-4 rounded border-gray-300"
+                        className="w-4 h-4 rounded border-gray-400"
                       />
                     ) : null}
                   </td>

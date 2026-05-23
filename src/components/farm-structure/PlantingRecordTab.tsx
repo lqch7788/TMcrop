@@ -165,22 +165,22 @@ export default function PlantingRecordTab() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder="搜索种植季/作物..." value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
         <select value={facilityFilter} onChange={(e) => { setFacilityFilter(e.target.value); setCurrentPage(1); }}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
+          className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg">
           <option value="">全部设施</option>
           {facilityOptions.map((g) => <option key={g.oid} value={g.oid}>{g.name}</option>)}
         </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
+          className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg">
           <option value="">全部状态</option>
           {statusOptions.map((opt) => <option key={opt.dictCode} value={opt.dictCode}>{opt.dictLabel}</option>)}
         </select>
         {/* 切换活跃/全部 */}
         <button
           onClick={() => setShowOnlyActive(!showOnlyActive)}
-          className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border transition-colors ${showOnlyActive ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-300 text-gray-600'}`}
+          className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border transition-colors ${showOnlyActive ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-400 text-gray-600'}`}
         >
           {showOnlyActive ? <Leaf className="w-4 h-4" /> : <History className="w-4 h-4" />}
           {showOnlyActive ? '种植中' : '全部历史'}
@@ -289,26 +289,26 @@ export default function PlantingRecordTab() {
             <div className="p-5 space-y-3">
               <label className="text-xs font-medium text-gray-600">选择设施<span className="text-red-500">*</span>
                 <select value={formData.facility_oid || ''} onChange={(e) => setFormData({ ...formData, facility_oid: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                   <option value="">请选择设施</option>
                   {facilityOptions.map((g) => <option key={g.oid} value={g.oid}>{g.name}</option>)}
                 </select>
               </label>
               <label className="text-xs font-medium text-gray-600">作物名称<span className="text-red-500">*</span>
                 <input value={formData.crop_name || ''} onChange={(e) => setFormData({ ...formData, crop_name: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">品种名称
                 <input value={formData.variety_name || ''} onChange={(e) => setFormData({ ...formData, variety_name: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">开始日期
                 <input type="date" value={formData.start_date || ''} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">备注
                 <textarea value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
               </label>
               <p className="text-xs text-gray-400">种植季编码将自动生成（格式：2026S001）</p>
             </div>
@@ -333,19 +333,19 @@ export default function PlantingRecordTab() {
             <div className="p-5 space-y-3">
               <label className="text-xs font-medium text-gray-600">作物名称
                 <input value={formData.crop_name || ''} onChange={(e) => setFormData({ ...formData, crop_name: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">品种名称
                 <input value={formData.variety_name || ''} onChange={(e) => setFormData({ ...formData, variety_name: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">开始日期
                 <input type="date" value={formData.start_date || ''} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <label className="text-xs font-medium text-gray-600">备注
                 <textarea value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
               </label>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
@@ -372,30 +372,30 @@ export default function PlantingRecordTab() {
               </p>
               <label className="text-xs font-medium text-gray-600">结束日期<span className="text-red-500">*</span>
                 <input type="date" value={formData.end_date || ''} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-xs font-medium text-gray-600">产量
                   <input type="number" value={formData.yield_amount || ''} onChange={(e) => setFormData({ ...formData, yield_amount: e.target.value })}
-                    className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                    className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">单位
                   <select value={formData.yield_unit || 'kg'} onChange={(e) => setFormData({ ...formData, yield_unit: e.target.value })}
-                    className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                    className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                     <option value="kg">千克</option><option value="ton">吨</option><option value="jin">斤</option>
                   </select>
                 </label>
               </div>
               <label className="text-xs font-medium text-gray-600">品质等级
                 <select value={formData.quality_grade || ''} onChange={(e) => setFormData({ ...formData, quality_grade: e.target.value })}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                   <option value="">请选择</option>
                   <option value="A">A级</option><option value="B">B级</option><option value="C">C级</option>
                 </select>
               </label>
               <label className="text-xs font-medium text-gray-600">备注
                 <textarea value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={2}
-                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded resize-none" />
+                  className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
               </label>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">

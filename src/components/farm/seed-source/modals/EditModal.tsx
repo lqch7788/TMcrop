@@ -310,7 +310,7 @@ export function EditModal({
               setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder={
                 formData.sourceOrigin === 'external_purchase' ? '请选择' : '内部自留/无需填写'
               } />
@@ -337,7 +337,7 @@ export function EditModal({
           <DatePicker
             selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
             onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -349,7 +349,7 @@ export function EditModal({
               type="number"
               value={formData.quantity || ''}
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <DictSelect
               category="unit"
@@ -367,14 +367,14 @@ export function EditModal({
             type="number"
             value={formData.unitPrice || ''}
             onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
         {/* 图片上传 - 占两列 */}
         <div className="col-span-2">
           <Label className="text-gray-900">图片上传</Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer">
+          <div className="border-2 border-dashed border-gray-400 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer">
             <div className="text-gray-500 text-sm">
               点击上传或拖拽图片到此处
             </div>
@@ -388,7 +388,7 @@ export function EditModal({
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="请输入备注信息"
           />
         </div>

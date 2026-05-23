@@ -572,7 +572,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.code}
                           onChange={(e) => handleMaterialChange(m.id, 'code', e.target.value)}
-                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5">
@@ -630,7 +630,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.category}
                           onChange={(e) => handleMaterialChange(m.id, 'category', e.target.value)}
-                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
@@ -638,7 +638,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.specification}
                           onChange={(e) => handleMaterialChange(m.id, 'specification', e.target.value)}
-                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
@@ -646,7 +646,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.barcode}
                           onChange={(e) => handleMaterialChange(m.id, 'barcode', e.target.value)}
-                          className="w-20 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-20 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
@@ -654,7 +654,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.unit}
                           onChange={(e) => handleMaterialChange(m.id, 'unit', e.target.value)}
-                          className="w-12 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-12 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
@@ -671,7 +671,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.price}
                           onChange={(e) => handleMaterialChange(m.id, 'price', e.target.value)}
-                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
@@ -679,7 +679,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                           type="text"
                           value={m.location}
                           onChange={(e) => handleMaterialChange(m.id, 'location', e.target.value)}
-                          className="w-16 h-6 px-1 text-xs border-gray-300 bg-blue-50"
+                          className="w-16 h-6 px-1 text-xs border-gray-400 bg-blue-50"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">

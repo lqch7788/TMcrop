@@ -225,7 +225,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="请输入任务标题"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -238,7 +238,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             <select
               value={greenhouseId}
               onChange={(e) => handleGreenhouseChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">请选择温室</option>
               {GREENHOUSE_OPTIONS.map((option) => (
@@ -256,7 +256,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             <select
               value={taskType}
               onChange={(e) => handleTaskTypeChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">请选择农事类型</option>
               {TASK_TYPES.map((option) => (
@@ -277,7 +277,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as typeof priority)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {PRIORITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -294,7 +294,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             <select
               value={assigneeId}
               onChange={(e) => handleExecutorChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">请选择执行人</option>
               {EXECUTOR_OPTIONS.map((option) => (
@@ -317,7 +317,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
               min="1"
               value={estimatedDays}
               onChange={(e) => setEstimatedDays(parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -330,7 +330,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
               min="0"
               value={estimatedHours}
               onChange={(e) => setEstimatedHours(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -342,7 +342,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
@@ -357,7 +357,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="请输入任务描述..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
@@ -367,7 +367,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
             所需物资
           </label>
           {materials.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-300 rounded-lg">
+            <p className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-400 rounded-lg">
               暂无所需物资
             </p>
           ) : (
@@ -379,19 +379,19 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
                     value={material.name}
                     onChange={(e) => handleMaterialChange(index, 'name', e.target.value)}
                     placeholder="物资名称"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <input
                     type="number"
                     min="0"
                     value={material.qty}
                     onChange={(e) => handleMaterialChange(index, 'qty', e.target.value)}
-                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-20 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <select
                     value={material.unit}
                     onChange={(e) => handleMaterialChange(index, 'unit', e.target.value)}
-                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-20 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     {MATERIAL_UNIT_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -425,7 +425,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
           >
             取消
           </button>

@@ -19,7 +19,7 @@ export const DispatchRecommend: React.FC<DispatchRecommendProps> = ({
         relative p-4 rounded-lg border-2 transition-all
         ${isTopPick
           ? 'border-emerald-500 bg-emerald-50 shadow-md'
-          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+          : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm'
         }
       `}
     >

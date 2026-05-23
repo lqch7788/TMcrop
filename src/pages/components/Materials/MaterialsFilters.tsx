@@ -109,7 +109,7 @@ export default function MaterialsFilters({
                 value={code}
                 onChange={(e) => onCodeChange(e.target.value)}
                 placeholder="输入编号"
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32"
+                className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-32"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export default function MaterialsFilters({
                 value={name}
                 onChange={(e) => onNameChange(e.target.value)}
                 placeholder="输入名称"
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32"
+                className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-32"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function MaterialsFilters({
               <select
                 value={category}
                 onChange={(e) => onCategoryChange(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm"
               >
                 {SIMPLE_CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -141,7 +141,7 @@ export default function MaterialsFilters({
                 value={supplier}
                 onChange={(e) => onSupplierChange(e.target.value)}
                 placeholder="输入供应商"
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-32"
+                className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-32"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -151,7 +151,7 @@ export default function MaterialsFilters({
                 value={location}
                 onChange={(e) => onLocationChange(e.target.value)}
                 placeholder="输入位置"
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm w-24"
+                className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-24"
               />
             </div>
             <Button variant="secondary" onClick={onReset} size="sm">重置</Button>
@@ -166,7 +166,7 @@ export default function MaterialsFilters({
             <select
               value={searchBigCategory}
               onChange={(e) => onSearchBigCategoryChange(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm"
             >
               <option value="">全部大类</option>
               {BIG_CATEGORIES.map(cat => (
@@ -177,7 +177,7 @@ export default function MaterialsFilters({
               value={searchMidCategory}
               onChange={(e) => onSearchMidCategoryChange(e.target.value)}
               disabled={!searchBigCategory}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+              className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm disabled:opacity-50"
             >
               <option value="">全部中类</option>
             </select>
@@ -185,7 +185,7 @@ export default function MaterialsFilters({
               value={searchSubCategory}
               onChange={(e) => onSearchSubCategoryChange(e.target.value)}
               disabled={!searchMidCategory}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+              className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm disabled:opacity-50"
             >
               <option value="">全部小类</option>
             </select>
@@ -194,7 +194,7 @@ export default function MaterialsFilters({
                 type="checkbox"
                 checked={showLowStock}
                 onChange={(e) => onShowLowStockChange(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                className="w-4 h-4 rounded border-gray-400 text-blue-600"
               />
               <span className="text-sm text-amber-600">仅显示库存不足</span>
             </label>

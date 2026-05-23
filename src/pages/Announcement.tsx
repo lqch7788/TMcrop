@@ -288,14 +288,14 @@ export default function Announcement() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">类型：</span>
                 <select value={templateTypeFilter} onChange={e => setTemplateTypeFilter(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
+                  className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
                   {allTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">分类：</span>
                 <select value={templateCatFilter} onChange={e => setTemplateCatFilter(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
+                  className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white">
                   {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -303,7 +303,7 @@ export default function Announcement() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={templateSearch} onChange={e => setTemplateSearch(e.target.value)}
-                    placeholder="搜索模板名称..." className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500 transition-colors" />
+                    placeholder="搜索模板名称..." className="w-full pl-10 pr-4 py-2 bg-white border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-green-500 transition-colors" />
                 </div>
               </div>
               <div className="ml-auto">

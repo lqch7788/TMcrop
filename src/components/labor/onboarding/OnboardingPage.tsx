@@ -45,10 +45,10 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             key={format.value}
             onClick={() => onFormatChange(format.value)}
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+              exportFormat === format.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
             }`}
           >
-            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-400'}`}>
               {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
             </div>
             <div className="ml-3">
@@ -366,13 +366,13 @@ export function OnboardingPage() {
               placeholder="搜索姓名、身份证号、手机号..."
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="">全部状态</option>
             <option value="待入职">待入职</option>

@@ -151,7 +151,7 @@ export function CreateInspectionModal({
                   value={newRecord.recordCode}
                   onChange={(e) => updateField('recordCode', e.target.value)}
                   placeholder="点击生成或手动输入"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
                 <Button
                   type="button"
@@ -184,7 +184,7 @@ export function CreateInspectionModal({
             value={newRecord.inspectionType}
             onValueChange={(val) => updateField('inspectionType', val)}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="种植区域巡查" />
             </SelectTrigger>
             <SelectContent>
@@ -204,7 +204,7 @@ export function CreateInspectionModal({
                 value={newRecord.greenhouseId}
                 onValueChange={(val) => updateField('greenhouseId', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择区域" />
                 </SelectTrigger>
                 <SelectContent>                  {greenhouses.map(gh => (
@@ -218,7 +218,7 @@ export function CreateInspectionModal({
                 value={newRecord.cropName}
                 onValueChange={(val) => updateField('cropName', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择作物" />
                 </SelectTrigger>
                 <SelectContent>                  {cropTypes.map(crop => (
@@ -244,7 +244,7 @@ export function CreateInspectionModal({
                   }));
                 }}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <SelectValue placeholder="请选择设备" />
                 </SelectTrigger>
                 <SelectContent>                  {equipmentRecords.map(eq => (
@@ -259,7 +259,7 @@ export function CreateInspectionModal({
                 value={newRecord.equipmentName}
                 readOnly
                 placeholder="自动填充"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50"
               />
             </FormField>
           </div>
@@ -280,7 +280,7 @@ export function CreateInspectionModal({
                   }));
                 }}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
                   <SelectValue placeholder="请选择基础设施" />
                 </SelectTrigger>
                 <SelectContent>                  {infrastructureRecords.map(inf => (
@@ -295,7 +295,7 @@ export function CreateInspectionModal({
                 value={newRecord.infrastructureName}
                 readOnly
                 placeholder="自动填充"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50"
               />
             </FormField>
           </div>
@@ -308,7 +308,7 @@ export function CreateInspectionModal({
               onChange={(e) => updateField('remarks', e.target.value)}
               placeholder="请输入其他巡查类型的具体说明"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </FormField>
         )}
@@ -320,7 +320,7 @@ export function CreateInspectionModal({
               type="text"
               value={users.find(u => u.id === newRecord.inspectorId)?.name || ''}
               readOnly
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50 text-gray-700"
             />
           </FormField>
           <FormField label="关联生产计划批次">
@@ -328,7 +328,7 @@ export function CreateInspectionModal({
               value={newRecord.batchId}
               onValueChange={(val) => updateField('batchId', val)}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="不关联批次" />
               </SelectTrigger>
               <SelectContent>
@@ -347,7 +347,7 @@ export function CreateInspectionModal({
             <DatePicker
               selected={newRecord.checkDate ? new Date(newRecord.checkDate) : undefined}
               onChange={(date) => updateField('checkDate', date.toISOString().split('T')[0])}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </FormField>
           <FormField label="巡查时间">
@@ -355,7 +355,7 @@ export function CreateInspectionModal({
               type="time"
               value={newRecord.checkTime}
               onChange={(e) => updateField('checkTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </FormField>
           <FormField label="巡查时长(分钟)">
@@ -375,7 +375,7 @@ export function CreateInspectionModal({
                 value={newRecord.cropStatus}
                 onValueChange={(val) => updateField('cropStatus', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择作物状态" />
                 </SelectTrigger>
                 <SelectContent>
@@ -479,7 +479,7 @@ export function CreateInspectionModal({
                     const newValue = 'normal';
                     onNewRecordChange({ ...newRecord, inspectionResult: newValue, feedbackRequired: false });
                   }}
-                  className="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  className="w-5 h-5 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
                 <span className={`text-sm font-medium group-hover:text-emerald-600 transition-colors ${newRecord.inspectionResult === 'normal' ? 'text-emerald-600' : 'text-gray-700'}`}>
                   正常
@@ -493,7 +493,7 @@ export function CreateInspectionModal({
                     const newValue = 'abnormal';
                     onNewRecordChange({ ...newRecord, inspectionResult: newValue, feedbackRequired: true });
                   }}
-                  className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                  className="w-5 h-5 rounded border-gray-400 text-red-600 focus:ring-red-500 cursor-pointer"
                 />
                 <span className={`text-sm font-medium group-hover:text-red-600 transition-colors ${newRecord.inspectionResult === 'abnormal' ? 'text-red-600' : 'text-gray-700'}`}>
                   异常
@@ -536,7 +536,7 @@ export function CreateInspectionModal({
                           // 直接调用 onNewRecordChange
                           onNewRecordChange({ ...newRecord, issueCategories: newCategories, issuePresets: [] });
                         }}
-                        className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                        className="w-4 h-4 rounded border-gray-400 text-red-600 focus:ring-red-500 cursor-pointer"
                       />
                       <span className="text-sm font-medium">{cat.label}</span>
                     </Label>
@@ -585,7 +585,7 @@ export function CreateInspectionModal({
                 onChange={(e) => updateField('issueText', e.target.value)}
                 placeholder={newRecord.issueCategories?.length === 1 ? "请详细描述发现的问题" : "请详细描述各种问题现象"}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
               />
             </FormField>
 
@@ -602,7 +602,7 @@ export function CreateInspectionModal({
                           : level === '中等'
                           ? 'border-amber-500 bg-amber-50 text-amber-700'
                           : 'border-gray-500 bg-gray-100 text-gray-700'
-                        : 'border-gray-300 hover:border-gray-400'
+                        : 'border-gray-400 hover:border-gray-400'
                     }`}
                   >
                     <Input
@@ -625,7 +625,7 @@ export function CreateInspectionModal({
               <div className="space-y-3">
                 <div className="flex gap-3 flex-wrap">
                   {(newRecord.issuePhotos || []).map((img, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300">
+                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-400">
                       <img src={img} alt={`问题照片${idx + 1}`} className="w-full h-full object-cover" />
                       <Button
                         type="button"
@@ -643,7 +643,7 @@ export function CreateInspectionModal({
                     </div>
                   ))}
                   {(newRecord.issuePhotos || []).length < 6 && (
-                    <Label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
+                    <Label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
                       <Camera className="w-6 h-6 text-gray-400" />
                       <span className="text-xs text-gray-400 mt-1">添加</span>
                       <Input
@@ -706,7 +706,7 @@ export function CreateInspectionModal({
                   }
                 }}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
                   <SelectValue placeholder="+ 选择反馈人员" />
                 </SelectTrigger>
                 <SelectContent>
@@ -727,7 +727,7 @@ export function CreateInspectionModal({
             onChange={(e) => updateField('remarks', e.target.value)}
             placeholder="请输入巡查备注"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
           />
         </FormField>
       </div>

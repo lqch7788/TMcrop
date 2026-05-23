@@ -75,7 +75,7 @@ export default function MaterialsTable({
                       type="checkbox"
                       checked={selectedRows.includes(material.id)}
                       onChange={() => onSelectRow(material.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600"
                     />
                   </td>
                 )}

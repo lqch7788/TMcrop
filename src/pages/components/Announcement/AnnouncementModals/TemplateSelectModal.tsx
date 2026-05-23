@@ -87,7 +87,7 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
               value={searchKeyword}
               onChange={e => setSearchKeyword(e.target.value)}
               placeholder="搜索模板名称..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
           <Select

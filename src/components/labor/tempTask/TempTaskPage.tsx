@@ -102,10 +102,10 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
               exportFormat === format.value
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-gray-400'
             }`}
           >
-            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-300'}`}>
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${exportFormat === format.value ? 'border-emerald-600' : 'border-gray-400'}`}>
               {exportFormat === format.value && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
             </div>
             <div className="ml-3">
@@ -413,7 +413,7 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder={`请输入${isWithdraw ? '撤回' : '取消'}原因...`}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           rows={3}
         />
       </div>
@@ -509,7 +509,7 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
         <select
           value={selectedAssignee}
           onChange={(e) => setSelectedAssignee(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           <option value="">请选择执行人</option>
           {users.map(user => (

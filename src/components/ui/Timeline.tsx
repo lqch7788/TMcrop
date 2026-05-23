@@ -42,7 +42,7 @@ const Timeline = React.forwardRef<HTMLDivElement, TimelineProps>(
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white z-10",
                       item.status === 'completed' && "border-emerald-500 text-emerald-500",
                       item.status === 'processing' && "border-blue-500 text-blue-500 animate-pulse",
-                      item.status === 'pending' && "border-gray-300 text-gray-300"
+                      item.status === 'pending' && "border-gray-400 text-gray-300"
                     )}
                   >
                     {item.status === 'completed' && <CheckCircle className="w-5 h-5" />}

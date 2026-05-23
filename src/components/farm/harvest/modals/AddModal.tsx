@@ -386,7 +386,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                     type="checkbox"
                     checked={addForm.harvesterIds.includes(user.id)}
                     onChange={() => toggleHarvester(user.id, user.name)}
-                    className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                    className="w-4 h-4 text-emerald-600 rounded border-gray-400 focus:ring-emerald-500"
                   />
                   <span className="text-sm text-gray-700">{user.name}</span>
                 </Label>

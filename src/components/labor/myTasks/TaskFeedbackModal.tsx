@@ -189,7 +189,7 @@ export function TaskFeedbackModal({
                 cannotContinueReason: newStatus === '无法继续' ? prev.cannotContinueReason : '',
               }));
             }}
-            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
           >
             <option value="">请选择处理结果</option>
             <option value="全部完成">全部完成</option>
@@ -210,7 +210,7 @@ export function TaskFeedbackModal({
               onChange={(e) => setFeedbackForm(prev => ({ ...prev, resultText: e.target.value }))}
               placeholder="请详细说明处理情况和原因..."
               rows={4}
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="w-full px-3 py-2 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
             />
           </div>
         )}

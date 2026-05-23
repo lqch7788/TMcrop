@@ -79,7 +79,7 @@ export function RiskFormModal({
             <select
               value={formData.alertType}
               onChange={(e) => handleAlertTypeChange(e.target.value as AlertType)}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="overtime">超时加班</option>
               <option value="high_temp">高温作业</option>
@@ -96,7 +96,7 @@ export function RiskFormModal({
             <select
               value={formData.level}
               onChange={(e) => setFormData({ ...formData, level: e.target.value as AlertLevel })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="warning">一般提醒</option>
               <option value="danger">需要注意</option>
@@ -111,7 +111,7 @@ export function RiskFormModal({
               type="text"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入部门"
             />
           </div>
@@ -123,7 +123,7 @@ export function RiskFormModal({
               type="text"
               value={formData.staffId}
               onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入工号"
             />
           </div>
@@ -135,7 +135,7 @@ export function RiskFormModal({
               type="text"
               value={formData.staffName}
               onChange={(e) => setFormData({ ...formData, staffName: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入姓名"
             />
           </div>
@@ -146,7 +146,7 @@ export function RiskFormModal({
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'handled' })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="pending">待处理</option>
               <option value="handled">已处理</option>
@@ -160,7 +160,7 @@ export function RiskFormModal({
               type="text"
               value={formData.handler}
               onChange={(e) => setFormData({ ...formData, handler: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入处理人"
             />
           </div>
@@ -183,7 +183,7 @@ export function RiskFormModal({
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             placeholder="请输入预警标题"
           />
         </div>
@@ -194,7 +194,7 @@ export function RiskFormModal({
           <textarea
             value={formData.content}
             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             rows={3}
             placeholder="请输入预警内容"
           />
@@ -206,7 +206,7 @@ export function RiskFormModal({
           <textarea
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             rows={2}
             placeholder="请输入处理备注"
           />

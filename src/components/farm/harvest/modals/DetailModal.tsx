@@ -80,6 +80,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
         <div className="flex border-b border-gray-200 px-6 pt-4">
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('info')}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === 'info'
@@ -91,6 +92,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
           </Button>
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('trace')}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1 ${
               activeTab === 'trace'
@@ -240,6 +242,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
           <Button
             variant="secondary"
+            size="sm"
             onClick={onClose}
           >
             关闭

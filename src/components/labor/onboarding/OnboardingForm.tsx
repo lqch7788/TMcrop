@@ -36,7 +36,7 @@ export function OnboardingForm({
             value={formData.name}
             onChange={(e) => onChange('name', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.name ? 'border-red-500' : 'border-gray-300'
+              errors.name ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入姓名"
           />
@@ -53,7 +53,7 @@ export function OnboardingForm({
             value={formData.idCard}
             onChange={(e) => onChange('idCard', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.idCard ? 'border-red-500' : 'border-gray-300'
+              errors.idCard ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入身份证号"
           />
@@ -70,7 +70,7 @@ export function OnboardingForm({
             value={formData.phone}
             onChange={(e) => onChange('phone', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.phone ? 'border-red-500' : 'border-gray-300'
+              errors.phone ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入联系电话"
           />
@@ -100,7 +100,7 @@ export function OnboardingForm({
             value={formData.position}
             onChange={(e) => onChange('position', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.position ? 'border-red-500' : 'border-gray-300'
+              errors.position ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入岗位"
           />
@@ -117,7 +117,7 @@ export function OnboardingForm({
             value={formData.department}
             onChange={(e) => onChange('department', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.department ? 'border-red-500' : 'border-gray-300'
+              errors.department ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入部门"
           />
@@ -133,7 +133,7 @@ export function OnboardingForm({
             value={formData.contractType}
             onChange={(e) => onChange('contractType', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.contractType ? 'border-red-500' : 'border-gray-300'
+              errors.contractType ? 'border-red-500' : 'border-gray-400'
             }`}
           >
             <option value="">请选择合同类型</option>
