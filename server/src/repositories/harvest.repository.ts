@@ -14,6 +14,7 @@ const FIELD_MAP: Record<string, string> = {
   cropName: 'crop_name',
   cropVariety: 'crop_variety',
   greenhouseName: 'greenhouse_name',
+  greenhouseId: 'greenhouse_id',
   harvestDate: 'harvest_date',
   harvestQuantity: 'harvest_quantity',
   unit: 'unit',
@@ -36,6 +37,7 @@ const FIELD_MAP: Record<string, string> = {
   targetYield: 'target_yield',
   harvestArea: 'harvest_area',
   harvesterIds: 'harvester_ids',
+  inboundType: 'inbound_type',
   relatedTaskId: 'related_task_id',
   relatedTaskCode: 'related_task_code',
 };
@@ -76,6 +78,7 @@ export interface HarvestRecord {
   source_name?: string;
   crop_name?: string;
   crop_variety?: string;
+  greenhouse_id?: string;
   greenhouse_name?: string;
   harvest_date?: string;
   harvest_quantity?: number;
@@ -91,6 +94,13 @@ export interface HarvestRecord {
   create_by?: string;
   create_time?: string;
   update_time?: string;
+  // V3.0/V3.1 新增字段
+  create_by_id?: string;
+  warehouse_id?: string;
+  auditor_id?: string;
+  harvester_ids?: string;
+  batch_code?: string;
+  inbound_type?: string;
 }
 
 /**
@@ -235,19 +245,64 @@ export class HarvestRepository {
     const newId = data.id || `HV${Date.now()}`;
     const now = new Date().toISOString();
 
-    // 使用 any[] 来避免 sql.js 类型严格检查问题
-    const params: any[] = [
-      newId, data.harvest_code, data.source_id, data.source_name, data.crop_name, data.crop_variety, data.greenhouse_name,
-      data.harvest_date, data.harvest_quantity, data.unit, data.unit_price, data.total_amount, data.quality_grade,
-      data.buyer_id, data.buyer_name, data.sales_channel, data.status || 'pending', data.remarks, data.create_by, now, now
-    ];
+    // 将前端驼峰字段转换为数据库蛇形字段
+    const snakeData = toSnakeFields(data as Record<string, any>);
+    console.log('[HarvestRepository] create() 转换后的字段:', JSON.stringify(snakeData, null, 2));
+    console.log('[HarvestRepository] 原始数据字段:', Object.keys(data));
 
-    db.run(`
-      INSERT INTO harvest_records (id, harvest_code, source_id, source_name, crop_name, crop_variety, greenhouse_name,
-        harvest_date, harvest_quantity, unit, unit_price, total_amount, quality_grade,
-        buyer_id, buyer_name, sales_channel, status, remarks, create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, params);
+    // 将 harvesterIds 数组转换为 JSON 字符串存储
+    const harvesterIdsJson = snakeData.harvester_ids
+      ? (Array.isArray(snakeData.harvester_ids) ? JSON.stringify(snakeData.harvester_ids) : snakeData.harvester_ids)
+      : null;
+
+    // 使用 any[] 来避免 sql.js 类型严格检查问题
+    // 字段顺序必须与 INSERT 语句中的列顺序完全一致
+    const params: any[] = [
+      newId,                      // 1. id
+      snakeData.harvest_code,      // 2. harvest_code
+      snakeData.source_id,         // 3. source_id
+      snakeData.source_name,       // 4. source_name
+      snakeData.crop_name,         // 5. crop_name
+      snakeData.crop_variety,      // 6. crop_variety
+      snakeData.greenhouse_id,     // 7. greenhouse_id
+      snakeData.greenhouse_name,   // 8. greenhouse_name
+      snakeData.harvest_date,      // 9. harvest_date
+      snakeData.harvest_quantity,  // 10. harvest_quantity
+      snakeData.unit,              // 11. unit
+      snakeData.unit_price,        // 12. unit_price
+      snakeData.total_amount,      // 13. total_amount
+      snakeData.quality_grade,     // 14. quality_grade
+      snakeData.buyer_id,         // 15. buyer_id
+      snakeData.buyer_name,        // 16. buyer_name
+      snakeData.sales_channel,    // 17. sales_channel
+      snakeData.status || 'pending', // 18. status
+      snakeData.remarks,           // 19. remarks
+      snakeData.create_by,        // 20. create_by
+      now,                         // 21. create_time
+      now,                         // 22. update_time
+      snakeData.warehouse_id,      // 23. warehouse_id
+      snakeData.auditor_id,       // 24. auditor_id
+      harvesterIdsJson,            // 25. harvester_ids (JSON字符串)
+      snakeData.inbound_type,     // 26. inbound_type
+      snakeData.batch_code        // 27. batch_code
+    ];
+    console.log('[HarvestRepository] params 数量:', params.length);
+    console.log('[HarvestRepository] params 内容:', params);
+
+    try {
+      db.run(`
+        INSERT INTO harvest_records (
+          id, harvest_code, source_id, source_name, crop_name, crop_variety,
+          greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
+          total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
+          remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
+          harvester_ids, inbound_type, batch_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, params);
+    } catch (err) {
+      console.error('[HarvestRepository] INSERT 错误:', err);
+      throw err;
+    }
 
     saveDatabase();
 

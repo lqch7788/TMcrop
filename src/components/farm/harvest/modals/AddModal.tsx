@@ -104,8 +104,10 @@ export const AddModal: React.FC<AddModalProps> = ({
     }
   }, [dictionaries.length, loadDictionaries]);
 
-  const qualityGradeOptions = getDictItems('quality_grade');
+  const qualityGradeOptions = getDictItems('quality_level');
   const harvestTypeOptions = getDictItems('harvest_type');
+  // 从数据字典获取采收人员列表（feedback_personnel 分类）
+  const harvestWorkerOptions = getDictItems('feedback_personnel');
 
   // 获取选中的批次信息
   const selectedBatch = cropBatches.find(b => b.batchCode === addForm.batchCode);
@@ -377,18 +379,18 @@ export const AddModal: React.FC<AddModalProps> = ({
               <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>
             <div id="harvester-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
-              {users.filter(u => u.role === 'worker' || u.role === 'technician').map(user => (
+              {harvestWorkerOptions.map(worker => (
                 <Label
-                  key={user.id}
+                  key={worker.dictCode}
                   className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                 >
                   <Input
                     type="checkbox"
-                    checked={addForm.harvesterIds.includes(user.id)}
-                    onChange={() => toggleHarvester(user.id, user.name)}
+                    checked={addForm.harvesterIds.includes(worker.dictCode)}
+                    onChange={() => toggleHarvester(worker.dictCode, worker.dictLabel)}
                     className="w-4 h-4 text-emerald-600 rounded border-gray-400 focus:ring-emerald-500"
                   />
-                  <span className="text-sm text-gray-700">{user.name}</span>
+                  <span className="text-sm text-gray-700">{worker.dictLabel}</span>
                 </Label>
               ))}
             </div>
@@ -438,62 +440,82 @@ export const AddModal: React.FC<AddModalProps> = ({
 
         {addForm.products.length > 0 ? (
           <div className="overflow-x-auto border border-gray-400 rounded-lg">
-            <Table className="min-w-[1200px]">
-              <TableHeader className="bg-emerald-600">
-                <TableRow className="hover:from-emerald-600 hover:to-emerald-600">
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-36">产品编码</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">产品名称</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold">分类信息</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-24">品质等级</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">采收量(kg)</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-28">目标产量</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-20">完成率</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold">备注</TableHead>
-                  <TableHead className="px-2 py-2 text-white text-sm font-semibold w-12">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-gray-200">
+            <table className="min-w-[1200px]">
+              <thead style={{ backgroundColor: '#059669' }}>
+                <tr style={{ backgroundColor: '#059669' }}>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-36 text-left">产品编码</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-28 text-left">作物名称</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">品种</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-32 text-left">生产计划批次号</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">种植模式</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">品质等级</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">采收量(kg)</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">目标产量</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-16 text-left">完成率</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold text-left">备注</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-12 text-left">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
                 {addForm.products.map((product, idx) => {
                   const completionRate = product.targetYield > 0
                     ? Math.round((product.harvestQuantity / product.targetYield) * 100)
                     : 0;
 
                   return (
-                    <TableRow key={idx}>
-                      <TableCell className="px-2 py-2">
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="text"
-                            value={product.productCode}
-                            onChange={(e) => onProductChange(idx, 'productCode', e.target.value.toUpperCase())}
-                            placeholder="输入编码"
-                            className="w-32 px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                    <tr key={idx}>
+                      {/* 产品编码 */}
+                      <td className="px-2 py-2">
+                        <Input
+                          type="text"
+                          value={product.productCode}
+                          onChange={(e) => onProductChange(idx, 'productCode', e.target.value.toUpperCase())}
+                          placeholder="编码"
+                          className="w-32 px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </td>
+                      {/* 作物名称 */}
+                      <td className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.cropName}
                           onChange={(e) => onProductChange(idx, 'cropName', e.target.value)}
-                          placeholder="输入产品名称"
+                          placeholder="作物名称"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-sm text-gray-700 bg-gray-50">
-                        {(() => {
-                          if (!product.productCode || product.productCode.length < 6) {
-                            return <span className="text-gray-400">-</span>;
-                          }
-                          // 解析产品编码获取分类信息
-                          const info = getProduceCategoryInfo(product.productCode);
-                          if (info) {
-                            return `${info.category.name}-${info.type.name}-${info.variety.name}`;
-                          }
-                          return <span className="text-gray-400">-</span>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                      </td>
+                      {/* 品种 */}
+                      <td className="px-2 py-2">
+                        <Input
+                          type="text"
+                          value={product.variety}
+                          onChange={(e) => onProductChange(idx, 'variety', e.target.value)}
+                          placeholder="品种"
+                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </td>
+                      {/* 生产计划批次号 */}
+                      <td className="px-2 py-2">
+                        <Input
+                          type="text"
+                          value={product.batchCode}
+                          onChange={(e) => onProductChange(idx, 'batchCode', e.target.value)}
+                          placeholder="批次号"
+                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </td>
+                      {/* 种植模式 */}
+                      <td className="px-2 py-2">
+                        <Input
+                          type="text"
+                          value={product.plantingMode}
+                          onChange={(e) => onProductChange(idx, 'plantingMode', e.target.value)}
+                          placeholder="种植模式"
+                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </td>
+                      {/* 品质等级 */}
+                      <td className="px-2 py-2">
                         <Select
                           value={product.grade}
                           onValueChange={(val) => onProductChange(idx, 'grade', val)}
@@ -507,8 +529,9 @@ export const AddModal: React.FC<AddModalProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                      </td>
+                      {/* 采收量 */}
+                      <td className="px-2 py-2">
                         <Input
                           type="number"
                           value={product.harvestQuantity}
@@ -516,8 +539,9 @@ export const AddModal: React.FC<AddModalProps> = ({
                           min="0"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                      </td>
+                      {/* 目标产量 */}
+                      <td className="px-2 py-2">
                         <Input
                           type="number"
                           value={product.targetYield}
@@ -525,11 +549,13 @@ export const AddModal: React.FC<AddModalProps> = ({
                           min="0"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-sm text-blue-700 bg-gray-50 text-center">
+                      </td>
+                      {/* 完成率 */}
+                      <td className="px-2 py-2 text-sm text-blue-700 bg-gray-50 text-center">
                         {completionRate}%
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                      </td>
+                      {/* 备注 */}
+                      <td className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.remarks}
@@ -537,8 +563,9 @@ export const AddModal: React.FC<AddModalProps> = ({
                           placeholder="备注"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
+                      </td>
+                      {/* 操作 */}
+                      <td className="px-2 py-2">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -547,12 +574,12 @@ export const AddModal: React.FC<AddModalProps> = ({
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="text-sm text-gray-500 italic border border-gray-400 rounded-lg p-4 text-center">

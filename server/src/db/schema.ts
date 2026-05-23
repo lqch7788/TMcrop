@@ -958,6 +958,21 @@ export function initializeDatabase() {
   } catch (e) {
     // 列可能已存在，忽略错误
   }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN inbound_type TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN greenhouse_id TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN batch_code TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
 
   // 为供应商表添加创建者ID关联
   try {
