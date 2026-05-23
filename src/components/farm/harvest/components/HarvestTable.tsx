@@ -24,40 +24,38 @@ interface ProductRowProps {
 function ProductRow({ record, recordIdx, generateProductCode }: ProductRowProps) {
   return (
     <>
-      {/* 表头 */}
-      <TableHeader className="bg-emerald-600 text-white">
-        <TableRow className="hover:from-emerald-600 hover:to-emerald-600">
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">产品编码</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">作物名称</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">品种</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">生产计划批次号</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">种植模式</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">采收量</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">目标产量</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">完成率</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">品质等级</TableHead>
-          <TableHead className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap">备注</TableHead>
-        </TableRow>
-      </TableHeader>
+      {/* 表头 - 使用原生HTML元素+内联样式彻底禁止hover变色 */}
+      <thead style={{ backgroundColor: '#059669' }}>
+        <tr style={{ backgroundColor: '#059669' }}>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">产品编码</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">作物名称</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">品种</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">生产计划批次号</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">种植模式</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">采收量</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">目标产量</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">完成率</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">品质等级</th>
+          <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">备注</th>
+        </tr>
+      </thead>
       {/* 表体 */}
-      <TableBody>
-        <TableRow className="border-t">
-          <TableCell className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
-            {generateProductCode(record.cropName, record.variety || record.cropVariety || '', recordIdx)}
-          </TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety || record.cropVariety || '-'}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode || '-'}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode || '-'}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield || 0}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
+      <tbody>
+        <tr className="border-t" style={{ backgroundColor: 'white' }}>
+          <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">{generateProductCode(record.cropName, record.variety || record.cropVariety || '', recordIdx)}</td>
+          <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety || record.cropVariety || '-'}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode || '-'}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode || '-'}</td>
+          <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield || 0}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
             {record.targetYield ? Math.round(record.harvestQuantity / record.targetYield * 100) : 0}%
-          </TableCell>
-          <TableCell className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade || record.qualityGrade || 'A')}</TableCell>
-          <TableCell className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>
-        </TableRow>
-      </TableBody>
+          </td>
+          <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade || record.qualityGrade || 'A')}</td>
+          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
+        </tr>
+      </tbody>
     </>
   );
 }
