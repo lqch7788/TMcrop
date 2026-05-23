@@ -141,7 +141,7 @@ export function BatchDetailModal({
             </div>
             <div>
               <Label className="text-xs text-gray-600">种植面积</Label>
-              <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.plantingArea} m²</p>
+              <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.plantingArea} {batch.plantingAreaUnit || 'm²'}</p>
             </div>
             <div>
               <Label className="text-xs text-gray-600">开始时间</Label>
@@ -157,7 +157,7 @@ export function BatchDetailModal({
             </div>
             <div>
               <Label className="text-xs text-gray-600">目标产量</Label>
-              <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.targetYield} kg</p>
+              <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg">{batch.targetYield} {batch.unit || 'kg'}</p>
             </div>
             <div>
               <Label className="text-xs text-gray-600">当前状态</Label>

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Upload, Leaf } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
+import { DictSelect } from '../../common/settings/DictSelect';
 
 interface CreateBatchModalProps {
   isOpen: boolean;
@@ -21,9 +22,11 @@ interface CreateBatchModalProps {
     variety: string;
     greenhouseId: string;
     plantingArea: string;
+    plantingAreaUnit: string;  // 面积单位
     startDate: string;
     expectedHarvestDate: string;
     targetYield: string;
+    unit: string;  // 单位
     plantingMode: string;
     responsiblePerson: string;
     publisher: string;
@@ -160,21 +163,31 @@ export function CreateBatchModal({
             />
           </FormField>
 
-          <FormField label="种植面积（m²）" required error={errors.plantingArea}>
-            <Input
-              value={formData.plantingArea}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^\d.]/g, '');
-                const parts = val.split('.');
-                let formatted = parts[0];
-                if (parts.length > 1) {
-                  formatted += '.' + parts[1].slice(0, 2);
-                }
-                onFormChange('plantingArea', formatted);
-              }}
-              placeholder="例如：1000或1500.50"
-            />
-          </FormField>
+          <div className="grid grid-cols-2 gap-2">
+            <FormField label="种植面积" required error={errors.plantingArea}>
+              <Input
+                value={formData.plantingArea}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^\d.]/g, '');
+                  const parts = val.split('.');
+                  let formatted = parts[0];
+                  if (parts.length > 1) {
+                    formatted += '.' + parts[1].slice(0, 2);
+                  }
+                  onFormChange('plantingArea', formatted);
+                }}
+                placeholder="例如：1000"
+              />
+            </FormField>
+            <FormField label="单位">
+              <DictSelect
+                category="unit"
+                value={formData.plantingAreaUnit}
+                onChange={(value) => onFormChange('plantingAreaUnit', value)}
+                placeholder="选择单位"
+              />
+            </FormField>
+          </div>
 
           <FormField label="生产模式" required error={errors.plantingMode}>
             <Select
@@ -204,7 +217,16 @@ export function CreateBatchModal({
             <Input
               value={formData.targetYield}
               onChange={(e) => onFormChange('targetYield', e.target.value)}
-              placeholder="例如：10000或10000kg"
+              placeholder="例如：10000"
+            />
+          </FormField>
+
+          <FormField label="单位">
+            <DictSelect
+              category="unit"
+              value={formData.unit}
+              onChange={(value) => onFormChange('unit', value)}
+              placeholder="选择单位"
             />
           </FormField>
 

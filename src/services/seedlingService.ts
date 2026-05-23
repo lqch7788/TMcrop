@@ -340,7 +340,8 @@ export function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' | 'upda
     createTime: new Date().toLocaleString('zh-CN'),
     updateTime: new Date().toLocaleString('zh-CN')
   };
-  seedlings.push(newSeedling);
+  // unshift添加到数组开头，保证新数据排在最前
+  seedlings.unshift(newSeedling);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(seedlings));
   return newSeedling;
 }

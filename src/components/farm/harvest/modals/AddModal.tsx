@@ -24,13 +24,12 @@ import { WarehouseSelect } from '../../../common/settings/WarehouseSelect';
 import { useDictionaryStore, getDictItems } from '../../../../stores';
 
 interface ProductDetail {
-  productCode: string;
-  cropName: string;      // 大类代码
-  variety: string;        // 类型代码
-  subCategory: string;   // 品种代码
-  batchCode: string;
-  plantingMode: string;
+  cropCode: string;      // 作物编码（11位）
+  cropName: string;      // 作物名称
+  variety: string;        // 品种
+  plantingMode: string;  // 种植模式
   harvestQuantity: number;
+  unit: string;  // 单位
   targetYield: number;
   grade: string;
   auditor: string;
@@ -45,7 +44,6 @@ interface AddModalProps {
     harvestCode: string;
     harvestDate: string;
     greenhouseId: string;
-    warehouseId: string;
     batchCode: string;
     harvesterIds: string[];
     harvesterNames: string[];
@@ -55,13 +53,14 @@ interface AddModalProps {
     harvestType: 'seed' | 'seedling' | 'product';  // 采收类型
     targetInventory: 'seed' | 'seedling' | 'product';  // 目标库存
     products: ProductDetail[];
-    // V3.1 入库类型
-    inboundType: 'seed_source' | 'seedling' | 'planting_harvest';  // 入库类型
     // V3.1 补录相关字段
     isSupplementary: boolean;  // 是否补录
     supplementaryReason: string;  // 补录原因
-    // V3.2 单价
-    unitPrice: number;
+    // V3.2 单价和单位
+    unitPrice: number;  // 单价
+    unit: string;  // 单位
+    // V3.3 仓库
+    warehouseId: string;  // 仓库ID
   };
   onFormChange: (field: string, value: any) => void;
   onAddProduct: () => void;
@@ -69,8 +68,8 @@ interface AddModalProps {
   onProductChange: (index: number, field: string, value: any) => void;
   onGenerateCode: () => void;
   greenhouses: Array<{ id: string; name: string }>;
-  warehouseOptions: Array<{ value: string; label: string }>;
-  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string }>;
+  warehouses: Array<{ id: string; name: string; warehouseType?: string }>;
+  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string; cropCode?: string }>;
   users: Array<{ id: string; name: string; role: string }>;
   errors: Record<string, string>;
 }
@@ -86,7 +85,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   onProductChange,
   onGenerateCode,
   greenhouses,
-  warehouseOptions,
+  warehouses,
   cropBatches,
   users,
   errors,
@@ -109,29 +108,11 @@ export const AddModal: React.FC<AddModalProps> = ({
   // 从数据字典获取采收人员列表（feedback_personnel 分类）
   const harvestWorkerOptions = getDictItems('feedback_personnel');
 
-  // 获取选中的批次信息
-  const selectedBatch = cropBatches.find(b => b.batchCode === addForm.batchCode);
-
-  // 根据入库类型过滤批次号列表
+  // 过滤批次号列表（排除已正常结束的批次）
   const filteredBatches = cropBatches.filter(batch => {
-    // 已正常结束的批次不允许入库
     if (batch.batchStatus === 'completed' && batch.endType === 'normal') return false;
-    // 根据入库类型过滤
-    if (addForm.inboundType === 'seed_source') {
-      return batch.planType === 'seed_breeding';
-    } else if (addForm.inboundType === 'seedling') {
-      return batch.planType === 'seedling';
-    } else {
-      return batch.planType === 'planting';
-    }
+    return true;
   });
-
-  // 入库类型对应的标签
-  const inboundTypeLabels = {
-    'seed_source': '种源入库',
-    'seedling': '育苗成活入库',
-    'planting_harvest': '种植采收入库'
-  };
 
   // 根据种源类型获取单位
   const getUnitBySourceType = (sourceType: string): string => {
@@ -213,24 +194,13 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
-          <Label className="text-gray-900">入库类型</Label>
-          <DictSelect
-            category="inbound_type"
-            value={addForm.inboundType}
-            onChange={(value) => {
-              onFormChange('inboundType', value);
-              // 切换入库类型时清空已选的批次
-              onFormChange('batchCode', '');
-            }}
-            placeholder="选择入库类型"
-          />
-          <p className="mt-1 text-xs text-gray-400">{inboundTypeLabels[addForm.inboundType]}</p>
-        </div>
-        <div>
           <Label className="text-gray-900">生产计划批次号</Label>
           <Select
             value={addForm.batchCode}
-            onValueChange={(val) => onFormChange('batchCode', val)}
+            onValueChange={(val) => {
+              // 先更新批次号
+              onFormChange('batchCode', val);
+            }}
           >
             <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="请选择批次" />
@@ -261,23 +231,6 @@ export const AddModal: React.FC<AddModalProps> = ({
           {errors.greenhouseId && <p className="text-red-500 text-xs mt-1">{errors.greenhouseId}</p>}
         </div>
         <div>
-          <Label className="text-gray-900">入库仓库</Label>
-          <Select
-            value={addForm.warehouseId}
-            onValueChange={(val) => onFormChange('warehouseId', val)}
-          >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              <SelectValue placeholder="请选择仓库" />
-            </SelectTrigger>
-            <SelectContent>
-              {warehouseOptions.map(w => (
-                <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
-        </div>
-        <div>
           <Label className="text-gray-900">审核人员</Label>
           <Input
             type="text"
@@ -287,26 +240,37 @@ export const AddModal: React.FC<AddModalProps> = ({
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        {/* V3.2 单价字段 */}
-        <div>
-          <Label className="text-gray-900">
-            单价 (元/kg) <span className="text-xs text-gray-400">(可选)</span>
-          </Label>
-          <Input
-            type="number"
-            value={addForm.unitPrice || ''}
-            onChange={(e) => onFormChange('unitPrice', Number(e.target.value))}
-            placeholder="输入单价自动计算收入"
-            min="0"
-            step="0.01"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          {(addForm.unitPrice || 0) > 0 && (
-            <p className="mt-1 text-xs text-emerald-600">
-              预计收入: {((addForm.unitPrice || 0) * (addForm.products.reduce((sum: number, p: any) => sum + (p.harvestQuantity || 0), 0))).toFixed(2)} 元
-            </p>
-          )}
+        {/* V3.2 单价和单位字段 */}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Label className="text-gray-900">
+              单价 (元) <span className="text-xs text-gray-400">(可选)</span>
+            </Label>
+            <Input
+              type="number"
+              value={addForm.unitPrice || ''}
+              onChange={(e) => onFormChange('unitPrice', Number(e.target.value))}
+              placeholder="输入单价"
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-gray-900">单位</Label>
+            <DictSelect
+              category="unit"
+              value={addForm.unit}
+              onChange={(value) => onFormChange('unit', value)}
+              placeholder="选择单位"
+            />
+          </div>
         </div>
+        {(addForm.products.length > 0 && addForm.products.some((p: any) => p.harvestQuantity > 0)) && (
+          <p className="mt-1 text-sm text-emerald-600 font-medium">
+            预计收入: {((addForm.unitPrice || 0) * (addForm.products.reduce((sum: number, p: any) => sum + (p.harvestQuantity || 0), 0))).toFixed(2)} 元
+          </p>
+        )}
         {/* V3.0 采收类型 */}
         <div>
           <Label className="text-gray-900">采收类型</Label>
@@ -337,15 +301,64 @@ export const AddModal: React.FC<AddModalProps> = ({
             {addForm.targetInventory === 'product' && '采收成品将进入产品库存'}
           </p>
         </div>
-        {/* V3.1 补录字段 */}
+        {/* V3.3 仓库选择 */}
         <div>
-          <Label className="text-gray-900">是否补录</Label>
-          <DictSelect
-            category="is_supplementary"
-            value={addForm.isSupplementary ? 'yes' : 'no'}
-            onChange={(value) => onFormChange('isSupplementary', value === 'yes')}
-            placeholder="选择是否补录"
+          <Label className="text-gray-900">目标仓库</Label>
+          <WarehouseSelect
+            value={addForm.warehouseId}
+            onChange={(val) => onFormChange('warehouseId', val)}
+            placeholder="请选择目标仓库"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+          <p className="mt-1 text-xs text-gray-400">选择入库的目标仓库</p>
+          {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
+        </div>
+        {/* V3.1 补录字段 + 采收人员 同一行 */}
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label className="text-gray-900">是否补录</Label>
+            <DictSelect
+              category="is_supplementary"
+              value={addForm.isSupplementary ? 'yes' : 'no'}
+              onChange={(value) => onFormChange('isSupplementary', value === 'yes')}
+              placeholder="选择是否补录"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-gray-900">采收人员</Label>
+            <div className="relative">
+              <div
+                className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex items-center justify-between"
+                onClick={() => {
+                  const dropdown = document.getElementById('harvester-dropdown');
+                  if (dropdown) dropdown.classList.toggle('hidden');
+                }}
+              >
+                <span className="text-sm text-gray-700">
+                  {addForm.harvesterIds.length > 0
+                    ? `${addForm.harvesterIds.length} 人已选择`
+                    : '请选择采收人员'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+              <div id="harvester-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
+                {harvestWorkerOptions.map(worker => (
+                  <Label
+                    key={worker.dictCode}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <Input
+                      type="checkbox"
+                      checked={addForm.harvesterIds.includes(worker.dictCode)}
+                      onChange={() => toggleHarvester(worker.dictCode, worker.dictLabel)}
+                      className="w-4 h-4 text-emerald-600 rounded border-gray-400 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-gray-700">{worker.dictLabel}</span>
+                  </Label>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         {addForm.isSupplementary && (
           <div>
@@ -361,67 +374,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             />
           </div>
         )}
-        <div className="col-span-2">
-          <Label className="text-gray-900">采收人员</Label>
-          <div className="relative">
-            <div
-              className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex items-center justify-between"
-              onClick={() => {
-                const dropdown = document.getElementById('harvester-dropdown');
-                if (dropdown) dropdown.classList.toggle('hidden');
-              }}
-            >
-              <span className="text-sm text-gray-700">
-                {addForm.harvesterIds.length > 0
-                  ? `${addForm.harvesterIds.length} 人已选择`
-                  : '请选择采收人员'}
-              </span>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </div>
-            <div id="harvester-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
-              {harvestWorkerOptions.map(worker => (
-                <Label
-                  key={worker.dictCode}
-                  className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                >
-                  <Input
-                    type="checkbox"
-                    checked={addForm.harvesterIds.includes(worker.dictCode)}
-                    onChange={() => toggleHarvester(worker.dictCode, worker.dictLabel)}
-                    className="w-4 h-4 text-emerald-600 rounded border-gray-400 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">{worker.dictLabel}</span>
-                </Label>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
-
-      {/* 批次信息自动填充区域 */}
-      {selectedBatch && (
-        <div className="mt-4 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-          <div className="text-sm font-medium text-emerald-700 mb-2">批次信息（自动填充）</div>
-          <div className="grid grid-cols-4 gap-4">
-            <div>
-              <div className="text-xs text-emerald-600">作物品种</div>
-              <div className="text-sm text-gray-900">{selectedBatch.cropName}</div>
-            </div>
-            <div>
-              <div className="text-xs text-emerald-600">作物品种</div>
-              <div className="text-sm text-gray-900">{selectedBatch.variety}</div>
-            </div>
-            <div>
-              <div className="text-xs text-emerald-600">种植模式</div>
-              <div className="text-sm text-gray-900">{selectedBatch.plantingMode}</div>
-            </div>
-            <div>
-              <div className="text-xs text-emerald-600">目标产量(kg)</div>
-              <div className="text-sm text-gray-900">{selectedBatch.targetYield}</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 产品明细 */}
       <div className="mt-6">
@@ -440,20 +393,20 @@ export const AddModal: React.FC<AddModalProps> = ({
 
         {addForm.products.length > 0 ? (
           <div className="overflow-x-auto border border-gray-400 rounded-lg">
-            <table className="min-w-[1200px]">
+            <table className="w-full min-w-[900px]">
               <thead style={{ backgroundColor: '#059669' }}>
                 <tr style={{ backgroundColor: '#059669' }}>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-36 text-left">产品编码</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-28 text-left">作物名称</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">品种</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-32 text-left">生产计划批次号</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">种植模式</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">品质等级</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">采收量(kg)</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-24 text-left">目标产量</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-16 text-left">完成率</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold text-left">备注</th>
-                  <th className="px-2 py-2 text-white text-sm font-semibold w-12 text-left">操作</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-36 text-left">作物编码</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-32 text-left">品种</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-32 text-left">作物品种</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-28 text-left">种植模式</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-20 text-left">品质等级</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-20 text-left">采收量</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-14 text-left">单位</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-20 text-left">目标产量</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-14 text-left">完成率</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-10 text-left">备注</th>
+                  <th className="px-2 py-2 text-white text-sm font-semibold w-10 text-left">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -464,43 +417,33 @@ export const AddModal: React.FC<AddModalProps> = ({
 
                   return (
                     <tr key={idx}>
-                      {/* 产品编码 */}
+                      {/* 作物编码 */}
                       <td className="px-2 py-2">
                         <Input
                           type="text"
-                          value={product.productCode}
-                          onChange={(e) => onProductChange(idx, 'productCode', e.target.value.toUpperCase())}
+                          value={product.cropCode}
+                          onChange={(e) => onProductChange(idx, 'cropCode', e.target.value.toUpperCase())}
                           placeholder="编码"
-                          className="w-32 px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
-                      {/* 作物名称 */}
+                      {/* 品种（类型名，如"黄瓜"） */}
                       <td className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.cropName}
                           onChange={(e) => onProductChange(idx, 'cropName', e.target.value)}
-                          placeholder="作物名称"
+                          placeholder="品种"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
-                      {/* 品种 */}
+                      {/* 作物品种（最细化名，如"水果黄瓜"） */}
                       <td className="px-2 py-2">
                         <Input
                           type="text"
                           value={product.variety}
                           onChange={(e) => onProductChange(idx, 'variety', e.target.value)}
-                          placeholder="品种"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </td>
-                      {/* 生产计划批次号 */}
-                      <td className="px-2 py-2">
-                        <Input
-                          type="text"
-                          value={product.batchCode}
-                          onChange={(e) => onProductChange(idx, 'batchCode', e.target.value)}
-                          placeholder="批次号"
+                          placeholder="作物品种"
                           className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
@@ -537,7 +480,16 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.harvestQuantity}
                           onChange={(e) => onProductChange(idx, 'harvestQuantity', Number(e.target.value))}
                           min="0"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-1 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </td>
+                      {/* 单位 */}
+                      <td className="px-2 py-2">
+                        <DictSelect
+                          category="unit"
+                          value={product.unit}
+                          onChange={(value) => onProductChange(idx, 'unit', value)}
+                          placeholder="单位"
                         />
                       </td>
                       {/* 目标产量 */}
@@ -561,7 +513,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.remarks}
                           onChange={(e) => onProductChange(idx, 'remarks', e.target.value)}
                           placeholder="备注"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-1 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </td>
                       {/* 操作 */}

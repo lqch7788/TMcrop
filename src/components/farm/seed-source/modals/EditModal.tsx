@@ -344,12 +344,12 @@ export function EditModal({
         {/* 登记数量 */}
         <div>
           <Label className="text-gray-900">登记数量</Label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Input
               type="number"
               value={formData.quantity || ''}
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-              className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <DictSelect
               category="unit"

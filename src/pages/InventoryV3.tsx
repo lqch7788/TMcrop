@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink, X, ArrowDownCircle, ArrowUpCircle, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   getInventoryList,
   getInventoryStats,
@@ -23,10 +24,14 @@ import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { showAlert } from '@/lib/dialogService';
 
 // Tab 类型
 type TabType = 'list' | 'outbound';
+
+// 库存类型 Tab
+type StockTypeTab = 'all' | 'seed' | 'seedling' | 'product';
 
 export default function InventoryV3Page() {
   const [loading, setLoading] = useState(true);
@@ -57,6 +62,17 @@ export default function InventoryV3Page() {
   const [activeTab, setActiveTab] = useState<TabType>('list');
   const [outboundModalOpen, setOutboundModalOpen] = useState(false);
   const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
+
+  // 库存类型 Tab 筛选
+  const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>('all');
+
+  // Tab 配置
+  const stockTypeTabs: { key: StockTypeTab; label: string; icon: React.ReactNode; color: string }[] = [
+    { key: 'all', label: '全部', icon: <Package className="w-4 h-4" />, color: 'gray' },
+    { key: 'seed', label: '种子', icon: <Leaf className="w-4 h-4" />, color: 'amber' },
+    { key: 'seedling', label: '种苗', icon: <Sprout className="w-4 h-4" />, color: 'green' },
+    { key: 'product', label: '成品', icon: <Package className="w-4 h-4" />, color: 'emerald' },
+  ];
 
   useEffect(() => {
     loadData();
@@ -153,13 +169,36 @@ export default function InventoryV3Page() {
     }
   };
 
+  // Tab 与 Select 联动：Tab 变化时同步更新 Select
+  const handleStockTypeTabChange = (tab: StockTypeTab) => {
+    setStockTypeTab(tab);
+    // Tab 切换时同步更新 filter
+    if (tab === 'all') {
+      setFilter({ ...filter, stockType: '' });
+    } else {
+      // Tab 值转换为 StockType
+      const stockTypeMap: Record<string, StockType> = {
+        'seed': StockType.SEED,
+        'seedling': StockType.SEEDLING,
+        'product': StockType.PRODUCT,
+      };
+      setFilter({ ...filter, stockType: stockTypeMap[tab] || '' });
+    }
+  };
+
   const filteredStocks = stocks.filter(stock => {
-    if (!searchKeyword) return true;
-    return (
-      stock.instanceId.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      stock.cropName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (stock.varietyName || '').toLowerCase().includes(searchKeyword.toLowerCase())
-    );
+    // 搜索过滤
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase();
+      if (
+        !stock.instanceId.toLowerCase().includes(keyword) &&
+        !stock.cropName.toLowerCase().includes(keyword) &&
+        !(stock.varietyName || '').toLowerCase().includes(keyword)
+      ) {
+        return false;
+      }
+    }
+    return true;
   });
 
   return (
@@ -252,7 +291,19 @@ export default function InventoryV3Page() {
             </div>
             <Select
               value={filter.stockType}
-              onValueChange={(val) => setFilter({ ...filter, stockType: val as StockType | '' })}
+              onValueChange={(val) => {
+                setFilter({ ...filter, stockType: val as StockType | '' });
+                // Select 变化时同步更新 Tab
+                if (val === '') {
+                  setStockTypeTab('all');
+                } else if (val === StockType.SEED) {
+                  setStockTypeTab('seed');
+                } else if (val === StockType.SEEDLING) {
+                  setStockTypeTab('seedling');
+                } else if (val === StockType.PRODUCT) {
+                  setStockTypeTab('product');
+                }
+              }}
             >
               <SelectTrigger className="w-auto">
                 <SelectValue placeholder="全部类型" />
@@ -302,6 +353,32 @@ export default function InventoryV3Page() {
               刷新
             </Button>
           </div>
+        </div>
+
+        {/* 库存类型 Tab 切换栏 */}
+        <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200 mb-4">
+          <Tabs value={stockTypeTab} onValueChange={(val) => handleStockTypeTabChange(val as StockTypeTab)}>
+            <TabsList className="w-full justify-start bg-transparent p-0 gap-1">
+              {stockTypeTabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                    stockTypeTab === tab.key
+                      ? tab.color === 'amber' ? "bg-amber-100 text-amber-700 shadow-sm" :
+                        tab.color === 'green' ? "bg-green-100 text-green-700 shadow-sm" :
+                        tab.color === 'emerald' ? "bg-emerald-100 text-emerald-700 shadow-sm" :
+                        "bg-gray-100 text-gray-700 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  )}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* 库存列表 */}

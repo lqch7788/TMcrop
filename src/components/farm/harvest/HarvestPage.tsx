@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
@@ -52,9 +52,10 @@ export default function HarvestPage() {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
-  // 生产计划和仓库Store
+  // 生产计划Store
   const plans = useProductionPlanStore((s) => s.plans);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
+  // 仓库Store（用于筛选工具栏）
   const warehouses = useWarehouseStore((s) => s.warehouses);
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
 
@@ -73,29 +74,34 @@ export default function HarvestPage() {
     }
   }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, plans.length, fetchPlans, warehouses.length, loadWarehouses]);
 
-  // 从Store计算 equivalent options
-  const cropBatches = plans.map(p => ({
-    id: p.id,
-    batchCode: p.batchCode,
-    batchStatus: p.batchStatus || p.status,
-    planType: p.planType,
-    planTypeName: p.planTypeName,
-    cropName: p.cropName || p.cropTypeName,
-    variety: p.variety,
-    plantingMode: p.plantingMode,
-    targetYield: p.targetYield,
-    cropId: p.cropId,
-    varietyId: p.varietyId,
-    productionPlanId: p.productionPlanId,
-    productionPlanCode: p.productionPlanCode,
-    instanceId: p.instanceId,
-  }));
-
-  // 防崩溃：API 或持久化数据可能返回非数组
-  const safeWarehouses = Array.isArray(warehouses) ? warehouses : [];
-  const warehouseOptions = safeWarehouses
-    .filter(w => w.status === 'active')
-    .map(w => ({ value: w.id, label: w.name, name: w.name }));
+  // 从Store计算 equivalent options（去重：同一批次号只保留一条）
+  const cropBatches = (() => {
+    const seen = new Set<string>();
+    return plans
+      .map(p => ({
+        id: p.id,
+        batchCode: p.batchCode,
+        batchStatus: p.batchStatus || p.status,
+        planType: p.planType,
+        planTypeName: p.planTypeName,
+        cropName: p.cropName || p.cropTypeName,
+        variety: p.variety,
+        plantingMode: p.plantingMode,
+        targetYield: p.targetYield,
+        cropId: p.cropId,
+        varietyId: p.varietyId,
+        productionPlanId: p.productionPlanId,
+        productionPlanCode: p.productionPlanCode,
+        instanceId: p.instanceId,
+      }))
+      .filter(item => {
+        if (seen.has(item.batchCode)) {
+          return false; // 跳过重复的批次号
+        }
+        seen.add(item.batchCode);
+        return true;
+      });
+  })();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -239,9 +245,9 @@ export default function HarvestPage() {
               '采收人员': harvesterNames,
               '单价(元/kg)': (record.unitPrice != null) ? record.unitPrice.toFixed(2) : '-',
               '收入(元)': (record.totalAmount != null) ? record.totalAmount.toFixed(2) : '-',
-              '产品编码': product.productCode || generateProductCode(product.cropName || record.cropName || '', product.variety || record.variety || '', recordIdx * 100 + productIdx),
+              '作物编码': product.cropCode || '-',
               '作物品种': product.variety || record.variety || '-',
-              '批次号': product.batchCode || record.batchCode || '-',
+              '批次号': record.batchCode || '-',
               '种植模式': record.plantingMode || '-',
               '采收量(kg)': `${product.harvestQuantity || 0} ${unit}`,
               '目标产量(kg)': `${product.targetYield || 0} ${unit}`,
@@ -262,6 +268,7 @@ export default function HarvestPage() {
             '采收人员': harvesterNames,
             '单价(元/kg)': (record.unitPrice != null) ? record.unitPrice.toFixed(2) : '-',
             '收入(元)': (record.totalAmount != null) ? record.totalAmount.toFixed(2) : '-',
+            '作物编码': '-',
             '产品编码': generateProductCode(record.cropName || '', record.variety || '', recordIdx),
             '作物品种': record.variety || '-',
             '批次号': record.batchCode || '-',
@@ -365,14 +372,6 @@ export default function HarvestPage() {
         } else {
           updatedRecord = { ...updatedRecord, ...editedRecords[id] };
         }
-        // Find warehouse name if warehouseId changed
-        if (editedRecords[id].warehouseId && editedRecords[id].warehouseId !== record.warehouseId) {
-          const wh = warehouseOptions.find(w => w.value === editedRecords[id].warehouseId);
-          updatedRecord = {
-            ...updatedRecord,
-            warehouseName: wh?.label || record.warehouseName,
-          };
-        }
         // Find batch cropName if batchCode changed
         if (editedRecords[id].batchCode && editedRecords[id].batchCode !== record.batchCode) {
           const batch = cropBatches.find(b => b.batchCode === editedRecords[id].batchCode);
@@ -466,7 +465,6 @@ export default function HarvestPage() {
     batchCode: '',
     greenhouseId: '',
     harvestDate: new Date().toISOString().slice(0, 16),
-    warehouseId: '',
     harvesterIds: [] as string[],
     harvesterNames: [] as string[],
     auditor: currentAuditor,
@@ -481,23 +479,22 @@ export default function HarvestPage() {
       batchCode: string;
       plantingMode: string;
       harvestQuantity: number;
+      unit: string;
       targetYield: number;
       grade: string;
       auditor: string;
       remarks: string;
     }>,
-    // V3.1 入库类型
-    inboundType: 'planting_harvest' as 'seed_source' | 'seedling' | 'planting_harvest',  // 入库类型
     // V3.1 补录相关字段
     isSupplementary: false,  // 是否补录
     supplementaryReason: '',  // 补录原因
-    // V3.2 单价字段
-    unitPrice: 0,  // 单价(元/kg)
+    // V3.2 单价和单位字段
+    unitPrice: 0,  // 单价(元)
+    unit: '公斤',  // 单位
+    // V3.3 仓库
+    warehouseId: '',  // 仓库ID
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // 转换 warehouseOptions 为 BatchEditModal 期望的格式 { id, name }[]
-  const warehousesForModal = warehouseOptions.map(w => ({ id: w.value, name: w.label }));
 
   const generateHarvestCode = () => {
     const date = new Date();
@@ -505,13 +502,21 @@ export default function HarvestPage() {
     return code;
   };
 
+  // 仓库选项（不过滤，用于筛选工具栏）
+  const safeWarehouses = Array.isArray(warehouses) ? warehouses : [];
+  const warehouseOptions = safeWarehouses
+    .filter(w => w.status === 'active')
+    .map(w => ({ value: w.id, label: w.name }));
+  // 转换 warehouseOptions 为 BatchEditModal 期望的格式 { id, name }[]
+  const warehousesForModal = warehouseOptions.map(w => ({ id: w.value, name: w.label }));
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!newRecord.harvestCode) newErrors.harvestCode = '请生成采收单号';
     if (!newRecord.batchCode) newErrors.batchCode = '请选择采收批次';
     if (!newRecord.greenhouseId) newErrors.greenhouseId = '请选择采收区域';
+    if (!newRecord.warehouseId) newErrors.warehouseId = '请选择目标仓库';
     if (!newRecord.harvestDate) newErrors.harvestDate = '请选择采收时间';
-    if (!newRecord.warehouseId) newErrors.warehouseId = '请选择入库仓库';
 
     // 数值验证（方案4.3 + 方案4.2）
     if (newRecord.unitPrice && !validateUnitPrice(newRecord.unitPrice)) {
@@ -529,16 +534,24 @@ export default function HarvestPage() {
 
   // 添加产品
   const handleAddProduct = () => {
+    // 从当前选中的批次获取默认值
+    const selectedBatchForProduct = cropBatches.find(b => b.batchCode === newRecord.batchCode);
+    // 通过作物名称搜索作物编码（使用模糊搜索匹配 varietyName 或 subVariety1Name）
+    const searchResults = selectedBatchForProduct?.cropName
+      ? cropVarietyService.searchVarieties(selectedBatchForProduct.cropName)
+      : [];
+    const cropVarietyInfo = searchResults.length > 0 ? searchResults[0].variety : undefined;
+
     setNewRecord(prev => ({
       ...prev,
       products: [...prev.products, {
-        productCode: '',
-        cropName: '',
-        variety: '',
-        batchCode: prev.batchCode,
-        plantingMode: '',
+        cropCode: cropVarietyInfo?.cropCode || '',  // 作物编码（11位）
+        cropName: selectedBatchForProduct?.cropName || '',
+        variety: selectedBatchForProduct?.variety || '',
+        plantingMode: selectedBatchForProduct?.plantingMode || '',
         harvestQuantity: 0,
-        targetYield: 0,
+        unit: prev.unit || '公斤',
+        targetYield: selectedBatchForProduct?.targetYield || 0,
         grade: 'A',
         auditor: prev.auditor,
         remarks: '',
@@ -553,6 +566,19 @@ export default function HarvestPage() {
       products: prev.products.filter((_, i) => i !== index),
     }));
   };
+
+  // 监听批次号变化，自动添加产品行（放在 handleAddProduct 定义之后）
+  const prevBatchCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    // 当批次号变化且从无批次变为有批次时，自动添加一行
+    if (newRecord.batchCode && !prevBatchCodeRef.current && newRecord.products.length === 0) {
+      // 使用 setTimeout 避免在渲染过程中调用 setState
+      setTimeout(() => {
+        handleAddProduct();
+      }, 0);
+    }
+    prevBatchCodeRef.current = newRecord.batchCode || null;
+  }, [newRecord.batchCode, newRecord.products.length]);
 
   // 更新产品
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -572,7 +598,6 @@ export default function HarvestPage() {
 
     const selectedBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
     const selectedGreenhouse = greenhouses.find(g => g.id === newRecord.greenhouseId);
-    const selectedWarehouse = warehouseOptions.find(w => w.value === newRecord.warehouseId);
     const selectedHarvesters = users.filter(u => newRecord.harvesterIds.includes(u.id));
 
     // 计算总采收量
@@ -599,6 +624,7 @@ export default function HarvestPage() {
       const quantity = product.harvestQuantity || totalHarvestQuantity;
       const unitPrice = newRecord.unitPrice || 0;
 
+      const selectedWarehouse = safeWarehouses.find(w => w.id === newRecord.warehouseId);
       const record = {
         harvestCode,
         batchCode: newRecord.batchCode,
@@ -607,17 +633,17 @@ export default function HarvestPage() {
         greenhouseName: selectedGreenhouse?.name || '',
         harvestDate: newRecord.harvestDate,
         harvestQuantity: quantity,
-        unit: '公斤',
+        unit: newRecord.unit,
         grade: product.grade as 'A' | 'B' | 'C',
-        warehouseId: newRecord.warehouseId,
-        warehouseName: selectedWarehouse?.name || '',
         harvesterIds: newRecord.harvesterIds,
         harvesterNames: selectedHarvesters.map(u => u.name),
+        warehouseId: newRecord.warehouseId,
+        warehouseName: selectedWarehouse?.name || '',
         status: 'harvested' as const,
         remarks: product.remarks || newRecord.remarks,
         auditor: product.auditor || newRecord.auditor,
         variety: product.variety || selectedBatch?.variety || '',
-        plantingMode: product.plantingMode || selectedBatch?.plantingMode || '',
+        plantingMode: selectedBatch?.plantingMode || '',
         targetYield: product.targetYield || selectedBatch?.targetYield || 0,
         quality: 'good' as const,
         unitPrice,                                    // 单价(元/kg)
@@ -627,9 +653,16 @@ export default function HarvestPage() {
       // 使用 Store 添加记录（架构：组件 → Store → API）
       const createdRecord = await addItem(record);
 
-      // 同步到库存中心（V3.0统一库存）
-      inventoryInbound({
-        stockType: StockType.PRODUCT,
+      // 同步到库存中心（V3.0统一库存）- 使用同步等待
+      // targetInventory 映射到 StockType
+      const stockTypeMap: Record<string, StockType> = {
+        'seed': StockType.SEED,
+        'seedling': StockType.SEEDLING,
+        'product': StockType.PRODUCT,
+      };
+      const stockType = stockTypeMap[newRecord.targetInventory] || StockType.PRODUCT;
+      const inventoryResult = await inventoryInbound({
+        stockType,
         businessId: createdRecord.id,
         businessType: BusinessType.HARVEST,
         cropId: selectedBatch?.cropId || '',
@@ -637,15 +670,22 @@ export default function HarvestPage() {
         varietyId: selectedBatch?.varietyId,
         varietyName: record.variety,
         quantity: product.harvestQuantity || totalHarvestQuantity,
-        unit: '公斤',
+        unit: newRecord.unit,
+        warehouseId: newRecord.warehouseId,
+        warehouseName: selectedWarehouse?.name || '',
         sourceType: SourceType.SELF_PRODUCED,
         baseName: selectedGreenhouse?.name,
         productionPlanId: selectedBatch?.productionPlanId,
         productionPlanCode: selectedBatch?.productionPlanCode,
         businessCode: record.harvestCode,
-      }, 'system', '系统管理员').catch(err => {
-        console.error('同步库存失败:', err);
-      });
+        extensions: {
+          inboundDate: newRecord.harvestDate,
+        },
+      }, 'system', '系统管理员');
+
+      if (!inventoryResult.success) {
+        showAlert(`库存同步失败: ${inventoryResult.error || '未知错误'}`, 'warning');
+      }
 
       // 更新作物实例的采收数量
       if (selectedBatch?.instanceId) {
@@ -660,13 +700,13 @@ export default function HarvestPage() {
       batchCode: '',
       greenhouseId: '',
       harvestDate: new Date().toISOString().slice(0, 16),
-      warehouseId: '',
       harvesterIds: [],
       harvesterNames: [],
       auditor: currentAuditor,
       remarks: '',
       products: [],
       unitPrice: 0,
+      unit: '公斤',
     });
     setErrors({});
   };
@@ -683,14 +723,22 @@ export default function HarvestPage() {
   const handleCloseModal = () => {
     setIsCreateModalOpen(false);
     setNewRecord({
+      harvestCode: '',
       batchCode: '',
       greenhouseId: '',
       harvestDate: new Date().toISOString().slice(0, 16),
-      harvestQuantity: 0,
-      grade: 'A',
-      warehouseId: '',
       harvesterIds: [],
+      harvesterNames: [],
+      auditor: currentAuditor,
       remarks: '',
+      products: [],
+      harvestType: 'product',
+      targetInventory: 'product',
+      isSupplementary: false,
+      supplementaryReason: '',
+      unitPrice: 0,
+      unit: '公斤',
+      warehouseId: '',
     });
     setErrors({});
   };
@@ -804,7 +852,7 @@ export default function HarvestPage() {
         onProductChange={handleProductChange}
         onGenerateCode={() => setNewRecord(prev => ({ ...prev, harvestCode: generateHarvestCode() }))}
         greenhouses={greenhouses}
-        warehouseOptions={warehouseOptions}
+        warehouses={safeWarehouses}
         cropBatches={cropBatches}
         users={users}
         errors={errors}

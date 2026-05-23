@@ -3,6 +3,9 @@
  */
 
 import { getDatabase, saveDatabase } from '../db';
+import { inventoryStockRepository } from '../repositories/inventory.repository';
+import { inventoryTransactionRepository } from '../repositories/inventory-tx.repository';
+import { queryToObjects } from '../utils/queryHelper';
 
 export interface Inventory {
   id: string;
@@ -19,6 +22,51 @@ export interface Inventory {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * 入库 DTO
+ */
+export interface InboundDTO {
+  stockType: string;
+  businessId: string;
+  businessType: string;
+  businessCode: string;
+  cropId: string;
+  cropName: string;
+  varietyId?: string;
+  varietyName?: string;
+  quantity: number;
+  unit: string;
+  warehouseId: string;
+  warehouseName: string;
+  inboundDate?: string;
+  sourceType?: string;
+  sourceInstanceId?: string;
+  productionPlanCode?: string;
+  remarks?: string;
+  operatorId?: string;
+  operatorName?: string;
+}
+
+/**
+ * 入库结果
+ */
+export interface InboundResult {
+  success: boolean;
+  instanceId?: string;
+  transactionId?: string;
+  currentQuantity?: number;
+  availableQuantity?: number;
+  error?: string;
+}
+
+// warehouseType → stockType 映射
+const WAREHOUSE_TYPE_TO_STOCK_TYPE: Record<string, string> = {
+  'seed_storage': 'seed',
+  'seedling': 'seedling',
+  'cold_storage': 'product',
+  'normal': 'product',
+};
 
 export class InventoryService {
   async getInventory(params: {
@@ -133,6 +181,125 @@ export class InventoryService {
     db.run('DELETE FROM inventory WHERE id = ?', [id]);
     saveDatabase();
     return true;
+  }
+
+  /**
+   * 采收入库
+   */
+  async inbound(request: InboundDTO): Promise<InboundResult> {
+    try {
+      // 1. 校验仓库
+      const db = getDatabase();
+      const warehouseSql = `SELECT * FROM warehouses WHERE id = ?`;
+      const warehouses = queryToObjects<{ id: string; warehouse_type: string; name: string }>(db, warehouseSql, [request.warehouseId]);
+
+      if (warehouses.length === 0) {
+        return { success: false, error: '仓库不存在' };
+      }
+
+      const warehouse = warehouses[0];
+
+      // 2. 校验仓库类型与 stockType 匹配
+      const expectedStockType = WAREHOUSE_TYPE_TO_STOCK_TYPE[warehouse.warehouse_type];
+      if (!expectedStockType || expectedStockType !== request.stockType) {
+        return {
+          success: false,
+          error: `仓库类型不匹配：期望 ${expectedStockType}，实际 ${warehouse.warehouse_type}`
+        };
+      }
+
+      // 3. 生成 instanceId
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const prefix = request.stockType === 'seed' ? 'INS'
+        : request.stockType === 'seedling' ? 'ISE'
+        : 'IPR';
+      const instanceId = `${prefix}-${dateStr}-${String(Math.random().toString(36).slice(2, 6)).toUpperCase()}`;
+
+      // 4. 创建库存记录
+      const stock = await inventoryStockRepository.create({
+        instance_id: instanceId,
+        stock_type: request.stockType,
+        business_id: request.businessId,
+        business_type: request.businessType,
+        business_code: request.businessCode,
+        crop_id: request.cropId,
+        crop_name: request.cropName,
+        variety_id: request.varietyId,
+        variety_name: request.varietyName,
+        current_quantity: request.quantity,
+        frozen_quantity: 0,
+        available_quantity: request.quantity,
+        unit: request.unit,
+        warehouse_id: request.warehouseId,
+        warehouse_name: request.warehouseName,
+        inbound_date: request.inboundDate || now.toISOString().slice(0, 10),
+        source_type: request.sourceType || 'self_produced',
+        production_plan_code: request.productionPlanCode,
+        source_instance_id: request.sourceInstanceId,
+        status: 'in_stock',
+      });
+
+      // 5. 创建入库流水
+      const transactionId = `TRX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await inventoryTransactionRepository.create({
+        transaction_id: transactionId,
+        instance_id: instanceId,
+        stock_type: request.stockType,
+        transaction_type: 'inbound',
+        quantity: request.quantity,
+        balance_before: 0,
+        balance_after: request.quantity,
+        business_id: request.businessId,
+        business_type: request.businessType,
+        business_code: request.businessCode,
+        operator_id: request.operatorId,
+        operator_name: request.operatorName || '系统管理员',
+        operate_date: now.toISOString().slice(0, 10),
+        remarks: request.remarks || '采收入库',
+      });
+
+      console.log('[InventoryService] 入库成功:', { instanceId, transactionId, quantity: request.quantity });
+
+      return {
+        success: true,
+        instanceId,
+        transactionId,
+        currentQuantity: request.quantity,
+        availableQuantity: request.quantity,
+      };
+    } catch (error) {
+      console.error('[InventoryService] inbound 失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '入库失败'
+      };
+    }
+  }
+
+  /**
+   * 获取库存详情（含流水）
+   */
+  async getDetail(instanceId: string): Promise<{
+    stock: any | null;
+    transactions: any[];
+  }> {
+    const stock = await inventoryStockRepository.findByInstanceId(instanceId);
+    const transactions = await inventoryTransactionRepository.findByInstanceId(instanceId);
+    return { stock, transactions };
+  }
+
+  /**
+   * 获取库存列表（V3.0 新库存表）
+   */
+  async getList(query: {
+    stockType?: string;
+    warehouseId?: string;
+    cropName?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: any[]; total: number }> {
+    return inventoryStockRepository.findAll(query);
   }
 }
 
