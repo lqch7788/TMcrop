@@ -259,7 +259,7 @@ export default function Reports() {
               type="checkbox"
               checked={selectedRows.length === 3 && 3 > 0}
               onChange={handleSelectAll}
-              className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
             />
             <span className="text-sm font-medium text-gray-900">选择要导出的报表</span>
           </div>
@@ -270,14 +270,14 @@ export default function Reports() {
                 className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
                   selectedRows.includes(type.value)
                     ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={selectedRows.includes(type.value)}
                   onChange={() => handleSelectRow(type.value)}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                 />
                 <span className="ml-2 text-sm text-gray-700">{type.label}</span>
               </label>

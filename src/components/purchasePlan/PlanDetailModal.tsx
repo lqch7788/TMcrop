@@ -197,7 +197,7 @@ export function PlanDetailModal({
           {selectedPlanDetail.items && selectedPlanDetail.items.length > 0 ? (
             <MaterialItemsTable items={selectedPlanDetail.items} />
           ) : (
-            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
+            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-gray-400 rounded-lg">
               暂无物料明细
             </div>
           )}

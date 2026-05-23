@@ -324,8 +324,8 @@ export default function CodeRule() {
                 <td colSpan={6} className="px-2 py-2">
                   {showAddBig ? (
                     <div className="flex items-center gap-2">
-                      <input type="text" value={newBigCode} onChange={e => setNewBigCode(e.target.value)} placeholder="代码(如:AB)" className="w-24 px-2 py-1 border border-gray-300 rounded text-sm" />
-                      <input type="text" value={newBigName} onChange={e => setNewBigName(e.target.value)} placeholder="大类名称" className="w-40 px-2 py-1 border border-gray-300 rounded text-sm" />
+                      <input type="text" value={newBigCode} onChange={e => setNewBigCode(e.target.value)} placeholder="代码(如:AB)" className="w-24 px-2 py-1 border border-gray-400 rounded text-sm" />
+                      <input type="text" value={newBigName} onChange={e => setNewBigName(e.target.value)} placeholder="大类名称" className="w-40 px-2 py-1 border border-gray-400 rounded text-sm" />
                       <Button variant="default" size="sm" onClick={handleAddBig}>添加</Button>
                       <Button variant="secondary" size="sm" onClick={() => { setShowAddBig(false); setNewBigCode(''); setNewBigName(''); }}>取消</Button>
                     </div>

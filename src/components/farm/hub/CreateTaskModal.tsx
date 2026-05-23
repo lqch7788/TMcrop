@@ -152,7 +152,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="请输入任务标题"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -163,7 +163,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     value={taskType}
                     onValueChange={(val) => setTaskType(val)}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="请选择类型" />
                     </SelectTrigger>
                     <SelectContent>
@@ -179,7 +179,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     value={batchCode}
                     onValueChange={(val) => setBatchCode(val)}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="请选择批次" />
                     </SelectTrigger>
                     <SelectContent>                      {cropBatches.map((batch) => (
@@ -199,7 +199,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     value={greenhouse}
                     onValueChange={(val) => setGreenhouse(val)}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="请选择区域" />
                     </SelectTrigger>
                     <SelectContent>                      {greenhouses.map((gh) => (
@@ -228,7 +228,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                       max="24"
                       value={estimatedHours}
                       onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                     <span className="text-sm text-gray-500">小时</span>
                   </div>
@@ -239,7 +239,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     value={priority}
                     onValueChange={(val) => setPriority(val as any)}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                    <SelectTrigger className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                       <SelectValue placeholder="中" />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,7 +305,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
               onChange={(e) => setDescription(e.target.value)}
               placeholder="请输入任务详细描述..."
               rows={3}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </div>
         </div>

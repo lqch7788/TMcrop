@@ -130,7 +130,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="请输入任务标题"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
 
@@ -143,7 +143,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as typeof priority)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
               {PRIORITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -160,7 +160,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
             <select
               value={assigneeId}
               onChange={(e) => handleExecutorChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="">请选择执行人</option>
               {EXECUTOR_OPTIONS.map((option) => (
@@ -181,7 +181,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
 
@@ -195,7 +195,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="请输入任务描述..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
           />
         </div>
 
@@ -204,7 +204,7 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
           >
             取消
           </button>

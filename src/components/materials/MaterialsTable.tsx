@@ -54,7 +54,7 @@ export default function MaterialsTable({
                     type="checkbox"
                     checked={selectedRows.length === filteredMaterials.length && filteredMaterials.length > 0}
                     onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>
               )}
@@ -79,7 +79,7 @@ export default function MaterialsTable({
                       type="checkbox"
                       checked={selectedRows.includes(item.id)}
                       onChange={() => onSelectRow(item.id)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
                   </td>
                 )}

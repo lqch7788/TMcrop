@@ -93,7 +93,7 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                 type="checkbox"
                 checked={selectedRows.length === tasks.length}
                 onChange={onSelectAll}
-                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
               />
             </th>
             <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">
@@ -150,7 +150,7 @@ export const FarmTaskTable: React.FC<FarmTaskTableProps> = ({
                     checked={selectedRows.includes(index)}
                     disabled={!EDITABLE_STATUSES.includes(task.status)}
                     onChange={() => onRowSelect(index)}
-                    className="rounded border-gray-300"
+                    className="rounded border-gray-400"
                   />
                 </td>
                 <td className="px-3 py-3 text-sm font-medium text-gray-900">

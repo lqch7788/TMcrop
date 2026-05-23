@@ -441,7 +441,7 @@ export function EditCropVarietyModal({
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               rows={3}
               placeholder="请输入备注信息..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
             />
           </div>
         </div>

@@ -457,6 +457,7 @@ export function AddModal({
                 <Button
                   key={opt.value}
                   variant="ghost"
+                  size="sm"
                   onClick={() => setFormData(prev => ({
                     ...prev,
                     propagationType: opt.value,
@@ -466,7 +467,7 @@ export function AddModal({
                   className={`p-3 border-2 text-left w-full h-auto ${
                     formData.propagationType === opt.value
                       ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-white'
+                      : 'border-gray-200 bg-white hover:border-gray-400 hover:bg-white'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
@@ -572,7 +573,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <SelectValue placeholder="选择育种方法" />
                   </SelectTrigger>
                   <SelectContent>
@@ -593,7 +594,7 @@ export function AddModal({
                   value={formData.parentMaleCode}
                   onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
                   placeholder="♂ 父本种源批号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -603,7 +604,7 @@ export function AddModal({
                   value={formData.parentFemaleCode}
                   onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
                   placeholder="♀ 母本种源批号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -612,7 +613,7 @@ export function AddModal({
                   value={formData.generation}
                   onValueChange={(val) => setFormData({ ...formData, generation: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <SelectValue placeholder="选择世代" />
                   </SelectTrigger>
                   <SelectContent>
@@ -631,7 +632,7 @@ export function AddModal({
                   value={formData.breedingLocation}
                   onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
                   placeholder="育种基地/温室"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -641,7 +642,7 @@ export function AddModal({
                   value={formData.targetTraits}
                   onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
                   placeholder="如：抗病、高产、早熟"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -649,7 +650,7 @@ export function AddModal({
                 <DatePicker
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </>
@@ -665,7 +666,7 @@ export function AddModal({
                   value={formData.linkedPlantingCode}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingCode: e.target.value })}
                   placeholder="种植批次号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -675,7 +676,7 @@ export function AddModal({
                   value={formData.linkedPlantingId}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingId: e.target.value })}
                   placeholder="留种株编号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -683,7 +684,7 @@ export function AddModal({
                 <DatePicker
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </>
@@ -698,7 +699,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <SelectValue placeholder="选择繁殖方式" />
                   </SelectTrigger>
                   <SelectContent>
@@ -718,7 +719,7 @@ export function AddModal({
                   value={formData.motherPlantCode}
                   onChange={(e) => setFormData({ ...formData, motherPlantCode: e.target.value })}
                   placeholder="母株种源批号"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -728,7 +729,7 @@ export function AddModal({
                   value={formData.motherPlantId}
                   onChange={(e) => setFormData({ ...formData, motherPlantId: e.target.value })}
                   placeholder="母株记录ID"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -737,7 +738,7 @@ export function AddModal({
                   type="number"
                   value={formData.quantity || ''}
                   onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </>
@@ -781,13 +782,13 @@ export function AddModal({
                       onChange={(e) => setSupplierSearchKeyword(e.target.value)}
                       onFocus={() => setShowSupplierSearch(true)}
                       placeholder="搜索供应商名称、编码或联系人..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => setShowSupplierSearch(!showSupplierSearch)}
-                      className="border border-l-0 border-gray-300 rounded-l-none"
+                      className="border border-l-0 border-gray-400 rounded-l-none"
                     >
                       <Search className="w-4 h-4 text-gray-500" />
                     </Button>
@@ -806,6 +807,7 @@ export function AddModal({
                           <Button
                             key={supplier.id}
                             variant="ghost"
+                            size="sm"
                             onClick={() => handleSelectSupplier(supplier)}
                             className="w-full px-3 py-2 text-left hover:bg-emerald-50 justify-between border-b border-gray-100 last:border-b-0 rounded-none h-auto"
                           >
@@ -844,7 +846,7 @@ export function AddModal({
                 value={formData.supplierName}
                 onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
                 placeholder="内部来源无需填写"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
                 readOnly
               />
             </div>
@@ -868,7 +870,7 @@ export function AddModal({
                 }));
               }}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <SelectValue placeholder="不关联" />
               </SelectTrigger>
               <SelectContent>
@@ -893,7 +895,7 @@ export function AddModal({
             <DatePicker
               selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
               onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -905,7 +907,7 @@ export function AddModal({
                 type="number"
                 value={formData.quantity || ''}
                 onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <DictSelect
                 category="unit"
@@ -923,14 +925,14 @@ export function AddModal({
               type="number"
               value={formData.unitPrice || ''}
               onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
           {/* 图片上传 - 占两列 */}
           <div className="col-span-2">
             <Label className="text-gray-900">图片上传</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
               {formData.pictures.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {formData.pictures.map((pic, index) => (
@@ -992,7 +994,7 @@ export function AddModal({
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
               placeholder="请输入备注信息"
             />
           </div>
@@ -1019,7 +1021,7 @@ export function AddModal({
                 value={formData.supplementaryReason}
                 onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 placeholder="请输入补录原因，说明为什么需要补录此入库记录"
               />
             </div>

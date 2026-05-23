@@ -356,7 +356,7 @@ export default function ApplicationTab({
                     <Checkbox
                       checked={selectedRows.length === filteredData.length && filteredData.length > 0}
                       onCheckedChange={onSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
                   </TableHead>
                 )}
@@ -383,7 +383,7 @@ export default function ApplicationTab({
                         <Checkbox
                           checked={selectedRows.includes(item.id)}
                           onCheckedChange={() => onSelectRow(item.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                         />
                       </TableCell>
                     )}

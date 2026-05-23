@@ -179,7 +179,7 @@ export function FertilizerTable({
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.length === data.length}
                     onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                   />
                 </TableHead>
               )}
@@ -220,7 +220,7 @@ export function FertilizerTable({
                           type="checkbox"
                           checked={selectedIds.includes(record.id)}
                           onChange={(e) => handleSelectRow(record.id, e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                         />
                       </TableCell>
                     )}

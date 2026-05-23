@@ -312,13 +312,13 @@ export function TempTaskFormModal({
             {/* 派发模式切换 */}
             <div className="flex gap-4 mb-3">
               <Label className="flex items-center gap-2 cursor-pointer" onClick={() => handleDispatchModeChange('manual')}>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'manual' ? 'border-emerald-600' : 'border-gray-300'}`}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'manual' ? 'border-emerald-600' : 'border-gray-400'}`}>
                   {dispatchMode === 'manual' && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
                 </div>
                 <span className="text-sm text-gray-700">👤 手动选择</span>
               </Label>
               <Label className="flex items-center gap-2 cursor-pointer" onClick={() => handleDispatchModeChange('ai_assisted')}>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'ai_assisted' ? 'border-emerald-600' : 'border-gray-300'}`}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${dispatchMode === 'ai_assisted' ? 'border-emerald-600' : 'border-gray-400'}`}>
                   {dispatchMode === 'ai_assisted' && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
                 </div>
                 <span className="text-sm text-gray-700">🤖 待智能推荐</span>
@@ -374,7 +374,7 @@ export function TempTaskFormModal({
           </FormField>
 
           <FormField label="发布人">
-            <div className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
+            <div className="flex items-center px-3 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-700">
               <span className="font-medium">{currentUser.name}</span>
               <span className="ml-2 text-xs text-gray-500">（当前登录用户）</span>
             </div>

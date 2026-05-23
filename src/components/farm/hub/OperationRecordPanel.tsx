@@ -74,7 +74,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
               value={filterType}
               onValueChange={(val) => setFilterType(val)}
             >
-              <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white w-auto">
+              <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white w-auto">
                 <SelectValue placeholder="全部操作" />
               </SelectTrigger>
               <SelectContent>

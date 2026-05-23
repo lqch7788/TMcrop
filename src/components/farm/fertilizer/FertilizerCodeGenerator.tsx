@@ -55,7 +55,7 @@ export default function FertilizerCodeGenerator({ value, onChange, disabled = fa
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+        className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
         placeholder="SF20260517-0001"
       />
       <Button

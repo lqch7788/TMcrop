@@ -235,6 +235,18 @@ export default function SeedlingPage() {
     setDailyRecordModalOpen(true);
   };
 
+  // 每日记录保存成功后刷新数据
+  const handleDailyRecordSuccess = async () => {
+    await loadItems();
+    // 从最新 store 数据中找到对应的记录并更新 currentRecord
+    if (currentRecord) {
+      const updatedRecord = useSeedlingStore.getState().items.find(s => s.id === currentRecord.id);
+      if (updatedRecord) {
+        setCurrentRecord(updatedRecord);
+      }
+    }
+  };
+
   const handleTransplant = (record: Seedling) => {
     setCurrentRecord(record);
     setTransplantModalOpen(true);
@@ -586,7 +598,7 @@ export default function SeedlingPage() {
         <DailyRecordModal
           isOpen={dailyRecordModalOpen}
           onClose={() => setDailyRecordModalOpen(false)}
-          onSuccess={loadItems}
+          onSuccess={handleDailyRecordSuccess}
           record={currentRecord}
         />
       )}

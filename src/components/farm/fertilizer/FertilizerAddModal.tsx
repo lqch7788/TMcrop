@@ -257,6 +257,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                         <Button
                           type="button"
                           variant="ghost"
+                          size="sm"
                           onClick={() => {
                             updateField('productionPlanCode', '');
                             updateField('productionPlanId', '');
@@ -275,6 +276,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                               key={plan.id}
                               type="button"
                               variant="ghost"
+                              size="sm"
                               onClick={() => {
                                 updateField('productionPlanId', plan.id);
                                 updateField('productionPlanCode', plan.batchCode);

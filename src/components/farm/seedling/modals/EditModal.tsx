@@ -228,7 +228,7 @@ export function EditModal({
                 setSourceSearch(e.target.value);
                 setSourcePopoverOpen(true);
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {formData.sourceId && (
               <Button
@@ -245,7 +245,7 @@ export function EditModal({
               </Button>
             )}
             {sourcePopoverOpen && (
-              <div ref={sourcePopoverRef} className="absolute z-50 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden"
+              <div ref={sourcePopoverRef} className="absolute z-50 mt-1 bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
                 style={{ minWidth: '500px', left: 0, right: 0 }}
               >
                 <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
@@ -305,7 +305,7 @@ export function EditModal({
             value={formData.seedlingType}
             onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +326,7 @@ export function EditModal({
               setFormData({ ...formData, siteId: val, siteName: site?.label || '' });
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -343,7 +343,7 @@ export function EditModal({
           <DatePicker
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
             onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -353,7 +353,7 @@ export function EditModal({
           <DatePicker
             selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
             onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -364,7 +364,7 @@ export function EditModal({
             type="number"
             value={formData.initialCount || ''}
             onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -375,7 +375,7 @@ export function EditModal({
             type="number"
             value={formData.survivalCount || ''}
             onChange={(e) => setFormData({ ...formData, survivalCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -386,7 +386,7 @@ export function EditModal({
             type="number"
             value={formData.plantedCount || ''}
             onChange={(e) => setFormData({ ...formData, plantedCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -397,7 +397,7 @@ export function EditModal({
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="请输入备注信息"
           />
         </div>
@@ -409,7 +409,7 @@ export function EditModal({
             type="text"
             value={formData.chargePerson}
             onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             placeholder="请输入负责人"
           />
         </div>
@@ -421,7 +421,7 @@ export function EditModal({
             type="number"
             value={formData.targetSurvivalCount || ''}
             onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             placeholder="请输入目标成活数量"
           />
         </div>
@@ -433,7 +433,7 @@ export function EditModal({
             type="number"
             value={formData.workHours || ''}
             onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             placeholder="请输入育苗工时"
             min="0"
             step="0.5"
@@ -447,7 +447,7 @@ export function EditModal({
             type="text"
             value={formData.qualityGrade}
             onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             placeholder="请输入品质等级"
           />
         </div>

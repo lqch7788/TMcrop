@@ -161,7 +161,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 value={formData.transplantCount || ''}
                 onChange={(e) => setFormData({ ...formData, transplantCount: Number(e.target.value) })}
                 max={availableCount}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-xs text-gray-500 mt-1">最多可定植 {availableCount.toLocaleString()} 株</p>
             </div>
@@ -171,7 +171,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 value={formData.areaId}
                 onValueChange={(val) => handleAreaChange(val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
                 <SelectContent>
@@ -188,7 +188,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 step="0.1"
                 value={formData.soilPH}
                 onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -198,7 +198,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 step="0.1"
                 value={formData.soilEC}
                 onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div className="col-span-2">
@@ -206,7 +206,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               <DatePicker
                 selected={formData.transplantDate ? new Date(formData.transplantDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, transplantDate: date.toISOString().split('T')[0] })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div className="col-span-2">
@@ -215,7 +215,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 placeholder="请输入备注信息"
               />
             </div>

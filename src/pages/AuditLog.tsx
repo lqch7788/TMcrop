@@ -227,7 +227,7 @@ export default function AuditLog() {
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               placeholder="搜索日志..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+              className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
             />
           </div>
           <div className="relative flex-1 min-w-[140px]">
@@ -237,13 +237,13 @@ export default function AuditLog() {
               value={filterUser}
               onChange={(e) => { setFilterUser(e.target.value); setCurrentPage(1); }}
               placeholder="搜索用户..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+              className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
             />
           </div>
           <select
             value={filterModule}
             onChange={(e) => { setFilterModule(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="all">全部模块</option>
             {modules.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -251,7 +251,7 @@ export default function AuditLog() {
           <select
             value={filterLevel}
             onChange={(e) => { setFilterLevel(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="all">全部级别</option>
             <option value="info">信息</option>
@@ -262,7 +262,7 @@ export default function AuditLog() {
             type="date"
             value={filterDate}
             onChange={(e) => { setFilterDate(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Button size="sm" onClick={fetchData}>
             刷新

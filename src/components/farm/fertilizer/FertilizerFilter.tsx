@@ -119,6 +119,7 @@ export function FertilizerFilter({
         <div className="flex gap-2">
           <Button
             variant="secondary"
+            size="sm"
             onClick={onReset}
           >
             <RotateCcw className="w-4 h-4" />
@@ -126,6 +127,7 @@ export function FertilizerFilter({
           </Button>
           <Button
             variant="default"
+            size="sm"
             onClick={onSearch}
           >
             <Search className="w-4 h-4" />

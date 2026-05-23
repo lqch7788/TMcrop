@@ -21,7 +21,6 @@ import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
 import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
-import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { enhancedApiClient } from '../../../lib/apiClient';
@@ -79,15 +78,15 @@ export default function PlantingPage() {
     submitMove, submitMark
   } = usePlantLabelStore();
 
-  // 作物品种数据（从品种库服务获取）
-  const cropVarietyOptions = useMemo(() => {
-    cropVarietyService.initVarieties();
-    return cropVarietyService.getVarietyOptions();
-  }, []);
-
-  // 将品种库选项转换为旧格式以兼容现有组件（仅用于页面筛选）
-  const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
-  const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
+  // 作物品种数据（从种植数据中提取唯一品种，而不是从品种库获取所有品种）
+  const cropNames = useMemo(() => {
+    // 从种植数据中提取所有唯一的作物名称
+    const uniqueCropNames = [...new Set(plantings.map(item => item.cropName).filter(Boolean))];
+    // 转换为下拉选项格式
+    return uniqueCropNames
+      .sort((a, b) => a.localeCompare(b)) // 按字母顺序排序
+      .map(name => ({ value: name, label: name }));
+  }, [plantings]);
 
   // 字典数据转换（使用 Zustand store 获取）
   // 种植区域选项
@@ -501,7 +500,6 @@ export default function PlantingPage() {
         onChange={setFilters}
         onSearch={handleSearch}
         onReset={handleReset}
-        onAdd={() => setAddModalOpen(true)}
         cropNames={cropNames}
         areas={areas}
         statusOptions={plantingStatusOptions}
@@ -558,7 +556,6 @@ export default function PlantingPage() {
         onClose={() => setAddModalOpen(false)}
         onSuccess={loadItems}
         cropNames={cropNames}
-        cropVarieties={cropVarieties}
         areas={areas}
         sourceTypeOptions={sourceTypeOptions}
       />

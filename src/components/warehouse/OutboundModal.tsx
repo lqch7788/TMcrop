@@ -176,7 +176,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
           <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
               <SelectValue placeholder="其他" />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +198,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             value={businessCode}
             onChange={(e) => setBusinessCode(e.target.value)}
             placeholder="请输入业务单号（可选）"
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
           />
         </div>
 
@@ -210,7 +210,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="请输入备注信息（可选）"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
           />
         </div>
       </div>

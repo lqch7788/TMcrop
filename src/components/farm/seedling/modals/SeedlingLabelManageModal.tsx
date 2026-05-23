@@ -129,7 +129,7 @@ export default function SeedlingLabelManageModal({
               value={searchText}
               onChange={(e) => { setSearchText(e.target.value); setLabelPage(1); }}
               placeholder="搜索标签编号..."
-              className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="pl-9 pr-3 py-2 border border-gray-400 rounded-lg text-sm w-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           <div className="flex items-center gap-2">

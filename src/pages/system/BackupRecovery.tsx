@@ -309,7 +309,7 @@ const BackupRecovery: React.FC = () => {
                 placeholder="搜索备份名称或备注..."
                 value={searchKeyword}
                 onChange={e => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -325,7 +325,7 @@ const BackupRecovery: React.FC = () => {
               </button>
               <button
                 onClick={handleExportRecords}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Upload size={18} />
                 导出记录
@@ -512,7 +512,7 @@ const BackupRecovery: React.FC = () => {
               </div>
             </div>
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setShowRestoreModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
+              <button onClick={() => setShowRestoreModal(false)} className="px-4 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
               <button onClick={handleRestore} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">确认恢复</button>
             </div>
           </div>
@@ -532,13 +532,13 @@ const BackupRecovery: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">策略名称 <span className="text-red-500">*</span></label>
                   <input type="text" value={strategyForm.name} onChange={e => setStrategyForm({ ...strategyForm, name: e.target.value })}
-                    placeholder="请输入策略名称" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    placeholder="请输入策略名称" className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">备份类型</label>
                     <select value={strategyForm.type} onChange={e => setStrategyForm({ ...strategyForm, type: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                      className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                       <option value="full">全量备份</option>
                       <option value="incremental">增量备份</option>
                     </select>
@@ -546,18 +546,18 @@ const BackupRecovery: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">保留份数</label>
                     <input type="number" value={strategyForm.retention} onChange={e => setStrategyForm({ ...strategyForm, retention: Number(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                      className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">执行周期 <span className="text-red-500">*</span></label>
                   <input type="text" value={strategyForm.schedule} onChange={e => setStrategyForm({ ...strategyForm, schedule: e.target.value })}
-                    placeholder="如：每天 02:00 或 每周一 01:00" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    placeholder="如：每天 02:00 或 每周一 01:00" className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">备份对象</label>
                   <select value={strategyForm.target} onChange={e => setStrategyForm({ ...strategyForm, target: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
                     <option value="全部数据库">全部数据库</option>
                     <option value="核心业务数据">核心业务数据</option>
                     <option value="配置文件">配置文件</option>
@@ -567,7 +567,7 @@ const BackupRecovery: React.FC = () => {
               </div>
             </div>
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setShowStrategyModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
+              <button onClick={() => setShowStrategyModal(false)} className="px-4 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-100">取消</button>
               <button onClick={handleAddStrategy} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">创建策略</button>
             </div>
           </div>

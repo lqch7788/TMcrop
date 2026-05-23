@@ -43,7 +43,7 @@ export function InspectionSearch({
             value={filters.recordCode}
             onChange={(e) => onFiltersChange({ ...filters, recordCode: e.target.value })}
             placeholder="请输入巡查编号"
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
@@ -54,7 +54,7 @@ export function InspectionSearch({
             value={filters.inspectionType}
             onValueChange={(val) => onFiltersChange({ ...filters, inspectionType: val })}
           >
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
@@ -75,7 +75,7 @@ export function InspectionSearch({
             value={filters.inspectorName}
             onChange={(e) => onFiltersChange({ ...filters, inspectorName: e.target.value })}
             placeholder="请输入提交人"
-            className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
@@ -106,7 +106,7 @@ export function InspectionSearch({
             value={filters.status}
             onValueChange={(val) => onFiltersChange({ ...filters, status: val })}
           >
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
@@ -125,7 +125,7 @@ export function InspectionSearch({
             value={filters.problemStatus}
             onValueChange={(val) => onFiltersChange({ ...filters, problemStatus: val })}
           >
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
               <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>

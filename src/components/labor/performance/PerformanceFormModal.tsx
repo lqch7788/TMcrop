@@ -91,7 +91,7 @@ export function PerformanceFormModal({
               type="text"
               value={formData.staffId}
               onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入工号"
             />
           </div>
@@ -103,7 +103,7 @@ export function PerformanceFormModal({
               type="text"
               value={formData.staffName}
               onChange={(e) => setFormData({ ...formData, staffName: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入姓名"
             />
           </div>
@@ -114,7 +114,7 @@ export function PerformanceFormModal({
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="生产部">生产部</option>
               <option value="技术部">技术部</option>
@@ -131,7 +131,7 @@ export function PerformanceFormModal({
               type="month"
               value={formData.month}
               onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -201,7 +201,7 @@ export function PerformanceFormModal({
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as '待评估' | '已评估' })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="待评估">待评估</option>
               <option value="已评估">已评估</option>
@@ -211,7 +211,7 @@ export function PerformanceFormModal({
           {/* 综合得分（计算） */}
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">综合得分（计算）</Label>
-            <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
+            <div className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateScore()}
             </div>
           </div>

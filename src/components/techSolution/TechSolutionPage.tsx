@@ -1632,13 +1632,13 @@ export function TechSolutionPage() {
                 className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
                   exportFormat === format.value
                     ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                   exportFormat === format.value
                     ? 'border-emerald-500'
-                    : 'border-gray-300'
+                    : 'border-gray-400'
                 }`}>
                   {exportFormat === format.value && (
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />

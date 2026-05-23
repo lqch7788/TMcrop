@@ -38,7 +38,7 @@ export function ExportTypeModal({
         <div className="p-6">
           <div className="grid grid-cols-3 gap-3">
             <label className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-              exportFileType === 'xlsx' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+              exportFileType === 'xlsx' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
             }`}>
               <input
                 type="radio"
@@ -52,7 +52,7 @@ export function ExportTypeModal({
               <span className="text-xs text-gray-500">.xlsx</span>
             </label>
             <label className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-              exportFileType === 'csv' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+              exportFileType === 'csv' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
             }`}>
               <input
                 type="radio"
@@ -66,7 +66,7 @@ export function ExportTypeModal({
               <span className="text-xs text-gray-500">.csv</span>
             </label>
             <label className={`flex flex-col items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-              exportFileType === 'word' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+              exportFileType === 'word' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
             }`}>
               <input
                 type="radio"

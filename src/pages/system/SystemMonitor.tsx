@@ -199,7 +199,7 @@ const SystemMonitor: React.FC = () => {
               <p className="text-gray-500">实时监控服务器和服务运行状态</p>
             </div>
           </div>
-          <button onClick={fetchSystemInfo} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <button onClick={fetchSystemInfo} className="flex items-center gap-2 px-4 py-2 border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors">
             <RefreshCw size={16} /> 刷新
           </button>
         </div>
@@ -280,16 +280,16 @@ const SystemMonitor: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input type="text" placeholder="搜索服务名称、主机或描述..." value={searchKeyword}
                 onChange={e => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
             </div>
           </div>
           <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            className="px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
             <option value="all">全部类型</option>
             {serviceTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            className="px-3 py-2 border border-gray-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
             <option value="all">全部状态</option>
             <option value="running">运行中</option>
             <option value="warning">警告</option>
@@ -418,7 +418,7 @@ const SystemMonitor: React.FC = () => {
               </div>
             </div>
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
-              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">关闭</button>
+              <button onClick={() => setShowDetailModal(false)} className="px-4 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-100">关闭</button>
             </div>
           </div>
         </div>

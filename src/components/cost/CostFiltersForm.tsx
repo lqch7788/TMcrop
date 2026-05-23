@@ -58,7 +58,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
         variant="ghost"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:border-gray-300 transition-colors ${
+        className={`flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:border-gray-400 transition-colors ${
           selected.length > 0 ? activeBg + ' text-white border-transparent' : 'bg-white text-gray-600'
         }`}
       >
@@ -80,7 +80,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
               <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                 selected.includes(option)
                   ? activeBg + ' border-transparent'
-                  : 'border-gray-300'
+                  : 'border-gray-400'
               }`}>
                 {selected.includes(option) && <Check className="w-3 h-3 text-white" />}
               </div>

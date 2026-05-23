@@ -104,7 +104,7 @@ export default function AddInboundModal({
                   value={newInbound.orderCode}
                   readOnly
                   placeholder="点击生成按钮自动生成"
-                  className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 text-sm"
+                  className="w-full px-4 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-600 text-sm"
                 />
               </div>
               <Button variant="blue" onClick={onGenerateOrderCode} className="mt-6">
@@ -119,7 +119,7 @@ export default function AddInboundModal({
                 <select
                   value={newInbound.bigCategory}
                   onChange={(e) => onNewInboundChange('bigCategory', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
                 >
                   <option value="">请选择</option>
                   {BIG_CATEGORIES.map(cat => (
@@ -133,7 +133,7 @@ export default function AddInboundModal({
                   value={newInbound.midCategory}
                   onChange={(e) => onNewInboundChange('midCategory', e.target.value)}
                   disabled={!newInbound.bigCategory}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm disabled:opacity-50"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm disabled:opacity-50"
                 >
                   <option value="">请选择</option>
                   {getMidCategories().map(cat => (
@@ -147,7 +147,7 @@ export default function AddInboundModal({
                   value={newInbound.subCategory}
                   onChange={(e) => onNewInboundChange('subCategory', e.target.value)}
                   disabled={!newInbound.midCategory}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm disabled:opacity-50"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm disabled:opacity-50"
                 >
                   <option value="">请选择</option>
                   {getSubCategories().map(cat => (
@@ -167,7 +167,7 @@ export default function AddInboundModal({
                   readOnly
                   placeholder="根据分类自动生成"
                   className={`w-full px-4 py-2 border rounded-lg text-gray-900 text-sm ${
-                    codeError ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-gray-100'
+                    codeError ? 'border-red-500 bg-red-50' : 'border-gray-400 bg-gray-100'
                   }`}
                 />
                 {codeError && <p className="text-red-500 text-xs mt-1">{codeError}</p>}
@@ -180,7 +180,7 @@ export default function AddInboundModal({
                   onChange={(e) => onNewInboundChange('materialName', e.target.value)}
                   placeholder="输入物料名称"
                   className={`w-full px-4 py-2 border rounded-lg text-gray-900 text-sm ${
-                    nameError ? 'border-red-500' : 'border-gray-300'
+                    nameError ? 'border-red-500' : 'border-gray-400'
                   }`}
                 />
                 {nameError && <p className="text-red-500 text-xs mt-1">{nameError}</p>}
@@ -196,7 +196,7 @@ export default function AddInboundModal({
                   value={newInbound.quantity}
                   onChange={(e) => onNewInboundChange('quantity', e.target.value)}
                   placeholder="输入数量"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
                 />
               </div>
               <div>
@@ -204,7 +204,7 @@ export default function AddInboundModal({
                 <select
                   value={newInbound.unit}
                   onChange={(e) => onNewInboundChange('unit', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
                 >
                   <option value="袋">袋</option>
                   <option value="箱">箱</option>
@@ -226,7 +226,7 @@ export default function AddInboundModal({
                 value={newInbound.supplier}
                 onChange={(e) => onNewInboundChange('supplier', e.target.value)}
                 placeholder="输入供应商名称"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
               />
             </div>
 
@@ -238,7 +238,7 @@ export default function AddInboundModal({
                   type="date"
                   value={newInbound.inboundDate}
                   onChange={(e) => onNewInboundChange('inboundDate', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
                 />
               </div>
               <div>
@@ -248,7 +248,7 @@ export default function AddInboundModal({
                   value={newInbound.operator}
                   onChange={(e) => onNewInboundChange('operator', e.target.value)}
                   placeholder="输入操作员"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                  className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
                 />
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function AddInboundModal({
                 onChange={(e) => onNewInboundChange('remarks', e.target.value)}
                 placeholder="输入备注信息"
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm resize-none"
+                className="w-full px-4 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm resize-none"
               />
             </div>
           </div>

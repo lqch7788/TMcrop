@@ -285,42 +285,42 @@ export default function TeamManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班组名称</label>
                   <input type="text" value={newTeam.teamName || ''} onChange={(e) => setNewTeam({ ...newTeam, teamName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班组编码</label>
                   <input type="text" value={newTeam.teamCode || ''} onChange={(e) => setNewTeam({ ...newTeam, teamCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班长</label>
                   <input type="text" value={newTeam.leaderName || ''} onChange={(e) => setNewTeam({ ...newTeam, leaderName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">部门</label>
                   <input type="text" value={newTeam.departmentOid || ''} onChange={(e) => setNewTeam({ ...newTeam, departmentOid: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班次类型</label>
                   <input type="text" value={newTeam.shiftType || ''} onChange={(e) => setNewTeam({ ...newTeam, shiftType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：早班/中班/晚班" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：早班/中班/晚班" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">成员数量</label>
                   <input type="number" value={newTeam.memberCount || 0} onChange={(e) => setNewTeam({ ...newTeam, memberCount: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
                 <textarea value={newTeam.description || ''} onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} />
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} />
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
@@ -341,31 +341,31 @@ export default function TeamManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班次编码 *</label>
                   <input type="text" value={newShift.shiftCode || ''} onChange={(e) => setNewShift({ ...newShift, shiftCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：SH001" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：SH001" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班次名称 *</label>
                   <input type="text" value={newShift.shiftName || ''} onChange={(e) => setNewShift({ ...newShift, shiftName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：早班" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="如：早班" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">开始时间 *</label>
                   <input type="time" value={newShift.startTime || ''} onChange={(e) => setNewShift({ ...newShift, startTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">结束时间 *</label>
                   <input type="time" value={newShift.endTime || ''} onChange={(e) => setNewShift({ ...newShift, endTime: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">班次类型</label>
                   <select value={newShift.shiftType || '早班'} onChange={(e) => setNewShift({ ...newShift, shiftType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="早班">早班</option>
                     <option value="中班">中班</option>
                     <option value="晚班">晚班</option>
@@ -374,7 +374,7 @@ export default function TeamManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">状态</label>
                   <select value={newShift.status || 'active'} onChange={(e) => setNewShift({ ...newShift, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="active">启用</option>
                     <option value="inactive">停用</option>
                   </select>
@@ -383,7 +383,7 @@ export default function TeamManagement() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
                 <textarea value={newShift.description || ''} onChange={(e) => setNewShift({ ...newShift, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} placeholder="如：早班 06:00-14:00" />
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} placeholder="如：早班 06:00-14:00" />
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">

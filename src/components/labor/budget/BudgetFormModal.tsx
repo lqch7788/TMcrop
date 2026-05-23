@@ -71,7 +71,7 @@ export function BudgetFormModal({
               type="month"
               value={formData.month}
               onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -144,7 +144,7 @@ export function BudgetFormModal({
           {/* 总成本（计算得出） */}
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">总成本(元)</Label>
-            <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
+            <div className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               ¥{(formData.formalWorkerCost + formData.tempWorkerCost + formData.socialSecurity + formData.benefits).toLocaleString()}
             </div>
           </div>

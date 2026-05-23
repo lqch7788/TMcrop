@@ -156,7 +156,7 @@ export const FarmDispatchTab: React.FC = () => {
                   placeholder="搜索任务编号、标题、执行人..."
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 pr-4 py-2 border border-gray-400 rounded-lg w-64 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -164,7 +164,7 @@ export const FarmDispatchTab: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as TaskStatus | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">全部状态</option>
                 {Object.entries(TASK_STATUS_CONFIG).map(([key, config]) => (

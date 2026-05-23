@@ -87,7 +87,7 @@ export function EfficiencyFormModal({
               type="month"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -97,7 +97,7 @@ export function EfficiencyFormModal({
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="生产部">生产部</option>
               <option value="技术部">技术部</option>
@@ -194,7 +194,7 @@ export function EfficiencyFormModal({
           {/* 计算得出字段 - 人均产出 */}
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">人均产出（计算）</Label>
-            <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
+            <div className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateAvgOutput()}
             </div>
           </div>
@@ -202,7 +202,7 @@ export function EfficiencyFormModal({
           {/* 计算得出字段 - 工时效率 */}
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">工时效率（计算）</Label>
-            <div className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
+            <div className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm bg-gray-100 flex items-center text-emerald-600 font-semibold">
               {calculateEfficiency()}
             </div>
           </div>

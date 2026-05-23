@@ -241,7 +241,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
             <div className="grid grid-cols-2 gap-6">
               {/* 空气环境参数 */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-300">空气环境参数</h5>
+                <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-400">空气环境参数</h5>
                 <div className="space-y-3">
                   {record.airTemperature && (
                     <div className="flex items-center justify-between">
@@ -300,7 +300,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
 
               {/* 土壤环境参数 */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-300">土壤环境参数</h5>
+                <h5 className="text-sm font-semibold text-gray-700 mb-3 pb-2 border-b border-gray-400">土壤环境参数</h5>
                 <div className="space-y-3">
                   {record.soilTemperature && (
                     <div className="flex items-center justify-between">

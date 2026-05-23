@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { Seedling, DailyRecord } from '../types/crop';
-import * as seedlingService from '../services/apiSeedlingService';
+import * as seedlingService from '../services/seedlingService';
 
 interface SeedlingState {
   items: Seedling[];
@@ -17,11 +17,13 @@ interface SeedlingState {
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
   addDailyRecord: (seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>) => Promise<DailyRecord | null>;
+  updateDailyRecord: (seedlingId: string, recordId: string, updates: Partial<DailyRecord>) => Promise<boolean>;
+  deleteDailyRecord: (seedlingId: string, recordId: string) => Promise<boolean>;
   increasePlantedCount: (id: string, count: number) => Promise<boolean>;
 }
 
 export const useSeedlingStore = create<SeedlingState>()(
-  (set) => ({
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -92,10 +94,39 @@ export const useSeedlingStore = create<SeedlingState>()(
     addDailyRecord: async (seedlingId, record) => {
       try {
         const result = await seedlingService.addDailyRecord(seedlingId, record);
+        if (result) {
+          await get().loadItems();
+        }
         return result;
       } catch (error) {
         console.error('[useSeedlingStore] 添加每日记录失败:', error);
         return null;
+      }
+    },
+
+    updateDailyRecord: async (seedlingId, recordId, updates) => {
+      try {
+        const result = await seedlingService.updateDailyRecord(seedlingId, recordId, updates);
+        if (result) {
+          await get().loadItems();
+        }
+        return result;
+      } catch (error) {
+        console.error('[useSeedlingStore] 更新每日记录失败:', error);
+        return false;
+      }
+    },
+
+    deleteDailyRecord: async (seedlingId, recordId) => {
+      try {
+        const result = await seedlingService.deleteDailyRecord(seedlingId, recordId);
+        if (result) {
+          await get().loadItems();
+        }
+        return result;
+      } catch (error) {
+        console.error('[useSeedlingStore] 删除每日记录失败:', error);
+        return false;
       }
     },
 

@@ -461,7 +461,7 @@ export function SeedlingTable({
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">入库数量</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">剩余总数</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">完成比例</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">状态</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap w-28">状态</th>
               <th className="px-3 py-3 text-left text-sm font-semibold text-white whitespace-nowrap">操作</th>
             </tr>
           </thead>
@@ -487,7 +487,7 @@ export function SeedlingTable({
                             onSelectionChange(selectedRows.filter(k => k !== record.id));
                           }
                         }}
-                        className="w-4 h-4 text-emerald-600 rounded border-gray-300"
+                        className="w-4 h-4 text-emerald-600 rounded border-gray-400"
                       />
                     </td>
                   )}
@@ -557,7 +557,7 @@ export function SeedlingTable({
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-sm">
+                  <td className="px-3 py-2 text-sm whitespace-nowrap">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status]?.color || ''}`}>
                       {statusMap[record.status]?.label || record.status}
                     </span>
@@ -582,14 +582,6 @@ export function SeedlingTable({
                           <Truck className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onPrint(record)}
-                        title="打印标签"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </Button>
                       {onLabelManage && (
                         <Button
                           variant="ghost"

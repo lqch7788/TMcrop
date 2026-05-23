@@ -190,7 +190,7 @@ export default function AlarmConfigManagement() {
                         className={`p-4 rounded-xl border-2 transition-all text-left ${
                           isOn
                             ? 'border-emerald-300 bg-emerald-50 shadow-sm'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
+                            : 'border-gray-200 bg-white hover:border-gray-400'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">

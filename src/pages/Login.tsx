@@ -138,7 +138,7 @@ export default function Login() {
                 type="checkbox"
                 checked={rememberPassword}
                 onChange={(e) => setRememberPassword(e.target.checked)}
-                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
               />
               <span className="ml-2 text-sm text-gray-600">记住密码</span>
             </label>

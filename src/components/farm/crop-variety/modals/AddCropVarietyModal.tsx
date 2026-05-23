@@ -484,7 +484,7 @@ export function AddCropVarietyModal({
             onValueChange={(val) => handleTypeChange(val)}
             disabled={!formData.categoryCode}
           >
-            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300">
+            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-400">
               <SelectValue placeholder="请选择类型" />
             </SelectTrigger>
             <SelectContent>
@@ -510,7 +510,7 @@ export function AddCropVarietyModal({
             }}
             disabled={!formData.typeCode}
           >
-            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-300">
+            <SelectTrigger className="w-full px-3 py-2 border-2 border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50 disabled:bg-gray-100 disabled:border-gray-400">
               <SelectValue placeholder="请选择品种" />
             </SelectTrigger>
             <SelectContent>
@@ -538,7 +538,7 @@ export function AddCropVarietyModal({
             }}
             disabled={!formData.varietyCode || subVariety1Options.length === 0}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100">
               <SelectValue placeholder="请选择子品种" />
             </SelectTrigger>
             <SelectContent>
@@ -562,7 +562,7 @@ export function AddCropVarietyModal({
             value={formData.detailVarietyName}
             onChange={(e) => handleDetailVarietyNameChange(e.target.value)}
             placeholder="输入作物品种"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -873,7 +873,7 @@ export function AddCropVarietyModal({
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
             placeholder="请输入备注信息..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
           />
         </div>
       </div>

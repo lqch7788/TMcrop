@@ -137,7 +137,7 @@ export const TraceChain: React.FC<TraceChainProps> = ({ type, businessId, onNavi
         {/* 连接线 */}
         {level > 0 && (
           <div
-            className="absolute border-l-2 border-gray-300 -left-4 top-0 bottom-0"
+            className="absolute border-l-2 border-gray-400 -left-4 top-0 bottom-0"
             style={{ height: '100%' }}
           />
         )}

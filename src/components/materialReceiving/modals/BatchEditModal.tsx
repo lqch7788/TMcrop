@@ -232,7 +232,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
   return (
     <div className="mt-6">
       <h4 className="text-sm font-bold text-gray-700 mb-2">物料明细</h4>
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="border border-gray-400 rounded-lg overflow-hidden">
         {/* 横向滚动容器 */}
         <div className="overflow-x-auto">
           <Table className="w-full text-sm min-w-[1200px]">

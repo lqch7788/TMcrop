@@ -22,7 +22,7 @@ function getRankBadgeStyle(rank: number): string {
 function getGradeInfo(score: number): { label: string; style: string } {
   if (score >= 90) return { label: '优秀', style: 'bg-emerald-100 text-emerald-800 border border-emerald-300' };
   if (score >= 85) return { label: '良好', style: 'bg-blue-100 text-blue-800 border border-blue-300' };
-  return { label: '合格', style: 'bg-gray-100 text-gray-700 border border-gray-300' };
+  return { label: '合格', style: 'bg-gray-100 text-gray-700 border border-gray-400' };
 }
 
 export default function EvaluatePanel({ evaluationData }: EvaluatePanelProps) {

@@ -120,7 +120,7 @@ function TaskCard({
   return (
     <div
       className={`bg-white rounded-lg border-2 transition-all cursor-pointer ${
-        isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-300'
+        isSelected ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-400'
       }`}
       onClick={onSelect}
     >
@@ -787,7 +787,7 @@ export default function SmartDispatchPage() {
                         className={`p-3 rounded-lg border-2 transition-all ${
                           selectedRecommendation?.worker.id === rec.worker.id
                             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                            : index === 0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                            : index === 0 ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-400'
                         }`}>
                         {/* 排名和名字 */}
                         <div className="flex items-center justify-between mb-2">

@@ -131,7 +131,7 @@ export function MaterialSelectModal({
                     type="checkbox"
                     checked={allSelected}
                     onChange={handleToggleAll}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>
                 <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700">物料编码</th>
@@ -154,7 +154,7 @@ export function MaterialSelectModal({
                       type="checkbox"
                       checked={selectedMaterials.has(material.materialCode)}
                       onChange={() => handleToggle(material.materialCode)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                     />
                   </td>
                   <td className="px-3 py-2 text-sm font-mono text-gray-900">{material.materialCode}</td>

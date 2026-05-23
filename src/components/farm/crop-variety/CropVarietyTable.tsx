@@ -158,7 +158,7 @@ export function CropVarietyTable({
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="h-10 px-3 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1">
+              <SelectTrigger className="h-10 px-3 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 flex-1">
                 <SelectValue placeholder="全部类别" />
               </SelectTrigger>
               <SelectContent>
@@ -174,7 +174,7 @@ export function CropVarietyTable({
                 placeholder="作物品种搜索..."
                 value={searchNameKeyword}
                 onChange={(e) => handleNameSearch(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div className="flex-1 relative">
@@ -184,7 +184,7 @@ export function CropVarietyTable({
                 placeholder="作物编码搜索..."
                 value={searchCodeKeyword}
                 onChange={(e) => handleCodeSearch(e.target.value)}
-                className="w-full h-10 pl-10 pr-4 border-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 pl-10 pr-4 border-2 border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>

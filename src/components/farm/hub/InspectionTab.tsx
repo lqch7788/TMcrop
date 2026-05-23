@@ -1006,7 +1006,7 @@ export function InspectionTab({
                   className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                     exportFormat === format.value
                       ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-gray-300 hover:border-emerald-300'
+                      : 'border-gray-400 hover:border-emerald-300'
                   }`}
                 >
                   <Input

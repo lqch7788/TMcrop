@@ -142,7 +142,7 @@ export function TeamTable({
               placeholder="搜索班组名称、负责人、作业区域..."
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>

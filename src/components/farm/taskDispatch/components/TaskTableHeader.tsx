@@ -36,7 +36,7 @@ export function TaskTableHeader({
               if (el) el.indeterminate = isSomeSelected && !isAllSelected;
             }}
             onChange={onSelectAll}
-            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
           />
         </TableHead>
       )}

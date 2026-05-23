@@ -26,7 +26,6 @@ interface AddModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   cropNames: Array<{ value: string; label: string }>;
-  cropVarieties: Array<{ value: string; label: string }>;
   areas: Array<{ value: string; label: string; parent?: string }>;
   sourceTypeOptions: Array<{ value: string; label: string }>;
 }
@@ -36,7 +35,6 @@ export function AddModal({
   onClose,
   onSuccess,
   cropNames,
-  cropVarieties,
   areas,
   sourceTypeOptions
 }: AddModalProps) {
@@ -271,7 +269,7 @@ export function AddModal({
               }));
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="不关联" />
             </SelectTrigger>
             <SelectContent>
@@ -300,7 +298,7 @@ export function AddModal({
               }
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -328,7 +326,7 @@ export function AddModal({
             type="text"
             value={formData.cropName}
             readOnly
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50"
             placeholder="选择来源后自动填充"
           />
         </div>
@@ -340,7 +338,7 @@ export function AddModal({
             type="text"
             value={formData.cropVariety}
             readOnly
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50"
             placeholder="选择来源后自动填充"
           />
         </div>
@@ -363,7 +361,7 @@ export function AddModal({
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -373,7 +371,7 @@ export function AddModal({
           <DatePicker
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
             onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -386,7 +384,7 @@ export function AddModal({
             value={formData.soilPH || ''}
             onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
             placeholder="如：6.5"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -399,7 +397,7 @@ export function AddModal({
             value={formData.soilEC || ''}
             onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
             placeholder="如：1.2"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -410,7 +408,7 @@ export function AddModal({
             value={formData.remarks}
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="请输入备注信息"
           />
         </div>
@@ -418,7 +416,7 @@ export function AddModal({
         {/* 图片上传 - 占两列 */}
         <div className="col-span-2">
           <Label className="text-gray-900">图片上传</Label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+          <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
             {/* 已上传的图片预览 */}
             {pictures.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">

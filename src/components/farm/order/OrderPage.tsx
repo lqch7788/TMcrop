@@ -18,7 +18,6 @@ import {
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
-import * as cropVarietyService from '@/services/apiCropVarietyService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function OrderPage() {
@@ -55,15 +54,15 @@ export default function OrderPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 作物品种数据（从品种库服务获取）
-  const cropVarietyOptions = useMemo(() => {
-    cropVarietyService.initVarieties();
-    return cropVarietyService.getVarietyOptions();
-  }, []);
-
-  // 将品种库选项转换为旧格式以兼容现有组件
-  const cropNames = cropVarietyOptions.map(v => ({ value: v.value, label: v.label }));
-  const cropVarieties = cropVarietyOptions.map(v => ({ value: v.varietyCode, label: v.label }));
+  // 作物品种数据（从订单数据中提取唯一品种，而不是从品种库获取所有品种）
+  const cropNames = useMemo(() => {
+    // 从订单数据中提取所有唯一的作物品种（对应表格中显示的 cropVariety 字段）
+    const uniqueCropVarieties = [...new Set(orders.map(order => order.cropVariety).filter(Boolean))];
+    // 转换为下拉选项格式
+    return uniqueCropVarieties
+      .sort((a, b) => a.localeCompare(b)) // 按字母顺序排序
+      .map(name => ({ value: name, label: name }));
+  }, [orders]);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -97,7 +96,7 @@ export default function OrderPage() {
     const filtered = orders.filter(item => {
       if (filters.orderCode && !item.orderCode.includes(filters.orderCode)) return false;
       if (filters.orderName && !item.orderName.includes(filters.orderName)) return false;
-      if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
+      if (filters.cropName && !item.cropVariety.includes(filters.cropName)) return false;
       if (filters.status && item.status !== filters.status) return false;
       if (filters.startDate && item.orderDate < filters.startDate) return false;
       if (filters.endDate && item.orderDate > filters.endDate) return false;

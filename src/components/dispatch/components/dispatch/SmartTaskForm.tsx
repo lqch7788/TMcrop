@@ -226,7 +226,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="请输入任务标题"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           />
         </div>
 
@@ -239,7 +239,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
             <select
               value={greenhouseId}
               onChange={(e) => handleGreenhouseChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               <option value="">请选择温室</option>
               {GREENHOUSE_OPTIONS.map((option) => (
@@ -257,7 +257,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
             <select
               value={priority}
               onChange={(e) => handlePriorityChange(e.target.value as typeof priority)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             >
               {PRIORITY_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -363,7 +363,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
               min="1"
               value={estimatedHours}
               onChange={(e) => setEstimatedHours(parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
 
@@ -375,7 +375,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
           </div>
         </div>
@@ -390,7 +390,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="请输入任务描述..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           />
         </div>
 
@@ -399,7 +399,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
           >
             取消
           </button>

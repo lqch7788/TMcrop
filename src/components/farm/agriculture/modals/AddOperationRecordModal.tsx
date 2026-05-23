@@ -343,7 +343,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
                       type="checkbox"
                       checked={formData.materials.includes(m)}
                       onChange={() => toggleMaterial(m)}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 mr-2"
+                      className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 mr-2"
                     />
                     <span className="text-sm text-gray-700">{m}</span>
                   </Label>

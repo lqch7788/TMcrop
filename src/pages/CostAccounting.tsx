@@ -297,28 +297,28 @@ export default function CostAccounting() {
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">类别名称</label>
                   <input type="text" value={newCategory.categoryName || ''} onChange={(e) => setNewCategory({ ...newCategory, categoryName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">编码</label>
                   <input type="text" value={newCategory.categoryCode || ''} onChange={(e) => setNewCategory({ ...newCategory, categoryCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
                   <select value={newCategory.categoryType || 'other'} onChange={(e) => setNewCategory({ ...newCategory, categoryType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     {CATEGORY_TYPE_OPTIONS.map(t => <option key={t} value={t}>{COST_CATEGORY_TYPE_MAP[t]}</option>)}
                   </select>
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">单位</label>
                   <input type="text" value={newCategory.unit || ''} onChange={(e) => setNewCategory({ ...newCategory, unit: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">描述</label>
                 <textarea value={newCategory.description || ''} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} />
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" rows={2} />
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
@@ -337,29 +337,29 @@ export default function CostAccounting() {
             <div className="space-y-4">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">预算名称</label>
                 <input type="text" value={newBudget.budgetName || ''} onChange={(e) => setNewBudget({ ...newBudget, budgetName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">成本类别</label>
                   <select value={newBudget.categoryOid || ''} onChange={(e) => setNewBudget({ ...newBudget, categoryOid: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     <option value="">请选择</option>
                     {categories.map(cat => <option key={cat.oid} value={cat.oid}>{cat.categoryName}</option>)}
                   </select>
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">预算金额</label>
                   <input type="number" value={newBudget.budgetAmount || 0} onChange={(e) => setNewBudget({ ...newBudget, budgetAmount: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">年份</label>
                   <input type="number" value={newBudget.budgetYear || new Date().getFullYear()} onChange={(e) => setNewBudget({ ...newBudget, budgetYear: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">月份（可选）</label>
                   <input type="number" min={1} max={12} value={newBudget.budgetMonth || ''} onChange={(e) => setNewBudget({ ...newBudget, budgetMonth: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
             </div>

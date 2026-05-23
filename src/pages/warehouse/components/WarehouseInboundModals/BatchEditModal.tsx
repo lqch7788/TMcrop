@@ -162,7 +162,7 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
             </div>
           )}
           {currentRecord.status === 'voided' && (
-            <div className="mb-3 p-2 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+            <div className="mb-3 p-2 bg-gray-100 border border-gray-400 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span className="text-xs text-gray-600">此记录已作废，仅供查看，无法编辑。</span>
             </div>

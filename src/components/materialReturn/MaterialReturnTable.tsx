@@ -43,7 +43,7 @@ export function MaterialReturnTable({
                   type="checkbox"
                   checked={selectedRows.length === data.length && data.length > 0}
                   onChange={onSelectAll}
-                  className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                 />
               </th>
             )}
@@ -72,7 +72,7 @@ export function MaterialReturnTable({
                       checked={selectedRows.includes(item.id)}
                       disabled={deleteMode && !isEditable(item.status)}
                       onChange={() => onSelectRow(item.id)}
-                      className={`w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 ${
+                      className={`w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500 ${
                         deleteMode && !isEditable(item.status) ? 'cursor-not-allowed opacity-50' : ''
                       }`}
                     />

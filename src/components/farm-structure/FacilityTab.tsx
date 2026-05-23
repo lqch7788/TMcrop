@@ -96,11 +96,11 @@ export default function FacilityTab() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder="搜索设施名称/编码..." value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
         {/* 基地筛选 */}
         <select value={baseFilter} onChange={(e) => { setBaseFilter(e.target.value); setCurrentPage(1); }}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">全部基地</option>
           {baseOptions.map((b) => (
             <option key={b.oid} value={b.oid}>{b.name}</option>
@@ -108,7 +108,7 @@ export default function FacilityTab() {
         </select>
         {/* 设施类型筛选 */}
         <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
           <option value="">全部类型</option>
           {facilityTypeOptions.map((opt) => (
             <option key={opt.dictCode} value={opt.dictCode}>{opt.dictLabel}</option>
@@ -206,13 +206,13 @@ export default function FacilityTab() {
             <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-xs font-medium text-gray-600">设施名称<span className="text-red-500">*</span>
-                  <input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">设施编码<span className="text-red-500">*</span>
-                  <input value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded focus:ring-2 focus:ring-blue-500 outline-none" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">设施类型
-                  <select value={formData.greenhouseType || ''} onChange={(e) => setFormData({ ...formData, greenhouseType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  <select value={formData.greenhouseType || ''} onChange={(e) => setFormData({ ...formData, greenhouseType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                     <option value="">请选择</option>
                     {facilityTypeOptions.map((opt) => (
                       <option key={opt.dictCode} value={opt.dictCode}>{opt.dictLabel}</option>
@@ -220,22 +220,22 @@ export default function FacilityTab() {
                   </select>
                 </label>
                 <label className="text-xs font-medium text-gray-600">所属基地
-                  <select value={formData.baseOid || ''} onChange={(e) => { const b = baseOptions.find(x => x.oid === e.target.value); setFormData({ ...formData, baseOid: e.target.value, baseName: b?.name || '' }); }} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  <select value={formData.baseOid || ''} onChange={(e) => { const b = baseOptions.find(x => x.oid === e.target.value); setFormData({ ...formData, baseOid: e.target.value, baseName: b?.name || '' }); }} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                     <option value="">请选择</option>
                     {baseOptions.map((b) => <option key={b.oid} value={b.oid}>{b.name}</option>)}
                   </select>
                 </label>
                 <label className="text-xs font-medium text-gray-600">面积(亩)
-                  <input type="number" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  <input type="number" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">位置
-                  <input value={formData.location || ''} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded" />
+                  <input value={formData.location || ''} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">当前作物
-                  <input value={formData.crop || ''} onChange={(e) => setFormData({ ...formData, crop: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded bg-blue-50" />
+                  <input value={formData.crop || ''} onChange={(e) => setFormData({ ...formData, crop: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded bg-blue-50" />
                 </label>
                 <label className="text-xs font-medium text-gray-600">状态
-                  <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-300 rounded">
+                  <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
                     <option value="active">活跃</option><option value="inactive">停用</option>
                   </select>
                 </label>

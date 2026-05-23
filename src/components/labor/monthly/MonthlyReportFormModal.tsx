@@ -76,7 +76,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：MR202404"
             />
           </div>
@@ -88,7 +88,7 @@ export function MonthlyReportFormModal({
               type="month"
               value={formData.month.replace('年', '-').replace('月', '')}
               onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -98,7 +98,7 @@ export function MonthlyReportFormModal({
             <select
               value={formData.dept}
               onChange={(e) => setFormData({ ...formData, dept: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="生产部">生产部</option>
               <option value="技术部">技术部</option>
@@ -170,7 +170,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.totalHarvest}
               onChange={(e) => setFormData({ ...formData, totalHarvest: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：45.8吨"
             />
           </div>
@@ -182,7 +182,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.qualityRate}
               onChange={(e) => setFormData({ ...formData, qualityRate: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：97.5%"
             />
           </div>
@@ -194,7 +194,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.laborCost}
               onChange={(e) => setFormData({ ...formData, laborCost: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：8.5万元"
             />
           </div>
@@ -206,7 +206,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.materialCost}
               onChange={(e) => setFormData({ ...formData, materialCost: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：6.2万元"
             />
           </div>
@@ -240,7 +240,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.attendanceRate}
               onChange={(e) => setFormData({ ...formData, attendanceRate: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="如：98.2%"
             />
           </div>
@@ -252,7 +252,7 @@ export function MonthlyReportFormModal({
               type="text"
               value={formData.publisher}
               onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               placeholder="请输入发布人"
             />
           </div>
@@ -277,7 +277,7 @@ export function MonthlyReportFormModal({
                 status: e.target.value,
                 statusClass: e.target.value === '已发布' ? 'normal' : 'draft'
               })}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="草稿">草稿</option>
               <option value="已发布">已发布</option>

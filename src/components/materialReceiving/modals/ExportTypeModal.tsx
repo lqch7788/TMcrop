@@ -51,12 +51,12 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
             className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
               exportFileType === format.value
                 ? 'border-emerald-500 bg-emerald-50'
-                : 'border-gray-200 hover:border-gray-300'
+                : 'border-gray-200 hover:border-gray-400'
             }`}
           >
             <div
               className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mr-3 ${
-                exportFileType === format.value ? 'border-emerald-500' : 'border-gray-300'
+                exportFileType === format.value ? 'border-emerald-500' : 'border-gray-400'
               }`}
             >
               {exportFileType === format.value && (

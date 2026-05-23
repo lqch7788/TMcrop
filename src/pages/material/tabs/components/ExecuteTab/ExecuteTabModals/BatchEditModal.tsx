@@ -97,7 +97,7 @@ export function ExecuteBatchEditModal({
             value={String(currentRecordId)}
             onValueChange={(val) => setCurrentRecordId(val)}
           >
-            <SelectTrigger className="w-full h-10 px-3 pr-8 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+            <SelectTrigger className="w-full h-10 px-3 pr-8 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500">
               <SelectValue placeholder="请选择出库单" />
             </SelectTrigger>
             <SelectContent>
@@ -124,7 +124,7 @@ export function ExecuteBatchEditModal({
               type="date"
               value={currentEditedData.date || ''}
               onChange={(e) => handleFieldChange('date', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -133,7 +133,7 @@ export function ExecuteBatchEditModal({
               type="text"
               value={currentEditedData.applicant || ''}
               onChange={(e) => handleFieldChange('applicant', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -142,7 +142,7 @@ export function ExecuteBatchEditModal({
               value={currentEditedData.warehouseLocation || 'none'}
               onValueChange={(val) => handleFieldChange('warehouseLocation', val === 'none' ? '' : val)}
             >
-              <SelectTrigger className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500">
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -159,7 +159,7 @@ export function ExecuteBatchEditModal({
               type="text"
               value={currentEditedData.reviewer || ''}
               onChange={(e) => handleFieldChange('reviewer', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -168,7 +168,7 @@ export function ExecuteBatchEditModal({
               type="text"
               value={currentEditedData.operator || ''}
               onChange={(e) => handleFieldChange('operator', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -177,7 +177,7 @@ export function ExecuteBatchEditModal({
               type="text"
               value={currentEditedData.productionBatchCode || ''}
               onChange={(e) => handleFieldChange('productionBatchCode', e.target.value)}
-              className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
           <div>
@@ -186,7 +186,7 @@ export function ExecuteBatchEditModal({
               value={currentEditedData.executeStatus || 'none'}
               onValueChange={(val) => handleFieldChange('executeStatus', val === 'none' ? '' : val)}
             >
-              <SelectTrigger className="w-full h-9 px-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+              <SelectTrigger className="w-full h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500">
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -249,7 +249,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
   return (
     <div className="mt-6">
       <h4 className="text-sm font-bold text-gray-700 mb-2">物料明细</h4>
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="border border-gray-400 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[1200px]">
             <thead className="bg-blue-600">
@@ -290,7 +290,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.applicationCode || ''}
                         onChange={(e) => onMaterialChange(idx, 'applicationCode', e.target.value)}
-                        className="w-28 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-28 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -298,7 +298,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.materialCode || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialCode', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-24 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -306,7 +306,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.materialName || ''}
                         onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -314,7 +314,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.batchNo || ''}
                         onChange={(e) => onMaterialChange(idx, 'batchNo', e.target.value)}
-                        className="w-20 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
+                        className="w-20 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500 font-mono"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -322,7 +322,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.spec || ''}
                         onChange={(e) => onMaterialChange(idx, 'spec', e.target.value)}
-                        className="w-20 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-20 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -330,7 +330,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.unit || ''}
                         onChange={(e) => onMaterialChange(idx, 'unit', e.target.value)}
-                        className="w-16 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-16 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -339,7 +339,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         min="0"
                         value={mat.requestedQuantity || 0}
                         onChange={(e) => onMaterialChange(idx, 'requestedQuantity', Number(e.target.value))}
-                        className="w-16 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500"
+                        className="w-16 h-8 px-2 border border-gray-400 rounded text-right text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -348,7 +348,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         min="0"
                         value={mat.stockQuantity || 0}
                         onChange={(e) => onMaterialChange(idx, 'stockQuantity', Number(e.target.value))}
-                        className="w-16 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500"
+                        className="w-16 h-8 px-2 border border-gray-400 rounded text-right text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -367,7 +367,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         min="0"
                         value={mat.unitPrice ?? ''}
                         onChange={(e) => onMaterialChange(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        className="w-20 h-8 px-2 border border-gray-300 rounded text-right text-xs focus:outline-none focus:border-blue-500"
+                        className="w-20 h-8 px-2 border border-gray-400 rounded text-right text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -375,7 +375,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.warehousePosition || ''}
                         onChange={(e) => onMaterialChange(idx, 'warehousePosition', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -383,7 +383,7 @@ const MaterialEditTable: React.FC<MaterialEditTableProps> = ({ materials, onMate
                         type="text"
                         value={mat.remark || ''}
                         onChange={(e) => onMaterialChange(idx, 'remark', e.target.value)}
-                        className="w-24 h-8 px-2 border border-gray-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                        className="w-24 h-8 px-2 border border-gray-400 rounded text-xs focus:outline-none focus:border-blue-500"
                       />
                     </td>
                   </tr>

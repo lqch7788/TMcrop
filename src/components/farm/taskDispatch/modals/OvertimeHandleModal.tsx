@@ -130,7 +130,7 @@ export function OvertimeHandleModal({
               className={`p-4 flex-col h-auto ${
                 handleType === 'continue'
                   ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 hover:border-gray-400'
               }`}
             >
               <PlayCircle className={`w-6 h-6 mx-auto mb-2 ${
@@ -153,7 +153,7 @@ export function OvertimeHandleModal({
               className={`p-4 flex-col h-auto ${
                 handleType === 'abandon'
                   ? 'border-red-500 bg-red-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 hover:border-gray-400'
               }`}
             >
               <XCircle className={`w-6 h-6 mx-auto mb-2 ${
@@ -182,7 +182,7 @@ export function OvertimeHandleModal({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="请说明超时原因..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 rows={2}
               />
             </div>
@@ -195,7 +195,7 @@ export function OvertimeHandleModal({
                 selected={newDeadline ? new Date(newDeadline) : undefined}
                 onChange={(date) => setNewDeadline(date.toISOString().split('T')[0])}
                 minDate={new Date()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <p className="text-xs text-gray-500 mt-1">
                 每次最多延期 {DEADLINE_CONFIG.maxExtensionHours} 小时
@@ -220,7 +220,7 @@ export function OvertimeHandleModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="请说明放弃执行的原因..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
               rows={3}
             />
             <p className="text-xs text-gray-500 mt-1">

@@ -436,7 +436,7 @@ export default function AgricultureRecordPage() {
                             type="checkbox"
                             checked={selectedRows.includes(record.id)}
                             onChange={() => handleSelectRow(record.id)}
-                            className="w-4 h-4 rounded border-gray-300"
+                            className="w-4 h-4 rounded border-gray-400"
                           />
                         </TableCell>
                       )}

@@ -26,7 +26,7 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
           <select
             value={selectedYear}
             onChange={(e) => onYearChange(Number(e.target.value))}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500"
           >
             {[2025, 2026, 2027].map((year) => (
               <option key={year} value={year}>
@@ -90,7 +90,7 @@ export const BudgetInputForm: React.FC<BudgetInputFormProps> = ({
               <select
                 value={input.isPeakSeason ? '是' : '否'}
                 onChange={(e) => onUpdate({ isPeakSeason: e.target.value === '是' })}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="是">是</option>
                 <option value="否">否</option>

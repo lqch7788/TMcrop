@@ -68,7 +68,7 @@ export default function MaterialsCodeGenerator({
               <select
                 value={codeGen.bigCategory}
                 onChange={(e) => onCodeGenChange('bigCategory', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm"
               >
                 <option value="">请选择</option>
                 {BIG_CATEGORIES.map(cat => (
@@ -82,7 +82,7 @@ export default function MaterialsCodeGenerator({
                 value={codeGen.midCategory}
                 onChange={(e) => onCodeGenChange('midCategory', e.target.value)}
                 disabled={!codeGen.bigCategory}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm disabled:opacity-50"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm disabled:opacity-50"
               >
                 <option value="">请选择</option>
                 {getMidCategories().map(cat => (
@@ -96,7 +96,7 @@ export default function MaterialsCodeGenerator({
                 value={codeGen.subCategory}
                 onChange={(e) => onCodeGenChange('subCategory', e.target.value)}
                 disabled={!codeGen.midCategory}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm disabled:opacity-50"
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-gray-900 text-sm disabled:opacity-50"
               >
                 <option value="">请选择</option>
                 {getSubCategories().map(cat => (
@@ -118,7 +118,7 @@ export default function MaterialsCodeGenerator({
                   value={codeGen.generatedCode}
                   readOnly
                   placeholder="生成的编码将显示在这里"
-                  className="flex-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-mono text-sm"
+                  className="flex-1 px-3 py-2 bg-gray-100 border border-gray-400 rounded-lg text-gray-900 font-mono text-sm"
                 />
                 <Button
                   variant="ghost"

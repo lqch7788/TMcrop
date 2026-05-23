@@ -35,7 +35,7 @@ export function ContractFormModal({
             value={formData.staffName}
             onChange={(e) => onChange('staffName', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.staffName ? 'border-red-500' : 'border-gray-300'
+              errors.staffName ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入员工姓名"
           />
@@ -52,7 +52,7 @@ export function ContractFormModal({
             value={formData.idCard}
             onChange={(e) => onChange('idCard', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.idCard ? 'border-red-500' : 'border-gray-300'
+              errors.idCard ? 'border-red-500' : 'border-gray-400'
             }`}
             placeholder="请输入身份证号"
           />
@@ -68,7 +68,7 @@ export function ContractFormModal({
             value={formData.contractType}
             onChange={(e) => onChange('contractType', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.contractType ? 'border-red-500' : 'border-gray-300'
+              errors.contractType ? 'border-red-500' : 'border-gray-400'
             }`}
           >
             <option value="">请选择合同类型</option>
@@ -163,7 +163,7 @@ export function ContractFormModal({
         <textarea
           value={formData.remarks || ''}
           onChange={(e) => onChange('remarks', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           rows={3}
           placeholder="请输入备注"
         />
