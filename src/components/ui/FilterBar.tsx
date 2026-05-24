@@ -25,7 +25,7 @@ const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
         {...props}
       >
         {/* 筛选项容器 */}
-        <div className="flex-1 flex flex-wrap items-end gap-3">
+        <div className="flex-1 flex flex-wrap items-end justify-between gap-3">
           {children}
         </div>
 

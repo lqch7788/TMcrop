@@ -1,7 +1,7 @@
 /**
  * 工资预算表格组件
  */
-import { Eye, Check, X } from 'lucide-react';
+import { Eye, Check, X, Plus, FileSpreadsheet, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import ProTable from '../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../components/common/labor/LaborStatusBadge';
@@ -22,6 +22,9 @@ export interface SalaryBudgetTableProps {
   onViewDetail: (record: SalaryBudgetRecord) => void;
   onApprove: (record: SalaryBudgetRecord) => void;
   onReject: (record: SalaryBudgetRecord) => void;
+  onAdd: () => void;
+  onOpenSummary: () => void;
+  onExport: () => void;
 }
 
 /**
@@ -137,30 +140,55 @@ export function SalaryBudgetTable({
   onViewDetail,
   onApprove,
   onReject,
+  onAdd,
+  onOpenSummary,
+  onExport,
 }: SalaryBudgetTableProps) {
   const columns = getColumns(onViewDetail, onApprove, onReject);
 
   return (
-    <ProTable
-      columns={columns}
-      dataSource={data}
-      pagination={{
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-        total: pagination.total,
-        onChange: pagination.onChange,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total) => `共 ${total} 条`,
-      }}
-      rowSelection={
-        selectedRowKeys.length > 0
-          ? {
-              selectedRowKeys,
-              onChange: onSelectionChange,
-            }
-          : undefined
-      }
-    />
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">预算记录</h3>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onAdd}>
+            <Plus className="w-4 h-4" />
+            新增预算
+          </Button>
+          <Button size="sm" variant="outline" onClick={onOpenSummary}>
+            <FileSpreadsheet className="w-4 h-4" />
+            预算汇总
+          </Button>
+          <Button size="sm" variant="outline" onClick={onExport}>
+            <Download className="w-4 h-4" />
+            导出
+          </Button>
+        </div>
+      </div>
+
+      <ProTable
+        columns={columns}
+        dataSource={data}
+        headerClassName="bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          onChange: pagination.onChange,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+        rowSelection={
+          selectedRowKeys.length > 0
+            ? {
+                selectedRowKeys,
+                onChange: onSelectionChange,
+              }
+            : undefined
+        }
+      />
+    </div>
   );
 }
