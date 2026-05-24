@@ -364,37 +364,37 @@ export function OnboardingPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">待入职</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{statusCounts.待入职}</p>
+              <p className="text-xs text-gray-500">待入职</p>
+              <p className="text-lg font-bold text-amber-600 mt-1">{statusCounts.待入职}</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-600" />
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-600" />
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">办理中</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{statusCounts.办理中}</p>
+              <p className="text-xs text-gray-500">办理中</p>
+              <p className="text-lg font-bold text-blue-600 mt-1">{statusCounts.办理中}</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-blue-600" />
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-blue-600" />
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">已入职</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{statusCounts.已入职}</p>
+              <p className="text-xs text-gray-500">已入职</p>
+              <p className="text-lg font-bold text-green-600 mt-1">{statusCounts.已入职}</p>
             </div>
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-green-600" />
             </div>
           </div>
         </div>

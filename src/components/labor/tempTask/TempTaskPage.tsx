@@ -1083,31 +1083,31 @@ export function TempTaskPage() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-md">
-          <p className="text-sm text-gray-500">总任务</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="bg-white rounded-lg p-3">
+          <p className="text-xs text-gray-500">总任务</p>
+          <p className="text-lg font-bold text-gray-900 mt-1">{stats.total}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-md">
-          <p className="text-sm text-gray-500">待执行</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+        <div className="bg-white rounded-lg p-3">
+          <p className="text-xs text-gray-500">待执行</p>
+          <p className="text-lg font-bold text-amber-600 mt-1">{stats.pending}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-md">
-          <p className="text-sm text-gray-500">进行中</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{stats.inProgress}</p>
+        <div className="bg-white rounded-lg p-3">
+          <p className="text-xs text-gray-500">进行中</p>
+          <p className="text-lg font-bold text-blue-600 mt-1">{stats.inProgress}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-md">
-          <p className="text-sm text-gray-500">已完成</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{stats.completed}</p>
+        <div className="bg-white rounded-lg p-3">
+          <p className="text-xs text-gray-500">已完成</p>
+          <p className="text-lg font-bold text-green-600 mt-1">{stats.completed}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-md border-l-4 border-red-500">
-          <p className="text-sm text-gray-500">非常紧急</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{stats.critical}</p>
+        <div className="bg-white rounded-lg p-3 border-l-2 border-red-500">
+          <p className="text-xs text-gray-500">非常紧急</p>
+          <p className="text-lg font-bold text-red-600 mt-1">{stats.critical}</p>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-md border-l-4 border-orange-500">
-          <p className="text-sm text-gray-500">超时预警</p>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-2xl font-bold text-orange-600">
+        <div className="bg-white rounded-lg p-3 border-l-2 border-orange-500">
+          <p className="text-xs text-gray-500">超时预警</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-lg font-bold text-orange-600">
               {stats.overdue + stats.warning}
             </p>
             {stats.overdue > 0 && (

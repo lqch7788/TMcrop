@@ -42,25 +42,25 @@ export const SmartDispatchPage: React.FC = () => {
           <Sparkles className="w-5 h-5 text-emerald-600" />
           <span className="font-semibold text-gray-900">派工决策因素与权重</span>
         </div>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-5 gap-3">
           <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-600">{DISPATCH_WEIGHTS.skillMatch * 100}%</div>
+            <div className="text-lg font-bold text-emerald-600">{DISPATCH_WEIGHTS.skillMatch * 100}%</div>
             <div className="text-xs text-gray-600 mt-1">技能匹配度</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{DISPATCH_WEIGHTS.location * 100}%</div>
+            <div className="text-lg font-bold text-blue-600">{DISPATCH_WEIGHTS.location * 100}%</div>
             <div className="text-xs text-gray-600 mt-1">地理位置</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-amber-600">{DISPATCH_WEIGHTS.currentLoad * 100}%</div>
+            <div className="text-lg font-bold text-amber-600">{DISPATCH_WEIGHTS.currentLoad * 100}%</div>
             <div className="text-xs text-gray-600 mt-1">当前负荷</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{DISPATCH_WEIGHTS.historicalPerformance * 100}%</div>
+            <div className="text-lg font-bold text-purple-600">{DISPATCH_WEIGHTS.historicalPerformance * 100}%</div>
             <div className="text-xs text-gray-600 mt-1">历史表现</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{DISPATCH_WEIGHTS.urgency * 100}%</div>
+            <div className="text-lg font-bold text-red-600">{DISPATCH_WEIGHTS.urgency * 100}%</div>
             <div className="text-xs text-gray-600 mt-1">紧急程度</div>
           </div>
         </div>

@@ -242,36 +242,36 @@ export function PerformancePage() {
       )}
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-[#F2F6FA] rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-emerald-600" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <Users className="w-4 h-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-500">考核人数</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+        <div className="bg-[#F2F6FA] rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-green-600" />
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.evaluated}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.evaluated}</p>
               <p className="text-xs text-gray-500">已评估</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+        <div className="bg-[#F2F6FA] rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Award className="w-5 h-5 text-amber-600" />
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Award className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.avgScore}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.avgScore}</p>
               <p className="text-xs text-gray-500">平均得分</p>
             </div>
           </div>

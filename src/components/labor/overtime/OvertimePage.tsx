@@ -236,28 +236,28 @@ export function OvertimePage() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">待审批</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">
+          <p className="text-lg font-bold text-amber-600 mt-1">
             {data.filter((r) => r.status === '待审批').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">已审批</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
+          <p className="text-lg font-bold text-blue-600 mt-1">
             {data.filter((r) => r.status === '已审批').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">已驳回</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">
+          <p className="text-lg font-bold text-red-600 mt-1">
             {data.filter((r) => r.status === '已驳回').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">总记录数</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{pagination.total}</p>
+          <p className="text-lg font-bold text-gray-900 mt-1">{pagination.total}</p>
         </div>
       </div>
 

@@ -44,17 +44,17 @@ export function MonthlyStatsCards({ stats }: MonthlyStatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {cards.map((card, index) => (
-        <div key={index} className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+        <div key={index} className="bg-white rounded-lg p-3 border border-gray-100">
           <div className="flex items-center gap-3">
             <div
-              className={`w-10 h-10 rounded-lg ${card.bgColor} flex items-center justify-center`}
+              className={`w-8 h-8 rounded-lg ${card.bgColor} flex items-center justify-center`}
             >
-              <span className={`${card.textColor} text-lg`}>{card.icon}</span>
+              <span className={`${card.textColor} text-base`}>{card.icon}</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+              <p className="text-lg font-bold text-gray-900">{card.value}</p>
               <p className="text-xs text-gray-500">{card.label}</p>
             </div>
           </div>

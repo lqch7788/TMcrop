@@ -249,28 +249,28 @@ export function SalaryPage() {
       />
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">待确认</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">
+          <p className="text-lg font-bold text-amber-600 mt-1">
             {data.filter((r) => r.status === '待确认').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">已确认</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
+          <p className="text-lg font-bold text-blue-600 mt-1">
             {data.filter((r) => r.status === '已确认').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">已发放</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">
+          <p className="text-lg font-bold text-green-600 mt-1">
             {data.filter((r) => r.status === '已发放').length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-500">总记录数</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{total}</p>
+          <p className="text-lg font-bold text-gray-900 mt-1">{total}</p>
         </div>
       </div>
 

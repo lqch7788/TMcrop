@@ -333,54 +333,54 @@ export function SchedulePage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-blue-600" />
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">今日排班</p>
-              <p className="text-xl font-bold text-gray-800">
+              <p className="text-xs text-gray-500">今日排班</p>
+              <p className="text-lg font-bold text-gray-800">
                 {scheduleList.filter(s => s.date === new Date().toISOString().split('T')[0]).length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">本周已执行</p>
-              <p className="text-xl font-bold text-gray-800">
+              <p className="text-xs text-gray-500">本周已执行</p>
+              <p className="text-lg font-bold text-gray-800">
                 {scheduleList.filter(s => s.status === '已执行' && weekDateRange.includes(s.date)).length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-              <Users className="w-5 h-5 text-amber-600" />
+        <div className="bg-white rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Users className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">待调班申请</p>
-              <p className="text-xl font-bold text-gray-800">
+              <p className="text-xs text-gray-500">待调班申请</p>
+              <p className="text-lg font-bold text-gray-800">
                 {swapRequests.filter(r => r.status === '待审批').length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <List className="w-5 h-5 text-purple-600" />
+        <div className="bg-white rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <List className="w-4 h-4 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">本月排班总数</p>
-              <p className="text-xl font-bold text-gray-800">
+              <p className="text-xs text-gray-500">本月排班总数</p>
+              <p className="text-lg font-bold text-gray-800">
                 {scheduleList.filter(s => {
                   const date = new Date(s.date);
                   const now = new Date();
