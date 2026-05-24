@@ -29,7 +29,8 @@ const FIELD_MAP: Record<string, string> = {
   remarks: 'remarks',
   createBy: 'create_by',
   warehouseId: 'warehouse_id',
-  auditorId: 'auditor_id',
+  auditor: 'auditor_id',       // 前端使用 auditor
+  auditorId: 'auditor_id',    // 兼容 auditorId
   batchCode: 'batch_code',
   batchId: 'batch_id',
   variety: 'crop_variety',
