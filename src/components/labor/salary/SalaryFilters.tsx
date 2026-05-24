@@ -1,4 +1,4 @@
-import { Search, X } from 'lucide-react';
+import { Search, X, RotateCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,8 +59,8 @@ export function SalaryFilters({
   const hasFilters = filters.month || filters.staffName || filters.calcType || filters.status;
 
   return (
-    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-      <div className="flex flex-wrap gap-4 items-end">
+    <div className="bg-[#F2F6FA] rounded-lg p-3">
+      <div className="flex flex-wrap gap-3 items-end">
         {/* 姓名搜索 */}
         <div className="flex-1 min-w-[200px]">
           <div className="relative">
@@ -72,21 +72,11 @@ export function SalaryFilters({
               onChange={(e) => onFilterChange({ staffName: e.target.value || undefined })}
               className="pl-9"
             />
-            {filters.staffName && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onFilterChange({ staffName: undefined })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 h-auto w-auto p-1"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </div>
 
         {/* 月份筛选 */}
-        <div className="w-40">
+        <div className="w-[140px]">
           <Select
             value={filters.month || '__all__'}
             onValueChange={(value) => onFilterChange({ month: value === '__all__' ? '' : value })}
@@ -106,7 +96,7 @@ export function SalaryFilters({
         </div>
 
         {/* 计算类型筛选 */}
-        <div className="w-36">
+        <div className="w-[120px]">
           <Select
             value={filters.calcType || '__all__'}
             onValueChange={(value) => onFilterChange({ calcType: value === '__all__' ? '' : value as SalaryCalcType })}
@@ -126,7 +116,7 @@ export function SalaryFilters({
         </div>
 
         {/* 状态筛选 */}
-        <div className="w-36">
+        <div className="w-[120px]">
           <Select
             value={filters.status || '__all__'}
             onValueChange={(value) => onFilterChange({ status: value === '__all__' ? '' : value as SalaryStatus })}
@@ -153,13 +143,17 @@ export function SalaryFilters({
           </Select>
         </div>
 
-        {/* 重置按钮 */}
-        {hasFilters && (
-          <Button variant="ghost" onClick={onReset} className="text-gray-500">
-            <X className="h-4 w-4 mr-1" />
+        {/* 重置和搜索按钮 */}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={onReset}>
+            <RotateCw className="w-4 h-4" />
             重置
           </Button>
-        )}
+          <Button size="sm" variant="default">
+            <Search className="w-4 h-4" />
+            搜索
+          </Button>
+        </div>
       </div>
     </div>
   );

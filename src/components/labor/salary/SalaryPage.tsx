@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Banknote, Plus } from 'lucide-react';
+import { Download, Banknote, Plus, Clock, CheckCircle, BanknoteIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SalaryTable } from './SalaryTable';
 import { SalaryFilters } from './SalaryFilters';
@@ -241,38 +241,66 @@ export function SalaryPage() {
 
   return (
     <div className="space-y-6">
+      {/* 统计卡片 - 紧凑型彩色背景 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">
+                {data.filter((r) => r.status === '待确认').length}
+              </p>
+              <p className="text-xs text-amber-600">待确认</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-blue-700">
+                {data.filter((r) => r.status === '已确认').length}
+              </p>
+              <p className="text-xs text-blue-600">已确认</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <BanknoteIcon className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-700">
+                {data.filter((r) => r.status === '已发放').length}
+              </p>
+              <p className="text-xs text-green-600">已发放</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gray-100 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-gray-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-700">{total}</p>
+              <p className="text-xs text-gray-600">总记录数</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 筛选栏 */}
       <SalaryFilters
         filters={filters}
         onFilterChange={updateFilters}
         onReset={resetFilters}
       />
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">待确认</p>
-          <p className="text-lg font-bold text-amber-600 mt-1">
-            {data.filter((r) => r.status === '待确认').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">已确认</p>
-          <p className="text-lg font-bold text-blue-600 mt-1">
-            {data.filter((r) => r.status === '已确认').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">已发放</p>
-          <p className="text-lg font-bold text-green-600 mt-1">
-            {data.filter((r) => r.status === '已发放').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">总记录数</p>
-          <p className="text-lg font-bold text-gray-900 mt-1">{total}</p>
-        </div>
-      </div>
 
       {/* 表格 */}
       <SalaryTable

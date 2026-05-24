@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, Filter, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload } from 'lucide-react';
+import { Plus, Download, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload, Search, RotateCw } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
@@ -338,53 +338,67 @@ export const PieceworkPage: React.FC = () => {
       </div>
 
       {/* 筛选区域 */}
-      <div className="p-4 bg-white rounded-lg border border-gray-200">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700">筛选条件</span>
+      <div className="bg-[#F2F6FA] rounded-lg p-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+            <label className="text-xs text-gray-500">员工姓名</label>
+            <input
+              type="text"
+              placeholder="请输入员工姓名"
+              value={filters.workerName || ''}
+              onChange={(e) => updateFilters({ workerName: e.target.value })}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="员工姓名"
-            value={filters.workerName || ''}
-            onChange={(e) => updateFilters({ workerName: e.target.value })}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
-          <input
-            type="text"
-            placeholder="任务名称"
-            value={filters.taskName || ''}
-            onChange={(e) => updateFilters({ taskName: e.target.value })}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          />
-          <DatePicker
-            selected={filters.startDate ? new Date(filters.startDate) : undefined}
-            onChange={(date) => updateFilters({ startDate: date.toISOString().split('T')[0] })}
-            className="w-[160px]"
-          />
-          <DatePicker
-            selected={filters.endDate ? new Date(filters.endDate) : undefined}
-            onChange={(date) => updateFilters({ endDate: date.toISOString().split('T')[0] })}
-            className="w-[160px]"
-          />
-          <select
-            value={filters.status || ''}
-            onChange={(e) => updateFilters({ status: e.target.value as PieceRate['status'] || undefined })}
-            className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          >
-            <option value="">全部状态</option>
-            <option value="待确认">待确认</option>
-            <option value="已确认">已确认</option>
-            <option value="已发放">已发放</option>
-          </select>
-          <Button
-            variant="ghost"
-            onClick={resetFilters}
-          >
-            <RefreshCw className="w-3 h-3" />
-            重置
-          </Button>
+          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+            <label className="text-xs text-gray-500">任务名称</label>
+            <input
+              type="text"
+              placeholder="请输入任务名称"
+              value={filters.taskName || ''}
+              onChange={(e) => updateFilters({ taskName: e.target.value })}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+            <label className="text-xs text-gray-500">开始日期</label>
+            <DatePicker
+              selected={filters.startDate ? new Date(filters.startDate) : undefined}
+              onChange={(date) => updateFilters({ startDate: date.toISOString().split('T')[0] })}
+              className="w-full"
+            />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+            <label className="text-xs text-gray-500">结束日期</label>
+            <DatePicker
+              selected={filters.endDate ? new Date(filters.endDate) : undefined}
+              onChange={(date) => updateFilters({ endDate: date.toISOString().split('T')[0] })}
+              className="w-full"
+            />
+          </div>
+          <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
+            <label className="text-xs text-gray-500">状态</label>
+            <select
+              value={filters.status || ''}
+              onChange={(e) => updateFilters({ status: e.target.value as PieceRate['status'] || undefined })}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value="">全部状态</option>
+              <option value="待确认">待确认</option>
+              <option value="已确认">已确认</option>
+              <option value="已发放">已发放</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={resetFilters}>
+              <RotateCw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button size="sm" variant="default">
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -516,28 +530,32 @@ export const PieceworkPage: React.FC = () => {
   );
 };
 
-// 统计卡片组件（紧凑型）
+// 统计卡片组件（紧凑型彩色背景）
 const StatCard: React.FC<{
   icon: React.ReactNode;
   label: string;
   value: string | number;
   color: string;
 }> = ({ icon, label, value, color }) => {
-  const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    purple: 'bg-purple-50 text-purple-600',
+  const colorClasses: Record<string, { bg: string; icon: string; value: string; label: string }> = {
+    blue: { bg: 'bg-blue-50', icon: 'text-blue-600', value: 'text-blue-700', label: 'text-blue-600' },
+    green: { bg: 'bg-green-50', icon: 'text-green-600', value: 'text-green-700', label: 'text-green-600' },
+    emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', value: 'text-emerald-700', label: 'text-emerald-600' },
+    purple: { bg: 'bg-purple-50', icon: 'text-purple-600', value: 'text-purple-700', label: 'text-purple-600' },
   };
 
+  const styles = colorClasses[color] || colorClasses.blue;
+
   return (
-    <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
-      <div className={`p-1.5 rounded-lg ${colorClasses[color]}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-base font-semibold text-gray-900">{value}</p>
+    <div className={`${styles.bg} rounded-lg p-2`}>
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+          <span className={styles.icon}>{icon}</span>
+        </div>
+        <div>
+          <p className={`text-lg font-bold ${styles.value}`}>{value}</p>
+          <p className={`text-xs ${styles.label}`}>{label}</p>
+        </div>
       </div>
     </div>
   );

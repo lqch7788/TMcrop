@@ -56,28 +56,26 @@ export default function SalaryBudgetPage() {
         onFilterChange={handleFilterChange}
         onReset={handleResetFilters}
         onSearch={handleSearch}
+      />
+
+      {/* 数据表格 */}
+      <SalaryBudgetTable
+        data={filteredData}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          onChange: (page, size) => setPagination({ current: page, pageSize: size, total: pagination.total }),
+        }}
+        selectedRowKeys={selectedRowKeys}
+        onSelectionChange={setSelectedRowKeys}
+        onViewDetail={handleOpenDetailModal}
+        onApprove={handleApprove}
+        onReject={handleReject}
         onAdd={handleOpenFormModal}
         onOpenSummary={handleOpenSummaryModal}
         onExport={handleExport}
       />
-
-      {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <SalaryBudgetTable
-          data={filteredData}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            onChange: (page, size) => setPagination({ current: page, pageSize: size, total: pagination.total }),
-          }}
-          selectedRowKeys={selectedRowKeys}
-          onSelectionChange={setSelectedRowKeys}
-          onViewDetail={handleOpenDetailModal}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
-      </div>
 
       {/* 新增/编辑表单弹窗 */}
       <CreateModal
