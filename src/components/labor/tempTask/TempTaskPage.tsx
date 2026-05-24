@@ -1082,19 +1082,6 @@ export function TempTaskPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg">
-            <AlertTriangle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">临时任务派发</h1>
-            <p className="text-gray-500">管理不在计划内的临时任务派发</p>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-md">

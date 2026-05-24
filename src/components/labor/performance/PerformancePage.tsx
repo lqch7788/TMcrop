@@ -230,69 +230,16 @@ export function PerformancePage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Award className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">绩效考核</h1>
-              <p className="text-gray-500">员工绩效考核评分与排名</p>
-            </div>
-          </div>
-          {/* 右上角按钮 */}
-          {!batchEditMode && !batchDeleteMode && !exportMode && (
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleExportClick}
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </Button>
-              <Button
-                onClick={handleBatchEditClick}
-                variant="default"
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <Edit2 className="w-4 h-4" />
-                编辑
-              </Button>
-              <Button
-                onClick={handleBatchDeleteClick}
-                variant="default"
-                className="gap-2 bg-red-600 hover:bg-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
-              </Button>
-            </div>
-          )}
-          {/* 批量操作按钮 */}
-          {(batchEditMode || batchDeleteMode || exportMode) && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <Button
-                onClick={handleCancelBatch}
-                variant="secondary"
-                className="gap-1"
-              >
-                <X className="w-4 h-4" />
-                取消
-              </Button>
-            </div>
-          )}
+      {/* 批量操作提示栏 */}
+      {(batchEditMode || batchDeleteMode || exportMode) && (
+        <div className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between">
+          <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+          <Button variant="secondary" onClick={handleCancelBatch}>
+            <X className="w-4 h-4" />
+            取消
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

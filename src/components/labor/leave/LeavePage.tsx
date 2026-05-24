@@ -230,21 +230,6 @@ export function LeavePage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <CalendarDays className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">请假管理</h1>
-              <p className="text-gray-500">员工请假申请与审批管理</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 请假配额卡片 */}
       <LeaveQuotaCard quota={getMockLeaveQuota('S001', '张三')} />
 

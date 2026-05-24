@@ -205,37 +205,6 @@ export const EfficiencyPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">人效分析</h1>
-              <p className="text-gray-500">查看各部门人效指标及趋势分析</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleExportClick}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              导出
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              新增
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* 筛选栏 */}
       <EfficiencyFilters
         filters={filters}

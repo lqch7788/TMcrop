@@ -278,19 +278,6 @@ export function SchedulePage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Calendar className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">排班调度中心</h1>
-            <p className="text-gray-500">管理员工排班、班次设置和调班申请</p>
-          </div>
-        </div>
-      </div>
-
       {/* 快捷操作栏 */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">

@@ -327,7 +327,6 @@ export function WorkLogPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
       {/* 筛选栏 */}
       <WorkLogFilters
         filters={filters}
