@@ -200,43 +200,16 @@ export function RiskPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">劳动风险预警</h1>
-              <p className="text-gray-500">监控和管理劳动风险预警信息</p>
-            </div>
-          </div>
-          {/* 右上角按钮 */}
-          {!batchEditMode && !batchDeleteMode && !exportMode && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleExportClick}>
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-              <Button variant="default" onClick={() => setShowAddModal(true)}>
-                <Plus className="w-4 h-4" />
-                新增
-              </Button>
-            </div>
-          )}
-          {/* 批量操作按钮 */}
-          {(batchEditMode || batchDeleteMode || exportMode) && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              <Button variant="secondary" onClick={handleCancelBatch}>
-                <X className="w-4 h-4" />
-                取消
-              </Button>
-            </div>
-          )}
+      {/* 筛选栏 */}
+      {(batchEditMode || batchDeleteMode || exportMode) && (
+        <div className="flex items-center gap-2 bg-white rounded-xl p-4 shadow-sm">
+          <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+          <Button variant="secondary" onClick={handleCancelBatch}>
+            <X className="w-4 h-4" />
+            取消
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* 预警仪表盘 */}
       <RiskDashboard stats={stats} />

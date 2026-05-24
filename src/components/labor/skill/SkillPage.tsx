@@ -288,35 +288,6 @@ export function SkillPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Award className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">技能档案管理</h1>
-              <p className="text-gray-500">管理员工的技能证书和培训记录</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {}}>
-              <Upload className="w-4 h-4" />
-              导入
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportClick}>
-              <Download className="w-4 h-4" />
-              导出
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setShowAddModal(true)}>
-              <Plus className="w-4 h-4" />
-              新建档案
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* 筛选栏 */}
       <SkillFiltersComponent
         filters={skillFilters}

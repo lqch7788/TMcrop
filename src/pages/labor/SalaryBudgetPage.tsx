@@ -49,19 +49,6 @@ export default function SalaryBudgetPage() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">工资预算</h1>
-            <p className="text-xs text-gray-500">编制月度工资预算，汇总各部门工资数据</p>
-          </div>
-        </div>
-      </div>
-
       {/* 筛选栏 */}
       <SalaryBudgetFilters
         filters={filters}

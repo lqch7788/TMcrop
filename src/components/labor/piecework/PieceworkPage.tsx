@@ -309,43 +309,6 @@ export const PieceworkPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">计件工资管理</h1>
-              <p className="text-gray-500">管理临时工计件工资记录</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {}}
-            >
-              <Upload className="w-4 h-4" />
-              导入
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleExportClick}
-            >
-              <Download className="w-4 h-4" />
-              导出
-            </Button>
-            <Button
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus className="w-4 h-4" />
-              新建
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard

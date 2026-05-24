@@ -51,19 +51,6 @@ export default function SalaryAdjustmentPage() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">调薪申请</h1>
-            <p className="text-xs text-gray-500">员工薪资调整申请管理</p>
-          </div>
-        </div>
-      </div>
-
       {/* 筛选栏 */}
       <SalaryAdjustmentFilters
         filters={filters}

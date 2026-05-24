@@ -241,44 +241,6 @@ export function SalaryPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Banknote className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">工资管理</h1>
-              <p className="text-gray-500">管理员工工资、查看工资条</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {canExport && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportClick}
-                className="flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                size="sm"
-                onClick={() => setAddModal(true)}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Plus className="w-4 h-4" />
-                新增
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* 筛选栏 */}
       <SalaryFilters
         filters={filters}
