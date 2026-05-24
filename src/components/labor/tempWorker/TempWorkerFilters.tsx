@@ -1,4 +1,4 @@
-import { Search, Plus } from 'lucide-react';
+import { Search, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TempWorkerFiltersProps, WorkerType, StaffStatus } from './types';
 
@@ -9,7 +9,6 @@ export function TempWorkerFilters({
   filters,
   onFiltersChange,
   onSearch,
-  onAdd,
 }: TempWorkerFiltersProps) {
   const workerTypes: WorkerType[] = ['正式工', '临时工', '季节工'];
   const statuses: StaffStatus[] = ['在职', '离职', '停薪留职', '试用期'];
@@ -18,9 +17,14 @@ export function TempWorkerFilters({
     onFiltersChange({ ...filters, [field]: value });
   };
 
+  // 重置筛选条件
+  const handleReset = () => {
+    onFiltersChange({ keyword: '', workerType: '', status: '' });
+  };
+
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm">
-      <div className="flex flex-wrap gap-4">
+    <div className="bg-[#F2F6FA] rounded-lg p-3">
+      <div className="flex flex-wrap gap-3 items-end">
         {/* 关键词搜索 */}
         <div className="flex-1 min-w-[200px]">
           <div className="relative">
@@ -64,14 +68,17 @@ export function TempWorkerFilters({
           </select>
         </div>
 
-        {/* 搜索按钮 */}
-        <Button onClick={onSearch}>搜索</Button>
-
-        {/* 新建按钮 */}
-        <Button onClick={onAdd}>
-          <Plus className="w-4 h-4 mr-1" />
-          快速入职
-        </Button>
+        {/* 操作按钮 */}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={handleReset}>
+            <RotateCw className="w-4 h-4" />
+            重置
+          </Button>
+          <Button size="sm" variant="default" onClick={onSearch}>
+            <Search className="w-4 h-4" />
+            搜索
+          </Button>
+        </div>
       </div>
     </div>
   );

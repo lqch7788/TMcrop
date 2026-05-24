@@ -1,7 +1,7 @@
 /**
  * 离职申请页面表格组件
  */
-import { Eye, Check, X } from 'lucide-react';
+import { Eye, Check, X, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
@@ -21,6 +21,14 @@ interface ResignationPageTableProps {
   onOpenDetail: (record: ResignationRecord) => void;
   onApprove: (record: ResignationRecord) => void;
   onReject: (record: ResignationRecord) => void;
+  onOpenFormModal?: () => void;
+  onBatchApprove?: () => void;
+  onBatchReject?: () => void;
+  onBatchExport?: () => void;
+  onConfirmBatchApprove?: () => void;
+  onConfirmBatchReject?: () => void;
+  onConfirmBatchExport?: () => void;
+  onCancelBatch?: () => void;
 }
 
 /**
@@ -35,6 +43,14 @@ export function ResignationPageTable({
   onOpenDetail,
   onApprove,
   onReject,
+  onOpenFormModal,
+  onBatchApprove,
+  onBatchReject,
+  onBatchExport,
+  onConfirmBatchApprove,
+  onConfirmBatchReject,
+  onConfirmBatchExport,
+  onCancelBatch,
 }: ResignationPageTableProps) {
   // 表格列定义
   const columns = [
@@ -131,10 +147,77 @@ export function ResignationPageTable({
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* 表格标题栏 */}
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">离职申请记录</h3>
+        <div className="flex gap-2">
+          {batchMode === 'none' ? (
+            <>
+              {onOpenFormModal && (
+                <Button variant="default" size="sm" onClick={onOpenFormModal}>
+                  <Plus className="w-4 h-4" />
+                  新增离职
+                </Button>
+              )}
+              {onBatchApprove && (
+                <Button variant="blue" size="sm" onClick={onBatchApprove}>
+                  批量通过
+                </Button>
+              )}
+              {onBatchReject && (
+                <Button variant="destructive" size="sm" onClick={onBatchReject}>
+                  批量驳回
+                </Button>
+              )}
+              {onBatchExport && (
+                <Button variant="default" size="sm" onClick={onBatchExport}>
+                  <Download className="w-4 h-4" />
+                  导出
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              {batchMode === 'approve' && onConfirmBatchApprove && (
+                <Button
+                  variant="blue"
+                  size="sm"
+                  onClick={onConfirmBatchApprove}
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  确认通过 ({selectedRowKeys.length})
+                </Button>
+              )}
+              {batchMode === 'reject' && onConfirmBatchReject && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={onConfirmBatchReject}
+                  disabled={selectedRowKeys.length === 0}
+                >
+                  确认驳回 ({selectedRowKeys.length})
+                </Button>
+              )}
+              {batchMode === 'export' && onConfirmBatchExport && (
+                <Button variant="default" size="sm" onClick={onConfirmBatchExport}>
+                  确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                </Button>
+              )}
+              {onCancelBatch && (
+                <Button variant="outline" size="sm" onClick={onCancelBatch}>
+                  取消
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
       <ProTable
         columns={columns}
         dataSource={dataSource}
+        headerClassName="bg-gradient-to-r from-blue-500 to-blue-600 text-white"
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCw } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
@@ -337,65 +337,75 @@ export function OnboardingPage() {
 
   return (
     <div className="space-y-6">
+      {/* 统计卡片 - 紧凑型彩色背景 */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">{statusCounts.待入职}</p>
+              <p className="text-xs text-amber-600">待入职</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-blue-700">{statusCounts.办理中}</p>
+              <p className="text-xs text-blue-600">办理中</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-700">{statusCounts.已入职}</p>
+              <p className="text-xs text-green-600">已入职</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 筛选栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
+      <div className="bg-[#F2F6FA] rounded-lg p-3">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="搜索姓名、身份证号、手机号..."
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
             />
           </div>
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-            className="px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
           >
             <option value="">全部状态</option>
             <option value="待入职">待入职</option>
             <option value="办理中">办理中</option>
             <option value="已入职">已入职</option>
           </select>
-        </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-500">待入职</p>
-              <p className="text-lg font-bold text-amber-600 mt-1">{statusCounts.待入职}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-amber-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-500">办理中</p>
-              <p className="text-lg font-bold text-blue-600 mt-1">{statusCounts.办理中}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <AlertCircle className="w-4 h-4 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-500">已入职</p>
-              <p className="text-lg font-bold text-green-600 mt-1">{statusCounts.已入职}</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-            </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setFilters({ keyword: '', status: '' })}>
+              <RotateCw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button size="sm" variant="default">
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
           </div>
         </div>
       </div>

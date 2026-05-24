@@ -239,37 +239,33 @@ export function WorkerAttendancePage() {
           <span className="text-xs text-gray-400">数据来源：农事管理 → 排班调度</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <div className="bg-blue-50 rounded-lg p-3">
+          <div className="bg-blue-50 rounded-lg p-2">
             <div className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-blue-600" />
               <span className="text-xs text-blue-600 font-medium">计划在班</span>
             </div>
-            <div className="text-lg font-bold text-blue-700 mt-1">{scheduleComparison.scheduledCount}</div>
-            <div className="text-xs text-blue-500">人</div>
+            <div className="text-lg font-bold text-blue-700">{scheduleComparison.scheduledCount}<span className="text-xs font-normal text-blue-500 ml-1">人</span></div>
           </div>
-          <div className="bg-emerald-50 rounded-lg p-3">
+          <div className="bg-emerald-50 rounded-lg p-2">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <span className="text-xs text-emerald-600 font-medium">已打卡</span>
             </div>
-            <div className="text-lg font-bold text-emerald-700 mt-1">{scheduleComparison.checkedInCount}</div>
-            <div className="text-xs text-emerald-500">人</div>
+            <div className="text-lg font-bold text-emerald-700">{scheduleComparison.checkedInCount}<span className="text-xs font-normal text-emerald-500 ml-1">人</span></div>
           </div>
-          <div className="bg-red-50 rounded-lg p-3">
+          <div className="bg-red-50 rounded-lg p-2">
             <div className="flex items-center gap-2">
               <XCircle className="w-4 h-4 text-red-600" />
               <span className="text-xs text-red-600 font-medium">排班缺勤</span>
             </div>
-            <div className="text-lg font-bold text-red-700 mt-1">{scheduleComparison.absentCount}</div>
-            <div className="text-xs text-red-500">人（在班未打卡）</div>
+            <div className="text-lg font-bold text-red-700">{scheduleComparison.absentCount}<span className="text-xs font-normal text-red-500 ml-1">人</span></div>
           </div>
-          <div className="bg-amber-50 rounded-lg p-3">
+          <div className="bg-amber-50 rounded-lg p-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
               <span className="text-xs text-amber-600 font-medium">临时到岗</span>
             </div>
-            <div className="text-lg font-bold text-amber-700 mt-1">{scheduleComparison.unscheduledCount}</div>
-            <div className="text-xs text-amber-500">人（未排班打卡）</div>
+            <div className="text-lg font-bold text-amber-700">{scheduleComparison.unscheduledCount}<span className="text-xs font-normal text-amber-500 ml-1">人</span></div>
           </div>
         </div>
       </div>

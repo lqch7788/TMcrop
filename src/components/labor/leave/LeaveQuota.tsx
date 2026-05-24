@@ -1,8 +1,8 @@
-import { Award, Calendar, Heart, Umbrella } from 'lucide-react';
+import { Calendar, Heart, Umbrella } from 'lucide-react';
 import type { LeaveQuota as LeaveQuotaType } from './types';
 
 /**
- * 请假配额显示卡片组件
+ * 请假配额显示卡片组件 - 紧凑型
  */
 interface LeaveQuotaCardProps {
   quota: LeaveQuotaType;
@@ -24,79 +24,68 @@ export function LeaveQuotaCard({ quota }: LeaveQuotaCardProps) {
     ? Math.round((quota.otherLeaveUsed / quota.otherLeaveTotal) * 100)
     : 0;
 
+  const quotaCards = [
+    {
+      icon: Calendar,
+      label: '年假',
+      used: quota.annualLeaveUsed,
+      total: quota.annualLeaveTotal,
+      remaining: quota.annualLeaveRemaining,
+      percent: annualPercent,
+      bgColor: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+      barColor: 'bg-amber-500',
+    },
+    {
+      icon: Heart,
+      label: '病假',
+      used: quota.sickLeaveUsed,
+      total: quota.sickLeaveTotal,
+      remaining: quota.sickLeaveRemaining,
+      percent: sickPercent,
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      barColor: 'bg-blue-500',
+    },
+    {
+      icon: Umbrella,
+      label: '其他假',
+      used: quota.otherLeaveUsed,
+      total: quota.otherLeaveTotal,
+      remaining: quota.otherLeaveRemaining,
+      percent: otherPercent,
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      barColor: 'bg-purple-500',
+    },
+  ];
+
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">请假配额</h3>
-        <span className="text-sm text-gray-500">{quota.year}年</span>
+    <div className="bg-white rounded-lg p-3 border border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-900">请假配额</h3>
+        <span className="text-xs text-gray-500">{quota.year}年</span>
       </div>
 
-      <div className="space-y-4">
-        {/* 年假 */}
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <Calendar className="w-4 h-4 text-amber-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">年假</span>
-              <span className="text-sm text-gray-500">
-                {quota.annualLeaveRemaining} / {quota.annualLeaveTotal} 天
-              </span>
+      <div className="grid grid-cols-3 gap-2">
+        {quotaCards.map((card, idx) => (
+          <div key={idx} className={`${card.bgColor} rounded-lg p-2`}>
+            <div className="flex items-center gap-2 mb-1">
+              <card.icon className={`w-4 h-4 ${card.iconColor}`} />
+              <span className="text-xs font-medium text-gray-700">{card.label}</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="text-lg font-bold text-gray-900">
+              {card.remaining}<span className="text-xs font-normal text-gray-500 ml-1">/ {card.total}天</span>
+            </div>
+            <div className="h-1.5 bg-white rounded-full overflow-hidden mt-1">
               <div
-                className="h-full bg-amber-500 rounded-full transition-all duration-300"
-                style={{ width: `${annualPercent}%` }}
+                className={`h-full ${card.barColor} rounded-full transition-all duration-300`}
+                style={{ width: `${card.percent}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">已用 {quota.annualLeaveUsed} 天</p>
+            <p className="text-xs text-gray-400 mt-0.5">已用{card.used}天</p>
           </div>
-        </div>
-
-        {/* 病假 */}
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <Heart className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">病假</span>
-              <span className="text-sm text-gray-500">
-                {quota.sickLeaveRemaining} / {quota.sickLeaveTotal} 天
-              </span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                style={{ width: `${sickPercent}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">已用 {quota.sickLeaveUsed} 天</p>
-          </div>
-        </div>
-
-        {/* 其他假 */}
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-            <Umbrella className="w-4 h-4 text-purple-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">其他假</span>
-              <span className="text-sm text-gray-500">
-                {quota.otherLeaveRemaining} / {quota.otherLeaveTotal} 天
-              </span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-purple-500 rounded-full transition-all duration-300"
-                style={{ width: `${otherPercent}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">已用 {quota.otherLeaveUsed} 天</p>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

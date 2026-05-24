@@ -3,13 +3,14 @@
  * 实现招聘需求的提交与审批功能
  * 拆分后主组件，组合子组件实现完整功能
  */
-import { Users } from 'lucide-react';
+import { Users, Plus, Check, X, Download } from 'lucide-react';
 import { useDepartmentStore, usePositionStore } from '../../stores';
 import { useRecruitment } from './hooks/useRecruitment';
 import { RecruitmentFilters } from './components/RecruitmentFilters';
 import { RecruitmentTable } from './components/RecruitmentTable';
 import { CreateModal } from './components/RecruitmentModals/CreateModal';
 import { DetailModal } from './components/RecruitmentModals/DetailModal';
+import { Button } from '@/components/ui/button';
 
 export default function RecruitmentPage() {
   const departments = useDepartmentStore((state) => state.departments);
@@ -60,17 +61,59 @@ export default function RecruitmentPage() {
         onFilterChange={handleFilterChange}
         onReset={handleResetFilters}
         onSearch={handleSearch}
-        onAdd={handleOpenFormModal}
-        batchMode={batchMode}
-        onBatchApprove={() => setBatchMode('approve')}
-        onBatchReject={() => setBatchMode('reject')}
-        onExport={() => setBatchMode('export')}
-        onCancelBatch={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
-        selectedCount={selectedRowKeys.length}
       />
 
       {/* 数据表格 */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">招聘申请记录</h3>
+          <div className="flex gap-2">
+            {batchMode === 'none' ? (
+              <>
+                <Button variant="default" size="sm" onClick={handleOpenFormModal}>
+                  <Plus className="w-4 h-4" />
+                  新增招聘
+                </Button>
+                <Button variant="blue" size="sm" onClick={() => setBatchMode('approve')}>
+                  <Check className="w-4 h-4" />
+                  批量通过
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setBatchMode('reject')}>
+                  <X className="w-4 h-4" />
+                  批量驳回
+                </Button>
+                <Button variant="default" size="sm" onClick={() => setBatchMode('export')}>
+                  <Download className="w-4 h-4" />
+                  导出
+                </Button>
+              </>
+            ) : (
+              <>
+                {batchMode === 'approve' && (
+                  <Button variant="blue" size="sm" onClick={handleBatchApprove} disabled={selectedRowKeys.length === 0}>
+                    <Check className="w-4 h-4" />
+                    确认通过 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                {batchMode === 'reject' && (
+                  <Button variant="destructive" size="sm" onClick={handleBatchReject} disabled={selectedRowKeys.length === 0}>
+                    <X className="w-4 h-4" />
+                    确认驳回 ({selectedRowKeys.length})
+                  </Button>
+                )}
+                {batchMode === 'export' && (
+                  <Button variant="default" size="sm" onClick={handleExport}>
+                    <Download className="w-4 h-4" />
+                    确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}>
+                  取消
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         <RecruitmentTable
           data={filteredData}
           pagination={{

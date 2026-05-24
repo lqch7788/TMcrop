@@ -1,4 +1,4 @@
-import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCw } from 'lucide-react';
 import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
@@ -359,52 +359,71 @@ export function ContractTable() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+      {/* 统计卡片 - 紧凑型彩色背景 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <FileText className="w-4 h-4 text-green-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">合同管理</h1>
-              <p className="text-gray-500">劳动合同模板、签订存档、到期提醒</p>
+              <p className="text-lg font-bold text-green-700">{statusCounts.生效中}</p>
+              <p className="text-xs text-green-600">生效中</p>
             </div>
           </div>
+        </div>
+        <div className="bg-amber-50 rounded-lg p-2">
           <div className="flex items-center gap-2">
-            <Button
-              variant="warning"
-              size="sm"
-              onClick={() => setIsRemindOpen(true)}
-            >
-              <AlertTriangle className="w-4 h-4" />
-              到期提醒 ({expiringContracts.length})
-            </Button>
-            <Button size="sm" onClick={openCreateModal}>
-              <Plus className="w-4 h-4" />
-              新建合同
-            </Button>
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">{statusCounts.即将到期}</p>
+              <p className="text-xs text-amber-600">即将到期</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-red-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <FileText className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-red-700">{statusCounts.已到期}</p>
+              <p className="text-xs text-red-600">已到期</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <FileText className="w-4 h-4 text-gray-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-700">{statusCounts.已终止}</p>
+              <p className="text-xs text-gray-600">已终止</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 筛选栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
+      <div className="bg-[#F2F6FA] rounded-lg p-3">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="搜索员工姓名、身份证号、合同编号..."
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
             />
           </div>
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-            className="px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
           >
             <option value="">全部状态</option>
             <option value="生效中">生效中</option>
@@ -415,33 +434,23 @@ export function ContractTable() {
           <select
             value={filters.contractType}
             onChange={(e) => setFilters({ ...filters, contractType: e.target.value as any })}
-            className="px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
           >
             <option value="">全部类型</option>
             <option value="劳动合同">劳动合同</option>
             <option value="实习协议">实习协议</option>
             <option value="劳务合同">劳务合同</option>
           </select>
-        </div>
-      </div>
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">生效中</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{statusCounts.生效中}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">即将到期</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">{statusCounts.即将到期}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">已到期</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{statusCounts.已到期}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">已终止</p>
-          <p className="text-2xl font-bold text-gray-600 mt-1">{statusCounts.已终止}</p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setFilters({ keyword: '', status: '', contractType: '' })}>
+              <RotateCw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button size="sm" variant="default">
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -451,6 +460,14 @@ export function ContractTable() {
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">合同记录</h3>
           <div className="flex gap-2">
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={() => setIsRemindOpen(true)}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              到期提醒 ({expiringContracts.length})
+            </Button>
             {(batchEditMode || batchDeleteMode || exportMode) ? (
               <>
                 {batchEditMode && (

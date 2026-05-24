@@ -285,7 +285,7 @@ const ProTable: React.FC<ProTableProps> = ({
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-gray-300">
             {paginationInfo.paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell

@@ -1,4 +1,4 @@
-import { Search, Filter, X } from 'lucide-react';
+import { Search, RotateCw } from 'lucide-react';
 import { RecruitmentStatus, RecruitmentSource } from './types';
 import { Button } from '@/components/ui/button';
 
@@ -37,67 +37,58 @@ export function RecruitmentFilters({
   onSourceChange,
   onReset,
 }: RecruitmentFiltersProps) {
-  const hasActiveFilters = searchTerm || statusFilter !== 'all' || sourceFilter !== 'all';
-
   return (
-    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm border border-gray-100">
-      <div className="flex flex-col lg:flex-row gap-4">
+    <div className="bg-[#F2F6FA] rounded-lg p-3">
+      <div className="flex flex-wrap gap-3 items-end">
         {/* Search */}
-        <div className="flex-1 relative">
+        <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             placeholder="搜索招聘编号、岗位、部门..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
           />
         </div>
 
         {/* Status Filter */}
-        <div className="relative">
+        <div className="w-[140px]">
           <select
             value={statusFilter}
             onChange={(e) => onStatusChange(e.target.value as RecruitmentStatus | 'all')}
-            className="appearance-none w-full lg:w-40 px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-white"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </div>
 
         {/* Source Filter */}
-        <div className="relative">
+        <div className="w-[140px]">
           <select
             value={sourceFilter}
             onChange={(e) => onSourceChange(e.target.value as RecruitmentSource | 'all')}
-            className="appearance-none w-full lg:w-40 px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            className="w-full h-10 px-3 border border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-white"
           >
             {sourceOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
-          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
         </div>
 
-        {/* Reset Button */}
-        {hasActiveFilters && (
-          <Button variant="secondary" onClick={onReset}>
-            <X className="w-4 h-4" />
+        {/* 操作按钮 */}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={onReset}>
+            <RotateCw className="w-4 h-4" />
             重置
           </Button>
-        )}
-
-        <Button variant="secondary">
-          <Filter className="w-4 h-4" />
-          更多筛选
-        </Button>
+          <Button size="sm" variant="default">
+            <Search className="w-4 h-4" />
+            搜索
+          </Button>
+        </div>
       </div>
     </div>
   );

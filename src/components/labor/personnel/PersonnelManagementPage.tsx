@@ -3,12 +3,21 @@
  * 架构：usePositionStore (Zustand Store) 替代 React Query
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Users, Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck } from 'lucide-react';
+import { Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck, Search, RotateCw } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { usePositionStore } from '@/stores/usePositionStore';
 import type { Position } from '@/services/apiBasicDataService';
 
@@ -69,6 +78,13 @@ export function PersonnelManagementPage() {
   const [pageSize, setPageSize] = useState(5);
   const totalPages = Math.ceil(pagePositions.length / pageSize);
 
+  // 筛选状态
+  const [filters, setFilters] = useState({
+    keyword: '',
+    level: '',
+    status: '',
+  });
+
   // 权限检查
   const canCreate = true;
   const canEdit = true;
@@ -96,6 +112,36 @@ export function PersonnelManagementPage() {
 
   const paginatedPositions = pagePositions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  // 筛选后的数据
+  const filteredPositions = useMemo(() => {
+    return pagePositions.filter(pos => {
+      if (filters.keyword && !pos.name.includes(filters.keyword) && !pos.code.includes(filters.keyword) && !pos.dept.includes(filters.keyword)) {
+        return false;
+      }
+      if (filters.level && pos.level !== filters.level) {
+        return false;
+      }
+      if (filters.status && pos.status !== filters.status) {
+        return false;
+      }
+      return true;
+    });
+  }, [pagePositions, filters]);
+
+  // 重置筛选
+  const handleResetFilters = () => {
+    setFilters({ keyword: '', level: '', status: '' });
+    setCurrentPage(1);
+  };
+
+  // 搜索
+  const handleSearch = () => {
+    setCurrentPage(1);
+  };
+
+  const paginatedFilteredPositions = filteredPositions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const filteredTotalPages = Math.ceil(filteredPositions.length / pageSize) || 1;
+
   // 刷新数据
   const refreshData = useCallback(() => {
     refreshPositions();
@@ -103,10 +149,10 @@ export function PersonnelManagementPage() {
 
   // 批量选择操作
   const handleSelectAll = () => {
-    if (selectedRows.length === paginatedPositions.length) {
+    if (selectedRows.length === paginatedFilteredPositions.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(paginatedPositions.map(p => p.id));
+      setSelectedRows(paginatedFilteredPositions.map(p => p.id));
     }
   };
 
@@ -330,52 +376,105 @@ export function PersonnelManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* 头部 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Users className="w-5 h-5 text-white" />
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <ClipboardCheck className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-blue-700">{pagePositions.length}</p>
+              <p className="text-xs text-blue-600">职务总数</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">员工信息</h1>
-            <p className="text-xs text-gray-500">员工信息管理与组织架构</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <span className="text-green-600 text-base">✓</span>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-700">{pagePositions.filter(p => p.status === '启用').length}</p>
+              <p className="text-xs text-green-600">启用中</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <span className="text-amber-600 text-base">!</span>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">{pagePositions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
+              <p className="text-xs text-amber-600">在职人数</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{pagePositions.length}</p>
-              <p className="text-xs text-gray-500">职务总数</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{pagePositions.filter(p => p.status === '启用').length}</p>
-              <p className="text-xs text-gray-500">启用中</p>
+      {/* 搜索栏 */}
+      <div className={cn('bg-[#F2F6FA] rounded-lg p-3')}>
+        <div className="flex flex-wrap gap-3 items-end">
+          {/* 搜索框 */}
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="搜索职务编号、名称、部门..."
+                value={filters.keyword}
+                onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                className="pl-9"
+              />
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <span className="text-amber-600 text-lg">!</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{pagePositions.reduce((sum, p) => sum + p.staffCount, 0)}</p>
-              <p className="text-xs text-gray-500">在职人数</p>
-            </div>
+
+          {/* 级别筛选 */}
+          <div className="w-[120px]">
+            <Select
+              value={filters.level || '__all__'}
+              onValueChange={(value) => setFilters({ ...filters, level: value === '__all__' ? '' : value })}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="选择级别" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">全部级别</SelectItem>
+                <SelectItem value="高层">高层</SelectItem>
+                <SelectItem value="中层">中层</SelectItem>
+                <SelectItem value="基层">基层</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 状态筛选 */}
+          <div className="w-[120px]">
+            <Select
+              value={filters.status || '__all__'}
+              onValueChange={(value) => setFilters({ ...filters, status: value === '__all__' ? '' : value })}
+            >
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="选择状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">全部状态</SelectItem>
+                <SelectItem value="启用">启用</SelectItem>
+                <SelectItem value="停用">停用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 重置和搜索按钮 */}
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleResetFilters}>
+              <RotateCw className="w-4 h-4" />
+              重置
+            </Button>
+            <Button size="sm" variant="default" onClick={handleSearch}>
+              <Search className="w-4 h-4" />
+              搜索
+            </Button>
           </div>
         </div>
       </div>
@@ -480,7 +579,7 @@ export function PersonnelManagementPage() {
         {(batchEditMode || batchDeleteMode || exportMode) && (
           <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-              {selectedRows.length === paginatedPositions.length ? '全不选' : '全选'}
+              {selectedRows.length === paginatedFilteredPositions.length ? '全不选' : '全选'}
             </Button>
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
@@ -492,7 +591,7 @@ export function PersonnelManagementPage() {
                 {(batchEditMode || batchDeleteMode || exportMode) && (
                   <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                     <Checkbox
-                      checked={selectedRows.length === paginatedPositions.length && paginatedPositions.length > 0}
+                      checked={selectedRows.length === paginatedFilteredPositions.length && paginatedFilteredPositions.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
@@ -511,14 +610,14 @@ export function PersonnelManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white divide-y divide-gray-300">
-              {paginatedPositions.length === 0 ? (
+              {paginatedFilteredPositions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="px-4 py-8 text-center text-gray-500">
                     暂无数据
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedPositions.map((pos) => (
+                paginatedFilteredPositions.map((pos) => (
                   <TableRow key={pos.id} className="hover:bg-blue-100 transition-colors">
                     {(batchEditMode || batchDeleteMode || exportMode) && (
                       <TableCell className="px-4 py-3 whitespace-nowrap">
@@ -604,8 +703,8 @@ export function PersonnelManagementPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(filteredTotalPages, p + 1))}
+              disabled={currentPage === filteredTotalPages}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
