@@ -321,67 +321,88 @@ export function calculateAvailableQuantity(stock: InventoryStock): number {
 }
 
 /**
- * 入库操作（调用后端 API）
+ * 入库操作（调用后端 API，带重试机制）
  * @param request 入库请求
  * @param operatorId 操作人ID
  * @param operatorName 操作人姓名
+ * @param retries 重试次数（默认3次）
  */
 export async function inbound(
   request: InboundRequest,
   operatorId: string,
-  operatorName: string
+  operatorName: string,
+  retries = 3
 ): Promise<InventoryOperationResult> {
-  try {
-    // 调用后端 API
-    const response = await fetch('/api/inventory/inbound', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        stockType: request.stockType,
-        businessId: request.businessId,
-        businessType: request.businessType,
-        businessCode: request.businessCode,
-        cropId: request.cropId,
-        cropName: request.cropName,
-        varietyId: request.varietyId,
-        varietyName: request.varietyName,
-        quantity: request.quantity,
-        unit: request.unit,
-        warehouseId: request.extensions?.warehouseId || '',
-        warehouseName: request.extensions?.warehouseName || '',
-        inboundDate: request.extensions?.inboundDate || new Date().toISOString().slice(0, 10),
-        sourceType: request.sourceType,
-        sourceInstanceId: request.sourceInstanceId,
-        productionPlanCode: request.productionPlanCode,
-        remarks: request.remarks,
-        operatorId,
-        operatorName,
-      }),
-    });
+  const requestBody = {
+    stockType: request.stockType,
+    businessId: request.businessId,
+    businessType: request.businessType,
+    businessCode: request.businessCode,
+    cropId: request.cropId,
+    cropName: request.cropName,
+    varietyId: request.varietyId,
+    varietyName: request.varietyName,
+    quantity: request.quantity,
+    unit: request.unit,
+    warehouseId: request.extensions?.warehouseId || '',
+    warehouseName: request.extensions?.warehouseName || '',
+    inboundDate: request.extensions?.inboundDate || new Date().toISOString().slice(0, 10),
+    sourceType: request.sourceType,
+    sourceInstanceId: request.sourceInstanceId,
+    productionPlanCode: request.productionPlanCode,
+    remarks: request.remarks,
+    operatorId,
+    operatorName,
+  };
 
-    const result = await response.json();
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch('/api/inventory/inbound', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-    if (!response.ok || !result.success) {
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        // 如果是业务错误（比如库存已存在等），不重试
+        if (response.status >= 400 && response.status < 500) {
+          return {
+            success: false,
+            error: result.error || `请求失败: ${response.status}`,
+          };
+        }
+        // 服务器错误，重试
+        continue;
+      }
+
       return {
-        success: false,
-        error: result.error || `请求失败: ${response.status}`,
+        success: true,
+        instanceId: result.data.instanceId,
+        newQuantity: result.data.currentQuantity,
       };
-    }
+    } catch (error) {
+      // 最后一次尝试也失败了
+      if (attempt === retries) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '网络错误，请检查网络连接',
+        };
+      }
 
-    return {
-      success: true,
-      instanceId: result.data.instanceId,
-      newQuantity: result.data.currentQuantity,
-    };
-  } catch (error) {
-    console.error('[inventoryService] inbound 失败:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : '网络错误，请重试',
-    };
+      // 等待后重试（指数退避）
+      await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+    }
   }
+
+  // 理论上不会走到这里
+  return {
+    success: false,
+    error: '库存同步失败，请稍后重试',
+  };
 }
 
 /**
