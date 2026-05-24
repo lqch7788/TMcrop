@@ -241,9 +241,9 @@ export const BudgetPage: React.FC = () => {
       </div>
 
       {/* 年度汇总 */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{selectedYear}年度预算汇总</h3>
-        <div className="grid grid-cols-5 gap-4">
+      <div className="bg-white p-3 rounded-lg border border-gray-200">
+        <h3 className="text-base font-semibold text-gray-900 mb-3">{selectedYear}年度预算汇总</h3>
+        <div className="grid grid-cols-5 gap-3">
           <SummaryCard
             label="年度总成本"
             value={`${(output.yearlyBudget.totalLaborCost / 10000).toFixed(2)}万元`}
@@ -277,16 +277,16 @@ export const BudgetPage: React.FC = () => {
         </div>
 
         {/* 季度分布 */}
-        <div className="mt-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">季度成本分布</h4>
-          <div className="grid grid-cols-4 gap-4">
+        <div className="mt-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">季度成本分布</h4>
+          <div className="grid grid-cols-4 gap-3">
             {output.quarterlyBudget.map((quarter) => (
               <div key={quarter.quarter} className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-500 mb-1">{quarter.quarter}</div>
-                <div className="text-lg font-semibold text-gray-900">
+                <div className="text-xs text-gray-500 mb-1">{quarter.quarter}</div>
+                <div className="text-base font-semibold text-gray-900">
                   {(quarter.laborCost / 10000).toFixed(2)}万元
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-gray-400 mt-0.5">
                   用工{quarter.headcount}人 | 采收{quarter.yieldPrediction.toLocaleString()}斤
                 </div>
               </div>
@@ -371,7 +371,7 @@ export const BudgetPage: React.FC = () => {
   );
 };
 
-// 汇总卡片组件
+// 汇总卡片组件（紧凑型）
 const SummaryCard: React.FC<{
   label: string;
   value: string;
@@ -387,12 +387,12 @@ const SummaryCard: React.FC<{
   };
 
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${colorClasses[color]} mb-2`}>
+    <div className="p-3 bg-gray-50 rounded-lg">
+      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${colorClasses[color]} mb-1`}>
         {label}
       </div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
-      <div className="text-xs text-gray-500 mt-1">{subValue}</div>
+      <div className="text-lg font-bold text-gray-900">{value}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{subValue}</div>
     </div>
   );
 };

@@ -275,47 +275,47 @@ export function StaffManagementPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Users className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-500">员工总数</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <span className="text-green-600 text-sm">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.inService}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.inService}</p>
               <p className="text-xs text-gray-500">在职</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
-              <span className="text-gray-600 text-lg">○</span>
+            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center">
+              <span className="text-gray-600 text-sm">○</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.left}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.left}</p>
               <p className="text-xs text-gray-500">离职</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <span className="text-amber-600 text-lg">★</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <span className="text-amber-600 text-sm">★</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.retired}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.retired}</p>
               <p className="text-xs text-gray-500">退休</p>
             </div>
           </div>

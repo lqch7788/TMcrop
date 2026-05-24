@@ -244,7 +244,7 @@ export function WorkerAttendancePage() {
               <CalendarDays className="w-4 h-4 text-blue-600" />
               <span className="text-xs text-blue-600 font-medium">计划在班</span>
             </div>
-            <div className="text-2xl font-bold text-blue-700 mt-1">{scheduleComparison.scheduledCount}</div>
+            <div className="text-lg font-bold text-blue-700 mt-1">{scheduleComparison.scheduledCount}</div>
             <div className="text-xs text-blue-500">人</div>
           </div>
           <div className="bg-emerald-50 rounded-lg p-3">
@@ -252,7 +252,7 @@ export function WorkerAttendancePage() {
               <CheckCircle className="w-4 h-4 text-emerald-600" />
               <span className="text-xs text-emerald-600 font-medium">已打卡</span>
             </div>
-            <div className="text-2xl font-bold text-emerald-700 mt-1">{scheduleComparison.checkedInCount}</div>
+            <div className="text-lg font-bold text-emerald-700 mt-1">{scheduleComparison.checkedInCount}</div>
             <div className="text-xs text-emerald-500">人</div>
           </div>
           <div className="bg-red-50 rounded-lg p-3">
@@ -260,7 +260,7 @@ export function WorkerAttendancePage() {
               <XCircle className="w-4 h-4 text-red-600" />
               <span className="text-xs text-red-600 font-medium">排班缺勤</span>
             </div>
-            <div className="text-2xl font-bold text-red-700 mt-1">{scheduleComparison.absentCount}</div>
+            <div className="text-lg font-bold text-red-700 mt-1">{scheduleComparison.absentCount}</div>
             <div className="text-xs text-red-500">人（在班未打卡）</div>
           </div>
           <div className="bg-amber-50 rounded-lg p-3">
@@ -268,7 +268,7 @@ export function WorkerAttendancePage() {
               <AlertTriangle className="w-4 h-4 text-amber-600" />
               <span className="text-xs text-amber-600 font-medium">临时到岗</span>
             </div>
-            <div className="text-2xl font-bold text-amber-700 mt-1">{scheduleComparison.unscheduledCount}</div>
+            <div className="text-lg font-bold text-amber-700 mt-1">{scheduleComparison.unscheduledCount}</div>
             <div className="text-xs text-amber-500">人（未排班打卡）</div>
           </div>
         </div>

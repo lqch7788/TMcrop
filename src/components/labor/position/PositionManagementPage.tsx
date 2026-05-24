@@ -260,25 +260,25 @@ export function PositionManagementPage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-lg p-3 border border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <ClipboardCheck className="w-5 h-5 text-blue-600" />
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <ClipboardCheck className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.length}</p>
+              <p className="text-lg font-bold text-gray-900">{positions.length}</p>
               <p className="text-xs text-gray-500">职务总数</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="bg-white rounded-lg p-3 border border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-              <span className="text-green-600 text-lg">✓</span>
+            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+              <span className="text-green-600 text-base">✓</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{positions.filter(p => p.status === '启用').length}</p>
+              <p className="text-lg font-bold text-gray-900">{positions.filter(p => p.status === '启用').length}</p>
               <p className="text-xs text-gray-500">启用中</p>
             </div>
           </div>

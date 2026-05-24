@@ -310,27 +310,27 @@ export const PieceworkPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-3">
         <StatCard
-          icon={<Users className="w-5 h-5" />}
+          icon={<Users className="w-4 h-4" />}
           label="计件工人"
           value={stats.totalWorkers}
           color="blue"
         />
         <StatCard
-          icon={<Package className="w-5 h-5" />}
+          icon={<Package className="w-4 h-4" />}
           label="总数量"
           value={stats.totalQuantity.toLocaleString()}
           color="green"
         />
         <StatCard
-          icon={<Coins className="w-5 h-5" />}
+          icon={<Coins className="w-4 h-4" />}
           label="总工资"
           value={`¥${stats.totalAmount.toLocaleString()}`}
           color="emerald"
         />
         <StatCard
-          icon={<Coins className="w-5 h-5" />}
+          icon={<Coins className="w-4 h-4" />}
           label="人均工资"
           value={`¥${stats.avgAmountPerWorker.toFixed(2)}`}
           color="purple"
@@ -516,7 +516,7 @@ export const PieceworkPage: React.FC = () => {
   );
 };
 
-// 统计卡片组件
+// 统计卡片组件（紧凑型）
 const StatCard: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -531,13 +531,13 @@ const StatCard: React.FC<{
   };
 
   return (
-    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200">
-      <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
+    <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+      <div className={`p-1.5 rounded-lg ${colorClasses[color]}`}>
         {icon}
       </div>
       <div>
         <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-lg font-semibold text-gray-900">{value}</p>
+        <p className="text-base font-semibold text-gray-900">{value}</p>
       </div>
     </div>
   );
