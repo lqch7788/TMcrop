@@ -6,13 +6,9 @@
 import React from 'react';
 import { HubStats } from '../../../hooks/useFarmHub';
 import { Send, CheckCircle, Clock, AlertTriangle, ClipboardList, Activity, AlertCircle, CheckCheck, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface FarmHubHeaderProps {
   stats: HubStats;
-  onOpenSmartDispatch: () => void;
-  onOpenDailyPlan: () => void;
-  onOpenMonthlyPlan: () => void;
 }
 
 /**
@@ -49,9 +45,6 @@ function StatCard({
  */
 export function FarmHubHeader({
   stats,
-  onOpenSmartDispatch,
-  onOpenDailyPlan,
-  onOpenMonthlyPlan,
 }: FarmHubHeaderProps) {
   return (
     <div className="bg-white rounded-xl p-6 shadow-none mb-6">
@@ -65,32 +58,6 @@ export function FarmHubHeader({
             <h1 className="text-2xl font-bold text-gray-900">农事任务中心</h1>
             <p className="text-gray-500">智能排程与任务调度管理中心</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onOpenSmartDispatch}
-            className="shadow-sm"
-          >
-            智能派工
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onOpenDailyPlan}
-            className="shadow-sm"
-          >
-            每日规划
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onOpenMonthlyPlan}
-            className="shadow-sm"
-          >
-            月度规划
-          </Button>
         </div>
       </div>
 

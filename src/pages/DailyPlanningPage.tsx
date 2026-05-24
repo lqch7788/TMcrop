@@ -260,6 +260,16 @@ export default function DailyPlanningPage() {
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
+            {/* 返回农事任务中心 */}
+            <a
+              href="/farm-hub"
+              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+              title="返回农事任务中心"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </a>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <Calendar className="w-6 h-6 text-white" />
             </div>
