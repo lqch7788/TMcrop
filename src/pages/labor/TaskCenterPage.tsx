@@ -9,7 +9,7 @@ import { TabHeader } from '../../components/common/TabHeader';
 import { TempTaskPage } from '../../components/labor/tempTask/TempTaskPage';
 import { TasksPage } from '../../components/labor/tasks/TasksPage';
 import { WorkLogPage } from '../../components/labor/worklog/WorkLogPage';
-import { SmartDispatchPage } from '../../components/labor/dispatch/SmartDispatchPage';
+import SmartDispatchPage from '../../pages/SmartDispatch';
 import { MyTasksPage } from '../../components/labor/myTasks/MyTasksPage';
 
 const TABS = [

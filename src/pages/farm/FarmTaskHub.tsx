@@ -414,9 +414,6 @@ export function FarmTaskHub() {
       {/* 顶部统计看板 */}
         <FarmHubHeader
           stats={hub.state.stats}
-          onOpenSmartDispatch={() => window.location.href = '/smart-dispatch'}
-          onOpenDailyPlan={() => window.location.href = '/daily-planning'}
-          onOpenMonthlyPlan={() => window.location.href = '/monthly-planning'}
         />
 
         {/* Tab切换 */}
