@@ -232,13 +232,13 @@ export function WorkerAttendancePage() {
   return (
     <div className="space-y-6">
       {/* 今日排班对比卡片（数据来自农事管理-排班调度） */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-white rounded-lg p-3 border border-gray-100">
+        <div className="flex items-center gap-2 mb-2">
           <CalendarDays className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-medium text-gray-700">今日排班对比（{todayStr}）</span>
           <span className="text-xs text-gray-400">数据来源：农事管理 → 排班调度</span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="bg-blue-50 rounded-lg p-3">
             <div className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-blue-600" />
