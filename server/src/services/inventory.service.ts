@@ -190,8 +190,8 @@ export class InventoryService {
     try {
       // 1. 校验仓库
       const db = getDatabase();
-      const warehouseSql = `SELECT * FROM warehouses WHERE id = ?`;
-      const warehouses = queryToObjects<{ id: string; warehouse_type: string; name: string }>(db, warehouseSql, [request.warehouseId]);
+      const warehouseSql = `SELECT * FROM warehouses WHERE oid = ?`;
+      const warehouses = queryToObjects<{ oid: string; warehouseType: string; name: string }>(db, warehouseSql, [request.warehouseId]);
 
       if (warehouses.length === 0) {
         return { success: false, error: '仓库不存在' };
@@ -200,11 +200,11 @@ export class InventoryService {
       const warehouse = warehouses[0];
 
       // 2. 校验仓库类型与 stockType 匹配
-      const expectedStockType = WAREHOUSE_TYPE_TO_STOCK_TYPE[warehouse.warehouse_type];
+      const expectedStockType = WAREHOUSE_TYPE_TO_STOCK_TYPE[warehouse.warehouseType];
       if (!expectedStockType || expectedStockType !== request.stockType) {
         return {
           success: false,
-          error: `仓库类型不匹配：期望 ${expectedStockType}，实际 ${warehouse.warehouse_type}`
+          error: `仓库类型不匹配：期望 ${expectedStockType}，实际 ${warehouse.warehouseType}`
         };
       }
 

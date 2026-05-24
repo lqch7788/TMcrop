@@ -37,6 +37,7 @@ const FIELD_MAP: Record<string, string> = {
   targetYield: 'target_yield',
   harvestArea: 'harvest_area',
   harvesterIds: 'harvester_ids',
+  harvesterNames: 'harvester_names',
   inboundType: 'inbound_type',
   relatedTaskId: 'related_task_id',
   relatedTaskCode: 'related_task_code',
@@ -136,10 +137,11 @@ export class HarvestRepository {
     let baseSql = `SELECT h.*,
       COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
       COALESCE(w.name, '') AS warehouse_name,
-      COALESCE(u.real_name, '') AS auditor
+      COALESCE(h.auditor_id, '') AS auditor,
+      COALESCE(h.harvester_ids, '[]') AS harvesterIds,
+      COALESCE(h.harvester_names, '[]') AS harvesterNames
     FROM harvest_records h
-    LEFT JOIN warehouses w ON h.warehouse_id = w.id
-    LEFT JOIN users u ON h.auditor_id = u.id
+    LEFT JOIN warehouses w ON h.warehouse_id = w.oid
     WHERE 1=1`;
     const params: any[] = [];
 
@@ -179,10 +181,11 @@ export class HarvestRepository {
     const sql = `SELECT h.*,
       COALESCE(h.inbound_type, 'planting_harvest') AS inbound_type,
       COALESCE(w.name, '') AS warehouse_name,
-      COALESCE(u.real_name, '') AS auditor
+      COALESCE(h.auditor_id, '') AS auditor,
+      COALESCE(h.harvester_ids, '[]') AS harvesterIds,
+      COALESCE(h.harvester_names, '[]') AS harvesterNames
     FROM harvest_records h
-    LEFT JOIN warehouses w ON h.warehouse_id = w.id
-    LEFT JOIN users u ON h.auditor_id = u.id
+    LEFT JOIN warehouses w ON h.warehouse_id = w.oid
     WHERE h.id = ?`;
     const stmt = db.prepare(sql);
     stmt.bind([id]);
@@ -250,9 +253,12 @@ export class HarvestRepository {
     console.log('[HarvestRepository] create() 转换后的字段:', JSON.stringify(snakeData, null, 2));
     console.log('[HarvestRepository] 原始数据字段:', Object.keys(data));
 
-    // 将 harvesterIds 数组转换为 JSON 字符串存储
+    // 将 harvesterIds 数组和 harvesterNames 数组转换为 JSON 字符串存储
     const harvesterIdsJson = snakeData.harvester_ids
       ? (Array.isArray(snakeData.harvester_ids) ? JSON.stringify(snakeData.harvester_ids) : snakeData.harvester_ids)
+      : null;
+    const harvesterNamesJson = snakeData.harvester_names
+      ? (Array.isArray(snakeData.harvester_names) ? JSON.stringify(snakeData.harvester_names) : snakeData.harvester_names)
       : null;
 
     // 使用 any[] 来避免 sql.js 类型严格检查问题
@@ -283,8 +289,9 @@ export class HarvestRepository {
       snakeData.warehouse_id,      // 23. warehouse_id
       snakeData.auditor_id,       // 24. auditor_id
       harvesterIdsJson,            // 25. harvester_ids (JSON字符串)
-      snakeData.inbound_type,     // 26. inbound_type
-      snakeData.batch_code        // 27. batch_code
+      harvesterNamesJson,           // 26. harvester_names (JSON字符串)
+      snakeData.inbound_type,     // 27. inbound_type
+      snakeData.batch_code        // 28. batch_code
     ];
     console.log('[HarvestRepository] params 数量:', params.length);
     console.log('[HarvestRepository] params 内容:', params);
@@ -296,8 +303,8 @@ export class HarvestRepository {
           greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
           total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
           remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
-          harvester_ids, inbound_type, batch_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          harvester_ids, harvester_names, inbound_type, batch_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, params);
     } catch (err) {
       console.error('[HarvestRepository] INSERT 错误:', err);

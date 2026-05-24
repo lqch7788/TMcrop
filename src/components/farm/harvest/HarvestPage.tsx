@@ -172,6 +172,24 @@ export default function HarvestPage() {
   };
 
   // Filter records based on search
+  // 安全解析采收人员数组（可能来自JSON字符串或直接数组）
+  const parseHarvesterNames = (value: string[] | string | undefined): string[] => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  // 将采收人员数组转换为逗号分隔字符串
+  const formatHarvesterNames = (value: string[] | string | undefined): string => {
+    const names = parseHarvesterNames(value);
+    return names.length > 0 ? names.join(', ') : '-';
+  };
+
   const filteredRecords = harvestRecords.filter(record => {
     // 使用 startsWith 替代 includes，避免误匹配
     if (searchFilters.harvestCode && !record.harvestCode.startsWith(searchFilters.harvestCode)) return false;
@@ -179,7 +197,7 @@ export default function HarvestPage() {
     if (searchFilters.greenhouseId && record.greenhouseId !== searchFilters.greenhouseId) return false;
     if (searchFilters.cropName && !record.cropName.startsWith(searchFilters.cropName)) return false;
     if (searchFilters.grade && record.grade !== searchFilters.grade) return false;
-    if (searchFilters.harvesterName && !record.harvesterNames.some(name => name.startsWith(searchFilters.harvesterName))) return false;
+    if (searchFilters.harvesterName && !parseHarvesterNames(record.harvesterNames).some(name => name.startsWith(searchFilters.harvesterName))) return false;
     if (searchFilters.warehouseId && record.warehouseId !== searchFilters.warehouseId) return false;
     if (searchFilters.status && record.status !== searchFilters.status) return false;
     return true;
@@ -228,7 +246,7 @@ export default function HarvestPage() {
       const exportData: Record<string, string>[] = [];
       selectedData.forEach((record, recordIdx) => {
         // 安全获取数组字段
-        const harvesterNames = Array.isArray(record.harvesterNames) ? record.harvesterNames.join(', ') : (record.harvesterNames || '-');
+        const harvesterNames = formatHarvesterNames(record.harvesterNames);
         const products = record.products || [];
         const harvestQuantity = record.harvestQuantity || 0;
         const targetYield = record.targetYield || 0;
@@ -546,8 +564,8 @@ export default function HarvestPage() {
       ...prev,
       products: [...prev.products, {
         cropCode: cropVarietyInfo?.cropCode || '',  // 作物编码（11位）
-        cropName: selectedBatchForProduct?.cropName || '',
-        variety: selectedBatchForProduct?.variety || '',
+        variety: selectedBatchForProduct?.cropName || '',  // 作物品种（最细化名，如"黑美人西瓜"）
+        cropName: selectedBatchForProduct?.variety || '',  // 品种（类型名，如"西瓜"）
         plantingMode: selectedBatchForProduct?.plantingMode || '',
         harvestQuantity: 0,
         unit: prev.unit || '公斤',
@@ -567,18 +585,43 @@ export default function HarvestPage() {
     }));
   };
 
-  // 监听批次号变化，自动添加产品行（放在 handleAddProduct 定义之后）
+  // 监听批次号变化，自动更新产品行
   const prevBatchCodeRef = useRef<string | null>(null);
   useEffect(() => {
-    // 当批次号变化且从无批次变为有批次时，自动添加一行
-    if (newRecord.batchCode && !prevBatchCodeRef.current && newRecord.products.length === 0) {
-      // 使用 setTimeout 避免在渲染过程中调用 setState
-      setTimeout(() => {
-        handleAddProduct();
-      }, 0);
+    // 当批次号变化且有批次时，更新产品明细
+    if (newRecord.batchCode && newRecord.batchCode !== prevBatchCodeRef.current) {
+      // 清空现有产品，重新根据新批次添加一行
+      if (newRecord.products.length > 0) {
+        setTimeout(() => {
+          setNewRecord(prev => {
+            // 找到新批次的信息
+            const newBatch = cropBatches.find(b => b.batchCode === prev.batchCode);
+            const searchResults = newBatch?.cropName
+              ? cropVarietyService.searchVarieties(newBatch.cropName)
+              : [];
+            const cropVarietyInfo = searchResults.length > 0 ? searchResults[0].variety : undefined;
+
+            // 用新批次信息更新产品
+            const updatedProducts = prev.products.map((p, idx) => ({
+              ...p,
+              cropCode: cropVarietyInfo?.cropCode || p.cropCode,
+              variety: newBatch?.cropName || p.variety,  // 作物品种（最细化名）
+              cropName: newBatch?.variety || p.cropName,  // 品种（类型名）
+              plantingMode: newBatch?.plantingMode || p.plantingMode,
+              targetYield: newBatch?.targetYield || p.targetYield,
+            }));
+            return { ...prev, products: updatedProducts };
+          });
+        }, 0);
+      } else if (!prevBatchCodeRef.current) {
+        // 从无批次变为有批次且产品为空时，添加一行
+        setTimeout(() => {
+          handleAddProduct();
+        }, 0);
+      }
     }
     prevBatchCodeRef.current = newRecord.batchCode || null;
-  }, [newRecord.batchCode, newRecord.products.length]);
+  }, [newRecord.batchCode, newRecord.products.length, cropBatches]);
 
   // 更新产品
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -596,6 +639,7 @@ export default function HarvestPage() {
   const handleCreateRecord = async () => {
     if (!validateForm()) return;
 
+    try {
     const selectedBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
     const selectedGreenhouse = greenhouses.find(g => g.id === newRecord.greenhouseId);
     const selectedHarvesters = users.filter(u => newRecord.harvesterIds.includes(u.id));
@@ -624,7 +668,7 @@ export default function HarvestPage() {
       const quantity = product.harvestQuantity || totalHarvestQuantity;
       const unitPrice = newRecord.unitPrice || 0;
 
-      const selectedWarehouse = safeWarehouses.find(w => w.id === newRecord.warehouseId);
+      const selectedWarehouse = safeWarehouses.find(w => w.oid === newRecord.warehouseId);
       const record = {
         harvestCode,
         batchCode: newRecord.batchCode,
@@ -636,7 +680,7 @@ export default function HarvestPage() {
         unit: newRecord.unit,
         grade: product.grade as 'A' | 'B' | 'C',
         harvesterIds: newRecord.harvesterIds,
-        harvesterNames: selectedHarvesters.map(u => u.name),
+        harvesterNames: newRecord.harvesterNames || [],
         warehouseId: newRecord.warehouseId,
         warehouseName: selectedWarehouse?.name || '',
         status: 'harvested' as const,
@@ -652,6 +696,12 @@ export default function HarvestPage() {
 
       // 使用 Store 添加记录（架构：组件 → Store → API）
       const createdRecord = await addItem(record);
+
+      // 如果保存失败，跳过后续步骤
+      if (!createdRecord) {
+        showAlert('采收记录保存失败，请重试', 'error');
+        return;
+      }
 
       // 同步到库存中心（V3.0统一库存）- 使用同步等待
       // targetInventory 映射到 StockType
@@ -671,14 +721,14 @@ export default function HarvestPage() {
         varietyName: record.variety,
         quantity: product.harvestQuantity || totalHarvestQuantity,
         unit: newRecord.unit,
-        warehouseId: newRecord.warehouseId,
-        warehouseName: selectedWarehouse?.name || '',
         sourceType: SourceType.SELF_PRODUCED,
         baseName: selectedGreenhouse?.name,
         productionPlanId: selectedBatch?.productionPlanId,
         productionPlanCode: selectedBatch?.productionPlanCode,
         businessCode: record.harvestCode,
         extensions: {
+          warehouseId: newRecord.warehouseId,
+          warehouseName: selectedWarehouse?.name || '',
           inboundDate: newRecord.harvestDate,
         },
       }, 'system', '系统管理员');
@@ -705,10 +755,19 @@ export default function HarvestPage() {
       auditor: currentAuditor,
       remarks: '',
       products: [],
+      harvestType: 'product',
+      targetInventory: 'product',
+      isSupplementary: false,
+      supplementaryReason: '',
       unitPrice: 0,
       unit: '公斤',
+      warehouseId: '',
     });
     setErrors({});
+    } catch (error) {
+      console.error('保存采收记录失败:', error);
+      showAlert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
+    }
   };
 
   const toggleHarvester = (userId: string) => {
@@ -843,7 +902,7 @@ export default function HarvestPage() {
       {/* Create Harvest Record Modal */}
       <AddModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseModal}
         onSave={handleCreateRecord}
         addForm={newRecord}
         onFormChange={(field, value) => setNewRecord(prev => ({ ...prev, [field]: value }))}

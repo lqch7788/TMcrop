@@ -301,16 +301,21 @@ export const AddModal: React.FC<AddModalProps> = ({
             {addForm.targetInventory === 'product' && '采收成品将进入产品库存'}
           </p>
         </div>
-        {/* V3.3 仓库选择 */}
+        {/* V3.3 仓库选择 - 根据目标库存类型联动过滤 */}
         <div>
           <Label className="text-gray-900">目标仓库</Label>
           <WarehouseSelect
             value={addForm.warehouseId}
             onChange={(val) => onFormChange('warehouseId', val)}
             placeholder="请选择目标仓库"
+            warehouseType={addForm.targetInventory === 'seed' ? 'seed_storage' : addForm.targetInventory === 'seedling' ? 'seedling' : 'cold_storage'}
             className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <p className="mt-1 text-xs text-gray-400">选择入库的目标仓库</p>
+          <p className="mt-1 text-xs text-gray-400">
+            {addForm.targetInventory === 'seed' && '（筛选：种子库）'}
+            {addForm.targetInventory === 'seedling' && '（筛选：种苗库）'}
+            {addForm.targetInventory === 'product' && '（筛选：成品冷库）'}
+          </p>
           {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
         </div>
         {/* V3.1 补录字段 + 采收人员 同一行 */}

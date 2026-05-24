@@ -14,6 +14,18 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Pagination } from '@/components/ui/Pagination';
 import { INBOUND_TYPE_MAP, SUPPLEMENTARY_STATUS_MAP } from '../../../../constants/cropConstants';
 
+// 安全解析采收人员数组（可能来自JSON字符串或直接数组）
+function parseHarvesterNames(value: string[] | string | undefined): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // 产品明细行组件
 interface ProductRowProps {
   record: HarvestRecord;
@@ -138,12 +150,16 @@ export function HarvestTableRow({
         </TableCell>
         <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate?.replace('T', ' ') || '-'}</TableCell>
         <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName}</TableCell>
+        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName || '-'}</TableCell>
         <TableCell className="px-4 py-3 whitespace-nowrap">
           <div className="flex flex-col items-center gap-1">
-            {(record.harvesterNames || record.createBy ? [record.createBy] : []).map((name, i) => (
-              <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
-            ))}
+            {parseHarvesterNames(record.harvesterNames).length > 0 ? (
+              parseHarvesterNames(record.harvesterNames).map((name, i) => (
+                <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
+              ))
+            ) : (
+              <span className="text-sm text-gray-400">-</span>
+            )}
           </div>
         </TableCell>
         <TableCell className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">

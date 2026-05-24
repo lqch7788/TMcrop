@@ -274,6 +274,18 @@ const defaultWarehouses: WarehouseSeed[] = [
     warehouseType: 'hazardous',
     status: 'active',
     createTime: new Date().toISOString()
+  },
+  {
+    id: 'W006',
+    oid: 'WH006',
+    name: '种苗库',
+    code: 'SM-001',
+    location: 'A区',
+    capacity: 500,
+    currentStock: 0,
+    warehouseType: 'seedling',
+    status: 'active',
+    createTime: new Date().toISOString()
   }
 ];
 
