@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Clock } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { useOvertime } from './hooks/useOvertime';
 import { OvertimeFilters } from './OvertimeFilters';
@@ -236,28 +235,28 @@ export function OvertimePage() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">待审批</p>
-          <p className="text-lg font-bold text-amber-600 mt-1">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-amber-50 rounded-lg p-2">
+          <p className="text-xs text-amber-600 font-medium">待审批</p>
+          <p className="text-lg font-bold text-amber-700">
             {data.filter((r) => r.status === '待审批').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">已审批</p>
-          <p className="text-lg font-bold text-blue-600 mt-1">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <p className="text-xs text-blue-600 font-medium">已审批</p>
+          <p className="text-lg font-bold text-blue-700">
             {data.filter((r) => r.status === '已审批').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">已驳回</p>
-          <p className="text-lg font-bold text-red-600 mt-1">
+        <div className="bg-red-50 rounded-lg p-2">
+          <p className="text-xs text-red-600 font-medium">已驳回</p>
+          <p className="text-lg font-bold text-red-700">
             {data.filter((r) => r.status === '已驳回').length}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <p className="text-sm text-gray-500">总记录数</p>
-          <p className="text-lg font-bold text-gray-900 mt-1">{pagination.total}</p>
+        <div className="bg-gray-100 rounded-lg p-2">
+          <p className="text-xs text-gray-600 font-medium">总记录数</p>
+          <p className="text-lg font-bold text-gray-700">{pagination.total}</p>
         </div>
       </div>
 
@@ -266,7 +265,6 @@ export function OvertimePage() {
         filters={filters}
         onFiltersChange={setFilters}
         onSearch={handleSearch}
-        onAdd={handleAdd}
       />
 
       {/* 数据表格 */}

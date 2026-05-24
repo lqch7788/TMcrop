@@ -1,7 +1,6 @@
 /**
  * 招聘申请筛选器组件
  */
-import { Button } from '../../../components/ui/button';
 import { FilterBar, FilterItem } from '../../../components/ui/FilterBar';
 import type { RecruitmentFilters as RecruitmentFiltersType } from '../types/recruitment.types';
 import { PRIORITY_OPTIONS, STATUS_OPTIONS } from '../types/recruitment.types';
@@ -13,13 +12,6 @@ export interface RecruitmentFiltersProps {
   onFilterChange: (field: keyof RecruitmentFiltersType, value: string) => void;
   onReset: () => void;
   onSearch: () => void;
-  onAdd: () => void;
-  batchMode: 'none' | 'approve' | 'reject' | 'export';
-  onBatchApprove: () => void;
-  onBatchReject: () => void;
-  onExport: () => void;
-  onCancelBatch: () => void;
-  selectedCount: number;
 }
 
 /**
@@ -32,13 +24,6 @@ export function RecruitmentFilters({
   onFilterChange,
   onReset,
   onSearch,
-  onAdd,
-  batchMode,
-  onBatchApprove,
-  onBatchReject,
-  onExport,
-  onCancelBatch,
-  selectedCount,
 }: RecruitmentFiltersProps) {
   return (
     <FilterBar onSearch={onSearch} onReset={onReset}>
@@ -108,48 +93,6 @@ export function RecruitmentFilters({
         </select>
       </FilterItem>
 
-      {/* 操作按钮 */}
-      <div className="flex items-center gap-2 ml-auto">
-        {batchMode === 'none' && (
-          <>
-            <Button variant="default" size="sm" onClick={onAdd}>
-              新增招聘
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onBatchApprove()}>
-              批量通过
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onBatchReject()}>
-              批量驳回
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onExport()}>
-              导出
-            </Button>
-          </>
-        )}
-
-        {batchMode !== 'none' && (
-          <>
-            {batchMode === 'approve' && (
-              <Button variant="default" size="sm" onClick={onBatchApprove} disabled={selectedCount === 0}>
-                确认通过 ({selectedCount})
-              </Button>
-            )}
-            {batchMode === 'reject' && (
-              <Button variant="default" size="sm" onClick={onBatchReject} disabled={selectedCount === 0}>
-                确认驳回 ({selectedCount})
-              </Button>
-            )}
-            {batchMode === 'export' && (
-              <Button variant="default" size="sm" onClick={onExport}>
-                确认导出 {selectedCount > 0 ? `(${selectedCount}条)` : '(全部)'}
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={onCancelBatch}>
-              取消
-            </Button>
-          </>
-        )}
-      </div>
     </FilterBar>
   );
 }

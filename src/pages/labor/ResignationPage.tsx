@@ -2,12 +2,14 @@
  * 离职申请页面 - 人工管理模块
  * 功能：提交离职申请、查看离职记录、状态筛选、审批功能
  */
-import { LogOut, Plus, Download } from 'lucide-react';
+import { useState } from 'react';
+import { LogOut, Plus, Download, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useResignationPage } from './hooks/useResignationPage';
 import { ResignationPageFilters } from './components/ResignationPage/ResignationPageFilters';
 import { ResignationPageTable } from './components/ResignationPage/ResignationPageTable';
 import { ResignationPageCreateModal } from './components/ResignationPage/ResignationPageModals/CreateModal';
 import { ResignationPageDetailModal } from './components/ResignationPage/ResignationPageModals/DetailModal';
+import { Button } from '@/components/ui/button';
 
 export default function ResignationPage() {
   const {
@@ -44,94 +46,64 @@ export default function ResignationPage() {
     setFormData,
   } = useResignationPage();
 
+  // 统计各状态数量
+  const statusCounts = {
+    待审批: filteredData.filter((r) => r.status === '待审批').length,
+    已通过: filteredData.filter((r) => r.status === '已通过').length,
+    已拒绝: filteredData.filter((r) => r.status === '已拒绝').length,
+  };
+
   // 表单数据变化处理
   const handleFormDataChange = (data: Partial<typeof formData>) => {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
   return (
-    <div className="space-y-4">
-      {/* 筛选栏 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <ResignationPageFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onResetFilters={handleResetFilters}
-          onSearch={handleSearch}
-        />
-
-        {/* 操作按钮栏 */}
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-          <button
-            onClick={handleOpenFormModal}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            新增离职
-          </button>
-
-          {batchMode === 'none' && (
-            <>
-              <button
-                onClick={() => setBatchMode('approve')}
-                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
-                批量通过
-              </button>
-              <button
-                onClick={() => setBatchMode('reject')}
-                className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-              >
-                批量驳回
-              </button>
-              <button
-                onClick={() => setBatchMode('export')}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </button>
-            </>
-          )}
-
-          {batchMode !== 'none' && (
-            <>
-              {batchMode === 'approve' && (
-                <button
-                  onClick={handleBatchApprove}
-                  disabled={selectedRowKeys.length === 0}
-                  className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                >
-                  确认通过 ({selectedRowKeys.length})
-                </button>
-              )}
-              {batchMode === 'reject' && (
-                <button
-                  onClick={handleBatchReject}
-                  disabled={selectedRowKeys.length === 0}
-                  className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-                >
-                  确认驳回 ({selectedRowKeys.length})
-                </button>
-              )}
-              {batchMode === 'export' && (
-                <button
-                  onClick={handleExport}
-                  className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-                >
-                  确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
-                </button>
-              )}
-              <button
-                onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
-                取消
-              </button>
-            </>
-          )}
+    <div className="space-y-6">
+      {/* 统计卡片 - 紧凑型彩色背景 */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">{statusCounts.待审批}</p>
+              <p className="text-xs text-amber-600">待审批</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-700">{statusCounts.已通过}</p>
+              <p className="text-xs text-green-600">已通过</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-red-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <XCircle className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-red-700">{statusCounts.已拒绝}</p>
+              <p className="text-xs text-red-600">已拒绝</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* 筛选栏 */}
+      <ResignationPageFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        onSearch={handleSearch}
+      />
 
       {/* 数据表格 */}
       <ResignationPageTable
@@ -148,6 +120,14 @@ export default function ResignationPage() {
         onOpenDetail={handleOpenDetailModal}
         onApprove={handleApprove}
         onReject={handleReject}
+        onOpenFormModal={handleOpenFormModal}
+        onBatchApprove={() => setBatchMode('approve')}
+        onBatchReject={() => setBatchMode('reject')}
+        onBatchExport={() => setBatchMode('export')}
+        onConfirmBatchApprove={handleBatchApprove}
+        onConfirmBatchReject={handleBatchReject}
+        onConfirmBatchExport={handleExport}
+        onCancelBatch={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
       />
 
       {/* 新增表单弹窗 */}

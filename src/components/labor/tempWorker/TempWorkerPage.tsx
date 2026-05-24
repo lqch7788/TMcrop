@@ -283,7 +283,6 @@ export function TempWorkerPage() {
         filters={filters}
         onFiltersChange={setFilters}
         onSearch={handleSearch}
-        onAdd={handleAdd}
       />
 
       {/* 数据表格 */}

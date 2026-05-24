@@ -163,6 +163,7 @@ export function RecruitmentTable({
     <ProTable
       columns={columns}
       dataSource={data}
+      headerClassName="bg-gradient-to-r from-blue-500 to-blue-600 text-white"
       pagination={{
         current: pagination.current,
         pageSize: pagination.pageSize,

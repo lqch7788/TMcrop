@@ -259,64 +259,49 @@ export function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">员工信息管理</h1>
-              <p className="text-gray-500">园区员工信息管理</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <Users className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">员工总数</p>
+              <p className="text-lg font-bold text-blue-700">{stats.total}</p>
+              <p className="text-xs text-blue-600">员工总数</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <span className="text-green-600 text-sm">✓</span>
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{stats.inService}</p>
-              <p className="text-xs text-gray-500">在职</p>
+              <p className="text-lg font-bold text-green-700">{stats.inService}</p>
+              <p className="text-xs text-green-600">在职</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center">
+        <div className="bg-gray-100 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <span className="text-gray-600 text-sm">○</span>
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{stats.left}</p>
-              <p className="text-xs text-gray-500">离职</p>
+              <p className="text-lg font-bold text-gray-700">{stats.left}</p>
+              <p className="text-xs text-gray-600">离职</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <span className="text-amber-600 text-sm">★</span>
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{stats.retired}</p>
-              <p className="text-xs text-gray-500">退休</p>
+              <p className="text-lg font-bold text-amber-700">{stats.retired}</p>
+              <p className="text-xs text-amber-600">退休</p>
             </div>
           </div>
         </div>

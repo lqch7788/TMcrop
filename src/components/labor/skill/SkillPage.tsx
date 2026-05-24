@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, Upload, Award, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Download, Upload, Award, Edit2, Trash2, Users, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useSkill } from './hooks/useSkill';
@@ -288,6 +288,54 @@ export function SkillPage() {
 
   return (
     <div className="space-y-6">
+      {/* 统计卡片 - 紧凑型彩色背景 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <Users className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-blue-700">{staffSkills.length}</p>
+              <p className="text-xs text-blue-600">员工总数</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-green-700">{staffSkills.filter((s) => s.status === '正常').length}</p>
+              <p className="text-xs text-green-600">正常状态</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-amber-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-700">{staffSkills.filter((s) => s.status === '即将过期').length}</p>
+              <p className="text-xs text-amber-600">即将过期</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-red-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+              <XCircle className="w-4 h-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-red-700">{staffSkills.filter((s) => s.status === '已过期').length}</p>
+              <p className="text-xs text-red-600">已过期</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 筛选栏 */}
       <SkillFiltersComponent
         filters={skillFilters}
@@ -295,32 +343,6 @@ export function SkillPage() {
         onReset={resetSkillFilters}
         allSkillTags={allSkillTags}
       />
-
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="p-3 bg-white border border-gray-200 rounded-lg">
-          <div className="text-xs text-gray-500">员工总数</div>
-          <div className="text-lg font-bold text-gray-900 mt-1">{staffSkills.length}</div>
-        </div>
-        <div className="p-3 bg-white border border-gray-200 rounded-lg">
-          <div className="text-xs text-gray-500">正常状态</div>
-          <div className="text-lg font-bold text-emerald-600 mt-1">
-            {staffSkills.filter((s) => s.status === '正常').length}
-          </div>
-        </div>
-        <div className="p-3 bg-white border border-gray-200 rounded-lg">
-          <div className="text-xs text-gray-500">即将过期</div>
-          <div className="text-lg font-bold text-amber-600 mt-1">
-            {staffSkills.filter((s) => s.status === '即将过期').length}
-          </div>
-        </div>
-        <div className="p-3 bg-white border border-gray-200 rounded-lg">
-          <div className="text-xs text-gray-500">已过期</div>
-          <div className="text-lg font-bold text-red-600 mt-1">
-            {staffSkills.filter((s) => s.status === '已过期').length}
-          </div>
-        </div>
-      </div>
 
       {/* 表格 */}
       <SkillTable

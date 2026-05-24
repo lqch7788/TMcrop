@@ -2,8 +2,7 @@
  * 职务管理页面组件
  */
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { PositionTable } from './PositionTable';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from './modals';
@@ -243,43 +242,27 @@ export function PositionManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* 头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <Link to="/settings/personnel" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <ClipboardCheck className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">职务管理</h1>
-            <p className="text-gray-500">组织架构与职务岗位设置</p>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3 border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="bg-blue-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <ClipboardCheck className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{positions.length}</p>
-              <p className="text-xs text-gray-500">职务总数</p>
+              <p className="text-lg font-bold text-blue-700">{positions.length}</p>
+              <p className="text-xs text-blue-600">职务总数</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3 border border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+        <div className="bg-green-50 rounded-lg p-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <span className="text-green-600 text-base">✓</span>
             </div>
             <div>
-              <p className="text-lg font-bold text-gray-900">{positions.filter(p => p.status === '启用').length}</p>
-              <p className="text-xs text-gray-500">启用中</p>
+              <p className="text-lg font-bold text-green-700">{positions.filter(p => p.status === '启用').length}</p>
+              <p className="text-xs text-green-600">启用中</p>
             </div>
           </div>
         </div>
