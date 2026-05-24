@@ -502,6 +502,7 @@ export function initializeDatabase() {
       source_name TEXT,
       crop_name TEXT,
       crop_variety TEXT,
+      greenhouse_id TEXT,
       greenhouse_name TEXT,
       harvest_date TEXT,
       harvest_quantity REAL DEFAULT 0,
@@ -516,7 +517,13 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      warehouse_id TEXT,
+      auditor_id TEXT,
+      harvester_ids TEXT,
+      harvester_names TEXT,
+      inbound_type TEXT,
+      batch_code TEXT
     )
   `);
 
@@ -950,6 +957,11 @@ export function initializeDatabase() {
   }
   try {
     db.run(`ALTER TABLE harvest_records ADD COLUMN harvester_ids TEXT`);
+  } catch (e) {
+    // 列可能已存在，忽略错误
+  }
+  try {
+    db.run(`ALTER TABLE harvest_records ADD COLUMN harvester_names TEXT`);
   } catch (e) {
     // 列可能已存在，忽略错误
   }

@@ -954,6 +954,27 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 36. harvest_records 表添加缺失的列
+  const harvestColumnsToAdd = [
+    { name: 'greenhouse_id', sql: 'ALTER TABLE harvest_records ADD COLUMN greenhouse_id TEXT' },
+    { name: 'warehouse_id', sql: 'ALTER TABLE harvest_records ADD COLUMN warehouse_id TEXT' },
+    { name: 'auditor_id', sql: 'ALTER TABLE harvest_records ADD COLUMN auditor_id TEXT' },
+    { name: 'harvester_ids', sql: 'ALTER TABLE harvest_records ADD COLUMN harvester_ids TEXT' },
+    { name: 'harvester_names', sql: 'ALTER TABLE harvest_records ADD COLUMN harvester_names TEXT' },
+    { name: 'inbound_type', sql: 'ALTER TABLE harvest_records ADD COLUMN inbound_type TEXT' },
+    { name: 'batch_code', sql: 'ALTER TABLE harvest_records ADD COLUMN batch_code TEXT' },
+  ];
+  for (const col of harvestColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ harvest_records 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        // console.log(`• harvest_records.${col.name}:`, e.message);
+      }
+    }
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }
