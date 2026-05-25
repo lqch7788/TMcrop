@@ -137,6 +137,7 @@ const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
 const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
 const HrApprovalDetail = lazy(() => import('./pages/hr/HrApprovalDetail'));
 const DispatchPage = lazy(() => import('./components/dispatch').then(module => ({ default: module.DispatchPage })));
+const MyTasksPage = lazy(() => import('./components/labor/myTasks/MyTasksPage'));
 const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
 const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
@@ -311,6 +312,7 @@ function AppContent() {
           <Route path="/labor/personnel" element={<PersonnelPage />} />
           <Route path="/labor/compensation" element={<CompensationPage />} />
           <Route path="/labor/analytics" element={<AnalyticsPage />} />
+          <Route path="/my-tasks" element={<MyTasksPage />} />
           <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
 
           {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}

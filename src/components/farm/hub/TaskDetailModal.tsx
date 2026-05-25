@@ -191,10 +191,13 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-6">
-            {/* 基本信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+          <div className="space-y-4">
+            {/* 基本信息 - 白色背景，蓝色标题 */}
+            <div className="bg-white rounded-lg p-4 border border-gray-100">
+              <h4 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                基本信息
+              </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-xs text-gray-500">任务类型</Label>
@@ -221,54 +224,61 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             </div>
 
-            {/* 来源信息 - 当有 sourceId 时显示 */}
+            {/* 来源信息 - 蓝色背景 */}
             {task.sourceId && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">来源信息</h4>
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-gray-500">来源类型</Label>
-                      <p className="font-semibold text-gray-900">
-                        {task.type === 'seedling' ? '育苗任务' : task.sourceType === 'dispatch' ? '任务派工' : task.sourceType === 'tempTask' ? '临时任务' : task.sourceType === 'inspection' ? '巡查任务' : '-'}
-                      </p>
-                    </div>
-                    {task.sourceCode && (
-                      <div>
-                        <Label className="text-xs text-gray-500">来源编号</Label>
-                        <p className="font-semibold text-gray-900">{task.sourceCode}</p>
-                      </div>
-                    )}
-                    <div>
-                      <Label className="text-xs text-gray-500">关联ID</Label>
-                      <p className="font-semibold text-gray-900 text-xs">{task.sourceId}</p>
-                    </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  来源信息
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs text-blue-600">来源类型</Label>
+                    <p className="font-semibold text-gray-900">
+                      {task.type === 'seedling' ? '育苗任务' : task.sourceType === 'dispatch' ? '任务派工' : task.sourceType === 'tempTask' ? '临时任务' : task.sourceType === 'inspection' ? '巡查任务' : '-'}
+                    </p>
                   </div>
-                  {/* 显示详细工作内容（如果有） */}
-                  {task.remarks && (
-                    <div className="mt-3 pt-3 border-t border-blue-100">
-                      <Label className="text-xs text-gray-500">工作内容</Label>
-                      <p className="text-sm text-gray-700 whitespace-pre-line bg-white rounded p-2">{task.remarks}</p>
+                  {task.sourceCode && (
+                    <div>
+                      <Label className="text-xs text-blue-600">来源编号</Label>
+                      <p className="font-semibold text-gray-900">{task.sourceCode}</p>
                     </div>
                   )}
+                  <div>
+                    <Label className="text-xs text-blue-600">关联ID</Label>
+                    <p className="font-semibold text-gray-900 text-xs">{task.sourceId}</p>
+                  </div>
                 </div>
+                {/* 显示详细工作内容（如果有） */}
+                {task.remarks && (
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <Label className="text-xs text-blue-600">工作内容</Label>
+                    <p className="text-sm text-gray-700 whitespace-pre-line bg-white rounded p-2">{task.remarks}</p>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 任务类型配置 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型配置</h4>
+            {/* 任务类型配置 - 紫色背景 */}
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+              <h4 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                任务类型配置
+              </h4>
               {renderTaskTypeConfig()}
             </div>
 
-            {/* 所需物资 */}
+            {/* 所需物资 - 橙色背景 */}
             {task.materials && task.materials.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需物资</h4>
-                <div className="bg-gray-50 rounded-lg p-3">
+              <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                <h4 className="text-sm font-bold text-amber-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  所需物资
+                </h4>
+                <div className="bg-white rounded-lg">
                   <Table>
                     <TableHeader>
-                      <TableRow className="text-xs text-gray-500">
+                      <TableRow className="text-xs text-amber-600">
                         <TableHead className="text-left pb-2">物资名称</TableHead>
                         <TableHead className="text-right pb-2">数量</TableHead>
                         <TableHead className="text-right pb-2">单位</TableHead>
@@ -288,11 +298,14 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             )}
 
-            {/* 所需工具 */}
+            {/* 所需工具 - 灰色背景 */}
             {(task.tools && task.tools.length > 0) || task.toolsRemarks ? (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">所需工具</h4>
-                <div className="bg-gray-50 rounded-lg p-3">
+              <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  所需工具
+                </h4>
+                <div className="bg-white rounded-lg">
                   {task.tools && task.tools.length > 0 ? (
                     <Table className="mb-2">
                       <TableHeader>
@@ -325,20 +338,23 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             ) : null}
 
-            {/* 时间信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+            {/* 时间信息 - 天蓝色背景 */}
+            <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
+              <h4 className="text-sm font-bold text-sky-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                时间信息
+              </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <Label className="text-xs text-gray-500">计划开始</Label>
+                  <Label className="text-xs text-sky-600">计划开始</Label>
                   <p className="font-semibold text-gray-900">{task.planStart || '-'}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">计划结束</Label>
+                  <Label className="text-xs text-sky-600">计划结束</Label>
                   <p className="font-semibold text-gray-900">{task.planEnd || '-'}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">状态</Label>
+                  <Label className="text-xs text-sky-600">状态</Label>
                   <p>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[task.status]?.bg || ''} ${statusMap[task.status]?.color || ''}`}>
                       {statusMap[task.status]?.label || task.status}
@@ -346,7 +362,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">预计时长</Label>
+                  <Label className="text-xs text-sky-600">预计时长</Label>
                   <p className="font-semibold text-gray-900">
                     {task.estimatedDays > 0 ? `${task.estimatedDays}天` : ''}
                     {task.estimatedHours > 0 ? `${task.estimatedHours}小时` : ''}
@@ -356,55 +372,59 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             </div>
 
-            {/* 实际完成工作量 */}
+            {/* 实际完成工作量 - 绿色背景 */}
             {hasActualWorkload && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">实际完成工作量</h4>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-green-600">实际工日</Label>
-                      <p className="font-bold text-green-700 text-lg">
-                        {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-green-600">实际工时</Label>
-                      <p className="font-bold text-green-700 text-lg">
-                        {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-green-600">作业人数</Label>
-                      <p className="font-bold text-green-700 text-lg">
-                        {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
-                      </p>
-                    </div>
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                <h4 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  实际完成工作量
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs text-emerald-600">实际工日</Label>
+                    <p className="font-bold text-emerald-700 text-lg">
+                      {actualWorkload.days > 0 ? `${actualWorkload.days}天` : '-'}
+                    </p>
                   </div>
-                  {task.estimatedDays !== undefined && task.estimatedHours !== undefined && (
-                    <div className="mt-3 pt-3 border-t border-green-200">
-                      <p className="text-xs text-green-600">
-                        预估总工时：{(task.estimatedDays * 8 + task.estimatedHours)}小时 → 实际总工时：{actualWorkload.days * 8 + actualWorkload.hours}小时
-                        {actualWorkload.days * 8 + actualWorkload.hours > 0 && (
-                          <span className={`ml-2 ${actualWorkload.days * 8 + actualWorkload.hours > task.estimatedDays * 8 + task.estimatedHours ? 'text-red-600' : 'text-green-600'}`}>
-                            ({actualWorkload.days * 8 + actualWorkload.hours > task.estimatedDays * 8 + task.estimatedHours ? '超出' : '节省'}
-                            {Math.abs((actualWorkload.days * 8 + actualWorkload.hours) - (task.estimatedDays * 8 + task.estimatedHours)).toFixed(1)}小时)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <Label className="text-xs text-emerald-600">实际工时</Label>
+                    <p className="font-bold text-emerald-700 text-lg">
+                      {actualWorkload.hours > 0 ? `${actualWorkload.hours}小时` : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-emerald-600">作业人数</Label>
+                    <p className="font-bold text-emerald-700 text-lg">
+                      {actualWorkload.workers > 0 ? `${actualWorkload.workers}人` : '-'}
+                    </p>
+                  </div>
                 </div>
+                {task.estimatedDays !== undefined && task.estimatedHours !== undefined && (
+                  <div className="mt-3 pt-3 border-t border-emerald-200">
+                    <p className="text-xs text-emerald-600">
+                      预估总工时：{(task.estimatedDays * 8 + task.estimatedHours)}小时 → 实际总工时：{actualWorkload.days * 8 + actualWorkload.hours}小时
+                      {actualWorkload.days * 8 + actualWorkload.hours > 0 && (
+                        <span className={`ml-2 ${actualWorkload.days * 8 + actualWorkload.hours > task.estimatedDays * 8 + task.estimatedHours ? 'text-red-600' : 'text-emerald-600'}`}>
+                          ({actualWorkload.days * 8 + actualWorkload.hours > task.estimatedDays * 8 + task.estimatedHours ? '超出' : '节省'}
+                          {Math.abs((actualWorkload.days * 8 + actualWorkload.hours) - (task.estimatedDays * 8 + task.estimatedHours)).toFixed(1)}小时)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 必填反馈 */}
+            {/* 必填反馈 - 粉色背景 */}
             {task.requiredFeedback && task.requiredFeedback.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">必填反馈</h4>
+              <div className="bg-pink-50 rounded-lg p-4 border border-pink-100">
+                <h4 className="text-sm font-bold text-pink-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  必填反馈
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {task.requiredFeedback.map(fb => (
-                    <span key={fb} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                    <span key={fb} className="px-2 py-1 bg-pink-100 text-pink-700 rounded text-xs">
                       {fb === 'gps' && '位置打卡'}
                       {fb === 'material' && '物资扫码'}
                       {fb === 'photo_before' && '作业前照片'}
@@ -416,24 +436,30 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             )}
 
-            {/* 执行进度 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+            {/* 执行进度 - 青色背景 */}
+            <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-100">
+              <h4 className="text-sm font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                执行进度
+              </h4>
               <div className="flex items-center gap-4">
                 <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${task.progress === 100 ? 'bg-green-500' : task.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    className={`h-full rounded-full transition-all ${task.progress === 100 ? 'bg-emerald-500' : task.progress > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
                     style={{ width: `${task.progress || 0}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium text-gray-900">{task.progress || 0}%</span>
+                <span className="text-sm font-bold text-cyan-700">{task.progress || 0}%</span>
               </div>
             </div>
 
-            {/* 执行反馈记录 */}
+            {/* 执行反馈记录 - 石板灰背景 */}
             {sortedRecords.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">执行反馈记录</h4>
+              <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
+                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  执行反馈记录
+                </h4>
                 <div className="space-y-3">
                   {sortedRecords.map((record, index) => {
                     const actionConfig = TASK_ACTION_CONFIG[record.action as keyof typeof TASK_ACTION_CONFIG];
@@ -443,51 +469,51 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                       <div
                         key={record.id}
                         className={`relative pl-6 pb-4 ${
-                          index !== sortedRecords.length - 1 ? 'border-l-2 border-gray-200' : ''
+                          index !== sortedRecords.length - 1 ? 'border-l-2 border-slate-300' : ''
                         }`}
                       >
                         {/* 时间线节点 */}
                         <div
                           className={`absolute left-0 top-0 w-3 h-3 rounded-full -translate-x-[7px] ${
-                            isLatest ? 'bg-emerald-500' : 'bg-gray-300'
+                            isLatest ? 'bg-emerald-500' : 'bg-slate-400'
                           }`}
                         />
                         {/* 记录内容 */}
-                        <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
+                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <span
                                 className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  actionConfig?.bg || 'bg-gray-100'
-                                } ${actionConfig?.color || 'text-gray-600'}`}
+                                  actionConfig?.bg || 'bg-slate-100'
+                                } ${actionConfig?.color || 'text-slate-600'}`}
                               >
                                 {actionConfig?.label || record.action}
                               </span>
                               {record.fromStatus && (
                                 <>
-                                  <span className="text-gray-400 text-xs">→</span>
+                                  <span className="text-slate-400 text-xs">→</span>
                                   <span
                                     className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      statusConfig?.bg || 'bg-gray-100'
-                                    } ${statusConfig?.color || 'text-gray-600'}`}
+                                      statusConfig?.bg || 'bg-slate-100'
+                                    } ${statusConfig?.color || 'text-slate-600'}`}
                                   >
                                     {statusConfig?.label || record.toStatus}
                                   </span>
                                 </>
                               )}
                             </div>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-slate-500">
                               {new Date(record.actionTime).toLocaleString('zh-CN')}
                             </span>
                           </div>
                           {/* 操作人 */}
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                             <User className="w-3 h-3" />
                             <span>{record.operatorName}</span>
                           </div>
                           {/* 进度信息 */}
                           {record.progress !== undefined && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                            <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                               <FileText className="w-3 h-3" />
                               <span>
                                 进度：{record.progress}%
@@ -512,15 +538,15 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                                   {record.feedback.images.map((img, i) => (
                                     <div
                                       key={`img-${record.id}-${i}`}
-                                      className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center"
+                                      className="w-16 h-16 bg-slate-100 rounded flex items-center justify-center"
                                     >
-                                      <Camera className="w-6 h-6 text-gray-400" />
+                                      <Camera className="w-6 h-6 text-slate-400" />
                                     </div>
                                   ))}
                                 </div>
                               )}
                               {record.feedback.gpsLocation && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
                                   <MapPin className="w-3 h-3" />
                                   <span>
                                     GPS: {record.feedback.gpsLocation.lat.toFixed(4)},{' '}
@@ -529,13 +555,13 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                                 </div>
                               )}
                               {record.feedback.voiceNote && (
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
                                   <Mic className="w-3 h-3" />
                                   <span>语音备注</span>
                                 </div>
                               )}
                               {record.feedback.materials && record.feedback.materials.length > 0 && (
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-slate-600">
                                   <span className="font-medium">物料使用：</span>
                                   {record.feedback.materials.map((m, mi) => (
                                     <span key={`fbmat-${record.id}-${mi}`} className="ml-1">
@@ -546,7 +572,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                               )}
                               {/* 工作量确认 */}
                               {(record.feedback.workloadDays !== undefined || record.feedback.workloadHours !== undefined || record.feedback.workers !== undefined) && (
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-slate-600">
                                   <span className="font-medium">工作量确认：</span>
                                   {record.feedback.workloadDays !== undefined && `${record.feedback.workloadDays}天`}
                                   {record.feedback.workloadHours !== undefined && `${record.feedback.workloadHours}小时`}
@@ -555,7 +581,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
                               )}
                               {/* 物资编码 */}
                               {record.feedback.materialCode && (
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-slate-600">
                                   <span className="font-medium">物资编码：</span>
                                   {record.feedback.materialCode}
                                 </div>

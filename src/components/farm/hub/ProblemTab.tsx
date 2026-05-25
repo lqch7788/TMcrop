@@ -19,7 +19,7 @@ import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
 import {
   AlertTriangle, List, X, Clock, User, MapPin, Package, Camera, Mic, Sparkles, UserPlus,
-  CheckCircle, Plus, Trash2, Download, Send
+  CheckCircle, Plus, Trash2, Download, Send, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '../../ui/input';
@@ -962,13 +962,17 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
 
           {/* 弹窗内容 - 优化视觉设计 */}
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-            {/* 来源信息 */}
+            {/* 来源信息 - 灰色背景 */}
             <div className="mb-4">
               <SourceBadge problem={problem} />
             </div>
 
-            {/* 问题描述卡片 - 高亮显示 */}
-            <div className="mb-6 bg-gradient-to-br from-red-50 to-orange-50 border border-red-100 rounded-xl p-4">
+            {/* 问题描述卡片 - 红色背景 */}
+            <div className="mb-4 bg-red-50 rounded-lg p-4 border border-red-100">
+              <h4 className="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                问题描述
+              </h4>
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-sm">!</span>
@@ -988,49 +992,49 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               </div>
             </div>
 
-            {/* 基本信息卡片 */}
-            <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+            {/* 基本信息卡片 - 蓝色背景 */}
+            <div className="mb-4 bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 基本信息
               </h4>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">温室区域</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">温室区域</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.greenhouseName || '-'}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">作物名称</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">作物名称</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.cropName || '-'}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">巡查人员</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">巡查人员</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.inspectorName}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">巡查时间</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">巡查时间</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.checkDate} {problem.checkTime}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">天气</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">天气</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.weather}</div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">温湿度</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-blue-600 mb-1">温湿度</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.temperature}°C / {problem.humidity}%</div>
                 </div>
               </div>
             </div>
 
-            {/* 处理信息卡片 */}
-            <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h4 className="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-amber-500 rounded-full"></span>
+            {/* 处理信息卡片 - 橙色背景 */}
+            <div className="mb-4 bg-orange-50 rounded-lg p-4 border border-orange-100">
+              <h4 className="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 处理信息
               </h4>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-amber-50 rounded-lg p-3">
-                  <div className="text-xs text-amber-600 mb-1">当前状态</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-orange-600 mb-1">当前状态</div>
                   <div className="text-sm font-semibold">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                       problem.status === '已处理' ? 'bg-green-100 text-green-700' :
@@ -1042,19 +1046,19 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                     </span>
                   </div>
                 </div>
-                <div className="bg-amber-50 rounded-lg p-3">
-                  <div className="text-xs text-amber-600 mb-1">处理人</div>
+                <div className="bg-white rounded-lg p-3">
+                  <div className="text-xs text-orange-600 mb-1">处理人</div>
                   <div className="text-sm font-semibold text-gray-900">{problem.handler || '-'}</div>
                 </div>
                 {problem.handleDate && (
-                  <div className="bg-amber-50 rounded-lg p-3">
-                    <div className="text-xs text-amber-600 mb-1">处理日期</div>
+                  <div className="bg-white rounded-lg p-3">
+                    <div className="text-xs text-orange-600 mb-1">处理日期</div>
                     <div className="text-sm font-semibold text-gray-900">{problem.handleDate}</div>
                   </div>
                 )}
                 {problem.expectedCompletion && (
-                  <div className="bg-amber-50 rounded-lg p-3">
-                    <div className="text-xs text-amber-600 mb-1">期望完成</div>
+                  <div className="bg-white rounded-lg p-3">
+                    <div className="text-xs text-orange-600 mb-1">期望完成</div>
                     <div className="text-sm font-semibold text-gray-900">{problem.expectedCompletion}</div>
                   </div>
                 )}
@@ -1067,10 +1071,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               </div>
             </div>
 
-            {/* 流转记录 */}
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h4 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-blue-500 rounded-full"></span>
+            {/* 流转记录 - 石板灰背景 */}
+            <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
+              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
                 流转记录
               </h4>
               <TaskFlowTimeline

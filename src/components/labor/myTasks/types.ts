@@ -100,7 +100,7 @@ export interface ModalState<T = null> {
 }
 
 // 任务筛选类型
-export type TaskFilterType = 'all' | 'problem' | 'production' | 'temp';
+export type TaskFilterType = 'all' | 'problem' | 'production' | 'temp' | 'worklog';
 
 // 任务类型配置项
 export interface TaskTypeConfig {
