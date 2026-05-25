@@ -85,16 +85,16 @@ function StatsCards({
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-4 gap-3">
       {stats.map((stat) => (
-        <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center text-white text-lg`}>
+        <div key={stat.label} className="bg-white rounded-lg px-3 py-2 border border-gray-200">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg ${stat.bg} flex items-center justify-center text-white text-sm`}>
               {stat.icon}
             </div>
             <div className="flex-1">
-              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-              <div className="text-sm text-gray-500">{stat.label}</div>
+              <div className="text-xl font-bold text-gray-900">{stat.value}</div>
+              <div className="text-xs text-gray-500">{stat.label}</div>
             </div>
           </div>
         </div>
