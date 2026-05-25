@@ -15,9 +15,9 @@ export function SourceCell({ problem }: SourceCellProps) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs font-medium text-gray-700">{config.label}</span>
+      <span className="text-sm font-medium text-gray-700">{config.label}</span>
       {problem.sourceId && (
-        <span className="text-xs text-gray-400 font-mono">{problem.sourceId}</span>
+        <span className="text-sm text-gray-400 font-mono">{problem.sourceId}</span>
       )}
     </div>
   );
