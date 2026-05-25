@@ -32,7 +32,7 @@ export function ScheduleAddModal({
       isOpen={isOpen}
       onClose={onClose}
       title="新增排班"
-      size="md"
+      size="xl"
       onSubmit={onSubmit}
     >
       <div className="space-y-4">
@@ -65,8 +65,13 @@ export function ScheduleAddModal({
 
         <FormField label="排班日期" required>
           <DatePicker
-            selected={formData.date ? new Date(formData.date) : undefined}
-            onChange={(date) => onFormChange('date', date.toISOString().split('T')[0])}
+            selected={formData.date ? new Date(formData.date + 'T00:00:00') : undefined}
+            onChange={(date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              onFormChange('date', `${year}-${month}-${day}`);
+            }}
             className="w-full"
           />
         </FormField>

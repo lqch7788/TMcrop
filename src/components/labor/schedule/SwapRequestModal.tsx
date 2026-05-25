@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
+import { Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -79,7 +79,7 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <select
           value={formData.requesterId}
           onChange={e => handleRequesterChange(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           <option value="">选择申请人</option>
           {staffList.map(staff => (
@@ -98,9 +98,14 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10 pointer-events-none" />
           <DatePicker
-            selected={formData.originalDate ? new Date(formData.originalDate) : undefined}
-            onChange={(date) => setFormData(prev => ({ ...prev, originalDate: date.toISOString().split('T')[0] }))}
-            className="w-full pl-9"
+            selected={formData.originalDate ? new Date(formData.originalDate + 'T00:00:00') : undefined}
+            onChange={(date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              setFormData(prev => ({ ...prev, originalDate: `${year}-${month}-${day}` }));
+            }}
+            className="w-full pl-9 border-2 border-gray-300 focus:border-emerald-500"
           />
         </div>
       </div>
@@ -113,7 +118,7 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <select
           value={formData.targetId}
           onChange={e => handleTargetChange(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         >
           <option value="">选择调班对象</option>
           {staffList.filter(s => s.id !== formData.requesterId).map(staff => (
@@ -132,9 +137,14 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         <div className="relative">
           <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10 pointer-events-none" />
           <DatePicker
-            selected={formData.targetDate ? new Date(formData.targetDate) : undefined}
-            onChange={(date) => setFormData(prev => ({ ...prev, targetDate: date.toISOString().split('T')[0] }))}
-            className="w-full pl-9"
+            selected={formData.targetDate ? new Date(formData.targetDate + 'T00:00:00') : undefined}
+            onChange={(date) => {
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              setFormData(prev => ({ ...prev, targetDate: `${year}-${month}-${day}` }));
+            }}
+            className="w-full pl-9 border-2 border-gray-300 focus:border-emerald-500"
           />
         </div>
       </div>
@@ -151,7 +161,7 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
             onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
             placeholder="请输入调班原因..."
             rows={3}
-            className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full pl-9 pr-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
           />
         </div>
       </div>
@@ -183,17 +193,8 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
       isOpen={true}
       onClose={onClose}
       title="调班申请"
-      size="md"
+      size="xl"
       showFooter={true}
-      headerAction={
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </Button>
-      }
       footer={footer}
     >
       {content}

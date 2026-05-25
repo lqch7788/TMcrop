@@ -23,6 +23,15 @@ function getShiftColor(shift: string, configs: ShiftConfig[]): string {
   return config?.color || 'bg-gray-500';
 }
 
+// 规范化排班记录（兼容snake_case和camelCase）
+function normalizeRecord(record: any): ScheduleRecord {
+  return {
+    ...record,
+    staffName: record.staffName || record.staff_name || '',
+    workZone: record.workZone || record.work_zone || '',
+  };
+}
+
 // 获取日期显示格式
 function formatDateDisplay(dateStr: string, viewMode: ViewMode): string {
   const date = new Date(dateStr);
@@ -60,6 +69,9 @@ export function ScheduleCalendar({
   onViewModeChange,
   onScheduleClick,
 }: ScheduleCalendarProps) {
+  // 规范化数据（兼容snake_case和camelCase）
+  const normalizedList = React.useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
+
   // 上一天/下周/上月
   const handlePrev = () => {
     const date = new Date(selectedDate);
@@ -93,7 +105,7 @@ export function ScheduleCalendar({
 
   // 获取某天的排班记录
   const getScheduleForDate = (dateStr: string) => {
-    return scheduleList.filter(s => s.date === dateStr);
+    return normalizedList.filter(s => s.date === dateStr);
   };
 
   // 渲染月视图
@@ -126,15 +138,15 @@ export function ScheduleCalendar({
                 key={dateStr}
                 onClick={() => onDateChange(dateStr)}
                 className={`
-                  min-h-24 border-b border-r p-1 cursor-pointer transition-colors
-                  ${selected ? 'bg-blue-50 ring-2 ring-blue-500 ring-inset' : 'hover:bg-gray-50'}
-                  ${!currentMonth ? 'bg-gray-50' : ''}
+                  min-h-24 border-b border-r border-gray-300 p-1 cursor-pointer transition-colors
+                  ${selected ? 'bg-blue-500' : 'bg-blue-50 hover:bg-blue-100'}
+                  ${!currentMonth ? 'bg-gray-100' : ''}
                 `}
               >
                 <div className={`
                   text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full
                   ${today ? 'bg-red-500 text-white' : ''}
-                  ${!currentMonth ? 'text-gray-400' : 'text-gray-700'}
+                  ${!currentMonth ? 'text-gray-400' : selected ? 'text-white' : 'text-gray-700'}
                 `}>
                   {formatDateDisplay(dateStr, 'month')}
                 </div>
@@ -189,16 +201,16 @@ export function ScheduleCalendar({
                 onClick={() => onDateChange(dateStr)}
                 className={`
                   py-3 text-center cursor-pointer transition-colors
-                  ${selected ? 'bg-blue-50' : 'hover:bg-gray-100'}
+                  ${selected ? 'bg-blue-500' : 'bg-blue-50 hover:bg-blue-100'}
                 `}
               >
-                <div className="text-xs text-gray-500 mb-1">
+                <div className={`text-xs mb-1 ${selected ? 'text-white/80' : 'text-gray-500'}`}>
                   {WEEKDAYS[date.getDay() === 0 ? 6 : date.getDay() - 1]}
                 </div>
                 <div className={`
                   text-lg font-medium w-8 h-8 mx-auto flex items-center justify-center rounded-full
                   ${today ? 'bg-red-500 text-white' : ''}
-                  ${selected ? 'text-blue-600' : 'text-gray-700'}
+                  ${selected ? 'text-white' : 'text-gray-700'}
                 `}>
                   {date.getDate()}
                 </div>
@@ -355,22 +367,25 @@ export function ScheduleCalendar({
         {/* 视图切换 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           <Button
-            variant={viewMode === 'month' ? 'secondary' : 'ghost'}
+            variant={viewMode === 'month' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('month')}
+            className={viewMode === 'month' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
           >
             月
           </Button>
           <Button
-            variant={viewMode === 'week' ? 'secondary' : 'ghost'}
+            variant={viewMode === 'week' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('week')}
+            className={viewMode === 'week' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
           >
             周
           </Button>
           <Button
-            variant={viewMode === 'day' ? 'secondary' : 'ghost'}
+            variant={viewMode === 'day' ? 'default' : 'ghost'}
             size="sm"
+            className={viewMode === 'day' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
             onClick={() => onViewModeChange('day')}
           >
             日

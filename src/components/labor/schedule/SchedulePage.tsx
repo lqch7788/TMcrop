@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Calendar,
   Clock,
@@ -20,6 +20,25 @@ import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFor
 import type { ScheduleRecord, ShiftType } from './types';
 import { showAlert } from '@/lib/dialogService';
 
+// 规范化排班记录（兼容snake_case和camelCase）
+function normalizeRecord(record: any): ScheduleRecord {
+  return {
+    ...record,
+    staffName: record.staffName || record.staff_name || '',
+    workZone: record.workZone || record.work_zone || '',
+  };
+}
+
+// 获取规范的员工名称
+function getStaffName(record: any): string {
+  return record.staffName || record.staff_name || '-';
+}
+
+// 获取规范的工作区域
+function getWorkZone(record: any): string {
+  return record.workZone || record.work_zone || '-';
+}
+
 export function SchedulePage() {
   const {
     scheduleList,
@@ -34,10 +53,15 @@ export function SchedulePage() {
     setViewMode,
     updateShiftConfig,
     addSchedule,
+    updateSchedule,
+    deleteSchedule,
     cancelSchedule,
     submitSwapRequest,
     handleSwapRequest,
   } = useSchedule();
+
+  // 规范化数据（兼容snake_case和camelCase）
+  const normalizedScheduleList = useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
 
   // UI状态
   const [showShiftEditor, setShowShiftEditor] = useState(false);
@@ -62,6 +86,10 @@ export function SchedulePage() {
   // 导出状态
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState('excel');
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // 新排班表单状态
   const [newSchedule, setNewSchedule] = useState({
@@ -138,7 +166,7 @@ export function SchedulePage() {
     if (selectedRows.length === 0) return;
     // 删除选中项
     selectedRows.forEach(id => {
-      cancelSchedule(id);
+      deleteSchedule(id);
     });
     handleCancelBatch();
   };
@@ -156,6 +184,15 @@ export function SchedulePage() {
 
   const handleConfirmBatchEdit = () => {
     // 保存编辑结果
+    if (editedRecordIds.length > 0) {
+      // 批量更新编辑过的记录
+      editedRecordIds.forEach(id => {
+        const updates = editedRecords[id];
+        if (updates) {
+          updateSchedule(id, updates);
+        }
+      });
+    }
     setShowBatchEditModal(false);
     setBatchEditMode(false);
     setSelectedRows([]);
@@ -207,9 +244,9 @@ export function SchedulePage() {
       const shiftConfig = shiftConfigs.find(c => c.name === row.shift);
       return {
         '日期': row.date,
-        '员工': row.staffName,
+        '员工': getStaffName(row),
         '班次': row.shift,
-        '工作区域': row.workZone,
+        '工作区域': getWorkZone(row),
         '开始时间': shiftConfig?.startTime || '',
         '结束时间': shiftConfig?.endTime || '',
         '状态': row.status,
@@ -278,15 +315,15 @@ export function SchedulePage() {
 
   return (
     <div className="space-y-4">
-      {/* 页面标题 - 紧凑型 */}
-      <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
+      {/* 页面标题 - 紧凑型标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-sm mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-            <Calendar className="w-5 h-5 text-white" />
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+            <Calendar className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">排版调度</h1>
-            <p className="text-sm text-gray-500">员工排班管理与调班申请</p>
+            <h1 className="text-2xl font-bold text-gray-900">排班调度</h1>
+            <p className="text-gray-500">员工排班管理与调班申请</p>
           </div>
         </div>
       </div>
@@ -317,18 +354,19 @@ export function SchedulePage() {
           {/* 右侧操作 */}
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => setShowSwapModal(true)}
-              className="text-purple-600 border-purple-200 hover:bg-purple-50"
+              className="bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
             >
               <Users className="w-4 h-4" />
               调班申请
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => setShowShiftEditor(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <Settings className="w-4 h-4" />
               班次设置
@@ -345,11 +383,11 @@ export function SchedulePage() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
+      {/* 统计卡片 - 淡彩底 */}
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-white rounded-lg p-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <Calendar className="w-4 h-4 text-blue-600" />
             </div>
             <div>
@@ -360,9 +398,9 @@ export function SchedulePage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <Clock className="w-4 h-4 text-green-600" />
             </div>
             <div>
@@ -373,9 +411,9 @@ export function SchedulePage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <Users className="w-4 h-4 text-amber-600" />
             </div>
             <div>
@@ -386,9 +424,9 @@ export function SchedulePage() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-3">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
               <List className="w-4 h-4 text-purple-600" />
             </div>
             <div>
@@ -426,6 +464,11 @@ export function SchedulePage() {
               <ScheduleTable
                 scheduleList={scheduleList}
                 shiftConfigs={shiftConfigs}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={scheduleList.length}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
                 onScheduleClick={handleScheduleClick}
                 showCheckbox={exportMode || batchEditMode || batchDeleteMode}
                 exportMode={exportMode}
@@ -435,6 +478,7 @@ export function SchedulePage() {
                 onSelectAll={handleSelectAll}
                 onSelectRow={handleSelectRow}
                 onAddClick={() => setShowAddModal(true)}
+                onExport={() => setExportMode(true)}
                 onBatchEditClick={handleBatchEditClick}
                 onBatchDeleteClick={() => {
                   if (batchDeleteMode) {
@@ -492,7 +536,7 @@ export function SchedulePage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">员工:</span>
-                  <span className="font-medium text-gray-800">{selectedSchedule.staffName}</span>
+                  <span className="font-medium text-gray-800">{getStaffName(selectedSchedule)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">日期:</span>
@@ -504,7 +548,7 @@ export function SchedulePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">工作区:</span>
-                  <span className="text-gray-800">{selectedSchedule.workZone}</span>
+                  <span className="text-gray-800">{getWorkZone(selectedSchedule)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">状态:</span>
