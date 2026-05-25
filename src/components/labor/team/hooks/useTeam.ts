@@ -99,7 +99,7 @@ export function useTeam(): UseTeamReturn {
   // 分配工人到班组
   const assignWorkers = useCallback(
     (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => {
-      storeAssign(teamId, workerIds);
+      storeAssign(teamId, workerIds, operatorId, operatorName);
     },
     [storeAssign]
   );

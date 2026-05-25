@@ -10,6 +10,36 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { enhancedApiClient } from '../lib/apiClient';
+
+// ========== 工人 ID 到姓名的映射（用于显示成员真实姓名）==========
+// 在真实 API 场景中，工人姓名应从 API 返回的团队数据中获取
+const WORKER_NAMES: Record<string, string> = {
+  'w001': '张三',
+  'w002': '李四',
+  'w003': '王五',
+  'w004': '赵六',
+  'w005': '孙七',
+  'w006': '周八',
+  'w007': '吴九',
+  'w008': '郑十',
+  'w009': '冯十一',
+  'w010': '陈十二',
+  'w011': '楚十三',
+  'w012': '褚十四',
+  'w013': '卫十五',
+  'w014': '蒋十六',
+  'w015': '沈十七',
+};
+
+/**
+ * 根据工人ID获取工人姓名
+ * @param workerId 工人ID
+ * @returns 工人姓名，如果未找到则返回 '未知'
+ */
+export function getWorkerName(workerId: string): string {
+  return WORKER_NAMES[workerId] || '未知';
+}
 
 // ========== 类型定义（与 team/types.ts 保持一致）==========
 
@@ -80,8 +110,8 @@ interface TeamManageState {
   createTeam: (data: Partial<Team>) => void;
   updateTeam: (id: string, data: Partial<Team>) => void;
   deleteTeam: (id: string) => void;
-  assignWorkers: (teamId: string, workerIds: string[]) => void;
-  removeWorker: (teamId: string, workerId: string) => void;
+  assignWorkers: (teamId: string, workerIds: string[], operatorId: string, operatorName: string) => Promise<void>;
+  removeWorker: (teamId: string, workerId: string) => Promise<void>;
 
   _initSeedData: () => void;
 }
@@ -140,7 +170,18 @@ export const useTeamManageStore = create<TeamManageState>()(
         set((state) => ({ teams: state.teams.filter((t) => t.id !== id) }));
       },
 
-      assignWorkers: (teamId, workerIds) => {
+      assignWorkers: async (teamId, workerIds, operatorId, operatorName) => {
+        try {
+          // 调用后端API批量添加成员
+          await enhancedApiClient.post(`/team-members/teams/${teamId}/members/batch`, {
+            workerIds,
+            operatorId,
+            operatorName,
+          });
+        } catch (error) {
+          console.warn('[TeamManageStore] 批量添加成员API失败:', error);
+        }
+        // 无论API成功与否，都更新本地状态（乐观更新）
         set((state) => {
           const team = state.teams.find((t) => t.id === teamId);
           if (!team) return state;
@@ -157,7 +198,14 @@ export const useTeamManageStore = create<TeamManageState>()(
         });
       },
 
-      removeWorker: (teamId, workerId) => {
+      removeWorker: async (teamId, workerId) => {
+        try {
+          // 调用后端API移除成员
+          await enhancedApiClient.delete(`/team-members/teams/${teamId}/members/${workerId}`);
+        } catch (error) {
+          console.warn('[TeamManageStore] 移除成员API失败:', error);
+        }
+        // 无论API成功与否，都更新本地状态（乐观更新）
         set((state) => {
           const team = state.teams.find((t) => t.id === teamId);
           if (!team) return state;

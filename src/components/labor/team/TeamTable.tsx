@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Users, Plus, Search, Trash2, UserPlus, Settings, ChevronLeft } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
+import { TeamDetailModal } from './TeamDetailModal';
 import type { Team } from './types';
 import { Button } from '@/components/ui/button';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
 import { showConfirm } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui/Pagination';
+import { Input } from '@/components/ui/input';
+import { TextArea } from '@/components/ui/TextArea';
+import { getWorkerName } from '@/stores/useTeamManageStore';
 
 interface TeamTableProps {
   onBack?: () => void;
@@ -44,6 +48,8 @@ export function TeamTable({
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailTeam, setDetailTeam] = useState<Team | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [formData, setFormData] = useState({
@@ -53,12 +59,18 @@ export function TeamTable({
     workZone: '',
   });
 
-  const currentUser = { id: 'u001', name: '张明' };
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   // 打开分配弹窗
   const openAssignModal = (team: Team) => {
     setSelectedTeam(team);
     setIsAssignModalOpen(true);
+  };
+
+  // 打开详情弹窗
+  const openDetailModal = (team: Team) => {
+    setDetailTeam(team);
+    setIsDetailModalOpen(true);
   };
 
   // 打开新建班组弹窗
@@ -137,12 +149,11 @@ export function TeamTable({
         <div className="flex gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
+            <Input
               type="text"
               placeholder="搜索班组名称、负责人、作业区域..."
               value={filters.keyword}
               onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -179,6 +190,14 @@ export function TeamTable({
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openDetailModal(team)}
+                    title="查看详情"
+                  >
+                    <Users className="w-5 h-5" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -219,12 +238,12 @@ export function TeamTable({
               </div>
               {team.memberCount > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {Array.from({ length: team.memberCount }).map((_, i) => (
+                  {team.memberIds.map((memberId) => (
                     <span
-                      key={i}
+                      key={memberId}
                       className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                     >
-                      成员{i + 1}
+                      {getWorkerName(memberId)}
                     </span>
                   ))}
                 </div>
@@ -257,6 +276,13 @@ export function TeamTable({
         onAssign={handleAssign}
       />
 
+      {/* 班组详情弹窗 */}
+      <TeamDetailModal
+        open={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        team={detailTeam}
+      />
+
       {/* 新建/编辑班组弹窗 */}
       <UnifiedModal
         isOpen={isFormOpen}
@@ -274,40 +300,36 @@ export function TeamTable({
         <div className="space-y-4">
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">班组名称</Label>
-            <input
+            <Input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="请输入班组名称"
             />
           </div>
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">负责人</Label>
-            <input
+            <Input
               type="text"
               value={formData.leaderName}
               onChange={(e) => setFormData({ ...formData, leaderName: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="请输入负责人姓名"
             />
           </div>
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">作业区域</Label>
-            <input
+            <Input
               type="text"
               value={formData.workZone}
               onChange={(e) => setFormData({ ...formData, workZone: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               placeholder="请输入作业区域"
             />
           </div>
           <div>
             <Label className="block text-sm font-medium text-gray-700 mb-1">描述</Label>
-            <textarea
+            <TextArea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               rows={3}
               placeholder="请输入描述"
             />

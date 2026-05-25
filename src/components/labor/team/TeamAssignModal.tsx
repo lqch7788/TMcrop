@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import type { Team, UnassignedWorker } from './types';
@@ -14,6 +14,13 @@ interface TeamAssignModalProps {
 
 export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssign }: TeamAssignModalProps) {
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
+
+  // HIGH-4: 弹窗关闭时重置选择状态
+  useEffect(() => {
+    if (!open) {
+      setSelectedWorkers([]);
+    }
+  }, [open]);
 
   if (!open || !team) return null;
 

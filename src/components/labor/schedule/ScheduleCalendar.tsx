@@ -34,7 +34,7 @@ function formatDateDisplay(dateStr: string, viewMode: ViewMode): string {
 
 // 判断是否是今天
 function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toISOString().split('T')[0];
+  return dateStr === new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
 }
 
 // 判断是否是选中日期
@@ -70,7 +70,7 @@ export function ScheduleCalendar({
     } else {
       date.setMonth(date.getMonth() - 1);
     }
-    onDateChange(date.toISOString().split('T')[0]);
+    onDateChange(date.toLocaleDateString('zh-CN').replace(/\//g, '-'));
   };
 
   // 下一天/下周/下月
@@ -83,12 +83,12 @@ export function ScheduleCalendar({
     } else {
       date.setMonth(date.getMonth() + 1);
     }
-    onDateChange(date.toISOString().split('T')[0]);
+    onDateChange(date.toLocaleDateString('zh-CN').replace(/\//g, '-'));
   };
 
   // 回到今天
   const handleToday = () => {
-    onDateChange(new Date().toISOString().split('T')[0]);
+    onDateChange(new Date().toLocaleDateString('zh-CN').replace(/\//g, '-'));
   };
 
   // 获取某天的排班记录

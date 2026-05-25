@@ -4,6 +4,7 @@ import type { ScheduleRecord, ShiftConfig } from './types';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Pagination } from '@/components/ui/Pagination';
 
@@ -243,15 +244,15 @@ export function ScheduleTable({
           <div className="flex items-center gap-2 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="搜索员工、区域、日期..."
                 value={searchTerm}
                 onChange={e => {
                   setSearchTerm(e.target.value);
-                  setCurrentPage(1);
+                  onPageChange?.(1);
                 }}
-                className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-9 pr-4"
               />
             </div>
           </div>
@@ -276,7 +277,7 @@ export function ScheduleTable({
               selected={dateRange.start ? new Date(dateRange.start) : undefined}
               onChange={(date) => {
                 setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }));
-                setCurrentPage(1);
+                onPageChange?.(1);
               }}
               className="w-[140px]"
             />
@@ -285,7 +286,7 @@ export function ScheduleTable({
               selected={dateRange.end ? new Date(dateRange.end) : undefined}
               onChange={(date) => {
                 setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }));
-                setCurrentPage(1);
+                onPageChange?.(1);
               }}
               className="w-[140px]"
             />
@@ -298,7 +299,7 @@ export function ScheduleTable({
               value={shiftFilter}
               onChange={e => {
                 setShiftFilter(e.target.value);
-                setCurrentPage(1);
+                onPageChange?.(1);
               }}
               className="px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -318,7 +319,7 @@ export function ScheduleTable({
               value={statusFilter}
               onChange={e => {
                 setStatusFilter(e.target.value);
-                setCurrentPage(1);
+                onPageChange?.(1);
               }}
               className="px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
