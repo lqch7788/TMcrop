@@ -659,26 +659,16 @@ export default function SmartDispatchPage() {
   // ── 渲染 ──
   return (
     <div className="space-y-4">
-      {/* 页面标题 */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
+      {/* 页面标题 - 紧凑型 */}
+      <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* 返回农事任务中心 */}
-            <a
-              href="/farm-hub"
-              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-              title="返回农事任务中心"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </a>
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
               <Bot className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">智能派工</h1>
-              <p className="text-xs text-gray-500">AI综合评分 · 多源任务整合 · 智能推荐</p>
+              <p className="text-xs text-gray-500">AI综合评分 · 多源任务整合</p>
             </div>
           </div>
           <button
