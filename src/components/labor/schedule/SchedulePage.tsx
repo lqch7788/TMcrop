@@ -277,9 +277,22 @@ export function SchedulePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* 页面标题 - 紧凑型 */}
+      <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">排版调度</h1>
+            <p className="text-sm text-gray-500">员工排班管理与调班申请</p>
+          </div>
+        </div>
+      </div>
+
       {/* 快捷操作栏 */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           {/* 左侧操作 */}
           <div className="flex items-center gap-2">
@@ -333,7 +346,7 @@ export function SchedulePage() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-4 gap-3">
         <div className="bg-white rounded-lg p-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -393,7 +406,7 @@ export function SchedulePage() {
       </div>
 
       {/* 主内容区 */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-4">
         {/* 日历/表格视图 */}
         <div className="col-span-2">
           {displayMode === 'calendar' ? (
