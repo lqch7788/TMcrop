@@ -566,7 +566,6 @@ export default function PlantingPage() {
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
           record={currentRecord}
-          cropVarietyOptions={cropVarietyOptions}
           areas={areas}
         />
       )}

@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
 import {
-  Users, Plus, Pencil, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX, ArrowLeft,
+  Users, Plus, Pencil, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
 } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
@@ -217,29 +217,7 @@ export default function UserManagement() {
   // ========== 渲染 ==========
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/settings"
-              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-              title="返回系统设置"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">用户管理</h1>
-              <p className="text-gray-500">管理系统用户账号、角色分配与状态</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 ml-auto">
@@ -279,12 +257,12 @@ export default function UserManagement() {
               <th className="text-left py-2.5 px-4 font-medium text-white">部门</th>
               <th className="text-left py-2.5 px-4 font-medium text-white">邮箱/电话</th>
               <th className="text-center py-2.5 px-4 font-medium text-white w-20">状态</th>
-              <th className="text-right py-2.5 px-4 font-medium text-white w-36">操作</th>
+              <th className="text-right py-2.5 px-4 font-medium text-white w-44">操作</th>
             </tr>
           </thead>
           <tbody>
             {pagedUsers.map((user) => (
-              <tr key={user.oid} className="border-b border-gray-100 hover:bg-blue-50">
+              <tr key={user.oid} className="border-b border-gray-300 hover:bg-blue-50">
                 <td className="py-2 px-4 text-gray-700 font-medium">{user.username || user.aid}</td>
                 <td className="py-2 px-4 text-gray-700">{user.real_name || user.name}</td>
                 <td className="py-2 px-4 text-gray-500">{getOrgName(user.org_oid || user.orgOid || '')}</td>
@@ -325,16 +303,16 @@ export default function UserManagement() {
                 </td>
                 <td className="py-2 px-4">
                   <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => openEditModal(user)} className="p-1 text-gray-400 hover:text-blue-600" title="编辑">
+                    <button onClick={() => openEditModal(user)} className="p-1 border border-gray-300 rounded text-blue-500 hover:border-blue-500" title="编辑">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => openPasswordModal(user)} className="p-1 text-gray-400 hover:text-amber-600" title="修改密码">
+                    <button onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-500 hover:border-amber-500" title="修改密码">
                       <Key className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => handleToggleStatus(user)} className="p-1 text-gray-400 hover:text-purple-600" title={user.status === 'active' ? '禁用' : '启用'}>
+                    <button onClick={() => handleToggleStatus(user)} className="p-1 border border-gray-300 rounded text-purple-500 hover:border-purple-500" title={user.status === 'active' ? '禁用' : '启用'}>
                       {user.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
                     </button>
-                    <button onClick={() => setDeleteTarget(user.oid)} className="p-1 text-gray-400 hover:text-red-600" title="删除">
+                    <button onClick={() => setDeleteTarget(user.oid)} className="p-1 border border-gray-300 rounded text-red-500 hover:border-red-500" title="删除">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>

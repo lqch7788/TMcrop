@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Shield, Search, RefreshCw, Save, Check, X, ArrowLeft, UserCog,
+  Shield, Search, RefreshCw, Save, Check, X, UserCog,
 } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import type { User, Process } from '@/types/authority';
@@ -54,6 +54,13 @@ export default function UserAuthorityConfig() {
     loadRoles();
   }, []);
 
+  // 默认选择第一个用户
+  useEffect(() => {
+    if (!selectedUserOid && users.length > 0) {
+      setSelectedUserOid(users[0].oid);
+    }
+  }, [users, selectedUserOid]);
+
   // 选择用户后加载权限
   useEffect(() => {
     if (!selectedUserOid) { setSelectedUser(null); return; }
@@ -90,7 +97,7 @@ export default function UserAuthorityConfig() {
     return roles.filter((r) => r.org_oid === selectedUser.org_oid).map((r) => r.role_name).join('、');
   }, [selectedUser, roles]);
 
-  // 获取权限值 (0=无权限, 1=角色权限, 2=用户特殊授权)
+  // 获取权限值 (0=拒绝, 1=允许, source=继承来源)
   const getAuthValue = (processOid: string, actionCode: string): { val: number; source: string } => {
     // 先看本地修改
     if (authorityChanges.has(processOid) && authorityChanges.get(processOid)!.has(actionCode)) {
@@ -98,30 +105,26 @@ export default function UserAuthorityConfig() {
     }
     // 用户特殊权限
     const ua = userAuthorities.find((a) => a.processOid === processOid && a.actionOid === actionCode);
-    if (ua) return { val: ua.value + 1, source: 'user_override' }; // +1 将 0/1 映射为 1/2 方便显示
+    if (ua) return { val: ua.value, source: 'user_override' };
     // 角色权限
     const ra = roleAuthorities.find((a) => a.processOid === processOid && a.actionOid === actionCode);
     if (ra && ra.value >= 1) return { val: 1, source: 'role' };
     return { val: 0, source: 'none' };
   };
 
-  const cycleValue = (processOid: string, actionCode: string) => {
+  // 设置权限值 (继承角色=null, 允许=1, 拒绝=0)
+  const setAuthValue = (processOid: string, actionCode: string, value: number | null) => {
     setAuthorityChanges((prev) => {
       const next = new Map(prev);
-      if (!next.has(processOid)) next.set(processOid, new Map());
-      const current = getAuthValue(processOid, actionCode);
-      // 三态循环: 原始权限 → 强制允许(1) → 强制拒绝(0) → 清除(恢复原始)
-      if (current.source === 'local') {
-        if (current.val === 1) {
-          next.get(processOid)!.set(actionCode, 0); // 允许 → 拒绝
-        } else {
-          // 拒绝(val=0) → 清除，恢复原始权限
+      if (value === null) {
+        // 清除记录，恢复继承角色权限
+        if (next.has(processOid)) {
           next.get(processOid)!.delete(actionCode);
           if (next.get(processOid)!.size === 0) next.delete(processOid);
         }
       } else {
-        // 原始状态(角色/无权限/用户覆盖) → 强制允许
-        next.get(processOid)!.set(actionCode, 1);
+        if (!next.has(processOid)) next.set(processOid, new Map());
+        next.get(processOid)!.set(actionCode, value);
       }
       return next;
     });
@@ -170,46 +173,24 @@ export default function UserAuthorityConfig() {
   const allProcesses = useMemo(() => flattenProcesses(processes), [processes]);
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/settings"
-              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-              title="返回系统设置"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <UserCog className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">用户特殊权限配置</h1>
-              <p className="text-gray-500">对单个用户进行权限增强或限制，覆盖角色权限</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 ml-auto">
-          <label className="text-xs font-medium text-gray-600 whitespace-nowrap">选择用户:</label>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">选择用户:</label>
           <div className="relative">
-            <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-300" />
+            <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-gray-300" />
             <input
               type="text" placeholder="搜索..."
               value={searchUserTerm}
               onChange={(e) => setSearchUserTerm(e.target.value)}
-              className="w-36 h-8 pl-7 pr-2 border border-gray-200 rounded text-xs"
+              className="w-44 h-9 pl-8 pr-2 border border-gray-200 rounded text-sm"
             />
           </div>
           <select
             value={selectedUserOid}
             onChange={(e) => setSelectedUserOid(e.target.value)}
-            className="h-8 px-2 border border-gray-200 rounded text-xs max-w-[160px]"
+            className="h-9 px-2 border border-gray-200 rounded text-sm max-w-[200px]"
           >
             <option value="">-- 请选择用户 --</option>
             {filteredUsers.map((u) => (
@@ -219,7 +200,7 @@ export default function UserAuthorityConfig() {
             ))}
           </select>
           {selectedUser && (
-            <span className="text-xs text-gray-400 whitespace-nowrap">
+            <span className="text-sm text-gray-400 whitespace-nowrap">
               组织:{selectedUser.org_oid} | {selectedUser.status}
             </span>
           )}
@@ -228,15 +209,10 @@ export default function UserAuthorityConfig() {
 
       {/* 权限矩阵 */}
       {selectedUser && (
-        <div className="bg-white rounded-xl shadow-sm">
-          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700">
-                工序-动作权限配置
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                灰=无权限 | 蓝=角色继承 | 点击循环: 角色→允许→拒绝→恢复角色
-              </p>
+        <div className="bg-white rounded-xl shadow-sm flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
+          <div className="p-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+              <span>下拉选择：继承=继承角色权限 | 允许=强制允许 | 拒绝=强制拒绝</span>
             </div>
             <div className="flex items-center gap-2">
               {hasChanges && (
@@ -251,10 +227,11 @@ export default function UserAuthorityConfig() {
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto max-h-96">
+          <div className="overflow-auto flex-1">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-b sticky top-0">
+                  <th className="text-center py-2 px-2 font-medium text-white w-12">序号</th>
                   <th className="text-left py-2 px-3 font-medium text-white w-48">工序</th>
                   {ACTION_LIST.map((act) => (
                     <th key={act.code} className="text-center py-2 px-2 font-medium text-white w-20">
@@ -264,34 +241,48 @@ export default function UserAuthorityConfig() {
                 </tr>
               </thead>
               <tbody>
-                {allProcesses.map((proc) => (
-                  <tr key={proc.oid} className="border-b border-gray-100 hover:bg-blue-50">
+                {allProcesses.map((proc, index) => (
+                  <tr key={proc.oid} className="border-b border-gray-300 hover:bg-blue-50">
+                    <td className="py-1.5 px-2 text-center text-gray-500 text-xs">{index + 1}</td>
                     <td className="py-1.5 px-3 text-gray-700">
-                      <div>{proc.process_name}</div>
-                      <div className="text-xs text-gray-400 font-mono">{proc.process_code}</div>
+                      <div>{proc.name}</div>
+                      <div className="text-xs text-gray-400 font-mono">{proc.aid}</div>
                     </td>
                     {ACTION_LIST.map((act) => {
                       const { val, source } = getAuthValue(proc.oid, act.code);
-                      let bg = 'bg-gray-50 text-gray-300';
-                      let label = '-';
-                      if (val === 1 && source === 'role') {
-                        bg = 'bg-blue-50 text-blue-600';
-                        label = '角色';
-                      } else if (source === 'user_override') {
-                        bg = val === 2 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500';
-                        label = val === 2 ? '允许' : '拒绝';
-                      } else if (source === 'local') {
-                        bg = val === 1 ? 'bg-emerald-200 text-emerald-700' : 'bg-red-200 text-red-700';
-                        label = val === 1 ? '允许' : '拒绝';
+                      // 计算当前值和颜色
+                      let currentValue = 'inherit';
+                      let textColor = 'text-blue-600';
+                      let bgStyle = 'bg-blue-50';
+                      if (source === 'role' || source === 'none') {
+                        currentValue = 'inherit';
+                        textColor = 'text-blue-600';
+                        bgStyle = 'bg-blue-50';
+                      } else if (val === 1) {
+                        currentValue = 'allow';
+                        textColor = 'text-emerald-600';
+                        bgStyle = 'bg-emerald-50';
+                      } else if (val === 0) {
+                        currentValue = 'deny';
+                        textColor = 'text-red-500';
+                        bgStyle = 'bg-red-50';
                       }
                       return (
                         <td key={act.code} className="text-center py-1.5 px-1">
-                          <button
-                            onClick={() => cycleValue(proc.oid, act.code)}
-                            className={`w-14 h-7 rounded text-xs font-medium transition-colors ${bg} hover:opacity-80`}
+                          <select
+                            value={currentValue}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === 'inherit') setAuthValue(proc.oid, act.code, null);
+                              else if (v === 'allow') setAuthValue(proc.oid, act.code, 1);
+                              else if (v === 'deny') setAuthValue(proc.oid, act.code, 0);
+                            }}
+                            className={`h-7 px-1 text-xs border border-gray-300 rounded cursor-pointer ${bgStyle} ${textColor} font-medium`}
                           >
-                            {label}
-                          </button>
+                            <option value="inherit" className="text-blue-600 bg-white">继承角色权限</option>
+                            <option value="allow" className="text-emerald-600 bg-white">强制允许</option>
+                            <option value="deny" className="text-red-500 bg-white">强制拒绝</option>
+                          </select>
                         </td>
                       );
                     })}

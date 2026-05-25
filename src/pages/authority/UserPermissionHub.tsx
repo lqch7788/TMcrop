@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Building2, Key, Users, GitBranch, ArrowLeft } from 'lucide-react';
+import { Shield, Building2, Key, Users, GitBranch } from 'lucide-react';
 import OrganizationManagement from './OrganizationManagement';
 import RoleManagement from './RoleManagement';
 import AuthorityConfiguration from './AuthorityConfiguration';
@@ -36,26 +36,6 @@ export default function UserPermissionHub() {
 
   return (
     <div className="space-y-4">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <a
-            href="/settings"
-            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-            title="返回系统设置"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </a>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">用户权限管理</h1>
-            <p className="text-gray-500">组织架构 · 角色定义 · 权限矩阵 · 用户管理 · 权限覆盖</p>
-          </div>
-        </div>
-      </div>
-
       {/* TAB 导航栏 */}
       <div className="bg-white rounded-xl shadow-sm p-1.5">
         <div className="flex items-center gap-1 flex-wrap">
