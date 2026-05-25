@@ -158,12 +158,12 @@ export function ProblemTable({
                   </td>
 
                   {/* 编号 */}
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <Button
                       variant="link"
                       size="sm"
                       onClick={() => onViewDetail(problem)}
-                      className="font-mono"
+                      className="text-blue-600 hover:text-blue-800 font-medium"
                       title="点击查看详情"
                     >
                       {problem.problemCode}
@@ -171,7 +171,7 @@ export function ProblemTable({
                   </td>
 
                   {/* 来源 */}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm">
                     <SourceCell problem={problem} />
                   </td>
 
