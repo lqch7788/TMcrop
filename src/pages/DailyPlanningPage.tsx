@@ -301,17 +301,17 @@ export default function DailyPlanningPage() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-5 gap-4">
+      {/* 统计卡片 - 紧凑型 */}
+      <div className="grid grid-cols-5 gap-3">
         {statsData.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center text-white text-lg`}>
+          <div key={index} className="bg-white rounded-lg px-3 py-2 border border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-lg ${stat.bgColor} flex items-center justify-center text-white text-sm`}>
                 {stat.icon}
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-sm text-gray-500">{stat.label}</div>
+                <div className="text-xl font-bold text-gray-900">{stat.value}</div>
+                <div className="text-xs text-gray-500">{stat.label}</div>
               </div>
             </div>
           </div>
