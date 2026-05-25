@@ -255,28 +255,16 @@ export default function DailyPlanningPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      {/* Page Header - 页面头部，与基地总览页面保持一致 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {/* 返回农事任务中心 */}
-            <a
-              href="/farm-hub"
-              className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-              title="返回农事任务中心"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">每日工单汇总与规划</h1>
-              <p className="text-gray-500">每日任务进度分析、人员负荷情况以及AI派工建议</p>
-            </div>
+    <div className="space-y-4">
+      {/* Page Header - 紧凑型标题卡片 */}
+      <div className="bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">每日工单汇总与规划</h1>
+            <p className="text-sm text-gray-500">每日任务进度与人员负荷分析</p>
           </div>
         </div>
       </div>
