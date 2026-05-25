@@ -78,7 +78,20 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <SettingsIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
+            <p className="text-gray-500">系统配置、权限管理、生产参数与设备管理</p>
+          </div>
+        </div>
+      </div>
+
       {/* 组1: 基础数据 */}
       <SectionGroup title="基础数据" subtitle="核心系统配置与日志" sections={basicDataSections} />
 
@@ -143,8 +156,8 @@ function SectionGroup({ title, subtitle, sections }: {
             className="bg-white rounded-xl p-6 shadow-none border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all group"
           >
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">
-                <section.icon className="w-6 h-6 text-emerald-600" />
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl group-hover:from-emerald-600 group-hover:to-green-700 transition-colors">
+                <section.icon className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
                 <h3 className={`font-semibold transition-colors ${section.isIags ? 'text-blue-600' : 'text-gray-900'} group-hover:text-emerald-600`}>{section.label}</h3>
