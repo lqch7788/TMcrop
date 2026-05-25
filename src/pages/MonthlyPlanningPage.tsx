@@ -17,6 +17,9 @@ import {
   AlertTriangle,
   Zap,
   ChevronLeft,
+  Timer,
+  Banknote,
+  ClipboardList,
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Pagination } from '@/components/ui/Pagination';
@@ -337,10 +340,10 @@ export default function MonthlyPlanningPage() {
 
   const statsData = monthlyPlan
     ? [
-        { label: '总任务数', value: monthlyPlan.totalTasks, icon: '📋', bgColor: 'bg-blue-500' },
-        { label: '预估工时', value: `${monthlyPlan.totalHours}h`, icon: '⏱️', bgColor: 'bg-purple-500' },
-        { label: '所需人员', value: Math.round(monthlyPlan.totalHours / 8), icon: '👥', bgColor: 'bg-cyan-500' },
-        { label: '预估成本', value: `¥${monthlyPlan.totalCost.toFixed(0)}`, icon: '💰', bgColor: 'bg-orange-500' },
+        { label: '总任务数', value: monthlyPlan.totalTasks, icon: ClipboardList, bgColor: 'bg-blue-50 border border-blue-200', iconColor: 'text-blue-500' },
+        { label: '预估工时', value: `${monthlyPlan.totalHours}h`, icon: Timer, bgColor: 'bg-purple-50 border border-purple-200', iconColor: 'text-purple-500' },
+        { label: '所需人员', value: Math.round(monthlyPlan.totalHours / 8), icon: Users, bgColor: 'bg-cyan-50 border border-cyan-200', iconColor: 'text-cyan-500' },
+        { label: '预估成本', value: `¥${monthlyPlan.totalCost.toFixed(0)}`, icon: Banknote, bgColor: 'bg-orange-50 border border-orange-200', iconColor: 'text-orange-500' },
       ]
     : [];
 
@@ -389,21 +392,24 @@ export default function MonthlyPlanningPage() {
         </div>
       </div>
 
-      {/* 统计卡片 - 紧凑型 */}
+      {/* 统计卡片 - 淡彩底 */}
       <div className="grid grid-cols-4 gap-4">
-        {statsData.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg px-3 py-2.5 border border-gray-200">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-9 h-9 rounded-lg ${stat.bgColor} flex items-center justify-center text-white text-sm`}>
-                {stat.icon}
-              </div>
-              <div>
-                <div className="text-xl font-bold text-gray-900">{stat.value}</div>
-                <div className="text-xs text-gray-500">{stat.label}</div>
+        {statsData.map((stat, index) => {
+          const IconComponent = stat.icon;
+          return (
+            <div key={index} className={`${stat.bgColor} rounded-lg px-3 py-2.5`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
+                  <IconComponent className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-xs text-gray-500">{stat.label}</div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 日期选择和操作按钮 */}

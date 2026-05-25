@@ -4,7 +4,7 @@
  */
 
 import { useState, useReducer, useEffect, useCallback } from 'react';
-import { Plus, AlertTriangle, Edit, Trash2, Download } from 'lucide-react';
+import { Plus, AlertTriangle, Edit, Trash2, Download, FileText } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
@@ -1349,25 +1349,28 @@ export const TempTaskTab: React.FC = () => {
         showFooter={false}
       >
         {selectedTask && (
-          <div className="space-y-6">
-            {/* 基本信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h4>
+          <div className="space-y-4">
+            {/* 基本信息 - 蓝色背景 */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                基本信息
+              </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">任务名称</label>
+                  <label className="text-xs text-blue-600">任务名称</label>
                   <p className="font-semibold text-gray-900">{selectedTask.title || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">任务区域</label>
+                  <label className="text-xs text-blue-600">任务区域</label>
                   <p className="font-semibold text-gray-900">{selectedTask.location || selectedTask.workLocation || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">执行人</label>
+                  <label className="text-xs text-blue-600">执行人</label>
                   <p className="font-semibold text-gray-900">{selectedTask.assigneeName || '待分配'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">优先级</label>
+                  <label className="text-xs text-blue-600">优先级</label>
                   <p className={`font-semibold ${priorityMap[selectedTask.priority]?.color || ''}`}>
                     {priorityMap[selectedTask.priority]?.label || selectedTask.priority || '普通'}
                   </p>
@@ -1375,9 +1378,12 @@ export const TempTaskTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 任务类型 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">任务类型</h4>
+            {/* 任务类型 - 紫色背景 */}
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+              <h4 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                任务类型
+              </h4>
               <div className="flex flex-wrap gap-2">
                 <span className={`px-3 py-1.5 rounded text-sm text-white ${getTypeColor(selectedTask.tempTaskType || 'other')}`}>
                   {getTypeLabel(selectedTask.tempTaskType || 'other')}
@@ -1385,9 +1391,12 @@ export const TempTaskTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 紧急程度 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">紧急程度</h4>
+            {/* 紧急程度 - 橙色背景 */}
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+              <h4 className="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                紧急程度
+              </h4>
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1.5 rounded text-sm font-medium ${
                   selectedTask.urgency === 'critical' ? 'bg-red-100 text-red-700' :
@@ -1400,30 +1409,34 @@ export const TempTaskTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 任务描述 */}
+            {/* 任务描述 - 灰色背景 */}
             {selectedTask.description && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">任务描述</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTask.description}</p>
-                </div>
+              <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  任务描述
+                </h4>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTask.description}</p>
               </div>
             )}
 
-            {/* 时间信息 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">时间信息</h4>
+            {/* 时间信息 - 天蓝色背景 */}
+            <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
+              <h4 className="text-sm font-bold text-sky-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                时间信息
+              </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500">派发时间</label>
+                  <label className="text-xs text-sky-600">派发时间</label>
                   <p className="font-semibold text-gray-900">{selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString('zh-CN') : '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">截止日期</label>
+                  <label className="text-xs text-sky-600">截止日期</label>
                   <p className="font-semibold text-gray-900">{selectedTask.dueDate || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">状态</label>
+                  <label className="text-xs text-sky-600">状态</label>
                   <p>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusMap[selectedTask.status]?.bg || 'bg-gray-100'} ${statusMap[selectedTask.status]?.color || 'text-gray-600'}`}>
                       {statusMap[selectedTask.status]?.label || selectedTask.status}
@@ -1431,7 +1444,7 @@ export const TempTaskTab: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500">预估时长</label>
+                  <label className="text-xs text-sky-600">预估时长</label>
                   <p className="font-semibold text-gray-900">
                     {selectedTask.estimatedHours ? `${selectedTask.estimatedHours}小时` : '-'}
                   </p>
@@ -1439,9 +1452,12 @@ export const TempTaskTab: React.FC = () => {
               </div>
             </div>
 
-            {/* 进度 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">执行进度</h4>
+            {/* 执行进度 - 青色背景 */}
+            <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-100">
+              <h4 className="text-sm font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                执行进度
+              </h4>
               <div className="flex items-center gap-4">
                 <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
@@ -1449,75 +1465,82 @@ export const TempTaskTab: React.FC = () => {
                     style={{ width: `${selectedTask.progress || 0}%` }}
                   />
                 </div>
-                <span className="w-14 text-sm font-medium text-gray-700 text-center">
+                <span className="w-14 text-sm font-bold text-cyan-700 text-center">
                   {selectedTask.progress || 0}%
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-cyan-600 mt-1">
                 {selectedTask.progress === 100 ? '已完成' : selectedTask.progress === 0 ? '未开始' : '进行中'}
               </p>
             </div>
 
-            {/* 备注 */}
+            {/* 备注 - 粉色背景 */}
             {(selectedTask.notes || selectedTask.remarks) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">备注</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {selectedTask.notes || selectedTask.remarks}
-                  </p>
-                </div>
+              <div className="bg-pink-50 rounded-lg p-4 border border-pink-100">
+                <h4 className="text-sm font-bold text-pink-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  备注
+                </h4>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {selectedTask.notes || selectedTask.remarks}
+                </p>
               </div>
             )}
 
-            {/* 驳回原因 */}
+            {/* 驳回原因 - 红色背景 */}
             {selectedTask.rejectReason && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">驳回原因</h4>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-700">{selectedTask.rejectReason}</p>
-                </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <h4 className="text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  驳回原因
+                </h4>
+                <p className="text-sm text-red-700">{selectedTask.rejectReason}</p>
               </div>
             )}
 
-            {/* 完成备注 */}
+            {/* 完成备注 - 绿色背景 */}
             {selectedTask.completionRemarks && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">完成备注</h4>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-700">{selectedTask.completionRemarks}</p>
-                </div>
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                <h4 className="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  完成备注
+                </h4>
+                <p className="text-sm text-emerald-700">{selectedTask.completionRemarks}</p>
               </div>
             )}
 
-            {/* 验收备注 */}
+            {/* 验收备注 - 蓝色背景 */}
             {selectedTask.acceptanceRemarks && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">验收备注</h4>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-700">{selectedTask.acceptanceRemarks}</p>
-                </div>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  验收备注
+                </h4>
+                <p className="text-sm text-blue-700">{selectedTask.acceptanceRemarks}</p>
               </div>
             )}
 
-            {/* 操作记录 */}
+            {/* 操作记录 - 石板灰背景 */}
             {(() => {
               const records = selectedTask.operationRecords || [];
               if (records.length === 0) return null;
               return (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
-                  <div className="space-y-4">
+                <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
+                  <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    操作记录
+                  </h4>
+                  <div className="space-y-3">
                     {records.map((record: any, index: number) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                      <div key={index} className="border border-slate-200 rounded-lg p-3 bg-white">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-medium">
                               {record.operationTypeName || record.operationType}
                             </span>
                             <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
                           </div>
-                          <span className="text-xs text-gray-500">{record.operationDate}</span>
+                          <span className="text-xs text-slate-500">{record.operationDate}</span>
                         </div>
                         {record.remarks && (
                           <p className="text-sm text-gray-600 mt-2">{record.remarks}</p>

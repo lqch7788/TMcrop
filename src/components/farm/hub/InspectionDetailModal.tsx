@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { InspectionRecord } from '../../../types';
 import { useInspectionDataStore } from '../../../stores';
-import { X } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InspectionDetailModalProps {
@@ -86,42 +86,48 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
 
         {/* 内容 */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* 巡查信息 */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">巡查信息</h4>
+          {/* 巡查信息 - 蓝色背景 */}
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+            <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              巡查信息
+            </h4>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-gray-500">巡查编号:</span>
+                <span className="text-blue-600">巡查编号:</span>
                 <span className="ml-2 text-gray-900">{inspection.recordCode}</span>
               </div>
               <div>
-                <span className="text-gray-500">巡查类型:</span>
+                <span className="text-blue-600">巡查类型:</span>
                 <span className="ml-2 text-gray-900">{typeLabel}</span>
               </div>
               <div>
-                <span className="text-gray-500">执行区域:</span>
+                <span className="text-blue-600">执行区域:</span>
                 <span className="ml-2 text-gray-900">{inspection.greenhouseName || '-'}</span>
               </div>
               <div>
-                <span className="text-gray-500">巡查人员:</span>
+                <span className="text-blue-600">巡查人员:</span>
                 <span className="ml-2 text-gray-900">{inspection.inspectorName || '-'}</span>
               </div>
               <div className="col-span-2">
-                <span className="text-gray-500">巡查时间:</span>
+                <span className="text-blue-600">巡查时间:</span>
                 <span className="ml-2 text-gray-900">{inspection.checkDate} {inspection.checkTime}</span>
               </div>
               {inspection.batchCode && (
                 <div className="col-span-2">
-                  <span className="text-gray-500">关联批次:</span>
+                  <span className="text-blue-600">关联批次:</span>
                   <span className="ml-2 text-gray-900">{inspection.batchCode}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* 巡查项目检查清单 */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">巡查项目检查清单</h4>
+          {/* 巡查项目检查清单 - 紫色背景 */}
+          <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+            <h4 className="text-sm font-bold text-purple-700 mb-3 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              巡查项目检查清单
+            </h4>
             <div className="space-y-3">
               {(inspection.checkItems || []).map((item: any, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-2 bg-white rounded">
@@ -154,10 +160,13 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
             </div>
           </div>
 
-          {/* 发现问题 */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          {/* 发现问题 - 红色背景 */}
+          <div className="bg-red-50 rounded-lg p-4 border border-red-100">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-gray-700">发现问题 ({issues.length})</h4>
+              <h4 className="text-sm font-bold text-red-700 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                发现问题 ({issues.length})
+              </h4>
               {onReportProblem && (
                 <Button
                   variant="destructive"
@@ -173,7 +182,7 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
             ) : (
               <div className="space-y-2">
                 {issues.map((issue) => (
-                  <div key={issue.id} className="p-3 bg-white rounded border border-gray-200">
+                  <div key={issue.id} className="p-3 bg-white rounded border border-red-200">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-900">{issue.description}</p>
                       <span className={`px-2 py-0.5 text-xs rounded ${
@@ -191,10 +200,13 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
             )}
           </div>
 
-          {/* 现场照片 */}
+          {/* 现场照片 - 青色背景 */}
           {inspection.photos && inspection.photos.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">现场照片</h4>
+            <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-100">
+              <h4 className="text-sm font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                现场照片
+              </h4>
               <div className="grid grid-cols-3 gap-2">
                 {inspection.photos.map((photo, index) => (
                   <div key={index} className="aspect-square bg-gray-200 rounded overflow-hidden">
@@ -210,10 +222,13 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
             </div>
           )}
 
-          {/* 备注 */}
+          {/* 备注 - 灰色背景 */}
           {inspection.remark && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">备注</h4>
+            <div className="bg-gray-100 rounded-lg p-4 border border-gray-200">
+              <h4 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                备注
+              </h4>
               <p className="text-sm text-gray-600 whitespace-pre-wrap">{inspection.remark}</p>
             </div>
           )}

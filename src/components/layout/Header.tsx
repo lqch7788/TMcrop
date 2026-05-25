@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw, ClipboardList
+  Bell, ChevronDown, LogOut, User, Settings, Home, RefreshCw, ClipboardList, ListTodo
 } from 'lucide-react';
 import { useAnnouncementStore } from '../../stores/useAnnouncementStore';
 import { useSystemConfigValue } from '../../hooks/useSystemConfigValue';
@@ -183,6 +183,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                   >
                     <User className="w-4 h-4" />
                     个人中心
+                  </Link>
+                  <Link
+                    to="/my-tasks"
+                    onClick={() => setShowUserMenu(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <ListTodo className="w-4 h-4" />
+                    我的任务
                   </Link>
                   <Link
                     to="/messages"

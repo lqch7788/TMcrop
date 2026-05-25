@@ -3,6 +3,7 @@
  */
 
 import { TaskFilterType } from './types';
+import { BookMarked } from 'lucide-react';
 
 interface TaskFilterTabsProps {
   taskFilter: TaskFilterType;
@@ -77,6 +78,17 @@ export function TaskFilterTabs({
           <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
             {taskCounts.problem}
           </span>
+        </button>
+        <button
+          onClick={() => onFilterChange('worklog')}
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+            taskFilter === 'worklog'
+              ? 'border-purple-500 text-purple-600 bg-purple-50'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <BookMarked className="w-4 h-4" />
+          工作日志
         </button>
       </div>
     </div>

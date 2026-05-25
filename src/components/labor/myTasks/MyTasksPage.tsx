@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { User, BookMarked } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { useProblemDispatch } from '../../../hooks/useProblemDispatch';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
@@ -17,6 +18,7 @@ import { useOperationRecords } from '../../../hooks/useOperationRecords';
 
 // 导入子组件
 import { TaskFilterTabs } from './TaskFilterTabs';
+import { WorkLogPage } from '../worklog/WorkLogPage';
 import { Pagination } from '@/components/ui/Pagination';
 import { TempTaskTableRow } from './TempTaskTableRow';
 import { ProblemTaskTableRow } from './ProblemTaskTableRow';
@@ -757,6 +759,19 @@ export function MyTasksPage() {
 
   return (
     <div className="space-y-4">
+      {/* 页面标题卡片 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
+            <User className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">我的任务</h1>
+            <p className="text-gray-500">查看并完成被分派的任务</p>
+          </div>
+        </div>
+      </div>
+
       {/* 任务类型标签页筛选 */}
       <TaskFilterTabs
         taskFilter={taskFilter}
@@ -764,6 +779,11 @@ export function MyTasksPage() {
         onFilterChange={handleFilterChange}
       />
 
+      {/* 根据筛选类型显示不同内容 */}
+      {taskFilter === 'worklog' ? (
+        <WorkLogPage />
+      ) : (
+      <>
       {/* 任务列表 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
@@ -929,6 +949,8 @@ export function MyTasksPage() {
         onClose={() => { setShowSopModal(false); setSelectedSopTask(null); }}
         task={selectedSopTask}
       />
+        </>
+      )}
     </div>
   );
 }

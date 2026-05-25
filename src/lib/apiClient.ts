@@ -100,6 +100,32 @@ class EnhancedApiClient {
     return this.request<T>({ url, method: 'PATCH', data }, options);
   }
 
+  // ========== 原始响应方法（用于需要检查 HTTP 状态码的场景）==========
+
+  /**
+   * POST 请求，返回原始 Response 对象以便检查状态码
+   */
+  async rawPost(url: string, options?: { body?: string }): Promise<Response> {
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    return this.rawFetch(fullUrl, 'POST', options?.body);
+  }
+
+  /**
+   * PUT 请求，返回原始 Response 对象以便检查状态码
+   */
+  async rawPut(url: string, options?: { body?: string }): Promise<Response> {
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    return this.rawFetch(fullUrl, 'PUT', options?.body);
+  }
+
+  /**
+   * DELETE 请求，返回原始 Response 对象以便检查状态码
+   */
+  async rawDelete(url: string): Promise<Response> {
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    return this.rawFetch(fullUrl, 'DELETE');
+  }
+
   // ========== 网络监听 ==========
 
   private setupNetworkListeners(): void {
@@ -192,6 +218,57 @@ class EnhancedApiClient {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 原始 fetch 方法，返回未封装的 Response 对象
+   * 用于需要检查 HTTP 状态码的场景（如 409 冲突）
+   */
+  private async rawFetch(url: string, method: string, data?: string): Promise<Response> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // 优先从状态管理读取最新token，其次从localStorage
+    let token: string | null = null;
+    try {
+      const { useAuthStore } = await import('../stores/useAuthStore');
+      token = useAuthStore.getState().token;
+    } catch {
+      // 导入失败则尝试从localStorage读取
+    }
+    if (!token) {
+      token = storageGet('token');
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const options: RequestInit = {
+      method,
+      headers,
+    };
+
+    if (data && method !== 'GET') {
+      options.body = data;
+    }
+
+    const timeoutMs = getSystemConfigValueNumber('api.timeout', FALLBACK_TIMEOUT);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    options.signal = controller.signal;
+
+    try {
+      const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`请求超时（${timeoutMs}ms）`);
+      }
+      throw error;
+    }
   }
 }
 

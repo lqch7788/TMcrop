@@ -115,6 +115,25 @@ export default function PlanSummary() {
       ),
     },
     {
+      key: 'scheduleStatus',
+      label: '排班状态',
+      width: '100px',
+      render: (value: string) => {
+        const config: Record<string, { bg: string; text: string; label: string }> = {
+          scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: '已排班' },
+          confirmed: { bg: 'bg-green-100', text: 'text-green-700', label: '已确认' },
+          in_progress: { bg: 'bg-amber-100', text: 'text-amber-700', label: '进行中' },
+          completed: { bg: 'bg-gray-100', text: 'text-gray-700', label: '已完成' },
+        };
+        const style = config[value] || { bg: 'bg-gray-100', text: 'text-gray-500', label: '未排班' };
+        return (
+          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+            {style.label}
+          </span>
+        );
+      },
+    },
+    {
       key: 'status',
       label: '状态',
       width: '100px',

@@ -363,10 +363,10 @@ export function TaskTab({
 
   return (
     <div className="space-y-4">
-      {/* 筛选栏 */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">状态:</span>
+      {/* 筛选栏 - 水平展开不换行 */}
+      <div className="flex flex-nowrap items-center gap-3 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-500 whitespace-nowrap">状态:</span>
           <Select
             value={filters.status}
             onValueChange={(val) => onFilterChange('status', val)}
@@ -383,8 +383,8 @@ export function TaskTab({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">类型:</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-500 whitespace-nowrap">类型:</span>
           <Select
             value={filters.type}
             onValueChange={(val) => onFilterChange('type', val)}
@@ -402,8 +402,8 @@ export function TaskTab({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">执行人:</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-500 whitespace-nowrap">执行人:</span>
           <Select
             value={filters.assignee}
             onValueChange={(val) => onFilterChange('assignee', val)}
@@ -421,8 +421,8 @@ export function TaskTab({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">批次:</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-gray-500 whitespace-nowrap">批次:</span>
           <Select
             value={filters.batchCode}
             onValueChange={(val) => onFilterChange('batchCode', val)}
@@ -441,21 +441,22 @@ export function TaskTab({
           </Select>
         </div>
         <Button
-          variant="ghost"
+          variant="default"
           size="sm"
           onClick={onResetFilters}
+          className="flex-shrink-0"
         >
           重置
         </Button>
         {/* 视图切换 */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setViewMode('list')}
             className={`${
               viewMode === 'list'
-                ? 'bg-white text-emerald-600 shadow-sm'
+                ? 'bg-blue-500 text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -467,7 +468,7 @@ export function TaskTab({
             onClick={() => setViewMode('calendar')}
             className={`${
               viewMode === 'calendar'
-                ? 'bg-white text-emerald-600 shadow-sm'
+                ? 'bg-blue-500 text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >

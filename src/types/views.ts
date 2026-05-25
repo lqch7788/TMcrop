@@ -20,6 +20,7 @@ export interface BatchSummaryRow {
   completionRate: string;      // 完成率
   status: 'planned' | 'in_progress' | 'completed' | 'cancelled' | 'suspended';
   statusClass: 'normal' | 'warning' | 'danger';
+  scheduleStatus?: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'unassigned';  // 排班状态
   // 扩展字段（新增）
   taskCount: number;          // 关联任务数
   completedTaskCount: number;  // 已完成任务数
@@ -144,6 +145,8 @@ export interface DailyWorkSummaryRow {
   workers?: number;          // 作业人数
   status: string;           // 状态
   completionRate: string;    // 完成率
+  scheduleStatus?: string;  // 排班状态（来自 farm_task_schedules）
+  shiftType?: string;       // 班次类型（来自 farm_task_schedules）
 }
 
 /**
