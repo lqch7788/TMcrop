@@ -211,7 +211,16 @@ export const useScheduleStore = create<ScheduleState>()(
           const apiSchedules = await enhancedApiClient.get<ScheduleRecord[]>('/schedules');
 
           if (apiSchedules && Array.isArray(apiSchedules) && apiSchedules.length > 0) {
-            set({ schedules: apiSchedules, isLoading: false });
+            // 规范化API返回的snake_case数据为camelCase
+            const normalizedSchedules = apiSchedules.map((s: any) => ({
+              ...s,
+              staffId: s.staff_id || s.staffId,
+              staffName: s.staff_name || s.staffName,
+              workZone: s.work_zone || s.workZone,
+              checkIn: s.check_in || s.checkIn,
+              checkOut: s.check_out || s.checkOut,
+            }));
+            set({ schedules: normalizedSchedules, isLoading: false });
             return;
           }
 
@@ -252,20 +261,38 @@ export const useScheduleStore = create<ScheduleState>()(
         }));
 
         try {
-          // 尝试调用API
+          // 转换字段为snake_case后发送给API
+          const apiRecord = {
+            staff_id: record.staffId,
+            staff_name: record.staffName,
+            date: record.date,
+            shift: record.shift,
+            work_zone: record.workZone,
+            status: record.status,
+            check_in: record.checkIn,
+            check_out: record.checkOut,
+          };
           const savedRecord = await enhancedApiClient.post<ScheduleRecord>(
             '/schedules',
-            record
+            apiRecord
           );
 
-          // API成功，用真实ID替换临时ID
+          // API成功，用真实ID替换临时ID，并规范化字段
+          const normalizedRecord = {
+            ...savedRecord,
+            staffId: (savedRecord as any).staff_id || (savedRecord as any).staffId,
+            staffName: (savedRecord as any).staff_name || (savedRecord as any).staffName,
+            workZone: (savedRecord as any).work_zone || (savedRecord as any).workZone,
+            checkIn: (savedRecord as any).check_in || (savedRecord as any).checkIn,
+            checkOut: (savedRecord as any).check_out || (savedRecord as any).checkOut,
+          };
           set(state => ({
             schedules: state.schedules.map(s =>
-              s.id === tempId ? savedRecord : s
+              s.id === tempId ? normalizedRecord : s
             ),
           }));
 
-          return savedRecord;
+          return normalizedRecord;
         } catch (error) {
           console.warn('[ScheduleStore] 创建排班API失败，已加入离线队列:', error);
 

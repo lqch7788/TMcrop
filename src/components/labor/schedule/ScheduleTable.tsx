@@ -44,6 +44,15 @@ function getShiftColor(shift: string, configs: ShiftConfig[]): string {
   return config?.color || 'bg-gray-500';
 }
 
+// 规范化排班记录（兼容snake_case和camelCase）
+function normalizeRecord(record: any): ScheduleRecord {
+  return {
+    ...record,
+    staffName: record.staffName || record.staff_name || '',
+    workZone: record.workZone || record.work_zone || '',
+  };
+}
+
 export function ScheduleTable({
   scheduleList,
   shiftConfigs,
@@ -72,6 +81,9 @@ export function ScheduleTable({
   canDelete = true,
   canExport = true,
 }: ScheduleTableProps) {
+  // 规范化数据（兼容snake_case和camelCase）
+  const normalizedList = useMemo(() => scheduleList.map(normalizeRecord), [scheduleList]);
+
   // 筛选状态
   const [searchTerm, setSearchTerm] = useState('');
   const [shiftFilter, setShiftFilter] = useState<string>('all');
@@ -80,15 +92,22 @@ export function ScheduleTable({
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay() + 1);
+    // 使用本地日期方法，避免 toISOString() 的 UTC 时区问题
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
     return {
-      start: weekStart.toISOString().split('T')[0],
-      end: new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      start: formatDate(weekStart),
+      end: formatDate(new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000)),
     };
   });
 
   // 筛选后的数据
   const filteredData = useMemo(() => {
-    return scheduleList.filter(record => {
+    return normalizedList.filter(record => {
       // 搜索
       const matchSearch =
         record.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -274,18 +293,24 @@ export function ScheduleTable({
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
             <DatePicker
-              selected={dateRange.start ? new Date(dateRange.start) : undefined}
+              selected={dateRange.start ? new Date(dateRange.start + 'T00:00:00') : undefined}
               onChange={(date) => {
-                setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }));
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                setDateRange(prev => ({ ...prev, start: `${year}-${month}-${day}` }));
                 onPageChange?.(1);
               }}
               className="w-[140px]"
             />
             <span className="text-gray-400">至</span>
             <DatePicker
-              selected={dateRange.end ? new Date(dateRange.end) : undefined}
+              selected={dateRange.end ? new Date(dateRange.end + 'T00:00:00') : undefined}
               onChange={(date) => {
-                setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }));
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                setDateRange(prev => ({ ...prev, end: `${year}-${month}-${day}` }));
                 onPageChange?.(1);
               }}
               className="w-[140px]"
