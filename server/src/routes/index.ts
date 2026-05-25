@@ -50,6 +50,7 @@ import alertRouter from './alert';
 import materialsRouter from './materials';
 import resignationRouter from './resignation';
 import recruitmentRouter from './recruitment';
+import teamMembersRouter from './teamMembers';
 import contractRenewalRouter from './contractRenewal';
 import salaryBudgetRouter from './salaryBudget';
 import fertilizerRouter from './fertilizer';
@@ -68,6 +69,8 @@ import waterFertilizerRouter from './waterFertilizer';
 import plantSettingsRouter from './plantSettings';
 import projectDebugRouter from './projectDebug';
 import deviceDistributionRouter from './deviceDistribution';
+import farmTaskSchedulesRouter from './farmTaskSchedules';
+import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -205,6 +208,12 @@ router.use('/indicator-evaluations', requireAuth, indicatorEvaluationsRouter);
 // 排班管理路由 - 需要认证
 router.use('/schedules', requireAuth, scheduleRouter);
 
+// 农事任务排班路由 - 需要认证
+router.use('/farm-task-schedules', requireAuth, farmTaskSchedulesRouter);
+
+// 换班申请路由 - 需要认证
+router.use('/farm-task-swap-requests', requireAuth, farmTaskSwapRequestsRouter);
+
 // 考勤管理路由 - 需要认证
 router.use('/attendance', requireAuth, attendanceRouter);
 
@@ -234,6 +243,9 @@ router.use('/resignation', requireAuth, resignationRouter);
 
 // 招聘管理路由 - 需要认证
 router.use('/recruitment', requireAuth, recruitmentRouter);
+
+// 团队成员路由 - 需要认证
+router.use('/team-members', requireAuth, teamMembersRouter);
 
 // 合同续签路由 - 需要认证
 router.use('/contract-renewal', requireAuth, contractRenewalRouter);

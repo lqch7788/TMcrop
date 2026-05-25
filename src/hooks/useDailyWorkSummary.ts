@@ -13,6 +13,7 @@ import type { DailyWorkSummaryRow, DailyWorkStatCard, DailyWorkFilters } from '.
 import { usePersistentWorkLogs } from './usePersistentWorkLogs';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import { useTasks, TASK_STATUS_CONFIG } from './useTasks';
+import { useFarmTaskSchedule } from './useFarmTaskSchedule';
 
 /**
  * 每日工单汇总数据 Hook
@@ -23,6 +24,7 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
   const { workLogs } = usePersistentWorkLogs();
   const { attendance } = usePersistentAttendance();
   const { tasks } = useTasks();
+  const { schedules: farmSchedules } = useFarmTaskSchedule({ date: filters?.date });
 
   // 模拟异步加载
   useEffect(() => {
@@ -98,6 +100,18 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
     });
   }, [summaries, filters?.date, filters?.greenhouse, filters?.taskType]);
 
+  // 在 summaries 聚合时加入排班信息
+  const summariesWithSchedule = useMemo(() => {
+    return filteredSummaries.map(summary => {
+      const schedule = farmSchedules.find(s => s.task_id === summary.taskId);
+      return {
+        ...summary,
+        scheduleStatus: schedule?.status,
+        shiftType: schedule?.shift_type,
+      };
+    });
+  }, [filteredSummaries, farmSchedules]);
+
   // 计算统计卡片数据（基于任务状态）
   const statCards = useMemo((): DailyWorkStatCard[] => {
     const total = summaries.length;
@@ -146,7 +160,7 @@ export function useDailyWorkSummary(filters?: DailyWorkFilters) {
   }, [tasks]);
 
   return {
-    summaries: filteredSummaries,
+    summaries: summariesWithSchedule,
     statCards,
     loading,
     filterOptions,

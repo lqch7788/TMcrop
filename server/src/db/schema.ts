@@ -64,6 +64,32 @@ export function initializeDatabase() {
     )
   `);
 
+  // 为 teams 表添加技能标签字段（幂等操作）
+  try { db.run(`ALTER TABLE teams ADD COLUMN skill_tags TEXT`); } catch (e) {}
+
+  // =====================================
+  // 班组人员关联表
+  // =====================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_members (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      worker_id TEXT NOT NULL,
+      role TEXT DEFAULT 'member',
+      joined_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      version INTEGER DEFAULT 1,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+      FOREIGN KEY (worker_id) REFERENCES employees(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 班组人员关联表索引（幂等操作）
+  db.run(`CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_team_members_worker_id ON team_members(worker_id)`);
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_unique ON team_members(team_id, worker_id)`);
+
   // 仓库表
   db.run(`
     CREATE TABLE IF NOT EXISTS warehouses (
@@ -575,6 +601,62 @@ export function initializeDatabase() {
       tools_remarks TEXT DEFAULT ''
     )
   `);
+
+  // =====================================
+  // 农事任务排班表（与V9.0考勤排班分离）
+  // =====================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS farm_task_schedules (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      worker_id TEXT NOT NULL,
+      worker_name TEXT,
+      team_id TEXT,
+      team_name TEXT,
+      plan_date TEXT NOT NULL,
+      plan_start TEXT,
+      plan_end TEXT,
+      shift_type TEXT DEFAULT 'day',
+      status TEXT DEFAULT 'scheduled',
+      remarks TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      version INTEGER DEFAULT 1,
+      FOREIGN KEY (task_id) REFERENCES farm_tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (worker_id) REFERENCES employees(id)
+    )
+  `);
+
+  // 农事任务排班表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_schedules_task_id ON farm_task_schedules(task_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_schedules_worker_id ON farm_task_schedules(worker_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_schedules_plan_date ON farm_task_schedules(plan_date)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_schedules_date_worker ON farm_task_schedules(plan_date, worker_id)`);
+
+  // =====================================
+  // 农事任务换班申请表
+  // =====================================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS farm_task_swap_requests (
+      id TEXT PRIMARY KEY,
+      schedule_id TEXT NOT NULL,
+      requester_id TEXT NOT NULL,
+      requester_name TEXT,
+      target_worker_id TEXT,
+      target_worker_name TEXT,
+      reason TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      version INTEGER DEFAULT 1,
+      FOREIGN KEY (schedule_id) REFERENCES farm_task_schedules(id) ON DELETE CASCADE,
+      FOREIGN KEY (requester_id) REFERENCES employees(id)
+    )
+  `);
+
+  // 农事任务换班申请表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_swap_requests_schedule ON farm_task_swap_requests(schedule_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_farm_task_swap_requests_status ON farm_task_swap_requests(status)`);
 
   // 创建巡查记录表
   db.run(`
