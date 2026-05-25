@@ -108,11 +108,6 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
       title={`分配工人到 ${team.name}`}
       size="md"
       showFooter={true}
-      headerAction={
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
-        </Button>
-      }
       footer={footer}
     >
       {content}

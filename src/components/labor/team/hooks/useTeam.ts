@@ -37,7 +37,7 @@ export function useTeam(): UseTeamReturn {
     removeWorker: storeRemove,
   } = useTeamManageStore();
 
-  const [filters, setFilters] = useState<TeamFilters>({ keyword: '' });
+  const [filters, setFilters] = useState<TeamFilters>({ name: '', leaderName: '', workZone: '' });
   const [pagination, setPagination] = useState<TeamPagination>({
     currentPage: 1,
     pageSize: 10,
@@ -54,17 +54,18 @@ export function useTeam(): UseTeamReturn {
   // 过滤后的班组
   const filteredTeams = useMemo(() => {
     return storeTeams.filter((team) => {
-      if (filters.keyword) {
-        const keyword = filters.keyword.toLowerCase();
-        return (
-          team.name.toLowerCase().includes(keyword) ||
-          team.leaderName.toLowerCase().includes(keyword) ||
-          team.workZone?.toLowerCase().includes(keyword)
-        );
+      if (filters.name && !team.name.toLowerCase().includes(filters.name.toLowerCase())) {
+        return false;
+      }
+      if (filters.leaderName && !team.leaderName.toLowerCase().includes(filters.leaderName.toLowerCase())) {
+        return false;
+      }
+      if (filters.workZone && !team.workZone?.toLowerCase().includes(filters.workZone.toLowerCase())) {
+        return false;
       }
       return true;
     });
-  }, [storeTeams, filters.keyword]);
+  }, [storeTeams, filters]);
 
   // 分页数据
   const paginatedTeams = useMemo(() => {

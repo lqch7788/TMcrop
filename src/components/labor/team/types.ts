@@ -36,7 +36,9 @@ export interface TeamAssignment {
  * 班组筛选条件
  */
 export interface TeamFilters {
-  keyword: string;
+  name: string;       // 班组名称
+  leaderName: string; // 负责人
+  workZone: string;  // 作业区域
 }
 
 /**
