@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
 import {
   Shield, Plus, Trash2, Save, RefreshCw, Check, X, ChevronRight, ChevronDown,
-  Key, FolderTree, Settings, Search, Building2, ArrowLeft,
+  Key, FolderTree, Settings, Search, Building2,
 } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import type { Process, Action, Role, RoleAuthorityItem, AuthValue } from '@/types/authority';
@@ -77,6 +77,16 @@ export default function AuthorityConfiguration() {
     loadOrganizations();
   }, [selectedAppType]);
 
+  // 默认选择系统管理员
+  useEffect(() => {
+    if (!selectedRoleOid && roles.length > 0) {
+      const adminRole = roles.find((r) => r.name === '系统管理员');
+      if (adminRole) {
+        setSelectedRoleOid(adminRole.oid);
+      }
+    }
+  }, [roles, selectedRoleOid]);
+
   // 加载角色权限
   useEffect(() => {
     if (selectedRoleOid) {
@@ -118,8 +128,8 @@ export default function AuthorityConfiguration() {
     const term = searchTerm.toLowerCase();
     const filter = (nodes: Process[]): Process[] =>
       nodes.reduce<Process[]>((acc, n) => {
-        const nameMatch = n.process_name?.toLowerCase().includes(term);
-        const codeMatch = n.process_code?.toLowerCase().includes(term);
+        const nameMatch = n.name?.toLowerCase().includes(term);
+        const codeMatch = n.aid?.toLowerCase().includes(term);
         const children = n.children ? filter(n.children) : [];
         if (nameMatch || codeMatch || children.length) {
           acc.push({ ...n, children: children.length ? children : n.children });
@@ -218,11 +228,11 @@ export default function AuthorityConfiguration() {
   const openProcessEdit = (proc: Process) => {
     setEditingProcess(proc);
     setProcessForm({
-      name: proc.process_name || '',
-      code: proc.process_code || '',
+      name: proc.name || '',
+      code: proc.aid || '',
       route: (proc as Record<string, unknown>).route as string || '',
       description: proc.description || '',
-      parentOid: proc.parent_oid || '',
+      parentOid: proc.oidParent || '',
     });
     setShowProcessModal(true);
   };
@@ -277,8 +287,8 @@ export default function AuthorityConfiguration() {
           )}
           <FolderTree className="w-3.5 h-3.5 text-amber-500" />
           <span className="text-sm text-gray-700 flex-1">
-            {node.process_name}
-            <span className="text-xs text-gray-400 font-mono ml-1">（{node.process_code}）</span>
+            {node.name}
+            <span className="text-xs text-gray-400 font-mono ml-1">（{node.aid}）</span>
           </span>
           <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => openProcessAdd(node.oid)} className="p-1 text-gray-400 hover:text-green-600" title="新增子工序">
@@ -312,8 +322,8 @@ export default function AuthorityConfiguration() {
     // 展平并筛选
     const flatList = allProcesses.filter((p) => {
       if (!searchTerm) return true;
-      return p.process_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             p.process_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      return p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             p.aid?.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     if (flatList.length === 0) {
@@ -336,22 +346,22 @@ export default function AuthorityConfiguration() {
           </thead>
           <tbody>
             {flatList.map((proc) => (
-              <tr key={proc.oid} className="border-b border-gray-100 hover:bg-blue-50">
-                <td className="py-1.5 px-3 text-gray-700">{proc.process_name}</td>
-                <td className="py-1.5 px-3 text-xs text-gray-400 font-mono">{proc.process_code}</td>
+              <tr key={proc.oid} className="border-b border-gray-300 hover:bg-blue-50">
+                <td className="py-1.5 px-3 text-gray-700">{proc.name}</td>
+                <td className="py-1.5 px-3 text-xs text-gray-400 font-mono">{proc.aid}</td>
                 {ACTION_LIST.map((act) => {
                   const val = getAuthValue(proc.oid, act.code);
                   return (
                     <td key={act.code} className="text-center py-1.5 px-2">
                       <button
                         onClick={() => toggleAuthority(proc.oid, act.code)}
-                        className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                        className={`w-7 h-7 rounded border flex items-center justify-center transition-colors font-bold text-base ${
                           val === 1
-                            ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
-                            : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
+                            ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50'
+                            : 'border-gray-300 text-red-500 hover:bg-red-50'
                         }`}
                       >
-                        {val === 1 ? <Check className="w-3.5 h-3.5" /> : <X className="w-3 h-3" />}
+                        {val === 1 ? '✓' : '✗'}
                       </button>
                     </td>
                   );
@@ -367,35 +377,13 @@ export default function AuthorityConfiguration() {
   // ========== 主渲染 ==========
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/settings"
-              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-              title="返回系统设置"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">权限配置</h1>
-              <p className="text-gray-500">工序管理 · 角色权限矩阵 · 数据权限</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* 工具栏：标题 + 内部Tab */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
           <button
             onClick={() => setActiveTab('authority')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+            className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
               activeTab === 'authority' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -403,7 +391,7 @@ export default function AuthorityConfiguration() {
           </button>
           <button
             onClick={() => setActiveTab('processes')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+            className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
               activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
             }`}
           >

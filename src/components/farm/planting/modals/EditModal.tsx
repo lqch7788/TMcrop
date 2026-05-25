@@ -8,7 +8,6 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
-import { CropVarietyOption } from '../../../../types/cropVariety';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '../../../ui/input';
@@ -20,7 +19,6 @@ interface EditModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   record: Planting;
-  cropVarietyOptions: CropVarietyOption[];
   areas: Array<{ value: string; label: string; parent?: string }>;
 }
 
@@ -29,7 +27,6 @@ export function EditModal({
   onClose,
   onSuccess,
   record,
-  cropVarietyOptions,
   areas
 }: EditModalProps) {
   const [formData, setFormData] = useState({

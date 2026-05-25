@@ -242,7 +242,19 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const data = await authorityService.getProcesses(params);
-      set({ processes: data });
+      // 字段映射：后端 parent_oid → oidParent, process_code → aid, process_name → name
+      const normalize = (p: any): Process => ({
+        oid: p.oid,
+        oidParent: p.parent_oid || null,
+        aid: p.process_code || p.aid || '',
+        name: p.process_name || p.name || '',
+        appType: p.app_type || p.appType,
+        hidden: p.is_hidden === 1 || p.hidden,
+        sortNumber: p.sort_order || p.sortNumber,
+        status: p.status,
+        children: p.children?.map(normalize),
+      });
+      set({ processes: Array.isArray(data) ? data.map(normalize) : [] });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '加载工序失败' });
     } finally {

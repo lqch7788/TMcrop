@@ -6,7 +6,6 @@
 import { useState, useEffect } from 'react';
 import { useDragResize } from './useDragResize';
 import {
-  Shield,
   Plus,
   Edit,
   Trash2,
@@ -14,7 +13,6 @@ import {
   RefreshCw,
   X,
   Save,
-  ArrowLeft,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { useOrganizationStore } from '@/stores';
@@ -106,29 +104,7 @@ export default function RoleManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <a
-              href="/settings"
-              className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-              title="返回系统设置"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </a>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">角色管理</h1>
-              <p className="text-gray-500">管理系统角色和权限配置</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* 工具栏 */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{roles.length} 个角色</span>
