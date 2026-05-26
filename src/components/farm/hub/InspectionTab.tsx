@@ -205,9 +205,20 @@ export function InspectionTab({
   }, [fetchRecords]);
 
   // 本地巡查记录状态：从 prop 初始化，prop 变化时同步
-  const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(inspections);
+  // 使用 useMemo 确保新记录排在前面（按 create_time 降序）
+  const [inspectionRecords, setInspectionRecords] = useState<InspectionRecord[]>(() => {
+    return inspections.sort((a, b) =>
+      new Date(b.createTime || b.create_time || 0).getTime() -
+      new Date(a.createTime || a.create_time || 0).getTime()
+    );
+  });
   useEffect(() => {
-    setInspectionRecords(inspections);
+    // 将新的 inspections 排序后更新到本地状态
+    const sortedInspections = [...inspections].sort((a, b) =>
+      new Date(b.createTime || b.create_time || 0).getTime() -
+      new Date(a.createTime || a.create_time || 0).getTime()
+    );
+    setInspectionRecords(sortedInspections);
   }, [inspections]);
 
   // 问题相关 Hook (V2.0: API 数据层)
@@ -668,12 +679,18 @@ export function InspectionTab({
       problemId: newProblemId,
     };
 
-    // 更新本地状态
-    const updatedRecords = [record, ...inspectionRecords];
-    setInspectionRecords(updatedRecords);
-    // 持久化到后端（通过 Zustand Store）
-    createStoreRecord(record);
+    // 先关闭弹窗，让用户看到反馈
     handleCloseCreateModal();
+
+    // 持久化到后端（通过 Zustand Store），等待完成
+    createStoreRecord(record)
+      .then(() => {
+        console.log('[InspectionTab] 巡查记录创建成功，重新加载数据');
+        fetchRecords();
+      })
+      .catch((error) => {
+        console.error('[InspectionTab] 巡查记录创建失败:', error);
+      });
   };
 
   // 导出处理

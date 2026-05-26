@@ -165,8 +165,11 @@ export function InspectionTable({
   };
 
   // 是否显示验收按钮（待验收状态才显示）
+  // 支持多种验收状态值
   const canAccept = (problem: ProblemEntry | undefined): boolean => {
-    return problem?.status === '待验收';
+    if (!problem) return false;
+    const acceptStatuses = ['待验收', 'waiting_acceptance', 'waitingAcceptance', 'pending_acceptance', 'pendingAcceptance'];
+    return acceptStatuses.includes(problem.status);
   };
 
   return (
@@ -403,6 +406,26 @@ export function InspectionTable({
                 <td className="px-4 py-3 text-center whitespace-nowrap">
                   {(() => {
                     const problem = getProblemForRecord(record);
+                    // 状态映射表（全部中文）
+                    const statusMap: Record<string, string> = {
+                      '待处理': '待处理',
+                      '处理中': '处理中',
+                      '待验收': '待验收',
+                      '已处理': '已处理',
+                      'pending': '待处理',
+                      'processing': '处理中',
+                      'waiting_acceptance': '待验收',
+                      'waitingAcceptance': '待验收',
+                      'pending_acceptance': '待验收',
+                      'pendingAcceptance': '待验收',
+                      'resolved': '已解决',
+                      'completed': '已完成',
+                      'completed_success': '已完成',
+                      'completedSuccess': '已完成',
+                    };
+                    const status = problem?.status;
+                    const displayStatus = status ? (statusMap[status] || status) : '';
+
                     if (canAccept(problem)) {
                       return (
                         <Button
@@ -414,11 +437,11 @@ export function InspectionTable({
                         </Button>
                       );
                     }
-                    if (problem && problem.status !== '已处理') {
-                      return <span className="text-xs text-blue-500 font-medium">{problem.status}</span>;
+                    if (status && displayStatus && displayStatus !== '已处理') {
+                      return <span className="text-xs text-blue-500 font-medium">{displayStatus}</span>;
                     }
-                    if (problem?.status === '已处理') {
-                      return <span className="text-xs text-green-500 font-medium">{problem.status}</span>;
+                    if (status === '已处理') {
+                      return <span className="text-xs text-green-500 font-medium">已处理</span>;
                     }
                     return <span className="text-gray-400 text-xs">-</span>;
                   })()}

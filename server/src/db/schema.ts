@@ -1240,6 +1240,23 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // 添加巡查记录的扩展字段（V2.1 数据层完善）
+  const inspectionColumns = [
+    'crop_name', 'batch_id', 'batch_code',
+    'equipment_id', 'equipment_name', 'infrastructure_id', 'infrastructure_name',
+    'plant_height REAL DEFAULT 0', 'leaf_count INTEGER DEFAULT 0', 'duration INTEGER DEFAULT 0',
+    'weather', 'temperature REAL DEFAULT 0', 'humidity REAL DEFAULT 0', 'crop_status',
+    'issue_categories', 'issue_presets', 'issue_photos',
+    'problem_id', 'remarks',
+    'air_temperature REAL DEFAULT 0', 'air_humidity REAL DEFAULT 0',
+    'light_intensity REAL DEFAULT 0', 'co2_concentration REAL DEFAULT 0',
+    'soil_temperature REAL DEFAULT 0', 'soil_moisture REAL DEFAULT 0',
+    'soil_ec REAL DEFAULT 0', 'soil_ph REAL DEFAULT 0',
+  ];
+  for (const col of inspectionColumns) {
+    try { db.run(`ALTER TABLE inspections ADD COLUMN ${col}`); } catch (e) {}
+  }
+
   // 为问题记录表添加关联字段
   try { db.run(`ALTER TABLE problems ADD COLUMN greenhouse_id TEXT`); } catch (e) {}
   // 巡查问题流转闭环字段（V2.0 数据层迁移）
