@@ -137,21 +137,93 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-            check_date, check_time, check_result, issue_severity, issue_text, images, status,
-            feedbackUsers } = req.body;
+    const body = req.body;
+
+    // 统一字段名：支持 camelCase 和 snake_case 两种格式
+    const id = body.id;
+    const record_code = body.record_code || body.recordCode;
+    const inspection_type = body.inspection_type || body.inspectionType;
+    const inspector_id = body.inspector_id || body.inspectorId;
+    const inspector_name = body.inspector_name || body.inspectorName;
+    const greenhouse_name = body.greenhouse_name || body.greenhouseName;
+    const check_date = body.check_date || body.checkDate;
+    const check_time = body.check_time || body.checkTime;
+    const check_result = body.check_result || body.checkResult;
+    const issue_severity = body.issue_severity || body.issueSeverity;
+    const issue_text = body.issue_text || body.issueText;
+    const images = body.images;
+    const status = body.status || 'pending';
+    const feedbackUsers = body.feedbackUsers || body.feedback_users;
+    const crop_name = body.crop_name || body.cropName || '';
+    const batch_id = body.batch_id || body.batchId || '';
+    const batch_code = body.batch_code || body.batchCode || '';
+    const equipment_id = body.equipment_id || body.equipmentId || '';
+    const equipment_name = body.equipment_name || body.equipmentName || '';
+    const infrastructure_id = body.infrastructure_id || body.infrastructureId || '';
+    const infrastructure_name = body.infrastructure_name || body.infrastructureName || '';
+    const plant_height = body.plant_height ?? body.plantHeight ?? 0;
+    const leaf_count = body.leaf_count ?? body.leafCount ?? 0;
+    const duration = body.duration ?? 0;
+    const weather = body.weather || '';
+    const temperature = body.temperature ?? 0;
+    const humidity = body.humidity ?? 0;
+    const crop_status = body.crop_status || body.cropStatus || '';
+    const issue_categories = body.issue_categories || body.issueCategories || [];
+    const issue_presets = body.issue_presets || body.issuePresets || [];
+    const issue_photos = body.issue_photos || body.issuePhotos || [];
+    const problem_id = body.problem_id ?? body.problemId ?? null;
+    const remarks = body.remarks || '';
+    const air_temperature = body.air_temperature ?? body.airTemperature ?? 0;
+    const air_humidity = body.air_humidity ?? body.airHumidity ?? 0;
+    const light_intensity = body.light_intensity ?? body.lightIntensity ?? 0;
+    const co2_concentration = body.co2_concentration ?? body.co2Concentration ?? 0;
+    const soil_temperature = body.soil_temperature ?? body.soilTemperature ?? 0;
+    const soil_moisture = body.soil_moisture ?? body.soilMoisture ?? 0;
+    const soil_ec = body.soil_ec ?? body.soilEc ?? 0;
+    const soil_ph = body.soil_ph ?? body.soilPh ?? 0;
 
     const newId = id || `INS${Date.now()}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO inspections (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-        check_date, check_time, check_result, issue_severity, issue_text, images, status, feedback_users, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-        check_date, check_time, check_result, issue_severity, issue_text, images, status || 'pending',
-        feedbackUsers ? JSON.stringify(feedbackUsers) : null, now, now]);
+      INSERT INTO inspections (
+        id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
+        check_date, check_time, check_result, issue_severity, issue_text, images, status,
+        feedback_users, crop_name, batch_id, batch_code,
+        equipment_id, equipment_name, infrastructure_id, infrastructure_name,
+        plant_height, leaf_count, duration,
+        weather, temperature, humidity, crop_status,
+        issue_categories, issue_presets, issue_photos,
+        problem_id, remarks,
+        air_temperature, air_humidity, light_intensity, co2_concentration,
+        soil_temperature, soil_moisture, soil_ec, soil_ph,
+        create_time, update_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      newId, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
+      check_date, check_time, check_result, issue_severity, issue_text, images, status,
+      feedbackUsers ? JSON.stringify(feedbackUsers) : null,
+      crop_name,
+      batch_id, batch_code,
+      equipment_id, equipment_name,
+      infrastructure_id, infrastructure_name,
+      plant_height, leaf_count, duration,
+      weather, temperature, humidity, crop_status,
+      JSON.stringify(issue_categories),
+      JSON.stringify(issue_presets),
+      JSON.stringify(issue_photos),
+      problem_id, remarks,
+      air_temperature,
+      air_humidity,
+      light_intensity,
+      co2_concentration,
+      soil_temperature,
+      soil_moisture,
+      soil_ec,
+      soil_ph,
+      now, now
+    ]);
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });

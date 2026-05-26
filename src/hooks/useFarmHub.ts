@@ -349,45 +349,41 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   }, [tasks, problems, inspections]);
 
   // 加载其他数据（问题、巡查、操作记录）
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
 
     // 从 Zustand Store 加载数据（Store 内部处理 API → IndexedDB → localStorage 降级）
-    const loadFromLocal = () => {
-      try {
-        // 问题数据：从 useProblemStore 获取
-        const storeProblems = useProblemStore.getState().problems;
-        if (storeProblems.length > 0) {
-          setProblems(prev => {
-            const existingIds = new Set(prev.map(p => String(p.id)));
-            const newRecords = storeProblems.filter(p => !existingIds.has(String(p.id)));
-            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
-          });
-        }
+    try {
+      console.log('[useFarmHub] loadData 开始 - 步骤1: 调用 fetchRecords');
+      // 等待 fetchRecords 完成（确保 Store 有最新数据）
+      await useInspectionDataStore.getState().fetchRecords();
+      console.log('[useFarmHub] loadData - fetchRecords 完成，当前 Store 有', useInspectionDataStore.getState().records.length, '条记录');
 
-        // 巡查数据：从 useInspectionDataStore 获取
-        const storeInspections = useInspectionDataStore.getState().records;
-        if (storeInspections.length > 0) {
-          setInspections(prev => {
-            const existingIds = new Set(prev.map(r => r.id));
-            const newRecords = storeInspections
-              .map((r: Record<string, unknown>) => normalizeInspectionRecord(r as InspectionRecord))
-              .filter((r: InspectionRecord) => !existingIds.has(r.id));
-            return newRecords.length > 0 ? [...prev, ...newRecords] : prev;
-          });
-        }
+      await useProblemStore.getState().fetchProblems();
+      console.log('[useFarmHub] loadData - fetchProblems 完成');
 
-        // 操作记录从 localStorage 读取（日志类数据，非核心业务）
-        const storedRecords = localStorage.getItem(STORAGE_KEYS.OPERATION_RECORDS);
-        if (storedRecords) {
-          const parsed = JSON.parse(storedRecords);
-          setOperationRecords(Array.isArray(parsed) ? parsed : []);
-        }
-      } catch (error) {
-        // 加载数据失败
-      } finally {
-        setIsLoading(false);
+      // 问题数据：从 useProblemStore 获取
+      const storeProblems = useProblemStore.getState().problems;
+      setProblems(storeProblems.length > 0 ? storeProblems : []);
+
+      // 巡查数据：从 useInspectionDataStore 获取（直接替换，不合并）
+      const storeInspections = useInspectionDataStore.getState().records;
+      console.log('[useFarmHub] loadData - 从 Store 获取巡查记录:', storeInspections.length, '条');
+      const normalizedInspections = storeInspections.map((r: Record<string, unknown>) => normalizeInspectionRecord(r as InspectionRecord));
+      setInspections(normalizedInspections);
+      console.log('[useFarmHub] loadData - 设置 inspections:', normalizedInspections.length, '条');
+
+      // 操作记录从 localStorage 读取（日志类数据，非核心业务）
+      const storedRecords = localStorage.getItem(STORAGE_KEYS.OPERATION_RECORDS);
+      if (storedRecords) {
+        const parsed = JSON.parse(storedRecords);
+        setOperationRecords(Array.isArray(parsed) ? parsed : []);
       }
+    } catch (error) {
+      console.error('[useFarmHub] loadData 失败:', error);
+    } finally {
+      setIsLoading(false);
+      console.log('[useFarmHub] loadData 完成');
 
       // 从后端 API 拉取操作日志（数据库持久化数据）
       getOperationLogs({ limit: 100 }).then(result => {
@@ -408,15 +404,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         // API 不可用时静默降级
       });
       setRefreshKey(k => k + 1);
-    };
-
-    // 触发Store加载API数据，完成后合并本地
-    Promise.allSettled([
-      useProblemStore.getState().fetchProblems(),
-      useInspectionDataStore.getState().fetchRecords(),
-    ]).finally(() => {
-      loadFromLocal();
-    });
+    }
   }, []);
 
   // 强制刷新任务列表

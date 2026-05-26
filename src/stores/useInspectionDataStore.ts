@@ -113,28 +113,35 @@ export const useInspectionDataStore = create<InspectionDataState>()(
           }
           const query = params.toString();
           const url = `/inspections${query ? `?${query}` : ''}`;
+          console.log('[InspectionDataStore] fetchRecords 请求:', url);
           const response = await enhancedApiClient.get<{ success: boolean; data: InspectionData[] }>(url);
+          console.log('[InspectionDataStore] fetchRecords 原始响应:', JSON.stringify(response).substring(0, 500));
           // enhancedApiClient 已提取 .data，response 即为实际数据数组
           const data = Array.isArray(response) ? response : [];
+          console.log('[InspectionDataStore] fetchRecords 加载记录数:', data.length);
           set({ records: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[InspectionDataStore] API获取失败:', error);
+          console.error('[InspectionDataStore] API获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
 
       createRecord: async (record) => {
         try {
+          console.log('[InspectionDataStore] createRecord 发送数据:', JSON.stringify(record, null, 2));
           const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
             '/inspections', record
           );
-          const newId = (response as any)?.id || `INS${Date.now()}`;
+          console.log('[InspectionDataStore] createRecord 响应:', response);
+          // 从响应中提取 ID
+          const newId = (response as { id?: string })?.id || (response as { data?: { id?: string } })?.data?.id || `INS${Date.now()}`;
           const newRecord = { ...record, id: newId } as InspectionData;
           set((state) => ({ records: [newRecord, ...state.records] }));
           return newRecord;
         } catch (error) {
-          console.warn('[InspectionDataStore] 创建失败:', error);
-          return null;
+          console.error('[InspectionDataStore] 创建失败:', error);
+          // 抛出错误，让调用方可以处理
+          throw error;
         }
       },
 
