@@ -10,7 +10,6 @@
  * 统计数据从 material_requests/material_executes 表中聚合计算
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -253,8 +252,7 @@ export function getMonthSummary(month: string, trend: CategoryTrendItem[], categ
 // ==================== 第六步：创建 Store ====================
 
 export const useStatisticsStore = create<StatisticsState>()(
-  persist(
-    (set) => ({
+  (set)=> ({
       materialStatistics: [],
       monthlyStatistics: [],
       categorySummary: [],
@@ -289,15 +287,5 @@ export const useStatisticsStore = create<StatisticsState>()(
           set({ error: (error as Error).message, isLoading: false });
         }
       },
-    }),
-    {
-      name: 'material-statistics-storage',
-      partialize: (state) => ({
-        materialStatistics: state.materialStatistics,
-        monthlyStatistics: state.monthlyStatistics,
-        categorySummary: state.categorySummary,
-        categoryTrend: state.categoryTrend,
-      }),
-    }
-  )
+    })
 );

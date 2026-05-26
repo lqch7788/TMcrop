@@ -954,7 +954,25 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
-  // 36. harvest_records 表添加缺失的列
+  // 36. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
+  const farmTaskColumnsToAdd = [
+    { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },
+    { name: 'source_inspection_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_inspection_id TEXT' },
+    { name: 'source_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_id TEXT' },
+    { name: 'source_code', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_code TEXT' },
+  ];
+  for (const col of farmTaskColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ farm_tasks 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        console.log(`• farm_tasks.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 37. harvest_records 表添加缺失的列
   const harvestColumnsToAdd = [
     { name: 'greenhouse_id', sql: 'ALTER TABLE harvest_records ADD COLUMN greenhouse_id TEXT' },
     { name: 'warehouse_id', sql: 'ALTER TABLE harvest_records ADD COLUMN warehouse_id TEXT' },
@@ -971,6 +989,29 @@ export async function fixMissingSchema(): Promise<void> {
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
         // console.log(`• harvest_records.${col.name}:`, e.message);
+      }
+    }
+  }
+
+  // 38. temp_tasks 表添加状态流转所需列（与农事任务流程一致）
+  const tempTaskColumnsToAdd = [
+    { name: 'start_time', sql: 'ALTER TABLE temp_tasks ADD COLUMN start_time TEXT' },
+    { name: 'accepted_at', sql: 'ALTER TABLE temp_tasks ADD COLUMN accepted_at TEXT' },
+    { name: 'completed_at', sql: 'ALTER TABLE temp_tasks ADD COLUMN completed_at TEXT' },
+    { name: 'version', sql: 'ALTER TABLE temp_tasks ADD COLUMN version INTEGER DEFAULT 1' },
+    { name: 'assigner_id', sql: 'ALTER TABLE temp_tasks ADD COLUMN assigner_id TEXT' },
+    { name: 'assigner_name', sql: 'ALTER TABLE temp_tasks ADD COLUMN assigner_name TEXT' },
+    { name: 'source_type', sql: 'ALTER TABLE temp_tasks ADD COLUMN source_type TEXT DEFAULT \'tempTask\'' },
+    { name: 'dispatch_mode', sql: 'ALTER TABLE temp_tasks ADD COLUMN dispatch_mode TEXT DEFAULT \'tempTask\'' },
+    { name: 'required_feedback', sql: 'ALTER TABLE temp_tasks ADD COLUMN required_feedback TEXT DEFAULT \'[]\'' },
+  ];
+  for (const col of tempTaskColumnsToAdd) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ temp_tasks 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        console.log(`• temp_tasks.${col.name}:`, e.message);
       }
     }
   }

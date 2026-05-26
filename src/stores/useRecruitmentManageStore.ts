@@ -7,8 +7,6 @@
  * 数据流：Store → Hook → 组件（组件不直接读写localStorage）
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 export type RecruitmentStatus = '待审批' | '招聘中' | '已完成' | '已取消';
@@ -235,8 +233,7 @@ interface RecruitmentState {
 }
 
 export const useRecruitmentManageStore = create<RecruitmentState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       recruitments: [],
       isLoading: false,
       error: null,
@@ -265,10 +262,5 @@ export const useRecruitmentManageStore = create<RecruitmentState>()(
           recruitments: state.recruitments.filter((r) => r.id !== id),
         }));
       },
-    }),
-    {
-      name: 'recruitment-manage-storage',
-      partialize: (state) => ({ recruitments: state.recruitments }),
-    }
-  )
+    })
 );

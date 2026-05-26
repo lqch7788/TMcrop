@@ -145,6 +145,9 @@ export interface TempTask {
   // 完成说明
   completionRemarks?: string;
 
+  // 必填反馈
+  requiredFeedback?: string[];
+
   // 驳回次数（第2次驳回后进入pending_reassign状态）
   rejectCount: number;
 
@@ -260,6 +263,12 @@ function mapStoreTaskToTempTask(t: TempTaskData): TempTask {
     rejectReason: t.rejectReason || t.reject_reason,
     acceptanceRemarks: t.acceptanceRemarks || t.acceptance_remarks,
     completionRemarks: t.completionRemarks || t.completion_note,
+    requiredFeedback: (() => {
+      const raw = t.requiredFeedback ?? t.required_feedback;
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
+      return [];
+    })(),
     rejectCount: t.rejectCount ?? 0,
     dueDate: t.dueDate || '',
     acceptedAt: undefined,
@@ -318,18 +327,20 @@ export interface UseTempTasksReturn {
 export function useTempTasks(): UseTempTasksReturn {
   // 从 Zustand Store 获取临时任务数据（替代 localStorage）
   const store = useTempTaskStore();
+  const storeTasks = useTempTaskStore(s => s.tasks);
   const [tempTasks, setTempTasks] = useState<TempTask[]>([]);
 
   // 首次加载时从 Store（后端 API）获取数据
   useEffect(() => {
-    store.fetchTasks().then(() => {
-      const tasks = useTempTaskStore.getState().tasks;
-      if (tasks.length > 0) {
-        setTempTasks(tasks.map(mapStoreTaskToTempTask));
-      }
-    });
+    store.fetchTasks();
   }, []);
 
+  // 订阅 Store 变更，自动同步本地状态（解决跨组件状态不一致问题）
+  useEffect(() => {
+    if (storeTasks.length > 0) {
+      setTempTasks(storeTasks.map(mapStoreTaskToTempTask));
+    }
+  }, [storeTasks]);
   // 操作记录状态
   const [operationRecords, setOperationRecords] = useState<TempTaskOperationRecord[]>([]);
 
@@ -388,6 +399,7 @@ export function useTempTasks(): UseTempTasksReturn {
       workerCount: newTask.workerCount,
       progress: newTask.progress,
       remarks: newTask.remarks,
+      requiredFeedback: newTask.requiredFeedback || [],
       createdAt: newTask.createdAt,
       updatedAt: newTask.updatedAt,
     });
@@ -440,6 +452,7 @@ export function useTempTasks(): UseTempTasksReturn {
       ...(updates.rejectCount !== undefined && { rejectCount: updates.rejectCount }),
       ...(updates.completionRemarks !== undefined && { completionRemarks: updates.completionRemarks }),
       ...(updates.acceptanceRemarks !== undefined && { acceptanceRemarks: updates.acceptanceRemarks }),
+      ...(updates.requiredFeedback !== undefined && { requiredFeedback: updates.requiredFeedback }),
       ...(updates.dueDate !== undefined && { dueDate: updates.dueDate }),
       ...(updates.completedAt !== undefined && { completedAt: updates.completedAt }),
     });
@@ -491,7 +504,10 @@ export function useTempTasks(): UseTempTasksReturn {
   // 提交完成（执行人提交）
   const submitCompletion = useCallback((id: string, hours: number, remarks: string) => {
     const task = tempTasks.find(t => t.id === id);
-    if (!task) return;
+    if (!task) {
+      console.warn('[useTempTasks] submitCompletion: 未找到任务', id);
+      return;
+    }
 
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];
@@ -526,8 +542,11 @@ export function useTempTasks(): UseTempTasksReturn {
 
   // 审核通过
   const acceptCompletion = useCallback((id: string, acceptanceRemarks?: string) => {
-    const task = tempTasks.find(t => t.id === id);
-    if (!task) return;
+    const task = tempTasks.find(t => t.id === id || t.taskCode === id);
+    if (!task) {
+      console.warn('[useTempTasks] acceptCompletion: 未找到任务', id, '当前任务IDs:', tempTasks.map(t => t.id));
+      return;
+    }
 
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];
@@ -551,14 +570,21 @@ export function useTempTasks(): UseTempTasksReturn {
     };
     saveOperationRecords([record, ...operationRecords]);
 
-    // 更新任务状态
-    updateTempTaskStatus(id, 'completed');
-  }, [tempTasks, operationRecords, saveOperationRecords, updateTempTaskStatus]);
+    // 更新任务状态和验收意见
+    updateTempTask(id, {
+      status: 'completed',
+      completedAt: now.toISOString(),
+      acceptanceRemarks: acceptanceRemarks,
+    });
+  }, [tempTasks, operationRecords, saveOperationRecords, updateTempTask]);
 
   // 审核驳回
   const rejectCompletion = useCallback((id: string, reason: string) => {
-    const task = tempTasks.find(t => t.id === id);
-    if (!task) return;
+    const task = tempTasks.find(t => t.id === id || t.taskCode === id);
+    if (!task) {
+      console.warn('[useTempTasks] rejectCompletion: 未找到任务', id);
+      return;
+    }
 
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];

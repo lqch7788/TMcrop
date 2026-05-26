@@ -154,6 +154,8 @@ export interface TempTask {
   workerCount?: number;
   rejectCount?: number;
   progress?: number;
+  // 必填反馈要求
+  requiredFeedback?: string[];
 }
 
 // 临时任务配置

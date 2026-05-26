@@ -3,9 +3,7 @@
  * 数据获取：从 /api/announcements 获取公告列表
  * 审批联动：审批通过后更新公告状态为已发布
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { enhancedApiClient } from '../lib/apiClient';
+import { create } from 'zustand';import { enhancedApiClient } from '../lib/apiClient';
 
 export interface AnnouncementStatusUpdate {
   announcementId: string;
@@ -67,8 +65,7 @@ interface AnnouncementStore {
 }
 
 export const useAnnouncementStore = create<AnnouncementStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       // 公告数据
       announcements: [],
       isLoading: false,
@@ -118,13 +115,5 @@ export const useAnnouncementStore = create<AnnouncementStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'announcement_store',
-      partialize: (state) => ({
-        announcements: state.announcements,
-        statusUpdates: state.statusUpdates,
-      }),
-    }
-  )
+    })
 );

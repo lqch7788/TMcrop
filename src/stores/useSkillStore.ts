@@ -9,8 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义（与 skill/types.ts 保持一致）==========
 
 export type SkillTag =
@@ -201,8 +199,7 @@ interface SkillState {
 // ========== Store 实现 ==========
 
 export const useSkillStore = create<SkillState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       staffSkills: [],
       trainingRecords: [],
       isLoading: false,
@@ -282,14 +279,5 @@ export const useSkillStore = create<SkillState>()(
         set({ staffSkills: skills, trainingRecords: trainings, isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'skill-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        staffSkills: state.staffSkills,
-        trainingRecords: state.trainingRecords,
-      }),
-    }
-  )
+    })
 );

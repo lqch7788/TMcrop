@@ -8,7 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import { getProcessOidByRoute } from '../lib/processRouteMap';
 
@@ -92,8 +91,7 @@ interface AuthState {
 // ==================== 创建 Store ====================
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       token: null,
       currentUser: null,
       isAuthenticated: false,
@@ -266,17 +264,5 @@ export const useAuthStore = create<AuthState>()(
 
         return allRoutes.filter(route => get().canAccessProcess(route));
       },
-    }),
-    {
-      name: 'auth-data-storage',
-      partialize: (state) => ({
-        token: state.token,
-        currentUser: state.currentUser,
-        isAuthenticated: state.isAuthenticated,
-        isAdmin: state.isAdmin,
-        authorities: state.authorities,
-        roles: state.roles,
-      }),
-    }
-  )
+    })
 );

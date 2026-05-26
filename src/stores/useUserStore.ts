@@ -2,9 +2,7 @@
  * 用户 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getUsers, type User } from '../services/authorityService';
+import { create } from 'zustand';import { getUsers, type User } from '../services/authorityService';
 
 interface UserStore {
   users: User[];
@@ -20,8 +18,7 @@ interface UserStore {
 }
 
 export const useUserStore = create<UserStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       users: [],
       loading: false,
       error: null,
@@ -48,18 +45,7 @@ export const useUserStore = create<UserStore>()(
         set({ lastFetch: null });
         await get().loadUsers();
       },
-    }),
-    {
-      name: 'user_store',
-      partialize: (state) => ({ users: state.users }),
-      // 防御 localStorage 数据损坏：确保 users 总是数组
-      onRehydrateStorage: () => (state) => {
-        if (state && !Array.isArray(state.users)) {
-          state.users = [];
-        }
-      },
-    }
-  )
+    })
 );
 
 // 辅助函数

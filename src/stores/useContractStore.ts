@@ -9,8 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ==================== 类型定义 ====================
 
 /** 合同类型 */
@@ -148,8 +146,7 @@ interface ContractState {
 // ==================== 创建 Store ====================
 
 export const useContractStore = create<ContractState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       items: MOCK_CONTRACTS,
 
       /** 创建合同 */
@@ -226,10 +223,5 @@ export const useContractStore = create<ContractState>()(
         if (daysUntilExpiry <= 30) return '即将到期';
         return '生效中';
       },
-    }),
-    {
-      name: 'contract-data-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

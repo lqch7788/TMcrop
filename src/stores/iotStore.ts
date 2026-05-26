@@ -7,7 +7,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义（camelCase，匹配前端 IoTSensor 格式）==========
@@ -92,8 +91,7 @@ interface IotState {
 // ========== Store 实现 ==========
 
 export const useIotStore = create<IotState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       devices: [],
       selectedDevice: null,
       environmentData: [],
@@ -149,13 +147,7 @@ export const useIotStore = create<IotState>()(
 
       setSelectedDevice: (device) => set({ selectedDevice: device }),
       clearEnvironmentData: () => set({ environmentData: [] }),
-    }),
-    {
-      name: 'iot-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ devices: state.devices, selectedDevice: state.selectedDevice }),
-    }
-  )
+    })
 );
 
 // ========== 辅助函数 ==========

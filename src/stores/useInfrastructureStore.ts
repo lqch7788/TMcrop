@@ -5,8 +5,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 export interface Infrastructure {
@@ -46,8 +44,7 @@ interface InfrastructureState {
 }
 
 export const useInfrastructureStore = create<InfrastructureState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       infrastructures: [],
       isLoading: false,
       error: null,
@@ -78,11 +75,5 @@ export const useInfrastructureStore = create<InfrastructureState>()(
       deleteInfrastructure: (id) => {
         set((s) => ({ infrastructures: s.infrastructures.filter((i) => i.id !== id) }));
       },
-    }),
-    {
-      name: 'infrastructure-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ infrastructures: state.infrastructures }),
-    }
-  )
+    })
 );

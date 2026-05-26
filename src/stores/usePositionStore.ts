@@ -2,9 +2,7 @@
  * 职位 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getPositions, createPosition, updatePosition, deletePosition, type Position } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getPositions, createPosition, updatePosition, deletePosition, type Position } from '../services/apiBasicDataService';
 
 interface PositionStore {
   positions: Position[];
@@ -25,8 +23,7 @@ interface PositionStore {
 }
 
 export const usePositionStore = create<PositionStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       positions: [],
       loading: false,
       error: null,
@@ -70,12 +67,7 @@ export const usePositionStore = create<PositionStore>()(
         set({ lastFetch: null });
         await get().loadPositions();
       },
-    }),
-    {
-      name: 'position_store',
-      partialize: (state) => ({ positions: state.positions }),
-    }
-  )
+    })
 );
 
 // 辅助函数

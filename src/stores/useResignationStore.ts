@@ -8,7 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 第一步：类型定义 ====================
@@ -123,8 +122,7 @@ interface ResignationState {
 // ==================== 第五步：创建 Store ====================
 
 export const useResignationStore = create<ResignationState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       items: [],
       isLoading: false,
       error: null,
@@ -230,10 +228,5 @@ export const useResignationStore = create<ResignationState>()(
           return false;
         }
       },
-    }),
-    {
-      name: 'resignation-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

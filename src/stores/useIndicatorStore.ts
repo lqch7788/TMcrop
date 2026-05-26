@@ -2,10 +2,7 @@
  * 指标状态 Store - Zustand 替代 useIndicatorStore (localStorage + CustomEvent)
  * 用于审批联动：审批通过后更新指标状态
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export interface IndicatorStatusUpdate {
+import { create } from 'zustand';export interface IndicatorStatusUpdate {
   indicatorId: string;
   status: 'draft' | 'pending' | 'published' | 'archived';
   updatedAt: string;
@@ -35,8 +32,7 @@ interface IndicatorStore {
 }
 
 export const useIndicatorStore = create<IndicatorStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       statusUpdates: {},
 
       updateIndicatorStatus: (indicatorId, status, updatedBy) => {
@@ -59,9 +55,5 @@ export const useIndicatorStore = create<IndicatorStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'indicator_status_updates',
-    }
-  )
+    })
 );

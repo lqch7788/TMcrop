@@ -6,7 +6,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { RiskAlert, RiskFilters, AlertLevel } from '../components/labor/risk/types';
 import { AlertTypeNames } from '../components/labor/risk/types';
 
@@ -130,8 +129,7 @@ interface RiskState {
 // ========== Store 实现 ==========
 
 export const useRiskStore = create<RiskState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       alerts: [],
       filters: {},
       isLoading: false,
@@ -177,10 +175,5 @@ export const useRiskStore = create<RiskState>()(
       clearFilters: () => {
         set({ filters: {} });
       },
-    }),
-    {
-      name: 'risk-storage',
-      partialize: (state) => ({ alerts: state.alerts }),
-    }
-  )
+    })
 );

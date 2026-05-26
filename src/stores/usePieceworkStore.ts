@@ -8,8 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义（与 piecework/types.ts 保持一致）==========
 
 export type PieceRateStatus = '待确认' | '已确认' | '已发放';
@@ -98,8 +96,7 @@ interface PieceworkState {
 // ========== Store 实现 ==========
 
 export const usePieceworkStore = create<PieceworkState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       records: [],
       isLoading: false,
       error: null,
@@ -153,11 +150,5 @@ export const usePieceworkStore = create<PieceworkState>()(
         set({ records: seed, isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'piecework-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ records: state.records }),
-    }
-  )
+    })
 );

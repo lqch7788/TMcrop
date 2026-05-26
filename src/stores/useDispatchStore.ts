@@ -8,8 +8,6 @@
  * 匹配算法等业务逻辑保留在Hook层
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 import type { SkillTag } from '../components/labor/skill/types';
@@ -163,8 +161,7 @@ interface DispatchState {
 }
 
 export const useDispatchStore = create<DispatchState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       tasks: [],
       workers: [],
       isLoading: false,
@@ -196,10 +193,5 @@ export const useDispatchStore = create<DispatchState>()(
           workers: state.workers.map((w) => (w.id === id ? { ...w, ...updates } : w)),
         }));
       },
-    }),
-    {
-      name: 'dispatch-storage',
-      partialize: (state) => ({ tasks: state.tasks, workers: state.workers }),
-    }
-  )
+    })
 );

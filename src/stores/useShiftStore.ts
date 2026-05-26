@@ -3,7 +3,6 @@
  * 统一管理班次的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getShifts, createShift, updateShift, deleteShift,
   type Shift,
@@ -23,8 +22,7 @@ interface ShiftStore {
 }
 
 export const useShiftStore = create<ShiftStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       shifts: [],
       loading: false,
       error: null,
@@ -85,10 +83,5 @@ export const useShiftStore = create<ShiftStore>()(
         set({ lastFetch: null });
         await get().loadShifts();
       },
-    }),
-    {
-      name: 'shift_store',
-      partialize: (s) => ({ shifts: s.shifts }),
-    }
-  )
+    })
 );

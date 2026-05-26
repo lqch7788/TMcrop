@@ -2,9 +2,7 @@
  * 仓库 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getWarehouses, createWarehouse, updateWarehouse, deleteWarehouse, type Warehouse } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getWarehouses, createWarehouse, updateWarehouse, deleteWarehouse, type Warehouse } from '../services/apiBasicDataService';
 
 interface WarehouseStore {
   warehouses: Warehouse[];
@@ -25,8 +23,7 @@ interface WarehouseStore {
 }
 
 export const useWarehouseStore = create<WarehouseStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       warehouses: [],
       loading: false,
       error: null,
@@ -72,19 +69,7 @@ export const useWarehouseStore = create<WarehouseStore>()(
         set({ lastFetch: null });
         await get().loadWarehouses();
       },
-    }),
-    {
-      name: 'warehouse_store',
-      partialize: (state) => ({ warehouses: state.warehouses }),
-      merge: (persisted: unknown, current) => {
-        const p = persisted as Partial<WarehouseStore> | null;
-        return {
-          ...current,
-          warehouses: Array.isArray(p?.warehouses) ? p!.warehouses : current.warehouses,
-        };
-      },
-    }
-  )
+    })
 );
 
 // 辅助函数

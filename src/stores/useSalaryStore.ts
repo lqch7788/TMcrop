@@ -8,8 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义（与 salary/types.ts 保持一致）==========
 
 export type SalaryCalcType = '月薪制' | '日薪制' | '时薪制';
@@ -110,8 +108,7 @@ interface SalaryState {
 // ========== Store 实现 ==========
 
 export const useSalaryStore = create<SalaryState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       records: [],
       isLoading: false,
       error: null,
@@ -161,11 +158,5 @@ export const useSalaryStore = create<SalaryState>()(
         set({ records: seed, isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'salary-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ records: state.records }),
-    }
-  )
+    })
 );

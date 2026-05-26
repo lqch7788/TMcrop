@@ -115,8 +115,6 @@ interface FarmTaskState {
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
-  // Actions - 数据迁移（保留原始ID）
-  importLegacyTasks: (tasks: Task[]) => void;
 
   // Actions - 状态更新（快捷方法）
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
@@ -273,32 +271,6 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         await get().updateTask(id, { status });
       },
 
-      // ========== 数据迁移：从旧 localStorage 导入原始任务 ==========
-
-      importLegacyTasks: (legacyTasks) => {
-        const existingIds = new Set(get().tasks.map(t => t.id));
-        const existingCodes = new Set(get().tasks.map(t => t.taskCode));
-
-        // 过滤出不在当前 store 中的任务（保留原始ID和taskCode）
-        const newTasks = legacyTasks.filter(
-          t => !existingIds.has(t.id) && !existingCodes.has(t.taskCode)
-        );
-
-        if (newTasks.length === 0) return;
-
-        console.log(`[FarmTaskStore] 从旧 localStorage 中迁移 ${newTasks.length} 条任务数据`);
-
-        // 直接写入 store 状态（保留原始ID/taskCode/状态）
-        set(state => ({
-          tasks: [...newTasks, ...state.tasks],
-        }));
-
-        // 异步同步到后端 API
-        newTasks.forEach(task => {
-          enhancedApiClient.post('/farm-tasks', task)
-            .catch(() => console.warn('[FarmTaskStore] 迁移任务同步API失败:', task.id));
-        });
-      },
 
       // ========== 筛选 ==========
 
@@ -316,8 +288,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         set({ isLoading: false });
         // 种子数据初始化完成（使用空数据，由 useTasks 填充）
       },
-    }
-  )
+  })
 );
 
 // ========== 辅助函数 ==========

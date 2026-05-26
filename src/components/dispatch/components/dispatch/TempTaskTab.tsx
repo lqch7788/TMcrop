@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../../hooks/useTempTasks';
+import { useTempTaskStore } from '../../../../stores';
 
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../../types/task';
@@ -560,6 +561,157 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
   );
 }
 
+// 验收确认弹窗组件（与农事任务验收流程一致）
+interface VerifyTempTaskModalProps {
+  isOpen: boolean;
+  task: TempTask | null;
+  onConfirm: (remarks?: string) => void;
+  onReject: (reason: string) => void;
+  onClose: () => void;
+}
+
+function VerifyTempTaskModal({ isOpen, task, onConfirm, onReject, onClose }: VerifyTempTaskModalProps) {
+  const [mode, setMode] = useState<'confirm' | 'reject'>('confirm');
+  const [remarks, setRemarks] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+
+  if (!isOpen || !task) return null;
+
+  const handleConfirm = () => {
+    if (mode === 'confirm') {
+      onConfirm(remarks || undefined);
+    } else {
+      if (!rejectReason.trim()) return;
+      onReject(rejectReason);
+    }
+    setRemarks('');
+    setRejectReason('');
+    setMode('confirm');
+  };
+
+  const handleClose = () => {
+    setRemarks('');
+    setRejectReason('');
+    setMode('confirm');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">任务验收</h2>
+            <Button variant="ghost" size="icon" onClick={handleClose}>
+              ×
+            </Button>
+          </div>
+          <div className="p-6 space-y-5">
+            {/* 模式切换 */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMode('confirm')}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  mode === 'confirm'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                验收通过
+              </button>
+              <button
+                onClick={() => setMode('reject')}
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  mode === 'reject'
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                驳回返工
+              </button>
+            </div>
+
+            {/* 任务信息 */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="font-medium text-gray-900">{task.title}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
+                <p>任务编号：{task.taskCode}</p>
+                <p>执行人：{task.assigneeName}</p>
+                <p>任务类型：{task.tempTaskType || '其他'}</p>
+                <p>当前状态：待验收</p>
+              </div>
+            </div>
+
+            {/* 验收通过：备注（选填） */}
+            {mode === 'confirm' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  验收备注 <span className="text-gray-400">(选填)</span>
+                </label>
+                <textarea
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="请输入验收备注..."
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {/* 驳回：原因（必填） */}
+            {mode === 'reject' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  驳回原因 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="请输入驳回原因..."
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            {/* 警示信息 */}
+            <div className={`flex items-start gap-3 p-4 rounded-lg border ${
+              mode === 'confirm'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}>
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">
+                  {mode === 'confirm' ? '确认验收通过后，任务将标记为已完成' : '驳回后任务将返回给执行人重新处理'}
+                </p>
+                <p className="text-sm mt-1 opacity-80">
+                  {mode === 'confirm' ? '此操作不可撤销' : '请填写具体的驳回原因'}
+                </p>
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="secondary" onClick={handleClose}>
+                取消
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={mode === 'reject' && !rejectReason.trim()}
+                className={mode === 'confirm' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}
+              >
+                {mode === 'confirm' ? '确认验收通过' : '确认驳回'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 重新派发弹窗组件
 interface ReassignTaskModalProps {
   isOpen: boolean;
@@ -690,7 +842,7 @@ export const TempTaskTab: React.FC = () => {
   }, [users.length, loadUsers]);
 
   // 使用统一临时任务管理 Hook（数据闭环核心）
-  const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
+  const { tempTasks, addTempTask, submitCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
   const { addTempTaskRecord } = useOperationRecords();
   // 统一任务管理 Hook（用于临时任务同步）
 
@@ -732,6 +884,10 @@ export const TempTaskTab: React.FC = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [withdrawCancelTask, setWithdrawCancelTask] = useState<TempTask | null>(null);
+
+  // 验收弹窗状态（与农事任务验收流程一致）
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyTargetTask, setVerifyTargetTask] = useState<TempTask | null>(null);
 
   // 重新派发弹窗状态
   const [showReassignModal, setShowReassignModal] = useState(false);
@@ -909,27 +1065,84 @@ export const TempTaskTab: React.FC = () => {
     triggerRefresh();
   };
 
-  // 审核通过
+  // 审核通过（打开验收确认弹窗，与农事任务验收流程一致）
   const handleAcceptComplete = (task: TempTask) => {
-    acceptCompletion(task.id);
+    setVerifyTargetTask(task);
+    setShowVerifyModal(true);
+  };
+
+  // 验收确认：通过（同时更新本地状态和 Store，避免 useEffect 异步同步延迟）
+  const handleVerifyConfirm = (remarks?: string) => {
+    if (!verifyTargetTask) return;
+    const now = new Date().toISOString();
+    // 1. 立即更新本地状态（同步，UI 立即响应）
+    updateTempTask(verifyTargetTask.id, {
+      status: 'completed',
+      completedAt: now,
+      acceptanceRemarks: remarks,
+    });
+    // 2. 直接更新 Zustand Store（持久化 + 跨组件同步）
+    useTempTaskStore.getState().updateTask(verifyTargetTask.id, {
+      status: 'completed',
+      completedAt: now,
+      acceptanceRemarks: remarks,
+    });
     // 同步到农事操作记录
     addTempTaskRecord({
       operationType: 'accept_confirm',
       operationTypeName: '审核通过',
       status: 'completed',
       greenhouseId: '',
-      greenhouseName: task.location || '',
-
-      operatorId: task.assignerId,
-      operatorName: task.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
-      sourceId: task.id,
-      sourceCode: task.taskCode,
+      greenhouseName: verifyTargetTask.location || '',
+      operatorId: verifyTargetTask.assignerId,
+      operatorName: verifyTargetTask.assignerName,
+      operationDate: now.split('T')[0],
+      sourceId: verifyTargetTask.id,
+      sourceCode: verifyTargetTask.taskCode,
       progress: 100,
-      remarks: '临时任务审核通过',
+      remarks: remarks || '临时任务审核通过',
     });
-    closeDetailModal();
-    triggerRefresh();
+    setShowVerifyModal(false);
+    setVerifyTargetTask(null);
+  };
+
+  // 验收确认：驳回（同时更新本地状态和 Store，避免 useEffect 异步同步延迟）
+  const handleVerifyReject = (reason: string) => {
+    if (!verifyTargetTask) return;
+    const now = new Date().toISOString();
+    const newRejectCount = (verifyTargetTask.rejectCount || 0) + 1;
+    const newStatus = newRejectCount >= 2 ? 'pending_reassign' : 'in_progress';
+    // 1. 立即更新本地状态（同步，UI 立即响应）
+    updateTempTask(verifyTargetTask.id, {
+      status: newStatus,
+      rejectCount: newRejectCount,
+      rejectReason: reason,
+      progress: 50, // 驳回后重置进度，避免进度条仍显示100%
+    });
+    // 2. 直接更新 Zustand Store（持久化 + 跨组件同步）
+    useTempTaskStore.getState().updateTask(verifyTargetTask.id, {
+      status: newStatus,
+      rejectCount: newRejectCount,
+      rejectReason: reason,
+      progress: 50,
+    });
+    // 同步到农事操作记录
+    addTempTaskRecord({
+      operationType: 'reject',
+      operationTypeName: '审核驳回',
+      status: 'rejected',
+      greenhouseId: '',
+      greenhouseName: verifyTargetTask.location || '',
+      operatorId: verifyTargetTask.assignerId,
+      operatorName: verifyTargetTask.assignerName,
+      operationDate: now.split('T')[0],
+      sourceId: verifyTargetTask.id,
+      sourceCode: verifyTargetTask.taskCode,
+      progress: verifyTargetTask.progress || 0,
+      remarks: reason || '任务被驳回',
+    });
+    setShowVerifyModal(false);
+    setVerifyTargetTask(null);
   };
 
   // 重新派发（驳回2次后）
@@ -1624,6 +1837,18 @@ export const TempTaskTab: React.FC = () => {
         onClose={() => {
           setShowCancelModal(false);
           setWithdrawCancelTask(null);
+        }}
+      />
+
+      {/* 验收确认弹窗（与农事任务验收流程一致） */}
+      <VerifyTempTaskModal
+        isOpen={showVerifyModal}
+        task={verifyTargetTask}
+        onConfirm={handleVerifyConfirm}
+        onReject={handleVerifyReject}
+        onClose={() => {
+          setShowVerifyModal(false);
+          setVerifyTargetTask(null);
         }}
       />
 

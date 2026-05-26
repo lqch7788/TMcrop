@@ -1,15 +1,13 @@
 /**
- * 审批中心 Zustand Store (V2.0 - 对齐架构标准)
+ * 审批中心 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
- * 数据流：Store → 组件 (组件不直接读写 localStorage)
- *
- * 对接后端: /api/approvals
- * 参考样板: useTempTaskStore.ts / useMaterialRequestDataStore.ts
+ * 数据流：enhancedApiClient → API → DB（无本地降级）
+ * 组件不直接读写 localStorage，统一通过 Zustand Store 层管理数据。
  */
 
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { useAuthStore } from './useAuthStore';
 import {
   Approval,
   ApprovalType,
@@ -311,8 +309,8 @@ export const useApprovalStore = create<ApprovalStore>()(
       // ========== 审批操作（通过 API + 联动） ==========
 
       approve: async (id, comment) => {
-        const approverId = localStorage.getItem('userId') || '';
-        const approverName = localStorage.getItem('username') || '系统';
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
           const response = await enhancedApiClient.patch<{ success: boolean; data?: unknown; error?: string }>(
             `${API_BASE}/${id}/action`,
@@ -337,8 +335,8 @@ export const useApprovalStore = create<ApprovalStore>()(
       },
 
       reject: async (id, comment) => {
-        const approverId = localStorage.getItem('userId') || '';
-        const approverName = localStorage.getItem('username') || '系统';
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
           const response = await enhancedApiClient.patch<{ success: boolean; data?: unknown; error?: string }>(
             `${API_BASE}/${id}/action`,
@@ -361,8 +359,8 @@ export const useApprovalStore = create<ApprovalStore>()(
       },
 
       cancel: async (id, reason) => {
-        const approverId = localStorage.getItem('userId') || '';
-        const approverName = localStorage.getItem('username') || '系统';
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
           const response = await enhancedApiClient.patch<{ success: boolean }>(
             `${API_BASE}/${id}/action`,
@@ -383,8 +381,8 @@ export const useApprovalStore = create<ApprovalStore>()(
       },
 
       batchApprove: async (ids, comment) => {
-        const approverId = localStorage.getItem('userId') || '';
-        const approverName = localStorage.getItem('username') || '系统';
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
           const promises = ids.map(id =>
             enhancedApiClient.patch(`${API_BASE}/${id}/action`, {
@@ -400,8 +398,8 @@ export const useApprovalStore = create<ApprovalStore>()(
       },
 
       batchReject: async (ids, comment) => {
-        const approverId = localStorage.getItem('userId') || '';
-        const approverName = localStorage.getItem('username') || '系统';
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
           const promises = ids.map(id =>
             enhancedApiClient.patch(`${API_BASE}/${id}/action`, {

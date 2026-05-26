@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ==================== 类型定义（与组件兼容） ====================
@@ -175,8 +174,7 @@ interface SupplierCodeRuleState {
 }
 
 export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       categories: defaultCategories,
       isLoading: false,
       error: null,
@@ -410,10 +408,5 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
 
       // ---------- 重置为默认值 ----------
       resetToDefault: () => set({ categories: defaultCategories }),
-    }),
-    {
-      name: 'supplier-code-rule-storage',
-      partialize: (state) => ({ categories: state.categories, migratedToApi: state.migratedToApi }),
-    }
-  )
+    })
 );
