@@ -2,9 +2,7 @@
  * 区域 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getZones, createZone, updateZone, deleteZone, type Zone } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getZones, createZone, updateZone, deleteZone, type Zone } from '../services/apiBasicDataService';
 
 interface ZoneStore {
   zones: Zone[];
@@ -25,8 +23,7 @@ interface ZoneStore {
 }
 
 export const useZoneStore = create<ZoneStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       zones: [],
       loading: false,
       error: null,
@@ -70,12 +67,7 @@ export const useZoneStore = create<ZoneStore>()(
         set({ lastFetch: null });
         await get().loadZones();
       },
-    }),
-    {
-      name: 'zone_store',
-      partialize: (state) => ({ zones: state.zones }),
-    }
-  )
+    })
 );
 
 // 辅助函数

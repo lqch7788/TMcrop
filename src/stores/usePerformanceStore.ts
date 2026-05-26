@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { PerformanceRecord, PerformanceFilters } from '../components/labor/performance/types';
 
 // ========== Mock 种子数据 ==========
@@ -90,8 +89,7 @@ interface PerformanceState {
 // ========== Store 实现 ==========
 
 export const usePerformanceStore = create<PerformanceState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       items: [],
       filters: { month: '', department: '', keyword: '' },
       isLoading: false,
@@ -141,10 +139,5 @@ export const usePerformanceStore = create<PerformanceState>()(
       resetFilters: () => {
         set({ filters: { month: '', department: '', keyword: '' } });
       },
-    }),
-    {
-      name: 'performance-storage',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

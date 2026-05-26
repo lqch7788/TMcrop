@@ -5,8 +5,6 @@
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ==================== 类型定义 ====================
 
 /** 工作日志数据 */
@@ -77,8 +75,7 @@ interface WorkLogState {
 // ==================== 创建 Store ====================
 
 export const useWorkLogStore = create<WorkLogState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       workLogs: SEED_DATA,
       filters: { date: '', worker: '', greenhouse: '全部' },
 
@@ -133,12 +130,7 @@ export const useWorkLogStore = create<WorkLogState>()(
           filters: { ...state.filters, ...newFilters },
         }));
       },
-    }),
-    {
-      name: 'worklog-storage',
-      partialize: (state) => ({ workLogs: state.workLogs }),
-    }
-  )
+    })
 );
 
 // ==================== 辅助函数 ====================

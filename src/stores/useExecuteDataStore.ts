@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 import type { MaterialExecuteRecord } from '@/types/materialReceiving';
 
@@ -92,8 +91,7 @@ interface ExecuteDataState {
 // ==================== 第四步：创建 Store ====================
 
 export const useExecuteDataStore = create<ExecuteDataState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       items: [],   // 初始空数组，通过 fetchItems() 从 API 加载
       isLoading: false,
       error: null,
@@ -197,11 +195,5 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         const existing = get().items.filter((i) => i.code.startsWith(prefix));
         return `${prefix}${String(existing.length + 1).padStart(3, '0')}`;
       },
-    }),
-    {
-      name: 'yuanxingtu-execute-data',
-      version: 2,
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

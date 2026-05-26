@@ -605,6 +605,12 @@ export function TempTaskPage() {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignTask, setReassignTask] = useState<TempTask | null>(null);
 
+  // 验收弹窗状态
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyTask, setVerifyTask] = useState<TempTask | null>(null);
+  const [verifyRemarks, setVerifyRemarks] = useState('');
+  const [verifyRejectReason, setVerifyRejectReason] = useState('');
+
   // 派发模式状态
   const [dispatchMode, setDispatchMode] = useState<'manual' | 'ai_assisted'>('manual');
 
@@ -779,25 +785,62 @@ export function TempTaskPage() {
     window.location.reload();
   };
 
-  // 审核通过
+  // 打开验收弹窗（替代直接审核通过）
   const handleAcceptComplete = (task: TempTask) => {
-    acceptCompletion(task.id);
+    setVerifyTask(task);
+    setVerifyRemarks('');
+    setVerifyRejectReason('');
+    setShowVerifyModal(true);
+  };
+
+  // 验收通过确认
+  const handleVerifyAccept = () => {
+    if (!verifyTask) return;
+    acceptCompletion(verifyTask.id, verifyRemarks);
     // 同步到农事操作记录
     addTempTaskRecord({
       operationType: 'accept_confirm',
       operationTypeName: '审核通过',
       status: 'completed',
       greenhouseId: '',
-      greenhouseName: task.location || '',
-      
-      operatorId: task.assignerId,
-      operatorName: task.assignerName,
+      greenhouseName: verifyTask.location || '',
+
+      operatorId: verifyTask.assignerId,
+      operatorName: verifyTask.assignerName,
       operationDate: new Date().toISOString().split('T')[0],
-      sourceId: task.id,
-      sourceCode: task.taskCode,
+      sourceId: verifyTask.id,
+      sourceCode: verifyTask.taskCode,
       progress: 100,
-      remarks: '临时任务审核通过',
+      remarks: verifyRemarks || '临时任务审核通过',
     });
+    setShowVerifyModal(false);
+    setVerifyTask(null);
+    closeDetailModal();
+    window.location.reload();
+  };
+
+  // 验收驳回确认
+  const handleVerifyReject = () => {
+    if (!verifyTask || !verifyRejectReason.trim()) return;
+    rejectCompletion(verifyTask.id, verifyRejectReason);
+    // 同步到农事操作记录
+    addTempTaskRecord({
+      operationType: 'reject',
+      operationTypeName: '审核驳回',
+      status: 'rejected',
+      greenhouseId: '',
+      greenhouseName: verifyTask.location || '',
+
+      operatorId: verifyTask.assignerId,
+      operatorName: verifyTask.assignerName,
+      operationDate: new Date().toISOString().split('T')[0],
+      sourceId: verifyTask.id,
+      sourceCode: verifyTask.taskCode,
+      progress: verifyTask.progress || 0,
+      remarks: verifyRejectReason || '任务被驳回',
+    });
+    setShowVerifyModal(false);
+    setVerifyTask(null);
     closeDetailModal();
     window.location.reload();
   };
@@ -1514,6 +1557,83 @@ export function TempTaskPage() {
           setReassignTask(null);
         }}
       />
+
+      {/* 验收弹窗 */}
+      {verifyTask && (
+        <UnifiedModal
+          isOpen={showVerifyModal}
+          onClose={() => { setShowVerifyModal(false); setVerifyTask(null); }}
+          title={`任务验收 - ${verifyTask.taskCode || ''}`}
+          size="md"
+          showFooter={true}
+          footer={
+            <div className="flex gap-3">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleVerifyReject}
+                disabled={!verifyRejectReason.trim()}
+              >
+                驳回
+              </Button>
+              <Button size="sm" onClick={handleVerifyAccept}>
+                验收通过
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* 任务基本信息 */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="font-medium text-gray-900">{verifyTask.title}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
+                <p>执行人：{verifyTask.assigneeName}</p>
+                <p>工作地点：{verifyTask.location || verifyTask.workLocation || '-'}</p>
+                <p>当前状态：<span className="text-orange-600 font-medium">待验收</span></p>
+                <p>进度：{verifyTask.progress || 0}%</p>
+              </div>
+            </div>
+
+            {/* 完成备注 */}
+            {verifyTask.completionRemarks && (
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">执行人完成备注</Label>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-700">{verifyTask.completionRemarks}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 验收意见 */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">
+                验收意见 <span className="text-gray-400">(可选)</span>
+              </Label>
+              <textarea
+                value={verifyRemarks}
+                onChange={(e) => setVerifyRemarks(e.target.value)}
+                placeholder="审核通过的验收意见..."
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                rows={3}
+              />
+            </div>
+
+            {/* 驳回原因 */}
+            <div>
+              <Label className="block text-sm font-medium text-gray-700 mb-1">
+                驳回原因 <span className="text-red-500">*</span> <span className="text-gray-400">(驳回时必填)</span>
+              </Label>
+              <textarea
+                value={verifyRejectReason}
+                onChange={(e) => setVerifyRejectReason(e.target.value)}
+                placeholder="请输入驳回原因..."
+                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                rows={3}
+              />
+            </div>
+          </div>
+        </UnifiedModal>
+      )}
     </div>
   );
 }

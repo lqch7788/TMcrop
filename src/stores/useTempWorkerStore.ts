@@ -8,8 +8,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义（与 tempWorker/types.ts 保持一致）==========
 
 export type WorkerType = '正式工' | '临时工' | '季节工';
@@ -113,8 +111,7 @@ interface TempWorkerState {
 // ========== Store 实现 ==========
 
 export const useTempWorkerStore = create<TempWorkerState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       workers: [],
       isLoading: false,
       error: null,
@@ -161,11 +158,5 @@ export const useTempWorkerStore = create<TempWorkerState>()(
         set({ workers: seed, isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'temp-worker-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ workers: state.workers }),
-    }
-  )
+    })
 );

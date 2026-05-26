@@ -2,9 +2,7 @@
  * 设备 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getDevices, createDevice, updateDevice, deleteDevice, type Device } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getDevices, createDevice, updateDevice, deleteDevice, type Device } from '../services/apiBasicDataService';
 
 interface DeviceStore {
   devices: Device[];
@@ -25,8 +23,7 @@ interface DeviceStore {
 }
 
 export const useDeviceStore = create<DeviceStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       devices: [],
       loading: false,
       error: null,
@@ -70,12 +67,7 @@ export const useDeviceStore = create<DeviceStore>()(
         set({ lastFetch: null });
         await get().loadDevices();
       },
-    }),
-    {
-      name: 'device_store',
-      partialize: (state) => ({ devices: state.devices }),
-    }
-  )
+    })
 );
 
 // 辅助函数

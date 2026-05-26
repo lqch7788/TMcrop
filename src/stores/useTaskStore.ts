@@ -2,10 +2,7 @@
  * 任务状态 Store - Zustand 替代 useTaskStore (localStorage + CustomEvent)
  * 用于审批联动：审批通过后更新任务状态为待接受
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export interface TaskStatusUpdate {
+import { create } from 'zustand';export interface TaskStatusUpdate {
   taskId: string;
   status: 'draft' | 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   updatedAt: string;
@@ -36,8 +33,7 @@ interface TaskStore {
 }
 
 export const useTaskStore = create<TaskStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       statusUpdates: {},
 
       updateTaskStatus: (taskId, status, updatedBy) => {
@@ -60,9 +56,5 @@ export const useTaskStore = create<TaskStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'task_status_updates',
-    }
-  )
+    })
 );

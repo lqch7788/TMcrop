@@ -306,8 +306,8 @@ export function TempTaskTable({
                       </Button>
                     )}
 
-                    {/* 待验收 - 验收按钮 */}
-                    {(task.status === 'waiting_acceptance' || task.progress === 100) && onAccept && (
+                    {/* 待验收 - 验收按钮（仅 status 判断，避免 progress===100 导致已完成/已驳回仍显示） */}
+                    {task.status === 'waiting_acceptance' && onAccept && (
                       <Button size="sm" onClick={() => onAccept(task)}>
                         验收
                       </Button>

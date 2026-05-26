@@ -2,7 +2,6 @@
  * 农事活动 Store - Zustand 状态管理
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getFarmActivities, createFarmActivity, updateFarmActivity, deleteFarmActivity,
   type FarmActivity,
@@ -22,8 +21,7 @@ interface FarmActivityStore {
 }
 
 export const useFarmActivityStore = create<FarmActivityStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       activities: [],
       loading: false,
       error: null,
@@ -78,10 +76,5 @@ export const useFarmActivityStore = create<FarmActivityStore>()(
       },
 
       refreshAll: async () => { set({ lastFetch: null }); await get().loadActivities(); },
-    }),
-    {
-      name: 'farm_activity_store',
-      partialize: (s) => ({ activities: s.activities }),
-    }
-  )
+    })
 );

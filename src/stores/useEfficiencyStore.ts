@@ -8,8 +8,6 @@
  * 计算逻辑（summaryMetrics, trendData）保留在Hook层
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 export interface EfficiencyMetrics {
@@ -80,8 +78,7 @@ interface EfficiencyState {
 }
 
 export const useEfficiencyStore = create<EfficiencyState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       data: [],
       isLoading: false,
       error: null,
@@ -106,10 +103,5 @@ export const useEfficiencyStore = create<EfficiencyState>()(
       deleteItem: (id) => {
         set((state) => ({ data: state.data.filter((d) => d.id !== id) }));
       },
-    }),
-    {
-      name: 'efficiency-storage',
-      partialize: (state) => ({ data: state.data }),
-    }
-  )
+    })
 );

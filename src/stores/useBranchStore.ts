@@ -3,7 +3,6 @@
  * 统一管理种植基地的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getBranches, createBranch, updateBranch, deleteBranch,
   type Branch,
@@ -23,8 +22,7 @@ interface BranchStore {
 }
 
 export const useBranchStore = create<BranchStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       branches: [],
       loading: false,
       error: null,
@@ -85,10 +83,5 @@ export const useBranchStore = create<BranchStore>()(
         set({ lastFetch: null });
         await get().loadBranches();
       },
-    }),
-    {
-      name: 'branch_store',
-      partialize: (s) => ({ branches: s.branches }),
-    }
-  )
+    })
 );

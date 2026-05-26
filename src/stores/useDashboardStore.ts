@@ -7,7 +7,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
@@ -138,8 +137,7 @@ interface DashboardState {
 // ========== Store 实现 ==========
 
 export const useDashboardStore = create<DashboardState>()(
-  persist(
-    (set) => ({
+  (set)=> ({
       // 初始数据
       batchStats: [],
       dashboardStats: { totalBatches: 0, totalYield: 0, totalCost: 0, totalLabor: 0 },
@@ -211,15 +209,5 @@ export const useDashboardStore = create<DashboardState>()(
           set({ error: (error as Error).message, isLoading: false });
         }
       },
-    }),
-    {
-      name: 'dashboard-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        batchStats: state.batchStats,
-        dashboardStats: state.dashboardStats,
-        alertsBreakdown: state.alertsBreakdown,
-      }),
-    }
-  )
+    })
 );

@@ -3,7 +3,6 @@
  * 统一管理种植基地的增删改查
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getBases, createBase, updateBase, deleteBase,
   type Base,
@@ -23,8 +22,7 @@ interface BaseStore {
 }
 
 export const useBaseStore = create<BaseStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       bases: [],
       loading: false,
       error: null,
@@ -85,12 +83,7 @@ export const useBaseStore = create<BaseStore>()(
         set({ lastFetch: null });
         await get().loadBases();
       },
-    }),
-    {
-      name: 'base_store',
-      partialize: (state) => ({ bases: state.bases }),
-    }
-  )
+    })
 );
 
 /** 根据 oid 获取基地 */

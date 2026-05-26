@@ -2,10 +2,7 @@
  * 巡查状态 Store - Zustand 替代 useInspectionStore (localStorage + CustomEvent)
  * 用于审批联动：审批通过后更新巡查问题状态
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export interface InspectionStatusUpdate {
+import { create } from 'zustand';export interface InspectionStatusUpdate {
   inspectionId: string;
   status: 'pending' | 'dispatched' | 'processing' | 'resolved' | 'closed';
   updatedAt: string;
@@ -37,8 +34,7 @@ interface InspectionStore {
 }
 
 export const useInspectionStore = create<InspectionStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       statusUpdates: {},
 
       updateInspectionStatus: (inspectionId, status, updatedBy) => {
@@ -61,9 +57,5 @@ export const useInspectionStore = create<InspectionStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'inspection_status_updates',
-    }
-  )
+    })
 );

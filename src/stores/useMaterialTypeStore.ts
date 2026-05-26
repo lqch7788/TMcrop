@@ -2,7 +2,6 @@
  * 物料类型 Store - Zustand 状态管理
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getMaterialTypes, createMaterialType, updateMaterialType, deleteMaterialType,
   type MaterialType,
@@ -22,8 +21,7 @@ interface MaterialTypeStore {
 }
 
 export const useMaterialTypeStore = create<MaterialTypeStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       types: [],
       loading: false,
       error: null,
@@ -78,10 +76,5 @@ export const useMaterialTypeStore = create<MaterialTypeStore>()(
       },
 
       refreshAll: async () => { set({ lastFetch: null }); await get().loadTypes(); },
-    }),
-    {
-      name: 'material_type_store',
-      partialize: (s) => ({ types: s.types }),
-    }
-  )
+    })
 );

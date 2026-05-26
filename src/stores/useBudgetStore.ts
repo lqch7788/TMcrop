@@ -2,10 +2,7 @@
  * 预算状态 Store - Zustand 替代 useBudgetStore (localStorage + CustomEvent)
  * 用于审批联动：审批通过后更新预算状态
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-export interface BudgetStatusUpdate {
+import { create } from 'zustand';export interface BudgetStatusUpdate {
   budgetId: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived';
   updatedAt: string;
@@ -44,8 +41,7 @@ interface BudgetStore {
 }
 
 export const useBudgetStore = create<BudgetStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       statusUpdates: {},
 
       updateBudgetStatus: (budgetId, status, updatedBy) => {
@@ -68,9 +64,5 @@ export const useBudgetStore = create<BudgetStore>()(
       getStatusUpdates: () => get().statusUpdates,
 
       clearAllUpdates: () => set({ statusUpdates: {} }),
-    }),
-    {
-      name: 'budget_status_updates',
-    }
-  )
+    })
 );

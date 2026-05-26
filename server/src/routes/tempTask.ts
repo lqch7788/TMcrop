@@ -114,11 +114,16 @@ router.post('/', (req: Request, res: Response) => {
       requester_id, requester_name, assignee_id, assignee_name,
       greenhouse_id, greenhouse_name, area_name,
       request_date, request_time, priority, status,
-      completion_date, completion_note, remarks, create_by,
+      completion_date, completion_note, remarks, create_by, description,
       // 新增字段
       due_date, urgency, estimated_hours, estimated_days,
       worker_count, actual_hours, progress, reject_count,
       reject_reason, acceptance_remarks, title, location,
+      // 状态流转字段（与农事任务一致）
+      start_time, accepted_at, completed_at, version,
+      assigner_id, assigner_name, source_type, dispatch_mode,
+      // 必填反馈
+      required_feedback,
     } = req.body;
 
     const newId = id || `TT${Date.now()}`;
@@ -136,10 +141,13 @@ router.post('/', (req: Request, res: Response) => {
         create_time, update_time, due_date, urgency,
         estimated_hours, estimated_days, worker_count,
         actual_hours, progress, reject_count, reject_reason,
-        acceptance_remarks, title, location
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        acceptance_remarks, title, location,
+        start_time, accepted_at, completed_at, version,
+        assigner_id, assigner_name, source_type, dispatch_mode,
+        required_feedback
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      newId, taskCode, task_title, task_type, task_content,
+      newId, taskCode, task_title || title, task_type, task_content || description,
       requester_id, requester_name, assignee_id, assignee_name,
       greenhouse_id, greenhouse_name, area_name,
       request_date || now.substring(0, 10),
@@ -152,6 +160,12 @@ router.post('/', (req: Request, res: Response) => {
       actual_hours ?? 0, progress ?? 0, reject_count ?? 0,
       reject_reason, acceptance_remarks,
       title || task_title, location || area_name,
+      start_time || null, accepted_at || null,
+      completed_at || null, version || 1,
+      assigner_id || requester_id, assigner_name || requester_name,
+      source_type || 'tempTask', dispatch_mode || 'tempTask',
+      // 如果前端已序列化为 JSON 字符串则直接使用，否则序列化数组
+      typeof required_feedback === 'string' ? required_feedback : JSON.stringify(required_feedback || []),
     ]);
 
     saveDatabase();
@@ -177,23 +191,56 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    // 过滤掉 id 和自动生成的字段
-    const excludeFields = ['id', 'task_code', 'create_time'];
-    const fields = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
-      .map(k => `${k} = ?`)
-      .join(', ');
+    // 有效数据库列名（与 temp_tasks 表结构一致）
+    const validDbColumns = new Set([
+      'id', 'task_code', 'task_title', 'task_type', 'task_content',
+      'requester_id', 'requester_name', 'assignee_id', 'assignee_name',
+      'greenhouse_id', 'greenhouse_name', 'area_name',
+      'request_date', 'request_time', 'priority', 'status',
+      'due_date', 'completion_date', 'completion_note', 'remarks',
+      'create_by', 'create_time', 'update_time',
+      'estimated_hours', 'worker_count', 'actual_hours', 'progress',
+      'reject_count', 'urgency', 'estimated_days',
+      'reject_reason', 'acceptance_remarks', 'operation_records',
+      'title', 'location',
+      // 状态流转列
+      'start_time', 'accepted_at', 'completed_at', 'version',
+      'assigner_id', 'assigner_name', 'source_type', 'dispatch_mode',
+      'required_feedback',
+    ]);
+    // camelCase → snake_case 简单转换
+    const toSnakeCase = (str: string): string =>
+      str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    const toDbColumnName = (k: string): string => {
+      // 如果已经是 snake_case 且存在于有效列中，直接返回
+      if (validDbColumns.has(k)) return k;
+      // 尝试 camelCase → snake_case 转换
+      const snake = toSnakeCase(k);
+      if (validDbColumns.has(snake)) return snake;
+      return k;
+    };
 
-    if (fields.length === 0) {
+    const validKeys = Object.keys(updates).filter(k => {
+      if (k === 'id' || updates[k] === undefined) return false;
+      return validDbColumns.has(toDbColumnName(k));
+    });
+
+    if (validKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates)
-      .filter(k => !excludeFields.includes(k))
-      .map(k => updates[k]);
+    const setClauses = validKeys.map(k => `${toDbColumnName(k)} = ?`).join(', ');
+    const values = validKeys.map(k => {
+      const dbKey = toDbColumnName(k);
+      // required_feedback 存储为 JSON 字符串
+      if (dbKey === 'required_feedback' && Array.isArray(updates[k])) {
+        return JSON.stringify(updates[k]);
+      }
+      return updates[k];
+    });
     values.push(now, id);
 
-    db.run(`UPDATE temp_tasks SET ${fields}, update_time = ? WHERE id = ?`, values);
+    db.run(`UPDATE temp_tasks SET ${setClauses}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {

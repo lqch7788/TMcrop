@@ -2,9 +2,7 @@
  * 地块 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getBlocks, createBlock, updateBlock, deleteBlock, type Block } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getBlocks, createBlock, updateBlock, deleteBlock, type Block } from '../services/apiBasicDataService';
 
 interface BlockStore {
   blocks: Block[];
@@ -25,8 +23,7 @@ interface BlockStore {
 }
 
 export const useBlockStore = create<BlockStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       blocks: [],
       loading: false,
       error: null,
@@ -70,12 +67,7 @@ export const useBlockStore = create<BlockStore>()(
         set({ lastFetch: null });
         await get().loadBlocks();
       },
-    }),
-    {
-      name: 'block_store',
-      partialize: (state) => ({ blocks: state.blocks }),
-    }
-  )
+    })
 );
 
 // 辅助函数

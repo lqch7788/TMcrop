@@ -4,7 +4,6 @@
  * 数据流：组件 → Store → apiBasicDataService → Backend API
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getProcessDefinitions,
   createProcessDefinition,
@@ -27,8 +26,7 @@ interface ProcessDefinitionStore {
 }
 
 export const useProcessDefinitionStore = create<ProcessDefinitionStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       items: [],
       loading: false,
       error: null,
@@ -95,10 +93,5 @@ export const useProcessDefinitionStore = create<ProcessDefinitionStore>()(
         set({ lastFetch: null });
         await get().loadItems();
       },
-    }),
-    {
-      name: 'process_definition_store',
-      partialize: (state) => ({ items: state.items }),
-    }
-  )
+    })
 );

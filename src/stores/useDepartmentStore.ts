@@ -3,7 +3,6 @@
  * 迁移自 SettingsDataProvider，已增强完整 CRUD
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import {
   getDepartments,
   createDepartment,
@@ -26,8 +25,7 @@ interface DepartmentStore {
 }
 
 export const useDepartmentStore = create<DepartmentStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       departments: [],
       loading: false,
       error: null,
@@ -95,12 +93,7 @@ export const useDepartmentStore = create<DepartmentStore>()(
         set({ lastFetch: null });
         await get().loadDepartments();
       },
-    }),
-    {
-      name: 'department_store',
-      partialize: (state) => ({ departments: state.departments }),
-    }
-  )
+    })
 );
 
 // 辅助函数

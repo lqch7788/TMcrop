@@ -2,17 +2,15 @@
  * 统一任务管理 Hook
  * 管理农事任务的增删改查、状态流转、超时检测、催办等
  *
- * 数据层（升级方案V1.0）：
- * - 农事任务：farmTaskStore (Zustand) → enhancedApiClient → API，三级降级（API → IndexedDB → localStorage）
- * - 临时任务：useTempTaskStore (Zustand)
+ * 数据层：所有数据通过 API 直接读写数据库，无本地缓存降级
+ * - 农事任务：farmTaskStore (Zustand) → enhancedApiClient → API → DB
+ * - 临时任务：useTempTaskStore (Zustand) → enhancedApiClient → API → DB
  * - 巡查记录：useInspectionDataStore (Zustand)
- * - 操作记录/催办记录：localStorage（待后续迁移到独立 Store）
- *
- * 组件不直接读写 localStorage，统一通过 Zustand Store 层管理数据。
+ * - 操作记录/催办记录：React 状态 + API 同步
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { STORAGE_KEYS } from './useLocalStorage';
+
 import { usePersistentWorkLogs } from './usePersistentWorkLogs';
 import { usePersistentAttendance } from './usePersistentAttendance';
 import {
@@ -32,7 +30,7 @@ import {
   REWORK_CONFIG,
   TASK_PERMISSIONS,
   TASK_ACTION_CONFIG,
-  STORAGE_CONFIG,
+
 } from '../config/taskConfig';
 
 // 导入育苗服务（用于任务验收后回传更新育苗状态）
@@ -49,7 +47,7 @@ import { useInspectionDataStore, InspectionData } from '../stores/useInspectionD
 // 导入增强版 API 客户端
 import { enhancedApiClient } from '../lib/apiClient';
 // 导入存储容量管理
-import { checkStorageCapacity } from '../utils/storageManager';
+
 
 // ========== API 同步辅助函数 ==========
 
@@ -201,7 +199,30 @@ function convertStoreTempTaskToTask(t: TempTaskData): Task {
     assignerId: requesterId,
     assignerName: requesterName,
     dueDate: t.dueDate || '',
-    feedbackRequirements: [],
+    feedbackRequirements: (() => {
+      const raw = t.requiredFeedback ?? (t as Record<string, unknown>).required_feedback;
+      if (Array.isArray(raw)) return raw.map((f: string) => {
+        const fbMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
+          gps: { type: 'gps', label: 'GPS位置', required: true },
+          photo_before: { type: 'image_before', label: '作业前照片', required: true },
+          photo_after: { type: 'image_after', label: '作业后照片', required: true },
+          material: { type: 'materials', label: '物料使用', required: true },
+        };
+        return fbMap[f] || { type: 'text' as const, label: f, required: false };
+      });
+      if (typeof raw === 'string') {
+        try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map((f: string) => {
+          const fbMap: Record<string, { type: 'gps' | 'image_before' | 'image_after' | 'text' | 'materials'; label: string; required: boolean }> = {
+            gps: { type: 'gps', label: 'GPS位置', required: true },
+            photo_before: { type: 'image_before', label: '作业前照片', required: true },
+            photo_after: { type: 'image_after', label: '作业后照片', required: true },
+            material: { type: 'materials', label: '物料使用', required: true },
+          };
+          return fbMap[f] || { type: 'text' as const, label: f, required: false };
+        }) : []; } catch { return []; }
+      }
+      return [];
+    })(),
     greenhouseId,
     greenhouseName,
     cropName: '',
@@ -221,7 +242,13 @@ function convertStoreTempTaskToTask(t: TempTaskData): Task {
     estimatedHours: t.estimatedHours || 0,
     workerCount: t.workerCount || 1,
     remarks: t.remarks || t.description || '',
-    requiredFeedback: [],
+    requiredFeedback: (() => {
+      const raw = t.requiredFeedback ?? (t as Record<string, unknown>).required_feedback;
+      console.warn('[useTasks] convertStoreTempTaskToTask requiredFeedback:', { id, title, raw, rawType: typeof raw, isArr: Array.isArray(raw), rawKeys: typeof raw === 'object' && raw !== null ? Object.keys(raw as object) : 'N/A' });
+      if (Array.isArray(raw)) return raw as string[];
+      if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
+      return [];
+    })(),
     startDate: '',
   };
 }
@@ -513,70 +540,21 @@ export function useTasks(): UseTasksReturn {
     const convertedTempTasks = tempTasks.map(convertStoreTempTaskToTask);
     const convertedInspectionTasks = inspectionRecords.map(convertStoreInspectionToTask);
     const all = [...farmTasks, ...convertedTempTasks, ...convertedInspectionTasks];
+    console.warn('[useTasks] useMemo 合并任务: 农事=', farmTasks.length, '临时=', convertedTempTasks.length, '巡查=', convertedInspectionTasks.length, '总计=', all.length);
+    // 打印临时任务的 requiredFeedback 字段
+    if (convertedTempTasks.length > 0) {
+      console.warn('[useTasks] 临时任务 requiredFeedback 示例:', convertedTempTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, rf: (t as Record<string, unknown>).requiredFeedback, rfLen: Array.isArray((t as Record<string, unknown>).requiredFeedback) ? (t as Record<string, unknown>).requiredFeedback?.length : 'NOT_ARRAY', status: t.status })));
+    }
     return Array.isArray(all) ? all : [];
   }, [storeTasks, tempTasks, inspectionRecords]);
 
-  // 初始化：触发 farmTaskStore 从 API 拉取数据
+  // 初始化：触发所有 Store 从 API 拉取数据
   useEffect(() => {
+    console.warn('[useTasks] 初始化 fetchTasks 调用');
     useFarmTaskStore.getState().fetchTasks();
+    useTempTaskStore.getState().fetchTasks();
   }, []);
 
-  // ========== 数据迁移：将旧 localStorage (yuanxingtu_tasks) 数据导入 farmTaskStore ==========
-  useEffect(() => {
-    try {
-      const legacyData = localStorage.getItem(STORAGE_KEYS.TASKS);
-      if (!legacyData) return;
-
-      const parsed = JSON.parse(legacyData);
-      // 兼容新旧格式：{ data: [...], version: N } 或直接数组
-      const rawTasks: Record<string, unknown>[] = Array.isArray(parsed)
-        ? parsed
-        : (parsed.data as Record<string, unknown>[]) || [];
-
-      if (rawTasks.length === 0) return;
-
-      // 转换为 farmTaskStore 的 Task 格式，保留原始 ID/taskCode/状态
-      const storeTasks = rawTasks
-        .filter(t => t.id && t.title)
-        .map(t => ({
-          id: String(t.id || ''),
-          taskCode: String(t.taskCode || t.code || ''),
-          title: String(t.title || ''),
-          type: String(t.type || 'other'),
-          typeName: String(t.typeName || t.type || '其他'),
-          status: String(t.status || 'pending') as 'draft' | 'pending' | 'accepted' | 'in_progress' | 'waiting_acceptance' | 'completed' | 'rejected' | 'failed' | 'cancelled' | 'abandoned',
-          priority: String(t.priority || 'normal') as 'urgent' | 'high' | 'normal',
-          progress: Number(t.progress || 0),
-          sourceType: String(t.sourceType || 'dispatch') as 'dispatch' | 'tempTask' | 'smart',
-          assigneeId: String(t.assigneeId || ''),
-          assigneeName: String(t.assigneeName || t.assignee || ''),
-          assignerId: String(t.assignerId || ''),
-          assignerName: String(t.assignerName || ''),
-          dueDate: String(t.dueDate || ''),
-          greenhouseId: String(t.greenhouseId || ''),
-          greenhouseName: String(t.greenhouseName || ''),
-          cropName: String(t.cropName || ''),
-          estimatedDays: Number(t.estimatedDays || 0),
-          estimatedHours: Number(t.estimatedHours || 0),
-          reworkCount: Number(t.reworkCount || 0),
-          reworkHistory: (t.reworkHistory as unknown[]) || [],
-          deadlineExtensions: (t.deadlineExtensions as unknown[]) || [],
-          version: Number(t.version || 1),
-          createdAt: String(t.createdAt || new Date().toISOString()),
-          updatedAt: String(t.updatedAt || new Date().toISOString()),
-          remarks: String(t.remarks || ''),
-        })) as import('../stores/farmTaskStore').Task[];
-
-      if (storeTasks.length > 0) {
-        useFarmTaskStore.getState().importLegacyTasks(storeTasks);
-        console.log(`[useTasks] 从旧 localStorage 迁移 ${storeTasks.length} 条任务到 farmTaskStore`);
-      }
-    } catch (e) {
-      console.warn('[useTasks] 旧数据迁移失败:', e);
-    }
-  }, []);
-
-  // 操作记录
   const [taskRecords, setTaskRecords] = useState<TaskRecord[]>([]);
   // 使用 ref 保存最新的 taskRecords，避免闭包问题
   const taskRecordsRef = useRef<TaskRecord[]>([]);
@@ -590,61 +568,10 @@ export function useTasks(): UseTasksReturn {
   // 考勤记录hook
   const { attendance, addAttendance, updateAttendance } = usePersistentAttendance();
 
-  // 从 localStorage 读取操作记录
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        taskRecordsRef.current = parsed;  // 同步到 ref
-        setTaskRecords(parsed);
-      }
-    } catch (e) {
-      console.warn('Failed to load task records:', e);
-    }
-  }, []);
-
-  // 从 localStorage 读取催办记录
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`${STORAGE_KEYS.TASKS}_reminders`);
-      if (stored) {
-        setReminderRecords(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.warn('Failed to load reminder records:', e);
-    }
-  }, []);
-
-  // ========== 存储容量管理：写入前检查，超限时修剪旧记录 ==========
-
-  /** 检查存储容量并在必要时修剪旧操作记录（保留最近 500 条） */
-  const ensureStorageCapacity = useCallback(() => {
-    const cap = checkStorageCapacity();
-    if (cap.ok) return;
-
-    // 容量告警：修剪旧操作记录
-    console.warn(`[useTasks] ${cap.message}，自动修剪旧操作记录`);
-    try {
-      const stored = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-      if (stored) {
-        const records: TaskRecord[] = JSON.parse(stored);
-        if (records.length > STORAGE_CONFIG.maxRecords) {
-          const trimmed = records.slice(-STORAGE_CONFIG.maxRecords);
-          localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(trimmed));
-          taskRecordsRef.current = trimmed;
-          setTaskRecords(trimmed);
-        }
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  // 保存操作记录到 localStorage 并同步写入后端数据库
+  // 保存操作记录到 React 状态 + 同步写入后端数据库
   const saveTaskRecords = useCallback((records: TaskRecord[]) => {
     taskRecordsRef.current = records;
     setTaskRecords(records);
-    ensureStorageCapacity();
-    localStorage.setItem(`${STORAGE_KEYS.TASKS}_records`, JSON.stringify(records));
 
     // 将最新一条记录同步写入后端数据库（异步，不阻塞UI）
     const latest = records[0];
@@ -658,18 +585,16 @@ export function useTasks(): UseTasksReturn {
         resourceId: latest.taskId,
         description: `${latest.operatorName} ${TASK_ACTION_CONFIG[latest.action]?.label || latest.action} 任务【${latest.taskTitle}】`,
         status: 'success',
-      }).catch(() => {
-        // API 写入失败时静默降级，不影响 localStorage 本地存储
+      }).catch((e) => {
+        console.warn('[useTasks] 操作日志API写入失败:', e);
       });
     }
-  }, [ensureStorageCapacity]);
+  }, []);
 
-  // 保存催办记录到 localStorage（写入前检查容量）
+  // 保存催办记录到 React 状态
   const saveReminderRecords = useCallback((records: ReminderRecord[]) => {
     setReminderRecords(records);
-    ensureStorageCapacity();
-    localStorage.setItem(`${STORAGE_KEYS.TASKS}_reminders`, JSON.stringify(records));
-  }, [ensureStorageCapacity]);
+  }, []);
 
   // 创建操作记录的辅助函数
   const createTaskRecord = useCallback(

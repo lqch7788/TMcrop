@@ -3,9 +3,7 @@
  * 迁移自 SettingsDataProvider 的错误实现
  * Worker类型来自 apiWorkerService 而非 authorityService
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getWorkerList, type Worker } from '../services/apiWorkerService';
+import { create } from 'zustand';import { getWorkerList, type Worker } from '../services/apiWorkerService';
 
 interface WorkerStore {
   workers: Worker[];
@@ -21,8 +19,7 @@ interface WorkerStore {
 }
 
 export const useWorkerStore = create<WorkerStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       workers: [],
       loading: false,
       error: null,
@@ -48,16 +45,5 @@ export const useWorkerStore = create<WorkerStore>()(
         set({ lastFetch: null });
         await get().loadWorkers();
       },
-    }),
-    {
-      name: 'worker_store',
-      partialize: (state) => ({ workers: state.workers }),
-      // 防御 localStorage 数据损坏：确保 workers 总是数组
-      onRehydrateStorage: () => (state) => {
-        if (state && !Array.isArray(state.workers)) {
-          state.workers = [];
-        }
-      },
-    }
-  )
+    })
 );

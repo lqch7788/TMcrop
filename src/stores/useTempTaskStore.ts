@@ -54,6 +54,8 @@ export interface TempTaskData {
   reject_reason?: string;
   acceptanceRemarks?: string;
   acceptance_remarks?: string;
+  required_feedback?: string | string[];
+  requiredFeedback?: string | string[];
   create_time?: string;
   createTime?: string;
   createdAt?: string;
@@ -93,6 +95,16 @@ const FIELD_MAP: Record<string, string> = {
   reject_count: 'rejectCount',
   urgency: 'urgency',
   operation_records: 'operationRecords',
+  // 状态流转字段（与农事任务一致）
+  start_time: 'startTime',
+  accepted_at: 'acceptedAt',
+  completed_at: 'completedAt',
+  assigner_id: 'assignerId',
+  assigner_name: 'assignerName',
+  source_type: 'sourceType',
+  dispatch_mode: 'dispatchMode',
+  version: 'version',
+  required_feedback: 'requiredFeedback',
   title: 'title',
   location: 'location',
   priority: 'priority',
@@ -116,6 +128,19 @@ function normalizeTask(db: Record<string, unknown>): TempTaskData {
   result.priority = result.priority || result.urgency || 'normal';
   result.status = result.status || 'draft';
   result.createdAt = result.createdAt || result.create_time || new Date().toISOString();
+  // 解析 requiredFeedback JSON 字符串为数组（兼容双重编码）
+  if (typeof result.requiredFeedback === 'string') {
+    try {
+      const parsed = JSON.parse(result.requiredFeedback as string);
+      // 兼容双重 JSON 编码：如果解析结果仍是字符串，再解一层
+      if (typeof parsed === 'string') {
+        try { result.requiredFeedback = JSON.parse(parsed); } catch { result.requiredFeedback = []; }
+      } else {
+        result.requiredFeedback = parsed;
+      }
+    } catch { result.requiredFeedback = []; }
+  }
+  if (!Array.isArray(result.requiredFeedback)) result.requiredFeedback = [];
   return result as TempTaskData;
 }
 
@@ -124,11 +149,19 @@ function denormalizeTask(task: Partial<TempTaskData>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const reverse: Record<string, string> = {};
   for (const [snake, camel] of Object.entries(FIELD_MAP)) {
-    reverse[camel] = snake;
+    // 跳过自映射条目（如 title: 'title'），保留正确的 DB 列名映射（如 task_title: 'title'）
+    if (!(camel in reverse) || snake !== camel) {
+      reverse[camel] = snake;
+    }
   }
   for (const [key, value] of Object.entries(task)) {
     const backendKey = reverse[key] || key;
-    result[backendKey] = value;
+    // requiredFeedback 数组需要序列化为 JSON 字符串
+    if (backendKey === 'required_feedback' && Array.isArray(value)) {
+      result[backendKey] = JSON.stringify(value);
+    } else {
+      result[backendKey] = value;
+    }
   }
   return result;
 }
@@ -165,7 +198,9 @@ export const useTempTaskStore = create<TempTaskState>()(
           const response = await enhancedApiClient.get<{ success: boolean; data: TempTaskData[]; meta?: { total: number } }>(url);
           // enhancedApiClient 已提取 .data，response 即为实际数据数组
           const data = Array.isArray(response) ? response : [];
+          console.warn('[TempTaskStore] fetchTasks 成功, 数据条数:', data.length, '示例requiredFeedback:', data.slice(0, 2).map((t: Record<string, unknown>) => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback })));
           const normalized = data.map(normalizeTask);
+          console.warn('[TempTaskStore] normalizeTask后, 示例requiredFeedback:', normalized.slice(0, 2).map(t => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback, isArr: Array.isArray(t.requiredFeedback) })));
           set({ tasks: normalized, isLoading: false });
         } catch (error) {
           console.warn('[TempTaskStore] API获取失败，使用本地数据:', error);
@@ -174,39 +209,67 @@ export const useTempTaskStore = create<TempTaskState>()(
       },
 
       createTask: async (task) => {
+        const body = denormalizeTask(task);
+        const tempId = task.id || `TEMP-${Date.now()}`;
+        const now = new Date().toISOString();
+
+        // 乐观更新：先添加到本地状态，再调API（与farmTaskStore.addTask一致）
+        const optimisticTask = normalizeTask({
+          ...task,
+          id: tempId,
+          createTime: now,
+          create_time: now,
+          createdAt: now,
+          updateTime: now,
+          update_time: now,
+          updatedAt: now,
+        } as Record<string, unknown>);
+        set((state) => ({ tasks: [optimisticTask, ...state.tasks] }));
+
         try {
-          const body = denormalizeTask(task);
-          const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
+          const savedTask = await enhancedApiClient.post(
             '/temp-tasks', body
           );
-          const newId = (response as any)?.id || `TT${Date.now()}`;
-          const newTask = normalizeTask({ ...task, id: newId } as Record<string, unknown>);
-          set((state) => ({ tasks: [newTask, ...state.tasks] }));
-          return newTask;
+          // API成功：用服务端返回数据合并乐观任务
+          const normalized = savedTask ? normalizeTask(savedTask as Record<string, unknown>) : null;
+          if (normalized && normalized.id) {
+            set((state) => ({
+              tasks: state.tasks.map(t =>
+                t.id === tempId ? { ...t, ...normalized, id: normalized.id || tempId } : t
+              ),
+            }));
+            return normalized;
+          }
+          return optimisticTask;
         } catch (error) {
-          console.warn('[TempTaskStore] 创建任务API失败，已加入离线队列:', error);
-          set({ error: (error as Error).message });
-          return null;
+          console.warn('[TempTaskStore] 创建任务API失败，保留本地乐观数据:', error);
+          return optimisticTask;
         }
       },
 
       updateTask: async (id, updates) => {
         const body = denormalizeTask(updates);
+        // 通过 id 或 taskCode 查找实际任务（兼容 unified task 使用 taskCode 作为 id 的情况）
+        const existing = get().tasks.find(t => t.id === id || t.taskCode === id);
+        const realId = existing?.id || id;
         // 乐观更新
         set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+          tasks: state.tasks.map((t) => (t.id === realId || t.taskCode === id ? { ...t, ...updates } : t)),
         }));
         try {
-          await enhancedApiClient.put(`/temp-tasks/${id}`, body);
+          await enhancedApiClient.put(`/temp-tasks/${realId}`, body);
         } catch (error) {
           console.warn('[TempTaskStore] 更新任务API失败，已加入离线队列:', error);
         }
       },
 
       deleteTask: async (id) => {
-        set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+        // 通过 id 或 taskCode 查找实际任务
+        const existing = get().tasks.find(t => t.id === id || t.taskCode === id);
+        const realId = existing?.id || id;
+        set((state) => ({ tasks: state.tasks.filter((t) => t.id !== realId && t.taskCode !== id) }));
         try {
-          await enhancedApiClient.delete(`/temp-tasks/${id}`);
+          await enhancedApiClient.delete(`/temp-tasks/${realId}`);
           return true;
         } catch (error) {
           console.warn('[TempTaskStore] 删除任务API失败，已加入离线队列:', error);
@@ -215,10 +278,20 @@ export const useTempTaskStore = create<TempTaskState>()(
       },
 
       deleteTasks: async (ids) => {
-        set((state) => ({ tasks: state.tasks.filter((t) => !ids.includes(t.id)) }));
+        // 通过 id 或 taskCode 查找实际任务ID
+        const allTasks = get().tasks;
+        const realIds = ids.map(id => {
+          const existing = allTasks.find(t => t.id === id || t.taskCode === id);
+          return existing?.id || id;
+        });
+        const idSet = new Set(ids);
+        const realIdSet = new Set(realIds);
+        set((state) => ({
+          tasks: state.tasks.filter((t) => !realIdSet.has(t.id) && !idSet.has(t.taskCode || '')),
+        }));
         try {
-          await Promise.all(ids.map((id) =>
-            enhancedApiClient.delete(`/temp-tasks/${id}`).catch(() => {})
+          await Promise.all(realIds.map((rid) =>
+            enhancedApiClient.delete(`/temp-tasks/${rid}`).catch(() => {})
           ));
           return true;
         } catch {

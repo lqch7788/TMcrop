@@ -595,10 +595,14 @@ export function initializeDatabase() {
       create_by TEXT,
       version INTEGER DEFAULT 1,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
       team_id TEXT DEFAULT '',
       team_name TEXT DEFAULT '',
-      tools_remarks TEXT DEFAULT ''
+      tools_remarks TEXT DEFAULT '',
+      source_problem_id TEXT,
+      source_inspection_id TEXT,
+      source_id TEXT,
+      source_code TEXT
     )
   `);
 
@@ -788,6 +792,16 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE temp_tasks ADD COLUMN greenhouse_name TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE temp_tasks ADD COLUMN title TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE temp_tasks ADD COLUMN location TEXT`); } catch (e) {}
+  // 状态流转所需列（与农事任务一致）
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN start_time TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN accepted_at TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN completed_at TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN version INTEGER DEFAULT 1`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN assigner_id TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN assigner_name TEXT`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN source_type TEXT DEFAULT 'tempTask'`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN dispatch_mode TEXT DEFAULT 'tempTask'`); } catch (e) {}
+  try { db.run(`ALTER TABLE temp_tasks ADD COLUMN required_feedback TEXT DEFAULT '[]'`); } catch (e) {}
 
   // 创建采购计划表
   db.run(`

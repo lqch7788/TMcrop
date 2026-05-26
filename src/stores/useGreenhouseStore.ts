@@ -2,9 +2,7 @@
  * 温室/基地 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getGreenhouses, createGreenhouse, updateGreenhouse, deleteGreenhouse, type Greenhouse } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getGreenhouses, createGreenhouse, updateGreenhouse, deleteGreenhouse, type Greenhouse } from '../services/apiBasicDataService';
 
 interface GreenhouseStore {
   greenhouses: Greenhouse[];
@@ -25,8 +23,7 @@ interface GreenhouseStore {
 }
 
 export const useGreenhouseStore = create<GreenhouseStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       greenhouses: [],
       loading: false,
       error: null,
@@ -71,19 +68,7 @@ export const useGreenhouseStore = create<GreenhouseStore>()(
         set({ lastFetch: null });
         await get().loadGreenhouses();
       },
-    }),
-    {
-      name: 'greenhouse_store',
-      partialize: (state) => ({ greenhouses: state.greenhouses }),
-      merge: (persisted: unknown, current) => {
-        const p = persisted as Partial<GreenhouseStore> | null;
-        return {
-          ...current,
-          greenhouses: Array.isArray(p?.greenhouses) ? p!.greenhouses : current.greenhouses,
-        };
-      },
-    }
-  )
+    })
 );
 
 // 辅助函数

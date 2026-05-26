@@ -433,6 +433,7 @@ export function MyTasksPage() {
 
   // 打开反馈弹窗
   const openFeedbackModal = (task: FarmTask | Task) => {
+    console.warn('[MyTasksPage] openFeedbackModal requiredFeedback:', { id: task.id, taskCode: (task as any).taskCode, rf: (task as any).requiredFeedback, rfLen: Array.isArray((task as any).requiredFeedback) ? (task as any).requiredFeedback?.length : 'NOT_ARRAY', rfVal: (task as any).requiredFeedback });
     setFeedbackModal({ isOpen: true, task });
     setFeedbackForm({
       resultText: '',

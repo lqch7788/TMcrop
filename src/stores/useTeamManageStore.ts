@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 工人 ID 到姓名的映射（用于显示成员真实姓名）==========
@@ -119,8 +118,7 @@ interface TeamManageState {
 // ========== Store 实现 ==========
 
 export const useTeamManageStore = create<TeamManageState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       teams: [],
       unassignedWorkers: [],
       isLoading: false,
@@ -227,14 +225,5 @@ export const useTeamManageStore = create<TeamManageState>()(
         set({ teams, unassignedWorkers: unassigned, isLoading: false });
         // 种子数据初始化完成
       },
-    }),
-    {
-      name: 'team-manage-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        teams: state.teams,
-        unassignedWorkers: state.unassignedWorkers,
-      }),
-    }
-  )
+    })
 );

@@ -5,8 +5,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 export interface Equipment {
@@ -48,8 +46,7 @@ interface EquipmentState {
 }
 
 export const useEquipmentStore = create<EquipmentState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       equipment: [],
       isLoading: false,
       error: null,
@@ -82,11 +79,5 @@ export const useEquipmentStore = create<EquipmentState>()(
       deleteEquipment: (id) => {
         set((s) => ({ equipment: s.equipment.filter((e) => e.id !== id) }));
       },
-    }),
-    {
-      name: 'equipment-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ equipment: state.equipment }),
-    }
-  )
+    })
 );

@@ -4,7 +4,6 @@
  * 策略：cache-first，数据极少变化
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型 ==========
@@ -28,8 +27,7 @@ interface RegionState {
 }
 
 export const useRegionStore = create<RegionState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       provinces: [],
       childrenCache: {},
       isLoading: false,
@@ -85,13 +83,5 @@ export const useRegionStore = create<RegionState>()(
           set({ error: (err as Error).message, isLoading: false });
         }
       },
-    }),
-    {
-      name: 'region-data-storage',
-      partialize: (state) => ({
-        provinces: state.provinces,
-        childrenCache: state.childrenCache,
-      }),
-    }
-  )
+    })
 );

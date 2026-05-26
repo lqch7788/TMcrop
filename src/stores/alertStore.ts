@@ -9,9 +9,7 @@
  * 3. 支持告警确认和解决
  */
 
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { enhancedApiClient } from '../lib/apiClient';
+import { create } from 'zustand';import { enhancedApiClient } from '../lib/apiClient';
 
 // ========== 类型定义 ==========
 
@@ -95,8 +93,7 @@ interface AlertState {
 // ========== Store 实现 ==========
 
 export const useAlertStore = create<AlertState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       // 初始状态
       alerts: [],
       selectedAlert: null,
@@ -219,16 +216,7 @@ export const useAlertStore = create<AlertState>()(
       setSelectedAlert: (alert) => {
         set({ selectedAlert: alert });
       },
-    }),
-    {
-      name: 'alert-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        alerts: state.alerts,
-        filters: state.filters,
-      }),
-    }
-  )
+    })
 );
 
 // ========== 辅助函数 ==========

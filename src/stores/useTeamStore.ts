@@ -2,9 +2,7 @@
  * 班组 Store - Zustand 状态管理
  * 迁移自 SettingsDataProvider
  */
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getTeams, createTeam, updateTeam, deleteTeam, type Team } from '../services/apiBasicDataService';
+import { create } from 'zustand';import { getTeams, createTeam, updateTeam, deleteTeam, type Team } from '../services/apiBasicDataService';
 
 interface TeamStore {
   teams: Team[];
@@ -25,8 +23,7 @@ interface TeamStore {
 }
 
 export const useTeamStore = create<TeamStore>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       teams: [],
       loading: false,
       error: null,
@@ -70,12 +67,7 @@ export const useTeamStore = create<TeamStore>()(
         set({ lastFetch: null });
         await get().loadTeams();
       },
-    }),
-    {
-      name: 'team_store',
-      partialize: (state) => ({ teams: state.teams }),
-    }
-  )
+    })
 );
 
 // 辅助函数

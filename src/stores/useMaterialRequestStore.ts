@@ -7,8 +7,6 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 interface MaterialRequestState {
   // 本地选中状态（用于审批联动等）
   selectedIds: string[];
@@ -37,8 +35,7 @@ interface MaterialRequestState {
 }
 
 export const useMaterialRequestStore = create<MaterialRequestState>()(
-  persist(
-    (set) => ({
+  (set)=> ({
       // 选中状态
       selectedIds: [],
       setSelectedIds: (ids) => set({ selectedIds: ids }),
@@ -68,14 +65,5 @@ export const useMaterialRequestStore = create<MaterialRequestState>()(
       sortField: 'date',
       sortOrder: 'desc',
       setSort: (field, order) => set({ sortField: field, sortOrder: order }),
-    }),
-    {
-      name: 'material-request-store',
-      partialize: (state) => ({
-        pageSize: state.pageSize,
-        sortField: state.sortField,
-        sortOrder: state.sortOrder,
-      }),
-    }
-  )
+    })
 );

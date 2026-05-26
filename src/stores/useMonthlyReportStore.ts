@@ -8,8 +8,6 @@
  * 导出等业务逻辑保留在Hook层
  */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 // ========== 类型定义 ==========
 
 export interface MonthlyReport {
@@ -65,8 +63,7 @@ interface MonthlyReportState {
 }
 
 export const useMonthlyReportStore = create<MonthlyReportState>()(
-  persist(
-    (set, get) => ({
+  (set, get)=> ({
       reports: [],
       isLoading: false,
       error: null,
@@ -91,10 +88,5 @@ export const useMonthlyReportStore = create<MonthlyReportState>()(
       deleteReport: (id) => {
         set((state) => ({ reports: state.reports.filter((r) => r.id !== id) }));
       },
-    }),
-    {
-      name: 'monthly-report-storage',
-      partialize: (state) => ({ reports: state.reports }),
-    }
-  )
+    })
 );
