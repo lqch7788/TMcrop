@@ -453,146 +453,126 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             </div>
 
-            {/* 执行反馈记录 - 石板灰背景 */}
+            {/* 处理流转记录 */}
             {sortedRecords.length > 0 && (
-              <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
-                <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  执行反馈记录
-                </h4>
-                <div className="space-y-3">
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                  <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                    <span>📋</span>
+                    处理流转记录（{sortedRecords.length}条）
+                  </h4>
+                </div>
+                <div className="divide-y divide-gray-100">
                   {sortedRecords.map((record, index) => {
-                    const actionConfig = TASK_ACTION_CONFIG[record.action as keyof typeof TASK_ACTION_CONFIG];
-                    const statusConfig = record.toStatus ? STATUS_MAP[record.toStatus as keyof typeof STATUS_MAP] : null;
-                    const isLatest = index === 0;
+                    const actionName = record.action || '';
+                    const fromStatus = record.fromStatus || '';
+                    const toStatus = record.toStatus || '';
+                    const comment = record.content || record.comment || '';
+                    const reason = record.reason || '';
                     return (
-                      <div
-                        key={record.id}
-                        className={`relative pl-6 pb-4 ${
-                          index !== sortedRecords.length - 1 ? 'border-l-2 border-slate-300' : ''
-                        }`}
-                      >
+                    <div key={record.id || index} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start gap-4">
                         {/* 时间线节点 */}
-                        <div
-                          className={`absolute left-0 top-0 w-3 h-3 rounded-full -translate-x-[7px] ${
-                            isLatest ? 'bg-emerald-500' : 'bg-slate-400'
-                          }`}
-                        />
-                        {/* 记录内容 */}
-                        <div className="bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-start justify-between mb-2">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                            actionName.includes('验收通过') || actionName.includes('通过') ? 'bg-green-500' :
+                            actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-500' :
+                            actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-500' :
+                            actionName.includes('分派') || actionName.includes('派发') || actionName.includes('发布') ? 'bg-blue-500' :
+                            actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-500' :
+                            'bg-gray-500'
+                          }`}>
+                            {sortedRecords.length - index}
+                          </div>
+                          {index < sortedRecords.length - 1 && (
+                            <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>
+                          )}
+                        </div>
+
+                        {/* 流转详情 */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
                             <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                  actionConfig?.bg || 'bg-slate-100'
-                                } ${actionConfig?.color || 'text-slate-600'}`}
-                              >
-                                {actionConfig?.label || record.action}
+                              <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                actionName.includes('验收通过') || actionName.includes('通过') ? 'bg-green-100 text-green-700' :
+                                actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-100 text-red-700' :
+                                actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-100 text-amber-700' :
+                                actionName.includes('分派') || actionName.includes('派发') || actionName.includes('发布') ? 'bg-blue-100 text-blue-700' :
+                                actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-100 text-indigo-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {actionName}
                               </span>
-                              {record.fromStatus && (
-                                <>
-                                  <span className="text-slate-400 text-xs">→</span>
-                                  <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      statusConfig?.bg || 'bg-slate-100'
-                                    } ${statusConfig?.color || 'text-slate-600'}`}
-                                  >
-                                    {statusConfig?.label || record.toStatus}
-                                  </span>
-                                </>
-                              )}
                             </div>
-                            <span className="text-xs text-slate-500">
-                              {new Date(record.actionTime).toLocaleString('zh-CN')}
+                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                              {(() => {
+                                const d = new Date(record.actionTime);
+                                if (isNaN(d.getTime())) return '';
+                                return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                              })()}
                             </span>
                           </div>
-                          {/* 操作人 */}
-                          <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
-                            <User className="w-3 h-3" />
-                            <span>{record.operatorName}</span>
-                          </div>
-                          {/* 进度信息 */}
-                          {record.progress !== undefined && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
-                              <FileText className="w-3 h-3" />
-                              <span>
-                                进度：{record.progress}%
-                                {record.progressIncrement !== undefined && record.progressIncrement > 0 && (
-                                  <span className="text-emerald-600 ml-1">
-                                    (+{record.progressIncrement}%)
-                                  </span>
-                                )}
-                              </span>
+
+                          {/* 状态变化 */}
+                          {(fromStatus || toStatus) && (
+                            <div className="flex items-center gap-1 mb-1">
+                              {fromStatus && (
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                                  {fromStatus}
+                                </span>
+                              )}
+                              <span className="text-gray-400">→</span>
+                              {toStatus && (
+                                <span className={`px-2 py-0.5 text-xs rounded ${
+                                  toStatus.includes('completed') || toStatus.includes('完成') ? 'bg-green-100 text-green-700' :
+                                  toStatus.includes('waiting_acceptance') || toStatus.includes('验收') ? 'bg-amber-100 text-amber-700' :
+                                  toStatus.includes('in_progress') || toStatus.includes('进行') ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {toStatus}
+                                </span>
+                              )}
                             </div>
                           )}
-                          {/* 反馈内容 */}
-                          {record.feedback && (
-                            <div className="mt-3 space-y-2">
-                              {record.feedback.text && (
-                                <div className="bg-blue-50 rounded p-2 text-sm">
-                                  <p className="text-gray-700">{record.feedback.text}</p>
-                                </div>
-                              )}
-                              {record.feedback.images && record.feedback.images.length > 0 && (
-                                <div className="flex gap-2 flex-wrap">
-                                  {record.feedback.images.map((img, i) => (
-                                    <div
-                                      key={`img-${record.id}-${i}`}
-                                      className="w-16 h-16 bg-slate-100 rounded flex items-center justify-center"
-                                    >
-                                      <Camera className="w-6 h-6 text-slate-400" />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {record.feedback.gpsLocation && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <MapPin className="w-3 h-3" />
-                                  <span>
-                                    GPS: {record.feedback.gpsLocation.lat.toFixed(4)},{' '}
-                                    {record.feedback.gpsLocation.lng.toFixed(4)}
-                                  </span>
-                                </div>
-                              )}
-                              {record.feedback.voiceNote && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <Mic className="w-3 h-3" />
-                                  <span>语音备注</span>
-                                </div>
-                              )}
-                              {record.feedback.materials && record.feedback.materials.length > 0 && (
-                                <div className="text-sm text-slate-600">
-                                  <span className="font-medium">物料使用：</span>
-                                  {record.feedback.materials.map((m, mi) => (
-                                    <span key={`fbmat-${record.id}-${mi}`} className="ml-1">
-                                      {m.name}({m.qty}{m.unit})
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              {/* 工作量确认 */}
-                              {(record.feedback.workloadDays !== undefined || record.feedback.workloadHours !== undefined || record.feedback.workers !== undefined) && (
-                                <div className="text-sm text-slate-600">
-                                  <span className="font-medium">工作量确认：</span>
-                                  {record.feedback.workloadDays !== undefined && `${record.feedback.workloadDays}天`}
-                                  {record.feedback.workloadHours !== undefined && `${record.feedback.workloadHours}小时`}
-                                  {record.feedback.workers !== undefined && `×${record.feedback.workers}人`}
-                                </div>
-                              )}
-                              {/* 物资编码 */}
-                              {record.feedback.materialCode && (
-                                <div className="text-sm text-slate-600">
-                                  <span className="font-medium">物资编码：</span>
-                                  {record.feedback.materialCode}
-                                </div>
-                              )}
+
+                          {/* 进度显示 */}
+                          {record.progress !== undefined && record.progress !== null && (
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className="h-full bg-blue-500 rounded-full"
+                                  style={{ width: `${record.progress}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-gray-500">{record.progress}%</span>
+                            </div>
+                          )}
+
+                          {/* 备注/原因 */}
+                          {comment && (
+                            <div className="mt-1 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
+                              {comment}
+                            </div>
+                          )}
+                          {reason && (
+                            <div className="mt-1 text-sm text-red-600 bg-red-50 rounded px-2 py-1">
+                              {reason}
                             </div>
                           )}
                         </div>
                       </div>
+                    </div>
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* 无流转记录提示 */}
+            {sortedRecords.length === 0 && (
+              <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                暂无处理流转记录
               </div>
             )}
           </div>

@@ -127,17 +127,10 @@ export function InspectionTable({
   const showSelection = exportMode || batchEditMode || batchDeleteMode;
 
   // 根据 record 查找关联的问题
+  // ?? record ??????????? problemId ???????????????
   const getProblemForRecord = (record: InspectionRecord): ProblemEntry | undefined => {
-    // 优先通过 problemId 匹配
-    if (record.problemId) {
-      return problems.find(p => p.id === record.problemId);
-    }
-    // 通过温室名称和巡查日期匹配（没有 problemId 时使用）
-    return problems.find(p =>
-      record.checkDate === p.checkDate &&
-      record.greenhouseName &&
-      (record.greenhouseName.includes(p.greenhouseName || '') || (p.greenhouseName && p.greenhouseName.includes(record.greenhouseName)))
-    );
+    if (!record.problemId) return undefined;
+    return problems.find(p => p.id === record.problemId);
   };
 
   // 根据问题获取关联的任务
@@ -155,13 +148,14 @@ export function InspectionTable({
       return task.progress;
     }
     // 如果没有任务，使用问题状态估算进度
-    switch (problem.status) {
-      case '待处理': return 0;
-      case '处理中': return 50;
-      case '待验收': return 100; // 待验收说明已提交完成
-      case '已处理': return 100;
-      default: return 0;
-    }
+    // 如果没有任务，使用问题状态估算进度（兼容中英文状态值）
+    const statusMap: Record<string, number> = {
+      '待处理': 0, 'pending': 0,
+      '处理中': 50, 'in_progress': 50, 'processing': 50,
+      '待验收': 100, 'waiting_acceptance': 100, 'waitingAcceptance': 100, 'pending_acceptance': 100, 'pendingAcceptance': 100,
+      '已处理': 100, 'completed': 100, 'resolved': 100,
+    };
+    return statusMap[problem.status] ?? 0;
   };
 
   // 是否显示验收按钮（待验收状态才显示）

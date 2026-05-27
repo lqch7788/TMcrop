@@ -265,6 +265,14 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   const [inspectionEditedRecordIds, setInspectionEditedRecordIds] = useState<string[]>([]);
   const [inspectionSelectedRecordId, setInspectionSelectedRecordId] = useState<string>('');
 
+  // 订阅 Store 中的巡查记录，确保新增/更新后列表即时刷新
+  const storeRecords = useInspectionDataStore((s) => s.records);
+  useEffect(() => {
+    const normalized = storeRecords.map((r) => normalizeInspectionRecord(r as unknown as InspectionRecord));
+    setInspections(normalized);
+  }, [storeRecords]);
+
+
   // 任务数据（直接从 localStorage 读取最新数据，确保实时更新）
   // 排序函数：按创建时间倒序（最新在前）
   // 使用时间戳比较，确保无效日期也能正确排序

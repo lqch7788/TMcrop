@@ -224,6 +224,13 @@ export function InspectionTab({
   // 问题相关 Hook (V2.0: API 数据层)
   const createProblem = useProblemStore((s) => s.createProblem);
   const fetchProblems = useProblemStore((s) => s.fetchProblems);
+  const storeProblems = useProblemStore((s) => s.problems);
+
+  // ?? Store ? prop ??????? Store ????????
+  const mergedProblems = useMemo(() => {
+    if (storeProblems.length > 0) return storeProblems;
+    return problems;
+  }, [storeProblems, problems]);
   const { approveProblemCompletion, rejectAcceptance } = useProblemDispatch();
 
   // 任务数据（用于获取实际处理进度，从 Zustand Store 读取）
@@ -359,7 +366,7 @@ export function InspectionTab({
   // 生成巡查编号
   const generateRecordCode = useCallback(() => {
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
     const todayRecords = inspectionRecords.filter(r => r.recordCode.includes(dateStr));
     const maxSeq = todayRecords.reduce((max, r) => {
       const seq = parseInt(r.recordCode.split('-')[1] || '0');
@@ -398,7 +405,7 @@ export function InspectionTab({
       }
       // 问题处理状态筛选
       if (filters.problemStatus !== 'all') {
-        const problem = problems.find(p => p.id === record.problemId);
+        const problem = mergedProblems.find(p => p.id === record.problemId);
         const problemStatusMap: Record<string, string> = {
           '待处理': 'pending',
           '处理中': 'processing',
@@ -412,7 +419,7 @@ export function InspectionTab({
       }
       return true;
     });
-  }, [inspectionRecords, filters, problems]);
+  }, [inspectionRecords, filters, mergedProblems]);
 
   // 分页后的数据
   const paginatedRecords = useMemo(() => {
@@ -587,7 +594,8 @@ export function InspectionTab({
 
     // 问题推送逻辑 (V2.0: 通过 API Store 创建问题)
     let newProblemId: number | undefined;
-    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult && newRecord.inspectionResult !== 'normal') {
+    // ????????????????????????"??"??????
+    if (newRecord.feedbackRequired && newRecord.feedbackUsers.length > 0 && newRecord.inspectionResult === 'abnormal') {
       const presetIssues = newRecord.issuePresets?.join('、') || '';
       const issueText = presetIssues + (newRecord.issueText ? (presetIssues ? '；' + newRecord.issueText : newRecord.issueText) : '');
 
@@ -645,7 +653,6 @@ export function InspectionTab({
     }
 
     const record = {
-      id: inspectionRecords.length + 1,
       recordCode: newRecord.recordCode,
       inspectionType: newRecord.inspectionType,
       greenhouseId,
@@ -944,7 +951,7 @@ export function InspectionTab({
           onViewDetail={(record) => { onViewDetail(record.id?.toString() || ''); }}
           onPageChange={onPageChange}
           onPageSizeChange={(size) => { onPageSizeChange(size); }}
-          problems={problems}
+          problems={mergedProblems}
           tasks={tasks}
           onAcceptance={(problem) => { setAcceptanceModal({ isOpen: true, problemId: problem.id }); }}
         />
@@ -1081,7 +1088,7 @@ export function InspectionTab({
           <div className="space-y-4">
             {/* 实时获取最新问题数据 */}
             {(() => {
-              const problem = problems.find(p => p.id === acceptanceModal.problemId);
+              const problem = mergedProblems.find(p => p.id === acceptanceModal.problemId);
               if (!problem) return null;
               return (
                 <>
