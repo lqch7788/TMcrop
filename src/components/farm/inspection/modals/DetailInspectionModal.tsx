@@ -98,10 +98,10 @@ export function DetailInspectionModal({ isOpen, onClose, record }: DetailInspect
     ? problems.find(p => p.id === record.problemId)
     : undefined;
 
-  // 获取流转记录（按时间倒序）
+  // 获取流转记录（按时间正序，最早的在前）
   const flowRecords = problem?.flowRecords
     ? [...problem.flowRecords].sort((a, b) =>
-        new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime()
+        new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime()
       )
     : [];
 

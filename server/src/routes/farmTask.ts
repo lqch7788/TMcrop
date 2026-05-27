@@ -1020,8 +1020,8 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const currentProgress = task.progress || 0;
 
-    db.run(`UPDATE farm_tasks SET progress = ?, feedback = ?, update_time = ? WHERE id = ?`,
-      [progress || currentProgress, feedback ? JSON.stringify(feedback) : null, now, id]);
+    db.run(`UPDATE farm_tasks SET progress = ?, update_time = ? WHERE id = ?`,
+      [progress || currentProgress, now, id]);
 
     // 将 feedback 对象转为 JSON 字符串存储
     const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
@@ -1032,6 +1032,7 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     saveDatabase();
     res.json({ success: true, data: { id, progress: progress || currentProgress } });
   } catch (error) {
+    console.error('提交进度失败:', error);
     res.status(500).json({ success: false, error: '提交进度失败' });
   }
 });

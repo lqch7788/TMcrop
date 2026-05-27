@@ -100,16 +100,15 @@ export function TaskRecordTimeline({
         <div className="space-y-4">
           {sortedRecords.map((record, index) => {
             const config = TASK_ACTION_CONFIG[record.action] || TASK_ACTION_CONFIG.progress;
-            const IconComponent = config.icon;
             const isLast = index === sortedRecords.length - 1;
 
             return (
               <div key={record.id} className="relative flex gap-4 pl-10">
-                {/* 图标节点 */}
+                {/* 数字序号节点 */}
                 <div
                   className={`absolute left-2 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium z-10 ${config.bgColor}`}
                 >
-                  <IconComponent className="w-3 h-3" />
+                  {index + 1}
                 </div>
 
                 {/* 内容 */}
@@ -238,6 +237,27 @@ export function TaskRecordTimeline({
                               {m.name} × {m.qty} {m.unit}
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {/* 物资编码/扫码 */}
+                      {record.feedback.materialCode && (
+                        <div className="text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
+                          <span>🔗</span>
+                          <span>物资编码：</span>
+                          <span className="font-mono">{record.feedback.materialCode}</span>
+                        </div>
+                      )}
+
+                      {/* 工作量 */}
+                      {(record.feedback.workloadDays !== undefined || record.feedback.workloadHours !== undefined || record.feedback.workers !== undefined) && (
+                        <div className="text-xs text-cyan-600 bg-cyan-50 rounded px-2 py-1">
+                          <span>⏱️</span>
+                          <span>工作量：</span>
+                          {record.feedback.workloadDays !== undefined && <span>{record.feedback.workloadDays}天</span>}
+                          {record.feedback.workloadDays !== undefined && record.feedback.workloadHours !== undefined && <span> + </span>}
+                          {record.feedback.workloadHours !== undefined && <span>{record.feedback.workloadHours}小时</span>}
+                          {record.feedback.workers !== undefined && <span>，{record.feedback.workers}人</span>}
                         </div>
                       )}
 

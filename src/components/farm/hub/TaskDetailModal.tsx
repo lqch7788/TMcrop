@@ -5,13 +5,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { type Task } from '../../../hooks/useTasks';
+import { type Task, type TaskRecord } from '../../../hooks/useTasks';
 import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
 import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
 import { TaskTypeConfigDisplay } from '../taskDispatch/components/TaskTypeConfigDisplay';
 import type { TaskConfigValues } from '../taskDispatch/hooks/useTaskTypeConfig';
+import { TaskRecordTimeline } from '../../common/TaskRecordTimeline';
 
 interface TaskDetailModalProps {
   taskId: string;
@@ -21,30 +22,6 @@ interface TaskDetailModalProps {
   tasks: Task[];
   /** 从父组件传入的任务记录获取函数（复用 useTasks 实例） */
   getTaskRecordsByTaskId: (taskId: string) => TaskRecord[];
-}
-
-interface TaskRecord {
-  id: string;
-  taskId: string;
-  actionTime: string;
-  operatorName: string;
-  action: string;
-  content?: string;
-  fromStatus?: string;
-  toStatus?: string;
-  progress?: number;
-  progressIncrement?: number;
-  feedback?: {
-    text?: string;
-    images?: string[];
-    gpsLocation?: { lat: number; lng: number };
-    voiceNote?: boolean;
-    materials?: { name: string; qty: string; unit: string }[];
-    workloadDays?: number;
-    workloadHours?: number;
-    workers?: number;
-    materialCode?: string;
-  };
 }
 
 export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecordsByTaskId }: TaskDetailModalProps) {
@@ -67,20 +44,40 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
 
         if (result.success && Array.isArray(result.data)) {
           console.warn('[TaskDetailModal] 流转记录数据:', result.data);
+          // 解析 feedback 字段（存储为 JSON 字符串）
           // 后端 queryToObjects 返回的是 camelCase 格式
-          const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => ({
-            id: String(r.id || ''),
-            taskId: String(r.taskId || taskId),
-            actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
-            operatorName: String(r.operatorName || ''),
-            action: String(r.action || 'progress'),
-            content: r.comment ? String(r.comment) : undefined,
-            fromStatus: r.fromStatus ? String(r.fromStatus) : undefined,
-            toStatus: r.toStatus ? String(r.toStatus) : String(foundTask?.status || ''),
-            progress: r.progress !== undefined ? Number(r.progress) : undefined,
-            progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
-            reason: r.reason ? String(r.reason) : undefined,
-          }));
+          const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => {
+            // 每个记录独立解析 feedback
+            let feedback: TaskRecord['feedback'] = undefined;
+            if (r.feedback && typeof r.feedback === 'string') {
+              try {
+                feedback = JSON.parse(r.feedback as string);
+              } catch {
+                feedback = undefined;
+              }
+            } else if (r.feedback && typeof r.feedback === 'object') {
+              feedback = r.feedback as TaskRecord['feedback'];
+            }
+            return {
+              id: String(r.id || ''),
+              taskId: String(r.taskId || taskId),
+              taskCode: String(r.taskCode || ''),
+              taskTitle: String(r.taskTitle || ''),
+              operatorId: String(r.operatorId || ''),
+              operatorName: String(r.operatorName || ''),
+              action: String(r.action || 'progress') as TaskRecord['action'],
+              actionName: String(r.actionName || r.action || ''),
+              fromStatus: r.fromStatus ? String(r.fromStatus) as TaskRecord['fromStatus'] : undefined,
+              toStatus: String(r.toStatus || foundTask?.status || ''),
+              progress: r.progress !== undefined ? Number(r.progress) : undefined,
+              progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
+              comment: r.comment ? String(r.comment) : undefined,
+              reason: r.reason ? String(r.reason) : undefined,
+              feedback,
+              actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
+              createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
+            };
+          });
           console.warn('[TaskDetailModal] 格式化后的记录:', formattedRecords);
           setRecords(formattedRecords);
         } else {
@@ -491,119 +488,10 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               </div>
             </div>
 
-            {/* 处理流转记录 */}
+            {/* 处理流转记录 - 使用完整的时间线组件 */}
             {sortedRecords.length > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                  <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                    <span>📋</span>
-                    处理流转记录（{sortedRecords.length}条）
-                  </h4>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {sortedRecords.map((record, index) => {
-                    const actionName = record.action || '';
-                    const fromStatus = record.fromStatus || '';
-                    const toStatus = record.toStatus || '';
-                    const comment = record.content || record.comment || '';
-                    const reason = record.reason || '';
-                    return (
-                    <div key={record.id || index} className="p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start gap-4">
-                        {/* 时间线节点 */}
-                        <div className="flex flex-col items-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
-                            actionName.includes('验收通过') || actionName.includes('通过') ? 'bg-green-500' :
-                            actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-500' :
-                            actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-500' :
-                            actionName.includes('分派') || actionName.includes('派发') || actionName.includes('发布') ? 'bg-blue-500' :
-                            actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-500' :
-                            'bg-gray-500'
-                          }`}>
-                            {sortedRecords.length - index}
-                          </div>
-                          {index < sortedRecords.length - 1 && (
-                            <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>
-                          )}
-                        </div>
-
-                        {/* 流转详情 */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                actionName.includes('验收通过') || actionName.includes('通过') ? 'bg-green-100 text-green-700' :
-                                actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-100 text-red-700' :
-                                actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-100 text-amber-700' :
-                                actionName.includes('分派') || actionName.includes('派发') || actionName.includes('发布') ? 'bg-blue-100 text-blue-700' :
-                                actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-100 text-indigo-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {actionName}
-                              </span>
-                            </div>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">
-                              {(() => {
-                                const d = new Date(record.actionTime);
-                                if (isNaN(d.getTime())) return '';
-                                return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                              })()}
-                            </span>
-                          </div>
-
-                          {/* 状态变化 */}
-                          {(fromStatus || toStatus) && (
-                            <div className="flex items-center gap-1 mb-1">
-                              {fromStatus && (
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                                  {fromStatus}
-                                </span>
-                              )}
-                              <span className="text-gray-400">→</span>
-                              {toStatus && (
-                                <span className={`px-2 py-0.5 text-xs rounded ${
-                                  toStatus.includes('completed') || toStatus.includes('完成') ? 'bg-green-100 text-green-700' :
-                                  toStatus.includes('waiting_acceptance') || toStatus.includes('验收') ? 'bg-amber-100 text-amber-700' :
-                                  toStatus.includes('in_progress') || toStatus.includes('进行') ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {toStatus}
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* 进度显示 */}
-                          {record.progress !== undefined && record.progress !== null && (
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className="h-full bg-blue-500 rounded-full"
-                                  style={{ width: `${record.progress}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs text-gray-500">{record.progress}%</span>
-                            </div>
-                          )}
-
-                          {/* 备注/原因 */}
-                          {comment && (
-                            <div className="mt-1 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
-                              {comment}
-                            </div>
-                          )}
-                          {reason && (
-                            <div className="mt-1 text-sm text-red-600 bg-red-50 rounded px-2 py-1">
-                              {reason}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
+                <TaskRecordTimeline records={sortedRecords} showStatusChange showFeedback />
               </div>
             )}
 
