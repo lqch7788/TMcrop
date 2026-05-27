@@ -71,6 +71,9 @@ import projectDebugRouter from './projectDebug';
 import deviceDistributionRouter from './deviceDistribution';
 import farmTaskSchedulesRouter from './farmTaskSchedules';
 import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
+import pestRecordsRouter from './pesticideRecords';
+import pesticideLibraryRouter from './pesticideLibrary';
+import pestDiseaseDictRouter from './pestDiseaseDict';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -294,6 +297,11 @@ router.use('/debug', requireAuth, projectDebugRouter);
 
 // 设备分配路由 — iAGS DeviceDistribution 集成
 router.use('/device-distributions', requireAuth, deviceDistributionRouter);
+
+// 病虫害防治管理路由 - V12.0
+router.use('/pest-records', requireAuth, pestRecordsRouter);
+router.use('/pesticide-library', requireAuth, pesticideLibraryRouter);
+router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

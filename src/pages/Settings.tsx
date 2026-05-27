@@ -41,6 +41,8 @@ const productionSections = [
   { icon: ScrollText, label: '工序管理', path: '/settings/processes', desc: '定义标准农事工序' },
   { icon: Tractor, label: '种植设置', path: '/settings/plant-settings', desc: '种植图标和品种种植参数配置', isIags: true },
   { icon: DollarSign, label: '成本核算', path: '/settings/cost-accounting', desc: '成本类别和预算管理' },
+  { icon: Bug, label: '药剂库', path: '/settings/pesticide-library', desc: '管理药剂信息、规格参数和生产厂家' },
+  { icon: AlertTriangle, label: '病虫害字典', path: '/settings/pest-disease-dict', desc: '管理病虫害类型、名称和防治方法' },
 ];
 
 // 组5: IoT设备 — 硬件设备参数和管理（iAGS集成）

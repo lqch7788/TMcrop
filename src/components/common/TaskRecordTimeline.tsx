@@ -30,6 +30,7 @@ const TASK_ACTION_CONFIG: Record<string, { icon: typeof CheckCircle; color: stri
   cancel: { icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500', label: '取消任务' },
   accept: { icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-500', label: '接单确认' },
   progress: { icon: Clock, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '进度更新' },
+  submit_progress: { icon: Clock, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '提交进度' },
   submit: { icon: Upload, color: 'text-amber-500', bgColor: 'bg-amber-500', label: '提交验收' },
   reject: { icon: XCircle, color: 'text-red-500', bgColor: 'bg-red-500', label: '验收驳回' },
   complete: { icon: CheckCircle, color: 'text-emerald-500', bgColor: 'bg-emerald-500', label: '验收通过' },
@@ -39,6 +40,7 @@ const TASK_ACTION_CONFIG: Record<string, { icon: typeof CheckCircle; color: stri
   remind: { icon: Bell, color: 'text-orange-500', bgColor: 'bg-orange-500', label: '催办提醒' },
   extend_deadline: { icon: Calendar, color: 'text-gray-500', bgColor: 'bg-gray-500', label: '延期' },
   continue: { icon: Play, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '继续执行' },
+  create: { icon: Send, color: 'text-blue-500', bgColor: 'bg-blue-500', label: '创建任务' },
 };
 
 interface TaskRecordTimelineProps {

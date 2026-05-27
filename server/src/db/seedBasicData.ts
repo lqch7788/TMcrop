@@ -477,6 +477,9 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC022', code: 'material_cost_type', name: '物料成本类型', module: 'production', description: '物料成本类型（肥料/农药/种子等）', sortOrder: 22, status: 'active' },
   { id: 'DC023', code: 'planting_season_status', name: '种植季状态', module: 'base', description: '种植季记录状态（种植中/已收获/休耕/准备中）', sortOrder: 23, status: 'active' },
   { id: 'DC024', code: 'block_type', name: '区块类型', module: 'base', description: '设施内种植区块类型', sortOrder: 24, status: 'active' },
+  { id: 'DC025', code: 'pesticide_type', name: '农药类型', module: 'pest', description: '农药类型（杀虫剂/杀菌剂/除草剂/杀螨剂/其他）', sortOrder: 25, status: 'active' },
+  { id: 'DC026', code: 'application_method', name: '施用方法', module: 'pest', description: '农药/防治施用方法', sortOrder: 26, status: 'active' },
+  { id: 'DC027', code: 'bio_agent_type', name: '生物制剂类型', module: 'pest', description: '生物防治制剂类型', sortOrder: 27, status: 'active' },
   // ============================================
   // 生产汇总表配置分类（V8.0新增）
   // ============================================
@@ -675,6 +678,26 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'D137', categoryCode: 'material_cost_type', dictCode: 'seed', dictLabel: '种子种苗', dictValue: 'seed', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
   { id: 'D138', categoryCode: 'material_cost_type', dictCode: 'film', dictLabel: '基质农膜', dictValue: 'film', color: 'purple', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'D139', categoryCode: 'material_cost_type', dictCode: 'other', dictLabel: '其他物料', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 农药类型（V12.0新增）
+  { id: 'PT001', categoryCode: 'pesticide_type', dictCode: 'insecticide', dictLabel: '杀虫剂', dictValue: 'insecticide', color: 'red', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'PT002', categoryCode: 'pesticide_type', dictCode: 'fungicide', dictLabel: '杀菌剂', dictValue: 'fungicide', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'PT003', categoryCode: 'pesticide_type', dictCode: 'herbicide', dictLabel: '除草剂', dictValue: 'herbicide', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'PT004', categoryCode: 'pesticide_type', dictCode: 'acaricide', dictLabel: '杀螨剂', dictValue: 'acaricide', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'PT005', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  // 施用方法（V12.0新增）
+  { id: 'AM001', categoryCode: 'application_method', dictCode: 'spray', dictLabel: '喷雾', dictValue: 'spray', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'AM002', categoryCode: 'application_method', dictCode: 'drench', dictLabel: '灌根', dictValue: 'drench', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'AM003', categoryCode: 'application_method', dictCode: 'fumigation', dictLabel: '熏蒸', dictValue: 'fumigation', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'AM004', categoryCode: 'application_method', dictCode: 'broadcast', dictLabel: '撒施', dictValue: 'broadcast', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'AM005', categoryCode: 'application_method', dictCode: 'irrigation', dictLabel: '灌施', dictValue: 'irrigation', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'AM006', categoryCode: 'application_method', dictCode: 'injection', dictLabel: '注射', dictValue: 'injection', color: 'orange', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 生物制剂类型（V12.0新增）
+  { id: 'BT001', categoryCode: 'bio_agent_type', dictCode: 'predatory_mite', dictLabel: '捕食螨', dictValue: 'predatory_mite', color: 'green', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'BT002', categoryCode: 'bio_agent_type', dictCode: 'parasitic_wasp', dictLabel: '寄生蜂', dictValue: 'parasitic_wasp', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'BT003', categoryCode: 'bio_agent_type', dictCode: 'entomopathogenic_fungi', dictLabel: ' Entomopathogenic Fungi', dictValue: 'entomopathogenic_fungi', color: 'purple', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'BT004', categoryCode: 'bio_agent_type', dictCode: 'bt', dictLabel: '苏云金杆菌(Bt)', dictValue: 'bt', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'BT005', categoryCode: 'bio_agent_type', dictCode: 'nematode', dictLabel: '线虫', dictValue: 'nematode', color: 'orange', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'BT006', categoryCode: 'bio_agent_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
   // 来源途径 - V3.0扩展至12项（含历史数据）
   // 注意：ID已修正为避免与material_cost_type/greenhouse_type的ID冲突
   { id: 'SO01', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '自产自繁', dictValue: 'self_produced', color: 'green', sortOrder: 0, isDefault: 0, status: 'active' },

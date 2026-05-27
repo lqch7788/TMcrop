@@ -97,6 +97,11 @@ import FarmStructureManagement from './pages/farm/FarmStructureManagement';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
 
+// 病虫害防治管理模块
+import PestControlPage from './components/farm/pest-control/PestControlPage';
+import PesticideLibraryPage from './components/settings/pesticide-library/PesticideLibraryPage';
+import PestDiseaseDictPage from './components/settings/pest-disease-dict/PestDiseaseDictPage';
+
 import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
@@ -254,6 +259,9 @@ function AppContent() {
             <Route path="cost-accounting" element={<CostAccounting />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="crop-variety" element={<CropVarietyManagement />} />
+            {/* 病虫害防治管理 */}
+            <Route path="pesticide-library" element={<PesticideLibraryPage />} />
+            <Route path="pest-disease-dict" element={<PestDiseaseDictPage />} />
 
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
@@ -318,6 +326,8 @@ function AppContent() {
           {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
           <Route path="/task-center" element={<TaskCenterPage />} />
           <Route path="/farm-hub" element={<FarmTaskHub />} />
+          {/* 病虫害防治管理 */}
+          <Route path="/pest-control" element={<PestControlPage />} />
           <Route path="/problem-dispatch" element={<FarmTaskHub />} />
           <Route path="/daily-work-summary" element={<DailyWorkSummary />} />
           <Route path="/schedule" element={<Schedule />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Edit, Eye, ChevronRight, ClipboardCheck, Calendar, Clock, FileText } from 'lucide-react';
+import { Users, Plus, Edit, Eye, ChevronRight, ChevronLeft, ClipboardCheck, Calendar, Clock, FileText } from 'lucide-react';
 import { usePositionStore } from '../stores';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/Pagination';
