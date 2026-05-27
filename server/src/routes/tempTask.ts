@@ -181,6 +181,218 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 /**
+ * 记录临时任务操作流水
+ */
+function recordTempTaskOperation(
+  db: any,
+  taskId: string,
+  taskCode: string,
+  taskTitle: string,
+  operatorId: string,
+  operatorName: string,
+  action: string,
+  actionName: string,
+  fromStatus: string | undefined,
+  toStatus: string,
+  progress?: number,
+  comment?: string,
+  reason?: string
+) {
+  const id = `TTO${Date.now()}`;
+  const now = new Date().toISOString();
+
+  db.run(`
+    INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
+      action, action_name, from_status, to_status, progress, comment, reason, action_time, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
+      fromStatus || null, toStatus, progress || null, comment || null, reason || null, now, now]);
+}
+
+/**
+ * 获取临时任务操作记录
+ * GET /api/temp-tasks/:id/records
+ */
+router.get('/:id/records', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const items = queryToObjects(db,
+      'SELECT * FROM task_operation_records WHERE task_id = ? ORDER BY action_time DESC',
+      [id]);
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '获取任务操作记录失败' });
+  }
+});
+
+/**
+ * 接受临时任务
+ * POST /api/temp-tasks/:id/accept
+ */
+router.post('/:id/accept', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { operator_id, operator_name } = req.body;
+
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) {
+      task = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '临时任务不存在' });
+    }
+
+    const fromStatus = task.status;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE temp_tasks SET status = 'accepted', accepted_at = ?, update_time = ? WHERE id = ?`,
+      [now, now, id]);
+
+    recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      operator_id || '', operator_name || '', 'accept', '接单',
+      fromStatus, 'accepted', undefined, '已接单，开始处理');
+
+    saveDatabase();
+    res.json({ success: true, data: { id, status: 'accepted' } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '接受任务失败' });
+  }
+});
+
+/**
+ * 提交进度
+ * POST /api/temp-tasks/:id/submit-progress
+ */
+router.post('/:id/submit-progress', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { progress, operator_id, operator_name, comment } = req.body;
+
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) {
+      task = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '临时任务不存在' });
+    }
+
+    const fromStatus = task.status;
+    const now = new Date().toISOString();
+    const currentProgress = task.progress || 0;
+
+    db.run(`UPDATE temp_tasks SET progress = ?, update_time = ? WHERE id = ?`,
+      [progress || currentProgress, now, id]);
+
+    // 如果进度达到100%，状态改为待验收
+    if (Number(progress) >= 100) {
+      db.run(`UPDATE temp_tasks SET status = 'waiting_acceptance', update_time = ? WHERE id = ?`,
+        [now, id]);
+    }
+
+    recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      operator_id || '', operator_name || '', 'submit_progress', '提交反馈',
+      fromStatus, Number(progress) >= 100 ? 'waiting_acceptance' : fromStatus,
+      progress, comment || '处理完成，提交验收');
+
+    saveDatabase();
+    res.json({ success: true, data: { id, progress: progress || currentProgress } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '提交进度失败' });
+  }
+});
+
+/**
+ * 验收通过（完成）
+ * POST /api/temp-tasks/:id/complete
+ */
+router.post('/:id/complete', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { operator_id, operator_name, acceptance_remarks } = req.body;
+
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) {
+      task = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '临时任务不存在' });
+    }
+
+    const fromStatus = task.status;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE temp_tasks SET status = 'completed', completed_at = ?, update_time = ? WHERE id = ?`,
+      [now, now, id]);
+
+    recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      operator_id || '', operator_name || '', 'verify', '验收通过',
+      fromStatus, 'completed', 100, acceptance_remarks || '验收通过');
+
+    saveDatabase();
+    res.json({ success: true, data: { id, status: 'completed' } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '验收失败' });
+  }
+});
+
+/**
+ * 验收返工
+ * POST /api/temp-tasks/:id/reject
+ */
+router.post('/:id/reject', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { operator_id, operator_name, reject_reason } = req.body;
+
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) {
+      task = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '临时任务不存在' });
+    }
+
+    const fromStatus = task.status;
+    const now = new Date().toISOString();
+
+    db.run(`UPDATE temp_tasks SET status = 'rejected', update_time = ? WHERE id = ?`,
+      [now, id]);
+
+    recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+      operator_id || '', operator_name || '', 'reject', '验收返工',
+      fromStatus, 'rejected', undefined,
+      reject_reason ? `返工原因：${reject_reason}` : '验收不通过，需要返工');
+
+    saveDatabase();
+    res.json({ success: true, data: { id, status: 'rejected' } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '返工操作失败' });
+  }
+});
+
+/**
  * 更新临时任务
  * PUT /api/temp-tasks/:id
  */

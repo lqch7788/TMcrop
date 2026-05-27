@@ -36,7 +36,8 @@ const STATUS_EN = {
 
 /** 检查问题状态是否为指定中文状态 */
 const isStatus = (p: ProblemData, cn: string): boolean => {
-  return p.status === cn || p.statusLabel === cn || p.status === STATUS_EN_TO_CN[cn];
+  // ?????????statusLabel????? status ?????
+  return p.status === cn || p.statusLabel === cn || STATUS_EN_TO_CN[p.status] === cn;
 };
 
 // 问题类型到任务类型的映射
