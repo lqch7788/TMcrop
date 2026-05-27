@@ -10,7 +10,8 @@ import {
   Banknote, UserPlus, Award, TrendingUp, AlertCircle, Clock, Sparkles, Calculator, FileSignature,
   Briefcase, GraduationCap, Clipboard, Play, Bot,
   Leaf, Flower2, Trees, CheckCircle,
-  DollarSign, Layers, Link as LinkIcon
+  DollarSign, Layers, Link as LinkIcon,
+  Bug
 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 
@@ -45,6 +46,7 @@ const cropSubItems = [
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
   { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
   { icon: Sprout, label: '施肥管理', path: '/crop/fertilizer' },
+  { icon: Bug, label: '病虫害管理', path: '/pest-control' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
@@ -92,7 +94,6 @@ const farmSubItems = [
   { icon: Folder, label: '班组分配', path: '/team' },
   { icon: Calendar, label: '每日工单汇总', path: '/daily-work-summary' },
 ];
-
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   const location = useLocation();

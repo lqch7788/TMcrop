@@ -75,24 +75,38 @@ export const SmartDispatchTab: React.FC = () => {
 
       if (result.success && Array.isArray(result.data)) {
         // 后端 queryToObjects 返回的是 camelCase 格式
-        const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => ({
-          id: String(r.id || ''),
-          taskId: String(r.taskId || task.id),
-          taskCode: String(r.taskCode || task.taskCode || ''),
-          taskTitle: String(r.taskTitle || task.title || ''),
-          operatorId: String(r.operatorId || ''),
-          operatorName: String(r.operatorName || ''),
-          action: String(r.action || 'progress') as TaskRecord['action'],
-          actionName: String(r.actionName || r.action || ''),
-          fromStatus: r.fromStatus ? String(r.fromStatus) as TaskRecord['fromStatus'] : undefined,
-          toStatus: String(r.toStatus || task.status) as TaskRecord['toStatus'],
-          progress: r.progress !== undefined ? Number(r.progress) : undefined,
-          progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
-          comment: r.comment ? String(r.comment) : undefined,
-          reason: r.reason ? String(r.reason) : undefined,
-          actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
-          createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
-        }));
+        const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => {
+          // 解析 feedback 字段（存储为 JSON 字符串）
+          let feedback: TaskRecord['feedback'] = undefined;
+          if (r.feedback && typeof r.feedback === 'string') {
+            try {
+              feedback = JSON.parse(r.feedback as string);
+            } catch {
+              feedback = undefined;
+            }
+          } else if (r.feedback && typeof r.feedback === 'object') {
+            feedback = r.feedback as TaskRecord['feedback'];
+          }
+          return {
+            id: String(r.id || ''),
+            taskId: String(r.taskId || task.id),
+            taskCode: String(r.taskCode || task.taskCode || ''),
+            taskTitle: String(r.taskTitle || task.title || ''),
+            operatorId: String(r.operatorId || ''),
+            operatorName: String(r.operatorName || ''),
+            action: String(r.action || 'progress') as TaskRecord['action'],
+            actionName: String(r.actionName || r.action || ''),
+            fromStatus: r.fromStatus ? String(r.fromStatus) as TaskRecord['fromStatus'] : undefined,
+            toStatus: String(r.toStatus || task.status) as TaskRecord['toStatus'],
+            progress: r.progress !== undefined ? Number(r.progress) : undefined,
+            progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
+            comment: r.comment ? String(r.comment) : undefined,
+            reason: r.reason ? String(r.reason) : undefined,
+            feedback,
+            actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
+            createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
+          };
+        });
         setViewingTaskRecords(formattedRecords);
       }
     } catch (error) {

@@ -2751,6 +2751,92 @@ export function initializeDatabase() {
 
   console.log('数据库表初始化完成');
 
+  // ========== V12.0: 病虫害防治管理 ==========
+  // 药剂知识库主表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pesticide_library (
+      id TEXT PRIMARY KEY,
+      pesticide_code TEXT NOT NULL UNIQUE,
+      pesticide_name TEXT NOT NULL,
+      control_type TEXT NOT NULL CHECK(control_type IN ('chemical', 'bio', 'physical')),
+      function_desc TEXT,
+      taboo_desc TEXT,
+      target_pests TEXT,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 药剂规格子表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pesticide_specs (
+      id TEXT PRIMARY KEY,
+      pesticide_id TEXT NOT NULL,
+      spec_content TEXT,
+      formulation TEXT,
+      manufacturer TEXT,
+      suggested_dosage TEXT,
+      suggested_ratio TEXT,
+      dosage_unit TEXT,
+      status TEXT DEFAULT 'active',
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (pesticide_id) REFERENCES pesticide_library(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 病虫害字典表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pest_disease_dict (
+      id TEXT PRIMARY KEY,
+      dict_code TEXT NOT NULL UNIQUE,
+      dict_name TEXT NOT NULL,
+      dict_type TEXT NOT NULL CHECK(dict_type IN ('pest', 'disease')),
+      target_crops TEXT,
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      create_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 病虫害防治记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pesticide_records (
+      id TEXT PRIMARY KEY,
+      record_code TEXT NOT NULL UNIQUE,
+      spray_time TEXT NOT NULL,
+      operator_id TEXT,
+      operator_name TEXT,
+      crop_name TEXT NOT NULL,
+      greenhouse_name TEXT,
+      control_type TEXT NOT NULL CHECK(control_type IN ('chemical', 'bio', 'physical')),
+      pesticide_id TEXT,
+      pesticide_name TEXT,
+      pesticide_type TEXT,
+      spec_id TEXT,
+      spec_content TEXT,
+      dosage REAL,
+      dosage_unit TEXT,
+      dilution_ratio TEXT,
+      target_pest TEXT,
+      application_method TEXT,
+      bio_agent_id TEXT,
+      bio_agent_name TEXT,
+      bio_agent_type TEXT,
+      equipment_name TEXT,
+      equipment_count TEXT,
+      use_leaf_fertilizer TEXT DEFAULT 'no',
+      leaf_fertilizer_name TEXT,
+      leaf_fertilizer_dosage REAL,
+      leaf_fertilizer_unit TEXT,
+      description TEXT,
+      photos TEXT,
+      status TEXT DEFAULT 'completed',
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
   // ========== V12.0: 库存中心表（采收入库联动）==========
 
   // 库存中心表 - 存储所有库存实例

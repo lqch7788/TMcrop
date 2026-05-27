@@ -1016,6 +1016,111 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // V12.0: 病虫害防治管理表（如果从旧版本升级）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pesticide_library (
+        id TEXT PRIMARY KEY,
+        pesticide_code TEXT NOT NULL UNIQUE,
+        pesticide_name TEXT NOT NULL,
+        control_type TEXT NOT NULL,
+        function_desc TEXT,
+        taboo_desc TEXT,
+        target_pests TEXT,
+        status TEXT DEFAULT 'active',
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        update_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ pesticide_library 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• pesticide_library 已存在');
+    else console.error('pesticide_library:', e.message);
+  }
+
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pesticide_specs (
+        id TEXT PRIMARY KEY,
+        pesticide_id TEXT NOT NULL,
+        spec_content TEXT,
+        formulation TEXT,
+        manufacturer TEXT,
+        suggested_dosage TEXT,
+        suggested_ratio TEXT,
+        dosage_unit TEXT,
+        status TEXT DEFAULT 'active',
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ pesticide_specs 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• pesticide_specs 已存在');
+    else console.error('pesticide_specs:', e.message);
+  }
+
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pest_disease_dict (
+        id TEXT PRIMARY KEY,
+        dict_code TEXT NOT NULL UNIQUE,
+        dict_name TEXT NOT NULL,
+        dict_type TEXT NOT NULL,
+        target_crops TEXT,
+        description TEXT,
+        status TEXT DEFAULT 'active',
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ pest_disease_dict 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• pest_disease_dict 已存在');
+    else console.error('pest_disease_dict:', e.message);
+  }
+
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pesticide_records (
+        id TEXT PRIMARY KEY,
+        record_code TEXT NOT NULL UNIQUE,
+        spray_time TEXT NOT NULL,
+        operator_id TEXT,
+        operator_name TEXT,
+        crop_name TEXT NOT NULL,
+        greenhouse_name TEXT,
+        control_type TEXT NOT NULL,
+        pesticide_id TEXT,
+        pesticide_name TEXT,
+        pesticide_type TEXT,
+        spec_id TEXT,
+        spec_content TEXT,
+        dosage REAL,
+        dosage_unit TEXT,
+        dilution_ratio TEXT,
+        target_pest TEXT,
+        application_method TEXT,
+        bio_agent_id TEXT,
+        bio_agent_name TEXT,
+        bio_agent_type TEXT,
+        equipment_name TEXT,
+        equipment_count TEXT,
+        use_leaf_fertilizer TEXT DEFAULT 'no',
+        leaf_fertilizer_name TEXT,
+        leaf_fertilizer_dosage REAL,
+        leaf_fertilizer_unit TEXT,
+        description TEXT,
+        photos TEXT,
+        status TEXT DEFAULT 'completed',
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        update_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ pesticide_records 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• pesticide_records 已存在');
+    else console.error('pesticide_records:', e.message);
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

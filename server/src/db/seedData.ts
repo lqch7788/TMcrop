@@ -1641,7 +1641,7 @@ function seedInspections() {
 
   for (const ins of inspections) {
     db.run(`
-      INSERT OR REPLACE INTO inspections
+      INSERT OR IGNORE INTO inspections
       (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
        check_date, check_time, check_result, issue_severity, issue_text, images, status, feedback_users, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1698,7 +1698,7 @@ function seedProblems() {
 
   for (const prb of problems) {
     db.run(`
-      INSERT OR REPLACE INTO problems
+      INSERT OR IGNORE INTO problems
       (id, problem_code, problem_type, title, description, greenhouse_name,
        reporter_id, reporter_name, assignee_id, assignee_name, priority, status, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -3499,7 +3499,7 @@ function seedBusinessTempTasks() {
 
   for (const task of tempTasks) {
     db.run(`
-      INSERT OR REPLACE INTO temp_tasks
+      INSERT OR IGNORE INTO temp_tasks
       (id, task_code, task_title, task_type, task_content, assignee_id, assignee_name,
        greenhouse_id, greenhouse_name, priority, status, due_date, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -336,3 +336,13 @@ export type { PlantSetting } from './usePlantSettingStore';
 // iAGS 设备分配 V1.0
 export { useDeviceDistributionStore } from './useDeviceDistributionStore';
 export type { DeviceDistribution } from '../services/apiDeviceDistributionService';
+
+// V12.0: 病虫害防治管理 Stores
+export { usePestControlStore } from './usePestControlStore';
+export type { PestControlData } from './usePestControlStore';
+
+export { usePesticideLibraryStore } from './usePesticideLibraryStore';
+export type { PesticideLibrary, PesticideSpec } from './usePesticideLibraryStore';
+
+export { usePestDiseaseDictStore } from './usePestDiseaseDictStore';
+export type { PestDiseaseDict } from './usePestDiseaseDictStore';
