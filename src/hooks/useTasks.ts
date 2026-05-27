@@ -734,15 +734,26 @@ export function useTasks(): UseTasksReturn {
     if (!task || task.status !== 'draft') return;
 
     const now = new Date().toISOString();
-    const record = createTaskRecord({ ...task, status: 'pending' }, 'publish', 'draft');
-    saveTaskRecords([record, ...taskRecordsRef.current]);
 
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+        }),
+      });
+    }, 'publishTask');
+
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'pending',
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 撤回任务（pending → cancelled，撤回原因记录在操作记录中）
   const withdrawTask = useCallback((id: string, reason: string) => {
@@ -750,16 +761,28 @@ export function useTasks(): UseTasksReturn {
     if (!task || task.status !== 'pending') return;
 
     const now = new Date().toISOString();
-    const record = createTaskRecord({ ...task, status: 'cancelled' }, 'withdraw', 'pending', { reason });
-    saveTaskRecords([record, ...taskRecordsRef.current]);
 
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+          reason,
+        }),
+      });
+    }, 'withdrawTask');
+
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'cancelled',
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 取消任务（彻底取消，后续不再执行，保留执行人信息用于审计追溯）
   const cancelTask = useCallback((id: string, reason: string) => {
@@ -767,16 +790,28 @@ export function useTasks(): UseTasksReturn {
     if (!task || !['pending', 'accepted', 'in_progress'].includes(task.status)) return;
 
     const now = new Date().toISOString();
-    const record = createTaskRecord({ ...task, status: 'cancelled' }, 'cancel', task.status, { reason });
-    saveTaskRecords([record, ...taskRecordsRef.current]);
 
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+          reason,
+        }),
+      });
+    }, 'cancelTask');
+
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'cancelled',
       cancelledReason: reason,
       cancelledAt: now,
       cancelledBy: task.assignerId,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress
   const acceptTask = useCallback((id: string) => {
@@ -787,8 +822,17 @@ export function useTasks(): UseTasksReturn {
     const nowStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().slice(0, 5);
 
-    const record = createTaskRecord({ ...task, status: 'accepted' }, 'accept', 'pending');
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assigneeId || '',
+          operator_name: task.assigneeName || '',
+        }),
+      });
+    }, 'acceptTask');
 
     // 创建考勤记录（从任务上下文获取部门信息）
     try {
@@ -809,6 +853,7 @@ export function useTasks(): UseTasksReturn {
       console.error('创建考勤记录失败:', error);
     }
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'accepted',
       acceptedAt: now.toISOString(),
@@ -816,7 +861,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now.toISOString(),
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords, addAttendance]);
+  }, [tasks, addAttendance]);
 
   // 选择执行人（用于待派工任务）- 设置执行人，状态变为 pending（待接受）
   const acceptAndAssign = useCallback((id: string, assigneeId: string, assigneeName: string) => {
@@ -883,7 +928,8 @@ export function useTasks(): UseTasksReturn {
       newStatus = 'in_progress';
     }
 
-    const feedbackData: TaskRecord['feedback'] = {
+    // 构建反馈数据
+    const feedbackData: Record<string, unknown> = {
       text: options?.remarks,
       materials: options?.materials,
       gpsLocation: options?.gpsLocation,
@@ -898,13 +944,36 @@ export function useTasks(): UseTasksReturn {
       materialCode: options?.materialCode,
     };
 
-    const record = createTaskRecord(
-      { ...task, status: newStatus, progress },
-      action,
-      task.status,
-      { progress, progressIncrement, feedback: feedbackData, comment: options?.remarks }
-    );
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      if (options?.isFinal) {
+        // 最终提交调用 submit-acceptance
+        await fetch(`/api/farm-tasks/${id}/submit-acceptance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operator_id: task.assigneeId || '',
+            operator_name: task.assigneeName || '',
+            progress,
+            comment: options?.remarks || '',
+            feedback: feedbackData,
+          }),
+        });
+      } else {
+        // 进度更新调用 progress
+        await fetch(`/api/farm-tasks/${id}/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operator_id: task.assigneeId || '',
+            operator_name: task.assigneeName || '',
+            progress,
+            comment: options?.remarks || '',
+            feedback: feedbackData,
+          }),
+        });
+      }
+    }, 'submitProgress');
 
     // 计算工作时长
     let workDuration = 0;
@@ -953,6 +1022,7 @@ export function useTasks(): UseTasksReturn {
       endTime: options?.endTime,
     });
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       progress,
       status: newStatus,
@@ -962,7 +1032,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: nowIso,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords, attendance, updateAttendance, syncWorkLogFromTask]);
+  }, [tasks, attendance, updateAttendance, syncWorkLogFromTask]);
 
   // 超时处理
   const handleOvertime = useCallback((
@@ -1019,13 +1089,18 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
 
-    const record = createTaskRecord(
-      { ...task, status: 'completed' },
-      'complete',
-      'waiting_acceptance',
-      { comment: comments }
-    );
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+          comments: comments || '',
+        }),
+      });
+    }, 'acceptCompletion');
 
     // 更新考勤记录状态为已完成
     const attendanceRecord = attendance.find(a => a.taskId === task.id);
@@ -1051,6 +1126,7 @@ export function useTasks(): UseTasksReturn {
       });
     }
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'completed',
       completedAt: now,
@@ -1064,7 +1140,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords, attendance, updateAttendance]);
+  }, [tasks, attendance, updateAttendance]);
 
   // 验收驳回
   const rejectForRework = useCallback((id: string, reason: string) => {
@@ -1083,14 +1159,20 @@ export function useTasks(): UseTasksReturn {
       taskStatusBeforeRework: task.status,
     };
 
-    const record = createTaskRecord(
-      { ...task, status: newStatus, reworkCount: newReworkCount },
-      'reject',
-      'waiting_acceptance',
-      { reason }
-    );
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+          reason,
+        }),
+      });
+    }, 'rejectForRework');
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: newStatus,
       reworkCount: newReworkCount,
@@ -1099,7 +1181,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 继续执行（返工后）
   const continueExecution = useCallback((id: string) => {
@@ -1108,19 +1190,25 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
 
-    const record = createTaskRecord(
-      { ...task, status: 'in_progress' },
-      'continue',
-      'rejected'
-    );
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/continue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assigneeId || '',
+          operator_name: task.assigneeName || '',
+        }),
+      });
+    }, 'continueExecution');
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: 'in_progress',
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 执行人拒绝任务（拒绝后任务状态变为rejected，可重新派发）
   const rejectByExecutor = useCallback((id: string, rejectReason: string, executorId: string, executorName: string) => {
@@ -1132,23 +1220,20 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
 
-    const record: TaskRecord = {
-      id: `TR_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      taskId: task.id,
-      taskCode: task.taskCode,
-      taskTitle: task.title,
-      operatorId: executorId,
-      operatorName: executorName,
-      action: 'reject',
-      actionName: '执行人拒绝',
-      fromStatus: task.status,
-      toStatus: 'rejected',
-      reason: rejectReason,
-      actionTime: now,
-      createdAt: now.split('T')[0],
-    };
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${task.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: executorId,
+          operator_name: executorName,
+          reason: rejectReason,
+        }),
+      });
+    }, 'rejectByExecutor');
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(task.id, {
       status: 'rejected',
       assigneeId: '',
@@ -1158,7 +1243,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, saveTaskRecords]);
+  }, [tasks]);
 
   // 重新派发
   const reassignTask = useCallback((id: string, newAssigneeId: string, newAssigneeName: string) => {
@@ -1174,13 +1259,21 @@ export function useTasks(): UseTasksReturn {
     const finalAssigneeName = mustClearAssignee ? '' : newAssigneeName;
     const finalStatus: TaskStatus = 'pending';
 
-    const record = createTaskRecord(
-      { ...task, status: finalStatus, assigneeId: finalAssigneeId, assigneeName: finalAssigneeName },
-      'reassign',
-      task.status
-    );
-    saveTaskRecords([record, ...taskRecordsRef.current]);
+    // 调用后端 API 持久化操作记录
+    syncToApi(async () => {
+      await fetch(`/api/farm-tasks/${id}/reassign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: task.assignerId || '',
+          operator_name: task.assignerName || '',
+          new_assignee_id: finalAssigneeId,
+          new_assignee_name: finalAssigneeName,
+        }),
+      });
+    }, 'reassignTask');
 
+    // 本地状态更新（乐观更新）
     getStoreForTask(task).updateTask(id, {
       status: finalStatus,
       assigneeId: finalAssigneeId,
@@ -1191,7 +1284,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, createTaskRecord, saveTaskRecords]);
+  }, [tasks]);
 
   // 催办
   const sendReminder = useCallback((id: string, message?: string) => {

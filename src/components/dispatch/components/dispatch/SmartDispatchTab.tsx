@@ -63,11 +63,44 @@ export const SmartDispatchTab: React.FC = () => {
     setShowForm(true);
   };
 
-  // 处理查看详情
-  const handleView = (task: Task) => {
-    const records = getTaskRecordsByTaskId(task.id);
-    setViewingTaskRecords(records);
+  // 处理查看详情 - 从后端 API 获取流转记录
+  const handleView = async (task: Task) => {
     setViewingTask(task);
+    setViewingTaskRecords([]); // 先清空，避免显示旧数据
+
+    try {
+      // 从后端 API 获取流转记录
+      const res = await fetch(`/api/farm-tasks/${task.id}/records`);
+      const result = await res.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        // 后端 queryToObjects 返回的是 camelCase 格式
+        const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => ({
+          id: String(r.id || ''),
+          taskId: String(r.taskId || task.id),
+          taskCode: String(r.taskCode || task.taskCode || ''),
+          taskTitle: String(r.taskTitle || task.title || ''),
+          operatorId: String(r.operatorId || ''),
+          operatorName: String(r.operatorName || ''),
+          action: String(r.action || 'progress') as TaskRecord['action'],
+          actionName: String(r.actionName || r.action || ''),
+          fromStatus: r.fromStatus ? String(r.fromStatus) as TaskRecord['fromStatus'] : undefined,
+          toStatus: String(r.toStatus || task.status) as TaskRecord['toStatus'],
+          progress: r.progress !== undefined ? Number(r.progress) : undefined,
+          progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
+          comment: r.comment ? String(r.comment) : undefined,
+          reason: r.reason ? String(r.reason) : undefined,
+          actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
+          createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
+        }));
+        setViewingTaskRecords(formattedRecords);
+      }
+    } catch (error) {
+      console.warn('[SmartDispatchTab] 获取流转记录失败:', error);
+      // 回退到本地记录
+      const records = getTaskRecordsByTaskId(task.id);
+      setViewingTaskRecords(records);
+    }
   };
 
   // 处理详情弹窗关闭
