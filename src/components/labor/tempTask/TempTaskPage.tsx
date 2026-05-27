@@ -848,9 +848,11 @@ export function TempTaskPage() {
   // 重新派发（驳回2次后）
   const handleReassign = (task: TempTask) => {
     // 重置任务状态为待接受，同时可以清空rejectCount
+    // 注意：后端 PUT 处理通过 reassign=true 标记来记录 reassign 操作
     updateTempTask(task.id, {
       status: 'pending',
       rejectCount: 0,
+      reassign: true, // 标记为重新分派，让后端记录 reassign 操作
     });
     // 记录操作
     addTempTaskRecord({
@@ -859,7 +861,7 @@ export function TempTaskPage() {
       status: 'pending',
       greenhouseId: '',
       greenhouseName: task.location || '',
-      
+
       operatorId: task.assignerId,
       operatorName: task.assignerName,
       operationDate: new Date().toISOString().split('T')[0],
