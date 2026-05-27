@@ -23,6 +23,7 @@ import { useTempTaskStore } from '../../../../stores';
 
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../../types/task';
+import { TaskRecordTimeline } from '../../../../components/common/TaskRecordTimeline';
 
 // 状态映射
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
@@ -1007,7 +1008,39 @@ export const TempTaskTab: React.FC = () => {
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data)) {
-          setDetailRecords(result.data);
+          // 格式化记录数据，与农事任务保持一致
+          const formattedRecords = result.data.map((r: Record<string, unknown>) => {
+            let feedback: TaskRecord['feedback'] = undefined;
+            if (r.feedback && typeof r.feedback === 'string') {
+              try {
+                feedback = JSON.parse(r.feedback as string);
+              } catch {
+                feedback = undefined;
+              }
+            } else if (r.feedback && typeof r.feedback === 'object') {
+              feedback = r.feedback as TaskRecord['feedback'];
+            }
+            return {
+              id: String(r.id || ''),
+              taskId: String(r.taskId || task.id),
+              taskCode: String(r.taskCode || ''),
+              taskTitle: String(r.taskTitle || ''),
+              operatorId: String(r.operatorId || ''),
+              operatorName: String(r.operatorName || ''),
+              action: String(r.action || 'progress') as TaskRecord['action'],
+              actionName: String(r.actionName || r.action || ''),
+              fromStatus: r.fromStatus ? String(r.fromStatus) as TaskRecord['fromStatus'] : undefined,
+              toStatus: String(r.toStatus || task.status || ''),
+              progress: r.progress !== undefined ? Number(r.progress) : undefined,
+              progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
+              comment: r.comment ? String(r.comment) : undefined,
+              reason: r.reason ? String(r.reason) : undefined,
+              feedback,
+              actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
+              createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
+            };
+          });
+          setDetailRecords(formattedRecords);
         }
       })
       .catch(() => {});
@@ -1060,37 +1093,64 @@ export const TempTaskTab: React.FC = () => {
     triggerRefresh();
   };
 
-  // 提交完成（需要审核）
-  const handleSubmitComplete = (task: TempTask, hours: number, remarks: string) => {
-    // 通过 useTempTasks 的 submitCompletion 提交
-    submitCompletion(task.id, hours, remarks);
-    // 同步到农事操作记录
-    addTempTaskRecord({
-      operationType: 'complete',
-      operationTypeName: '提交完成',
-      status: 'waiting_acceptance',
-      greenhouseId: '',
-      greenhouseName: task.location || '',
+  // 提交完成（需要审核）- 修复：先调用 submit-progress API 记录反馈，再更新本地状态
+  const handleSubmitComplete = async (task: TempTask, hours: number, remarks: string) => {
+    // 构造反馈数据
+    const feedbackData = {
+      workloadHours: hours,
+      workloadDays: 0,
+      workers: 1,
+      text: remarks || '',
+      gpsLocation: null,
+      images: [],
+      voiceNote: null,
+      materialCode: null,
+    };
 
-      operatorId: task.assigneeId,
-      operatorName: task.assigneeName,
-      operationDate: new Date().toISOString().split('T')[0],
-      sourceId: task.id,
-      sourceCode: task.taskCode,
-      progress: 100,
-      remarks: remarks || '任务已完成，提交审核',
-    });
-    // 调用后端 API 持久化操作记录
-    fetch(`/api/temp-tasks/${task.id}/submit-progress`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      // 1. 先调用后端 API 记录 submit_progress（包含反馈数据）
+      const response = await fetch(`/api/temp-tasks/${task.id}/submit-progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          progress: 100,
+          operator_id: task.assigneeId || '',
+          operator_name: task.assigneeName || '',
+          comment: remarks || '处理完成，提交验收',
+          feedback: feedbackData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('提交失败');
+      }
+
+      // 2. 更新本地状态
+      updateTempTask(task.id, {
+        status: 'waiting_acceptance',
+        actualHours: hours,
+        completionRemarks: remarks,
+      });
+
+      // 3. 同步到本地操作记录
+      addTempTaskRecord({
+        operationType: 'submit',
+        operationTypeName: '提交验收',
+        status: 'waiting_acceptance',
+        greenhouseId: task.greenhouseId || '',
+        greenhouseName: task.location || task.greenhouseName || '',
+        operatorId: task.assigneeId,
+        operatorName: task.assigneeName,
+        operationDate: new Date().toISOString().split('T')[0],
+        sourceId: task.id,
+        sourceCode: task.taskCode,
         progress: 100,
-        operator_id: task.assigneeId || '',
-        operator_name: task.assigneeName || '',
-        comment: remarks || '处理完成，提交验收',
-      }),
-    }).catch(() => {});
+        remarks: remarks || '任务已完成，提交验收',
+      });
+    } catch (error) {
+      console.error('[TempTaskTab] 提交完成失败:', error);
+    }
+
     closeDetailModal();
     triggerRefresh();
   };
@@ -1101,96 +1161,107 @@ export const TempTaskTab: React.FC = () => {
     setShowVerifyModal(true);
   };
 
-  // 验收确认：通过（同时更新本地状态和 Store，避免 useEffect 异步同步延迟）
-  const handleVerifyConfirm = (remarks?: string) => {
+  // 验收确认：通过 - 修复：先调用 API，再更新本地状态
+  const handleVerifyConfirm = async (remarks?: string) => {
     if (!verifyTargetTask) return;
     const now = new Date().toISOString();
-    // 1. 立即更新本地状态（同步，UI 立即响应）
-    updateTempTask(verifyTargetTask.id, {
-      status: 'completed',
-      completedAt: now,
-      acceptanceRemarks: remarks,
-    });
-    // 2. 直接更新 Zustand Store（持久化 + 跨组件同步）
-    useTempTaskStore.getState().updateTask(verifyTargetTask.id, {
-      status: 'completed',
-      completedAt: now,
-      acceptanceRemarks: remarks,
-    });
-    // 同步到农事操作记录
-    addTempTaskRecord({
-      operationType: 'accept_confirm',
-      operationTypeName: '审核通过',
-      status: 'completed',
-      greenhouseId: '',
-      greenhouseName: verifyTargetTask.location || '',
-      operatorId: verifyTargetTask.assignerId,
-      operatorName: verifyTargetTask.assignerName,
-      operationDate: now.split('T')[0],
-      sourceId: verifyTargetTask.id,
-      sourceCode: verifyTargetTask.taskCode,
-      progress: 100,
-      remarks: remarks || '临时任务审核通过',
-    });
-    // 调用后端 API 持久化操作记录
-    fetch(`/api/temp-tasks/${verifyTargetTask.id}/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        operator_id: verifyTargetTask.assignerId || '',
-        operator_name: verifyTargetTask.assignerName || '',
-        acceptance_remarks: remarks || '验收通过',
-      }),
-    }).catch(() => {});
+
+    try {
+      // 1. 先调用后端 API 记录验收通过
+      const response = await fetch(`/api/temp-tasks/${verifyTargetTask.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: verifyTargetTask.assignerId || '',
+          operator_name: verifyTargetTask.assignerName || '',
+          acceptance_remarks: remarks || '验收通过',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('验收失败');
+      }
+
+      // 2. 更新本地状态
+      updateTempTask(verifyTargetTask.id, {
+        status: 'completed',
+        completedAt: now,
+        acceptanceRemarks: remarks,
+      });
+
+      // 3. 同步到本地操作记录
+      addTempTaskRecord({
+        operationType: 'complete',
+        operationTypeName: '验收通过',
+        status: 'completed',
+        greenhouseId: '',
+        greenhouseName: verifyTargetTask.location || '',
+        operatorId: verifyTargetTask.assignerId,
+        operatorName: verifyTargetTask.assignerName,
+        operationDate: now.split('T')[0],
+        sourceId: verifyTargetTask.id,
+        sourceCode: verifyTargetTask.taskCode,
+        progress: 100,
+        remarks: remarks || '临时任务验收通过',
+      });
+    } catch (error) {
+      console.error('[TempTaskTab] 验收确认失败:', error);
+    }
+
     setShowVerifyModal(false);
     setVerifyTargetTask(null);
   };
 
   // 验收确认：驳回（同时更新本地状态和 Store，避免 useEffect 异步同步延迟）
-  const handleVerifyReject = (reason: string) => {
+  const handleVerifyReject = async (reason: string) => {
     if (!verifyTargetTask) return;
     const now = new Date().toISOString();
     const newRejectCount = (verifyTargetTask.rejectCount || 0) + 1;
     const newStatus = newRejectCount >= 2 ? 'pending_reassign' : 'in_progress';
-    // 1. 立即更新本地状态（同步，UI 立即响应）
-    updateTempTask(verifyTargetTask.id, {
-      status: newStatus,
-      rejectCount: newRejectCount,
-      rejectReason: reason,
-      progress: 50, // 驳回后重置进度，避免进度条仍显示100%
-    });
-    // 2. 直接更新 Zustand Store（持久化 + 跨组件同步）
-    useTempTaskStore.getState().updateTask(verifyTargetTask.id, {
-      status: newStatus,
-      rejectCount: newRejectCount,
-      rejectReason: reason,
-      progress: 50,
-    });
-    // 同步到农事操作记录
-    addTempTaskRecord({
-      operationType: 'reject',
-      operationTypeName: '审核驳回',
-      status: 'rejected',
-      greenhouseId: '',
-      greenhouseName: verifyTargetTask.location || '',
-      operatorId: verifyTargetTask.assignerId,
-      operatorName: verifyTargetTask.assignerName,
-      operationDate: now.split('T')[0],
-      sourceId: verifyTargetTask.id,
-      sourceCode: verifyTargetTask.taskCode,
-      progress: verifyTargetTask.progress || 0,
-      remarks: reason || '任务被驳回',
-    });
-    // 调用后端 API 持久化操作记录
-    fetch(`/api/temp-tasks/${verifyTargetTask.id}/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        operator_id: verifyTargetTask.assignerId || '',
-        operator_name: verifyTargetTask.assignerName || '',
-        reject_reason: reason || '验收不通过',
-      }),
-    }).catch(() => {});
+
+    try {
+      // 1. 先调用后端 API 记录驳回
+      const response = await fetch(`/api/temp-tasks/${verifyTargetTask.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: verifyTargetTask.assignerId || '',
+          operator_name: verifyTargetTask.assignerName || '',
+          reject_reason: reason || '验收不通过',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('驳回失败');
+      }
+
+      // 2. 更新本地状态
+      updateTempTask(verifyTargetTask.id, {
+        status: newStatus,
+        rejectCount: newRejectCount,
+        rejectReason: reason,
+        progress: 50,
+      });
+
+      // 3. 同步到本地操作记录
+      addTempTaskRecord({
+        operationType: 'reject',
+        operationTypeName: '验收驳回',
+        status: 'rejected',
+        greenhouseId: '',
+        greenhouseName: verifyTargetTask.location || '',
+        operatorId: verifyTargetTask.assignerId,
+        operatorName: verifyTargetTask.assignerName,
+        operationDate: now.split('T')[0],
+        sourceId: verifyTargetTask.id,
+        sourceCode: verifyTargetTask.taskCode,
+        progress: verifyTargetTask.progress || 0,
+        remarks: reason || '任务被驳回',
+      });
+    } catch (error) {
+      console.error('[TempTaskTab] 验收驳回失败:', error);
+    }
+
     setShowVerifyModal(false);
     setVerifyTargetTask(null);
   };
@@ -1198,9 +1269,11 @@ export const TempTaskTab: React.FC = () => {
   // 重新派发（驳回2次后）
   const handleReassign = (task: TempTask) => {
     // 重置任务状态为待接受，同时可以清空rejectCount
+    // 注意：后端 PUT 处理通过 reassign=true 标记来记录 reassign 操作
     updateTempTask(task.id, {
       status: 'pending',
       rejectCount: 0,
+      reassign: true, // 标记为重新分派，让后端记录 reassign 操作
     });
     // 记录操作
     addTempTaskRecord({
@@ -1318,18 +1391,44 @@ export const TempTaskTab: React.FC = () => {
   };
 
   // 重新派发确认
-  const handleReassignConfirm = (newAssigneeId: string, newAssigneeName: string) => {
+  const handleReassignConfirm = async (newAssigneeId: string, newAssigneeName: string) => {
     if (reassignTask) {
+      // 1. 先调用 /accept 记录接单动作（状态变为 accepted）
+      await fetch(`/api/temp-tasks/${reassignTask.id}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operator_id: newAssigneeId,
+          operator_name: newAssigneeName,
+        }),
+      }).catch(err => console.error('[handleReassignConfirm] accept failed:', err));
+
+      // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
       updateTempTask(reassignTask.id, {
-        status: 'pending',
         assigneeId: newAssigneeId,
         assigneeName: newAssigneeName,
+        status: 'in_progress', // 确保状态是进行中
         rejectCount: 0,
       });
+
+      // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
+      setTimeout(() => {
+        fetch(`/api/temp-tasks/${reassignTask.id}/submit-progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            progress: 0,
+            operator_id: newAssigneeId,
+            operator_name: newAssigneeName,
+            comment: '开始执行任务',
+          }),
+        }).catch(err => console.error('[handleReassignConfirm] submit-progress failed:', err));
+      }, 100);
+
       addTempTaskRecord({
         operationType: 'reassign',
         operationTypeName: '重新派发',
-        status: 'pending',
+        status: 'in_progress',
         greenhouseId: '',
         greenhouseName: reassignTask.location || '',
 
@@ -1783,148 +1882,49 @@ export const TempTaskTab: React.FC = () => {
               </div>
             )}
 
-            {/* 处理流转记录 */}
+            {/* 处理流转记录 - 添加与农事任务一致的工作量统计 */}
             {(() => {
-              // 优先使用API加载的记录，回退到任务自带的记录
-              const rawRecords = detailRecords.length > 0
-                ? detailRecords
-                : (selectedTask?.operationRecords || []);
-              
-              // 统一格式化为显示记录
-              const flowRecords = rawRecords.map((r: any) => ({
-                id: r.id || '',
-                operatorName: r.operator_name || r.operatorName || '',
-                actionName: r.action_name || r.action || r.operationTypeName || r.operationType || '',
-                actionTime: r.action_time || r.operationDate || r.createdAt || '',
-                fromStatus: r.from_status || r.fromStatus || '',
-                toStatus: r.to_status || r.toStatus || r.status || '',
-                progress: r.progress,
-                comment: r.comment || r.remarks || '',
-                reason: r.reason || r.rejectReason || '',
-              }));
-              
-              if (flowRecords.length === 0) {
-                return (
-                  <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
-                    暂无处理流转记录
-                  </div>
-                );
-              }
+              // 计算实际完成工作量（与农事任务完全一致）
+              let totalDays = 0;
+              let totalHours = 0;
+              let totalWorkers = 0;
+              detailRecords.forEach((record: any) => {
+                if (record.feedback) {
+                  if (record.feedback.workloadDays) totalDays += record.feedback.workloadDays;
+                  if (record.feedback.workloadHours) totalHours += record.feedback.workloadHours;
+                  if (record.feedback.workers && record.feedback.workers > totalWorkers) totalWorkers = record.feedback.workers;
+                }
+              });
+              const hasWorkload = totalDays > 0 || totalHours > 0;
+
               return (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                      <span>📋</span>
-                      处理流转记录（{flowRecords.length}条）
-                    </h4>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {flowRecords.map((record, index) => {
-                      const actionName = record.actionName || '';
-                      const fromStatus = record.fromStatus || '';
-                      const toStatus = record.toStatus || '';
-                      const comment = record.comment || '';
-                      const reason = record.reason || '';
-                      return (
-                      <div key={record.id || index} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-start gap-4">
-                          {/* 时间线节点 */}
-                          <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
-                              actionName.includes('验收通过') || actionName.includes('审核通过') || actionName.includes('通过') ? 'bg-green-500' :
-                              actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-500' :
-                              actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-500' :
-                              actionName.includes('分派') || actionName.includes('派发') ? 'bg-blue-500' :
-                              actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-500' :
-                              'bg-gray-500'
-                            }`}>
-                              {flowRecords.length - index}
-                            </div>
-                            {index < flowRecords.length - 1 && (
-                              <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>
-                            )}
-                          </div>
-
-                          {/* 流转详情 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                                <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                  actionName.includes('验收通过') || actionName.includes('审核通过') || actionName.includes('通过') ? 'bg-green-100 text-green-700' :
-                                  actionName.includes('返工') || actionName.includes('驳回') ? 'bg-red-100 text-red-700' :
-                                  actionName.includes('提交') || actionName.includes('反馈') ? 'bg-amber-100 text-amber-700' :
-                                  actionName.includes('分派') || actionName.includes('派发') ? 'bg-blue-100 text-blue-700' :
-                                  actionName.includes('接单') || actionName.includes('接受') || actionName.includes('开始') ? 'bg-indigo-100 text-indigo-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {actionName}
-                                </span>
-                              </div>
-                              <span className="text-xs text-gray-400 whitespace-nowrap">
-                                {(() => {
-                                  try {
-                                    const d = new Date(record.actionTime);
-                                    if (isNaN(d.getTime())) return record.actionTime || '';
-                                    return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                                  } catch(e) { return record.actionTime || ''; }
-                                })()}
-                              </span>
-                            </div>
-
-                            {/* 状态变化 */}
-                            {(fromStatus || toStatus) && (
-                              <div className="flex items-center gap-1 mb-1">
-                                {fromStatus && (
-                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                                    {fromStatus}
-                                  </span>
-                                )}
-                                <span className="text-gray-400">→</span>
-                                {toStatus && (
-                                  <span className={`px-2 py-0.5 text-xs rounded ${
-                                    toStatus === '已完成' || toStatus === 'completed' ? 'bg-green-100 text-green-700' :
-                                    toStatus === '待验收' || toStatus === 'waiting_acceptance' ? 'bg-amber-100 text-amber-700' :
-                                    toStatus === '进行中' || toStatus === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    {toStatus}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {/* 进度显示 */}
-                            {record.progress !== undefined && record.progress !== null && (
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
-                                  <div
-                                    className="h-full bg-blue-500 rounded-full"
-                                    style={{ width: `${record.progress}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-xs text-gray-500">{record.progress}%</span>
-                              </div>
-                            )}
-
-                            {/* 备注/原因 */}
-                            {comment && (
-                              <div className="mt-1 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
-                                {comment}
-                              </div>
-                            )}
-                            {reason && (
-                              <div className="mt-1 text-sm text-red-600 bg-red-50 rounded px-2 py-1">
-                                {reason}
-                              </div>
-                            )}
-                          </div>
+                <>
+                  {/* 实际完成工作量统计 - 与农事任务一致 */}
+                  {hasWorkload && (
+                    <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                      <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        实际完成工作量
+                      </h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">{totalDays}</div>
+                          <div className="text-xs text-emerald-600">总天数</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">{totalHours}</div>
+                          <div className="text-xs text-emerald-600">总工时</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-emerald-600">{totalWorkers}</div>
+                          <div className="text-xs text-emerald-600">总人数</div>
                         </div>
                       </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                    </div>
+                  )}
+                  {/* 流转记录 */}
+                  <TaskRecordTimeline records={detailRecords} showStatusChange showFeedback />
+                </>
               );
             })()}
           </div>

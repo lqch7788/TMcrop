@@ -168,6 +168,11 @@ router.post('/', (req: Request, res: Response) => {
       typeof required_feedback === 'string' ? required_feedback : JSON.stringify(required_feedback || []),
     ]);
 
+    // 记录创建/分派操作
+    recordTempTaskOperation(db, newId, taskCode, task_title || title || '',
+      assigner_id || requester_id || '', assigner_name || requester_name || '',
+      'create', '创建任务', undefined, status || 'pending');
+
     saveDatabase();
 
     // 读取完整记录返回
@@ -196,17 +201,27 @@ function recordTempTaskOperation(
   toStatus: string,
   progress?: number,
   comment?: string,
-  reason?: string
+  reason?: string,
+  feedback?: string
 ) {
   const id = `TTO${Date.now()}`;
   const now = new Date().toISOString();
 
+  console.log('[recordTempTaskOperation] 插入记录:', {
+    id, taskId, operatorId, operatorName, action, actionName,
+    fromStatus, toStatus, progress, comment, feedback
+  });
+
   db.run(`
     INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
-      action, action_name, from_status, to_status, progress, comment, reason, action_time, create_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
-      fromStatus || null, toStatus, progress || null, comment || null, reason || null, now, now]);
+      fromStatus !== undefined ? fromStatus : null, toStatus,
+      progress !== undefined ? progress : null,
+      comment !== undefined ? comment : null,
+      reason !== undefined ? reason : null,
+      feedback !== undefined ? feedback : null, now, now]);
 }
 
 /**
@@ -236,6 +251,8 @@ router.post('/:id/accept', (req: Request, res: Response) => {
     const { id } = req.params;
     const { operator_id, operator_name } = req.body;
 
+    console.log('[accept] 接收到的参数:', { id, operator_id, operator_name });
+
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
     stmt.bind([id]);
@@ -256,8 +273,8 @@ router.post('/:id/accept', (req: Request, res: Response) => {
       [now, now, id]);
 
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'accept', '接单',
-      fromStatus, 'accepted', undefined, '已接单，开始处理');
+      operator_id || '', operator_name || '', 'accept', '接受任务',
+      fromStatus, 'accepted', undefined, '已接受任务');
 
     saveDatabase();
     res.json({ success: true, data: { id, status: 'accepted' } });
@@ -273,7 +290,17 @@ router.post('/:id/accept', (req: Request, res: Response) => {
 router.post('/:id/submit-progress', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { progress, operator_id, operator_name, comment } = req.body;
+    const { progress, operator_id, operator_name, comment, feedback } = req.body;
+
+    console.log('[submit-progress] 接收到的参数:', {
+      id,
+      progress,
+      progressType: typeof progress,
+      operator_id,
+      operator_name,
+      comment,
+      feedback,
+    });
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
@@ -291,20 +318,46 @@ router.post('/:id/submit-progress', (req: Request, res: Response) => {
     const fromStatus = task.status;
     const now = new Date().toISOString();
     const currentProgress = task.progress || 0;
+    const progressNum = Number(progress);
 
+    // 更新进度
     db.run(`UPDATE temp_tasks SET progress = ?, update_time = ? WHERE id = ?`,
-      [progress || currentProgress, now, id]);
+      [progressNum, now, id]);
 
-    // 如果进度达到100%，状态改为待验收
-    if (Number(progress) >= 100) {
+    // 根据进度决定状态变更
+    let toStatus = fromStatus;
+    if (progressNum >= 100) {
+      // 进度100%：状态改为待验收
+      toStatus = 'waiting_acceptance';
       db.run(`UPDATE temp_tasks SET status = 'waiting_acceptance', update_time = ? WHERE id = ?`,
+        [now, id]);
+    } else if (progressNum === 0 && fromStatus === 'accepted') {
+      // 开始执行（0%）：状态从已接受改为进行中
+      toStatus = 'in_progress';
+      db.run(`UPDATE temp_tasks SET status = 'in_progress', update_time = ? WHERE id = ?`,
         [now, id]);
     }
 
+    // 将 feedback 对象转为 JSON 字符串存储
+    const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
+    // 根据进度决定操作名称
+    let actionName = '进度更新';
+    if (progressNum === 0) {
+      actionName = '开始执行';
+    } else if (progressNum >= 100) {
+      actionName = '提交验收';
+    }
+    console.log('[submit-progress] 即将记录操作:', {
+      progress,
+      progressNum,
+      actionName,
+      fromStatus,
+      toStatus,
+    });
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'submit_progress', '提交反馈',
-      fromStatus, Number(progress) >= 100 ? 'waiting_acceptance' : fromStatus,
-      progress, comment || '处理完成，提交验收');
+      operator_id || '', operator_name || '', 'submit_progress', actionName,
+      fromStatus, toStatus,
+      progress, comment || (progressNum >= 100 ? '处理完成，提交验收' : (progressNum === 0 ? '开始执行任务' : '进度更新')), undefined, feedbackStr);
 
     saveDatabase();
     res.json({ success: true, data: { id, progress: progress || currentProgress } });
@@ -342,7 +395,7 @@ router.post('/:id/complete', (req: Request, res: Response) => {
       [now, now, id]);
 
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'verify', '验收通过',
+      operator_id || '', operator_name || '', 'complete', '验收通过',
       fromStatus, 'completed', 100, acceptance_remarks || '验收通过');
 
     saveDatabase();
@@ -381,7 +434,7 @@ router.post('/:id/reject', (req: Request, res: Response) => {
       [now, id]);
 
     recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'reject', '验收返工',
+      operator_id || '', operator_name || '', 'reject', '验收驳回',
       fromStatus, 'rejected', undefined,
       reject_reason ? `返工原因：${reject_reason}` : '验收不通过，需要返工');
 
@@ -402,6 +455,19 @@ router.put('/:id', (req: Request, res: Response) => {
     const updates = req.body;
     const now = new Date().toISOString();
     const db = getDatabase();
+
+    // 查询当前任务状态
+    const stmt = db.prepare('SELECT * FROM temp_tasks WHERE id = ?');
+    stmt.bind([id]);
+    let task: any = null;
+    if (stmt.step()) {
+      task = stmt.getAsObject();
+    }
+    stmt.free();
+
+    if (!task || Object.keys(task).length === 0) {
+      return res.status(404).json({ success: false, error: '临时任务不存在' });
+    }
 
     // 有效数据库列名（与 temp_tasks 表结构一致）
     const validDbColumns = new Set([
@@ -453,6 +519,38 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now, id);
 
     db.run(`UPDATE temp_tasks SET ${setClauses}, update_time = ? WHERE id = ?`, values);
+
+    // 检测状态变更并记录
+    const oldStatus = task.status;
+    const newStatus = updates.status || oldStatus;
+    const oldAssigneeId = task.assignee_id;
+    const newAssigneeId = updates.assignee_id || oldAssigneeId;
+    const oldAssigneeName = task.assignee_name;
+    const newAssigneeName = updates.assignee_name || oldAssigneeName;
+
+    // 状态变更记录
+    if (oldStatus !== newStatus) {
+      let actionName = '状态更新';
+      if (newStatus === 'pending') actionName = '撤回任务';
+      else if (newStatus === 'accepted') actionName = '接受任务';
+      else if (newStatus === 'in_progress') actionName = '开始执行';
+      else if (newStatus === 'waiting_acceptance') actionName = '提交验收';
+      else if (newStatus === 'completed') actionName = '验收通过';
+      else if (newStatus === 'rejected') actionName = '验收返工';
+      else if (newStatus === 'cancelled') actionName = '取消任务';
+      recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        updates.operator_id || '', updates.operator_name || '',
+        'status_change', actionName, oldStatus, newStatus);
+    }
+
+    // 重新分派记录
+    if (oldAssigneeId !== newAssigneeId && updates.reassign === true) {
+      recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
+        updates.operator_id || '', updates.operator_name || '',
+        'reassign', '重新分派', oldStatus, newStatus, undefined,
+        `重新分派给 ${newAssigneeName} 处理`);
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {

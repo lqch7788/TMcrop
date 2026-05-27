@@ -894,12 +894,33 @@ export function useComprehensiveDispatch() {
           break;
         }
         case 'tempTask': {
-          // 临时任务：更新执行人并设置为已接受
+          // 临时任务：调用 /accept 记录接单操作，再调用 /submit-progress 记录开始执行
+          // 1. 调用 /accept 记录接单动作（状态变为 accepted）
+          fetch(`/api/temp-tasks/${task.sourceId}/accept`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
+          }).catch(err => console.error('[executeDispatch] tempTask accept failed:', err));
+
+          // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
           updateTempTask(task.sourceId, {
             assigneeId: workerId,
             assigneeName: workerName,
-            status: 'in_progress', // 临时任务派发后直接开始执行
           });
+
+          // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
+          setTimeout(() => {
+            fetch(`/api/temp-tasks/${task.sourceId}/submit-progress`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                progress: 0,
+                operator_id: workerId,
+                operator_name: workerName,
+                comment: '开始执行任务',
+              }),
+            }).catch(err => console.error('[executeDispatch] tempTask submit-progress failed:', err));
+          }, 100);
           break;
         }
         case 'inspection': {

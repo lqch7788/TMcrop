@@ -102,7 +102,14 @@ export function useDispatchActions(): UseDispatchActionsReturn {
       let message = '';
 
       if (source === 'farm') {
-        // 农事任务：更新任务执行人并设置为已接受
+        // 农事任务：使用 /accept 端点记录 accept 操作
+        fetch(`/api/farm-tasks/${sourceId}/accept`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
+        }).catch(err => console.error('[confirmDispatch] farm accept failed:', err));
+
+        // 同时更新执行人信息
         updateTask(sourceId, {
           assigneeId: workerId,
           assigneeName: workerName,
@@ -111,12 +118,34 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         success = true;
         message = `已成功派发给 ${workerName}`;
       } else if (source === 'tempTask') {
-        // 临时任务：更新执行人并设置为进行中
+        // 临时任务：调用 /accept 记录接单操作，再调用 /submit-progress 记录开始执行
+        // 1. 调用 /accept 记录接单动作（状态变为 accepted）
+        fetch(`/api/temp-tasks/${sourceId}/accept`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
+        }).catch(err => console.error('[confirmDispatch] tempTask accept failed:', err));
+
+        // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
         updateTempTask(sourceId, {
           assigneeId: workerId,
           assigneeName: workerName,
-          status: 'in_progress',
         });
+
+        // 3. 延迟调用 /submit-progress 记录开始执行（progress=0，状态变为 in_progress）
+        setTimeout(() => {
+          fetch(`/api/temp-tasks/${sourceId}/submit-progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              progress: 0,
+              operator_id: workerId,
+              operator_name: workerName,
+              comment: '开始执行任务',
+            }),
+          }).catch(err => console.error('[confirmDispatch] tempTask submit-progress failed:', err));
+        }, 100);
+
         success = true;
         message = `已成功派发给 ${workerName}`;
       } else if (source === 'inspection') {
@@ -213,6 +242,20 @@ export function useDispatchActions(): UseDispatchActionsReturn {
       let message = '';
 
       if (source === 'farm') {
+        // 农事任务：调用 /reassign 端点记录 reassign 操作
+        fetch(`/api/farm-tasks/${sourceId}/reassign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assigneeId: newWorkerId,
+            assigneeName: newWorkerName,
+            operator_id: newWorkerId,
+            operator_name: newWorkerName,
+            reason: `更换执行人为 ${newWorkerName}`,
+          }),
+        }).catch(err => console.error('[replaceWorker] farm reassign failed:', err));
+
+        // 同步更新本地状态
         updateTask(sourceId, {
           assigneeId: newWorkerId,
           assigneeName: newWorkerName,
@@ -220,9 +263,14 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         success = true;
         message = `已更换执行人为 ${newWorkerName}`;
       } else if (source === 'tempTask') {
+        // 临时任务：通过 PUT with reassign=true 记录重新分派操作
         updateTempTask(sourceId, {
           assigneeId: newWorkerId,
           assigneeName: newWorkerName,
+          status: 'pending', // 重新分派后变为待接受状态
+          reassign: true, // 标记为重新分派，让后端记录 reassign 操作
+          operator_id: newWorkerId, // 记录操作人信息
+          operator_name: newWorkerName,
         });
         success = true;
         message = `已更换执行人为 ${newWorkerName}`;
@@ -264,12 +312,26 @@ export function useDispatchActions(): UseDispatchActionsReturn {
       const newDueDateStr = newDueDate.toISOString().split('T')[0];
 
       if (source === 'farm') {
+        // 农事任务：调用 /extend-deadline 端点记录 delay 操作
+        fetch(`/api/farm-tasks/${sourceId}/extend-deadline`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            newDeadline: newDueDateStr,
+            reason: `延后 ${days} 天`,
+            operator_id: '',
+            operator_name: '',
+          }),
+        }).catch(err => console.error('[delayTask] farm extend-deadline failed:', err));
+
+        // 同步更新本地状态
         updateTask(sourceId, {
           dueDate: newDueDateStr,
         });
         success = true;
         message = `已延后 ${days} 天`;
       } else if (source === 'tempTask') {
+        // 临时任务：目前没有专用的 delay 端点，使用 PUT 更新截止日期
         updateTempTask(sourceId, {
           dueDate: newDueDateStr,
         });
@@ -307,6 +369,20 @@ export function useDispatchActions(): UseDispatchActionsReturn {
       let message = '';
 
       if (source === 'farm') {
+        // 农事任务：调用 /reassign 端点记录 reassign 操作
+        fetch(`/api/farm-tasks/${sourceId}/reassign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assigneeId: suggestion.suggestedWorkerId,
+            assigneeName: suggestion.suggestedWorkerName,
+            operator_id: suggestion.suggestedWorkerId,
+            operator_name: suggestion.suggestedWorkerName,
+            reason: '接受AI优化建议',
+          }),
+        }).catch(err => console.error('[acceptOptimization] farm reassign failed:', err));
+
+        // 同步更新本地状态
         updateTask(sourceId, {
           assigneeId: suggestion.suggestedWorkerId,
           assigneeName: suggestion.suggestedWorkerName,
@@ -314,9 +390,14 @@ export function useDispatchActions(): UseDispatchActionsReturn {
         success = true;
         message = `已接受优化建议，更换执行人为 ${suggestion.suggestedWorkerName}`;
       } else if (source === 'tempTask') {
+        // 临时任务：通过 PUT with reassign=true 记录重新分派操作
         updateTempTask(sourceId, {
           assigneeId: suggestion.suggestedWorkerId,
           assigneeName: suggestion.suggestedWorkerName,
+          status: 'pending',
+          reassign: true, // 标记为重新分派，让后端记录 reassign 操作
+          operator_id: suggestion.suggestedWorkerId, // 记录操作人信息
+          operator_name: suggestion.suggestedWorkerName,
         });
         success = true;
         message = `已接受优化建议，更换执行人为 ${suggestion.suggestedWorkerName}`;

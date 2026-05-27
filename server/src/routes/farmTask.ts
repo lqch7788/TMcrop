@@ -845,7 +845,11 @@ function recordTaskOperation(
       action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
-      fromStatus || null, toStatus, progress || null, comment || null, reason || null, feedback || null, now, now]);
+      fromStatus !== undefined ? fromStatus : null, toStatus,
+      progress !== undefined ? progress : null,
+      comment !== undefined ? comment : null,
+      reason !== undefined ? reason : null,
+      feedback !== undefined ? feedback : null, now, now]);
 }
 
 /**
