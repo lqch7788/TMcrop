@@ -2,7 +2,7 @@
  * 公告表格组件
  * 显示公告列表，支持展开行、分页和操作
  */
-import { Megaphone, Eye, Edit, Trash2, Send } from 'lucide-react';
+import { Megaphone, Eye, Edit, Trash2, Send, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Pagination } from '@/components/ui/Pagination';
