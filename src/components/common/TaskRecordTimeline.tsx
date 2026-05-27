@@ -124,7 +124,7 @@ export function TaskRecordTimeline({
                         className={`px-2 py-0.5 text-xs rounded-full ${config.color} bg-opacity-10 ${config.bgColor}`}
                         style={{ backgroundColor: `${config.color}15` }}
                       >
-                        {config.label}
+                        {record.actionName || config.label}
                       </span>
                     </div>
                     <span className="text-xs text-gray-400 whitespace-nowrap">

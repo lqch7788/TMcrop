@@ -567,7 +567,7 @@ export function TempTaskPage() {
 
   // 使用统一临时任务管理 Hook（数据闭环核心）
   const { tempTasks, addTempTask, submitCompletion, acceptCompletion, rejectCompletion, updateTempTask, deleteTempTask } = useTempTasks();
-  const { addTempTaskRecord } = useOperationRecords();
+  const { addTempTaskRecord, getRecordsByTaskId } = useOperationRecords();
   // 统一任务管理 Hook（用于临时任务同步）
 
 
@@ -1441,35 +1441,46 @@ export function TempTaskPage() {
                 </div>
               </div>
             )}
-
-            {/* 操作记录 */}
+            {/* ?????? ? ???? TaskFlowTimeline ?? */}
             {(() => {
-              const records = selectedTask.operationRecords || [];
-              if (records.length === 0) return null;
+              const opRecords = selectedTask ? getRecordsByTaskId(selectedTask.id) : [];
+              if (opRecords.length === 0) return null;
+
+              const flowRecords = opRecords.map((r: Record<string, unknown>, idx: number) => {
+                const opType = (r.operationTypeName as string) || (r.operationType as string) || "";
+                // 根据操作类型映射 action
+                let action = "comment";
+                if (opType) {
+                  const typeMap: Record<string, string> = {
+                    '派发': 'dispatch', '分配': 'dispatch',
+                    '接受': 'accept', '接单': 'accept',
+                    '驳回': 'reject', '拒绝': 'reject',
+                    '开始': 'start', '启动': 'start',
+                    '提交': 'submit', '上报': 'submit',
+                    '通过': 'approve', '审核': 'approve',
+                    '完成': 'complete', '完成': 'complete',
+                  };
+                  for (const [key, val] of Object.entries(typeMap)) {
+                    if (opType.includes(key)) { action = val; break; }
+                  }
+                }
+                return {
+                  id: (r.id as string) || ("tt_opr_" + idx + "_" + Date.now()),
+                  action,
+                  actionTime: (r.operationDate as string) || (r.createdAt as string) || "",
+                  operatorName: (r.operatorName as string) || (r.operator as string) || "系统",
+                  toStatus: r.status as string | undefined,
+                  comment: (r.remarks as string) || (r.rejectReason as string) || "",
+                };
+              });
+              
+              flowRecords.sort((a: Record<string, unknown>, b: Record<string, unknown>) => 
+                new Date(a.actionTime as string).getTime() - new Date(b.actionTime as string).getTime()
+              );
+
               return (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">操作记录</h4>
-                  <div className="space-y-4">
-                    {records.map((record: any, index: number) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                              {record.operationTypeName || record.operationType}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">{record.operationDate}</span>
-                        </div>
-                        {record.remarks && (
-                          <p className="text-sm text-gray-600 mt-2">{record.remarks}</p>
-                        )}
-                        {record.rejectReason && (
-                          <p className="text-sm text-red-600 mt-2">驳回原因：{record.rejectReason}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <TaskFlowTimeline records={flowRecords as any} />
                 </div>
               );
             })()}

@@ -834,17 +834,18 @@ function recordTaskOperation(
   toStatus: string,
   progress?: number,
   comment?: string,
-  reason?: string
+  reason?: string,
+  feedback?: string
 ) {
   const id = `TOR${Date.now()}`;
   const now = new Date().toISOString();
 
   db.run(`
     INSERT INTO task_operation_records (id, task_id, task_code, task_title, operator_id, operator_name,
-      action, action_name, from_status, to_status, progress, comment, reason, action_time, create_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      action, action_name, from_status, to_status, progress, comment, reason, feedback, action_time, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [id, taskId, taskCode, taskTitle, operatorId, operatorName, action, actionName,
-      fromStatus || null, toStatus, progress || null, comment || null, reason || null, now, now]);
+      fromStatus || null, toStatus, progress || null, comment || null, reason || null, feedback || null, now, now]);
 }
 
 /**
@@ -1022,9 +1023,11 @@ router.post('/:id/progress', (req: Request, res: Response) => {
     db.run(`UPDATE farm_tasks SET progress = ?, feedback = ?, update_time = ? WHERE id = ?`,
       [progress || currentProgress, feedback ? JSON.stringify(feedback) : null, now, id]);
 
+    // 将 feedback 对象转为 JSON 字符串存储
+    const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
     recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
       operator_id || '', operator_name || '', 'progress', '提交进度',
-      task.status, task.status, progress, comment);
+      task.status, task.status, progress, comment, undefined, feedbackStr);
 
     saveDatabase();
     res.json({ success: true, data: { id, progress: progress || currentProgress } });
@@ -1039,7 +1042,7 @@ router.post('/:id/progress', (req: Request, res: Response) => {
 router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { operator_id, operator_name, comment } = req.body;
+    const { operator_id, operator_name, comment, feedback } = req.body;
 
     const db = getDatabase();
     const stmt = db.prepare('SELECT * FROM farm_tasks WHERE id = ?');
@@ -1060,8 +1063,10 @@ router.post('/:id/submit-acceptance', (req: Request, res: Response) => {
     db.run(`UPDATE farm_tasks SET status = 'waiting_acceptance', progress = 100, update_time = ? WHERE id = ?`,
       [now, id]);
 
+    // 将 feedback 对象转为 JSON 字符串存储
+    const feedbackStr = feedback ? JSON.stringify(feedback) : undefined;
     recordTaskOperation(db, id, task.task_code, task.task_title || task.title,
-      operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment);
+      operator_id || '', operator_name || '', 'submit', '申请验收', fromStatus, 'waiting_acceptance', 100, comment, undefined, feedbackStr);
 
     saveDatabase();
     res.json({ success: true, data: { id, status: 'waiting_acceptance' } });

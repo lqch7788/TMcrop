@@ -57,9 +57,47 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
     const foundTask = tasks.find((t) => t.id === taskId) || null;
     setTask(foundTask);
 
-    // 加载任务记录
-    const taskRecords = getTaskRecordsByTaskId(taskId);
-    setRecords(taskRecords);
+    // 从后端 API 获取流转记录
+    const loadRecords = async () => {
+      try {
+        const res = await fetch(`/api/farm-tasks/${taskId}/records`);
+        const result = await res.json();
+
+        console.warn('[TaskDetailModal] API 返回:', result);
+
+        if (result.success && Array.isArray(result.data)) {
+          console.warn('[TaskDetailModal] 流转记录数据:', result.data);
+          // 后端 queryToObjects 返回的是 camelCase 格式
+          const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => ({
+            id: String(r.id || ''),
+            taskId: String(r.taskId || taskId),
+            actionTime: String(r.actionTime || r.createdAt || new Date().toISOString()),
+            operatorName: String(r.operatorName || ''),
+            action: String(r.action || 'progress'),
+            content: r.comment ? String(r.comment) : undefined,
+            fromStatus: r.fromStatus ? String(r.fromStatus) : undefined,
+            toStatus: r.toStatus ? String(r.toStatus) : String(foundTask?.status || ''),
+            progress: r.progress !== undefined ? Number(r.progress) : undefined,
+            progressIncrement: r.progressIncrement !== undefined ? Number(r.progressIncrement) : undefined,
+            reason: r.reason ? String(r.reason) : undefined,
+          }));
+          console.warn('[TaskDetailModal] 格式化后的记录:', formattedRecords);
+          setRecords(formattedRecords);
+        } else {
+          console.warn('[TaskDetailModal] API 返回格式不对或无数据');
+          // 回退到父组件传入的记录获取函数
+          const taskRecords = getTaskRecordsByTaskId(taskId);
+          setRecords(taskRecords);
+        }
+      } catch (error) {
+        console.warn('[TaskDetailModal] 获取流转记录失败:', error);
+        // 回退到父组件传入的记录获取函数
+        const taskRecords = getTaskRecordsByTaskId(taskId);
+        setRecords(taskRecords);
+      }
+    };
+
+    loadRecords();
   }, [taskId, tasks, getTaskRecordsByTaskId]);
 
   // 状态映射 - 放在条件返回之前，因为 hooks 必须在条件返回之前

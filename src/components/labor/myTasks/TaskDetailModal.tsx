@@ -270,12 +270,94 @@ export function TaskDetailModal({
           </div>
         )}
 
-        {/* 流转记录 */}
-        {taskWithExtras.sourceProblemId && problemFlowRecords.length > 0 && (
-          <div>
-            <TaskFlowTimeline records={problemFlowRecords} />
-          </div>
-        )}
+        {/* ???? ? ??????????????? + ???? + ????? */}
+        {(() => {
+          // ???? ? ??????
+          const mapAction = (typeName: string): string => {
+            if (!typeName) return "comment";
+            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "dispatch";
+            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "accept";
+            if (typeName.includes("??") || typeName.includes("??")) return "reject";
+            if (typeName.includes("??") || typeName.includes("??")) return "start";
+            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "submit";
+            if (typeName.includes("??") || typeName.includes("??") || typeName.includes("??")) return "approve";
+            if (typeName.includes("??")) return "complete";
+            return "comment";
+          };
+
+          // ?????????????
+          const flowRecords: Array<{id:string;action:string;actionTime:string;operatorName:string;fromStatus?:string;toStatus?:string;comment?:string}> = [];
+          
+          // 1. ??????????????
+          problemFlowRecords.forEach((r: Record<string, unknown>, idx: number) => {
+            flowRecords.push({
+              id: (r.id as string) || ("pf_" + Date.now() + "_" + idx),
+              action: (r.action as string) || "comment",
+              actionTime: (r.actionTime as string) || (r.createdAt as string) || "",
+              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+              fromStatus: r.fromStatus as string | undefined,
+              toStatus: r.toStatus as string | undefined,
+              comment: (r.comment as string) || (r.reason as string) || "",
+            });
+          });
+          
+          // 2. ???????????
+          operationRecords.forEach((r: Record<string, unknown>, idx: number) => {
+            const opType = (r.operationTypeName as string) || (r.operationType as string) || "";
+            const action = mapAction(opType);
+            
+            flowRecords.push({
+              id: "opr_" + idx + "_" + Date.now(),
+              action,
+              actionTime: (r.operationDate as string) || (r.createdAt as string) || "",
+              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+              toStatus: r.status as string | undefined,
+              comment: (r.remarks as string) || (r.rejectReason as string) || "",
+            });
+            
+            // ????children?
+            const children = r.children as Array<Record<string, unknown>> | undefined;
+            if (children && children.length) {
+              children.forEach((child: Record<string, unknown>, childIdx: number) => {
+                const childType = (child.operationTypeName as string) || (child.operationType as string) || "";
+                const childAction = mapAction(childType);
+                flowRecords.push({
+                  id: "opr_c_" + idx + "_" + childIdx + "_" + Date.now(),
+                  action: childAction,
+                  actionTime: (child.time as string) || (child.operationDate as string) || "",
+                  operatorName: (child.operatorName as string) || "",
+                  toStatus: (r.status || child.status) as string | undefined,
+                  comment: (child.remarks as string) || "",
+                });
+              });
+            }
+          });
+          
+          // 3. ???????useTasks TaskRecord ???
+          taskRecords.forEach((r: Record<string, unknown>, idx: number) => {
+            const actionName = (r.actionName as string) || (r.action as string) || "";
+            const action = mapAction(actionName);
+            
+            flowRecords.push({
+              id: (r.id as string) || ("tr_" + idx + "_" + Date.now()),
+              action,
+              actionTime: (r.actionTime as string) || (r.createdAt as string) || "",
+              operatorName: (r.operatorName as string) || (r.operator as string) || "??",
+              fromStatus: r.fromStatus as string | undefined,
+              toStatus: r.toStatus as string | undefined,
+              comment: (r.comment as string) || (r.reason as string) || (r.remarks as string) || "",
+            });
+          });
+          
+          // ?????
+          flowRecords.sort((a, b) => new Date(a.actionTime).getTime() - new Date(b.actionTime).getTime());
+          
+          return (
+            <div>
+              <TaskFlowTimeline records={flowRecords} />
+            </div>
+          );
+        })()}
 
         {/* 操作记录（useOperationRecords） */}
         {operationRecords.length > 0 && (
