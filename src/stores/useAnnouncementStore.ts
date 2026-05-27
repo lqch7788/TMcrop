@@ -78,12 +78,13 @@ export const useAnnouncementStore = create<AnnouncementStore>()(
       fetchAnnouncements: async () => {
         set({ isLoading: true, error: null });
         try {
-          const apiData = await enhancedApiClient.get<{ success: boolean; data: ApiAnnouncement[]; meta?: { total: number } }>(
+          // enhancedApiClient.get 返回 result.data（数组），不是完整的 { success, data } 响应
+          const data = await enhancedApiClient.get<ApiAnnouncement[]>(
             '/announcements',
             {}
           );
-          if (apiData && apiData.success && Array.isArray(apiData.data)) {
-            set({ announcements: apiData.data, isLoading: false });
+          if (Array.isArray(data)) {
+            set({ announcements: data, isLoading: false });
           } else {
             set({ isLoading: false });
             console.warn('[AnnouncementStore] API返回数据无效');
