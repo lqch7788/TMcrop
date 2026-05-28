@@ -480,6 +480,7 @@ const defaultDictionaryCategories: DictionaryCategorySeed[] = [
   { id: 'DC025', code: 'pesticide_type', name: '农药类型', module: 'pest', description: '农药类型（杀虫剂/杀菌剂/除草剂/杀螨剂/其他）', sortOrder: 25, status: 'active' },
   { id: 'DC026', code: 'application_method', name: '施用方法', module: 'pest', description: '农药/防治施用方法', sortOrder: 26, status: 'active' },
   { id: 'DC027', code: 'bio_agent_type', name: '生物制剂类型', module: 'pest', description: '生物防治制剂类型', sortOrder: 27, status: 'active' },
+  { id: 'DC028', code: 'dosage_unit', name: '用量单位', module: 'pest', description: '药剂/肥料用量单位', sortOrder: 28, status: 'active' },
   // ============================================
   // 生产汇总表配置分类（V8.0新增）
   // ============================================
@@ -698,6 +699,25 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'BT004', categoryCode: 'bio_agent_type', dictCode: 'bt', dictLabel: '苏云金杆菌(Bt)', dictValue: 'bt', color: 'yellow', sortOrder: 4, isDefault: 0, status: 'active' },
   { id: 'BT005', categoryCode: 'bio_agent_type', dictCode: 'nematode', dictLabel: '线虫', dictValue: 'nematode', color: 'orange', sortOrder: 5, isDefault: 0, status: 'active' },
   { id: 'BT006', categoryCode: 'bio_agent_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
+  // 用量单位（V12.0新增）
+  { id: 'DU001', categoryCode: 'dosage_unit', dictCode: 'g', dictLabel: '克 (g)', dictValue: '克', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
+  { id: 'DU002', categoryCode: 'dosage_unit', dictCode: 'kg', dictLabel: '千克 (kg)', dictValue: '千克', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
+  { id: 'DU003', categoryCode: 'dosage_unit', dictCode: 'mL', dictLabel: '毫升 (mL)', dictValue: '毫升', color: 'blue', sortOrder: 3, isDefault: 0, status: 'active' },
+  { id: 'DU004', categoryCode: 'dosage_unit', dictCode: 'L', dictLabel: '升 (L)', dictValue: '升', color: 'blue', sortOrder: 4, isDefault: 0, status: 'active' },
+  { id: 'DU005', categoryCode: 'dosage_unit', dictCode: 'bag', dictLabel: '袋', dictValue: '袋', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'DU006', categoryCode: 'dosage_unit', dictCode: 'bottle', dictLabel: '瓶', dictValue: '瓶', color: 'gray', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'DU007', categoryCode: 'dosage_unit', dictCode: 'g_per_bucket', dictLabel: 'g/桶', dictValue: 'g/桶', color: 'green', sortOrder: 7, isDefault: 0, status: 'active' },
+  { id: 'DU008', categoryCode: 'dosage_unit', dictCode: 'kg_per_bucket', dictLabel: 'kg/桶', dictValue: 'kg/桶', color: 'green', sortOrder: 8, isDefault: 0, status: 'active' },
+  { id: 'DU009', categoryCode: 'dosage_unit', dictCode: 'mL_per_bucket', dictLabel: 'mL/桶', dictValue: 'mL/桶', color: 'green', sortOrder: 9, isDefault: 0, status: 'active' },
+  { id: 'DU010', categoryCode: 'dosage_unit', dictCode: 'L_per_bucket', dictLabel: 'L/桶', dictValue: 'L/桶', color: 'green', sortOrder: 10, isDefault: 0, status: 'active' },
+  { id: 'DU011', categoryCode: 'dosage_unit', dictCode: 'g_per_mu', dictLabel: 'g/亩', dictValue: 'g/亩', color: 'orange', sortOrder: 11, isDefault: 0, status: 'active' },
+  { id: 'DU012', categoryCode: 'dosage_unit', dictCode: 'kg_per_mu', dictLabel: 'kg/亩', dictValue: 'kg/亩', color: 'orange', sortOrder: 12, isDefault: 0, status: 'active' },
+  { id: 'DU013', categoryCode: 'dosage_unit', dictCode: 'mL_per_mu', dictLabel: 'mL/亩', dictValue: 'mL/亩', color: 'orange', sortOrder: 13, isDefault: 0, status: 'active' },
+  { id: 'DU014', categoryCode: 'dosage_unit', dictCode: 'L_per_mu', dictLabel: 'L/亩', dictValue: 'L/亩', color: 'orange', sortOrder: 14, isDefault: 0, status: 'active' },
+  { id: 'DU015', categoryCode: 'dosage_unit', dictCode: 'g_per_hm2', dictLabel: 'g/hm²', dictValue: 'g/hm²', color: 'purple', sortOrder: 15, isDefault: 0, status: 'active' },
+  { id: 'DU016', categoryCode: 'dosage_unit', dictCode: 'kg_per_hm2', dictLabel: 'kg/hm²', dictValue: 'kg/hm²', color: 'purple', sortOrder: 16, isDefault: 0, status: 'active' },
+  { id: 'DU017', categoryCode: 'dosage_unit', dictCode: 'dilution', dictLabel: '倍液', dictValue: '倍液', color: 'cyan', sortOrder: 17, isDefault: 0, status: 'active' },
+  { id: 'DU018', categoryCode: 'dosage_unit', dictCode: 'other', dictLabel: '其他', dictValue: '其他', color: 'gray', sortOrder: 18, isDefault: 0, status: 'active' },
   // 来源途径 - V3.0扩展至12项（含历史数据）
   // 注意：ID已修正为避免与material_cost_type/greenhouse_type的ID冲突
   { id: 'SO01', categoryCode: 'source_origin', dictCode: 'self_produced', dictLabel: '自产自繁', dictValue: 'self_produced', color: 'green', sortOrder: 0, isDefault: 0, status: 'active' },

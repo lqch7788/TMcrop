@@ -363,12 +363,15 @@ export function useTempTasks(): UseTempTasksReturn {
   }, []);
 
   // 添加临时任务
-  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>): TempTask => {
+  const addTempTask = useCallback((taskData: Omit<TempTask, 'id' | 'createdAt' | 'updatedAt'> & { taskCode?: string }): TempTask => {
     const now = new Date().toISOString();
+    // 优先使用用户生成的任务编号（前端 form 已经生成了正确的 TT+日期+序号 格式）
+    // 如果前端传递了 taskCode 则使用，否则调用 generateTempTaskCode 生成
+    const finalTaskCode = taskData.taskCode || generateTempTaskCode();
     const newTask: TempTask = {
       ...taskData,
-      id: `TEMP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      taskCode: generateTempTaskCode(),
+      id: taskData.id || `TEMP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      taskCode: finalTaskCode,
       status: taskData.status || 'pending',
       rejectCount: 0,
       createdAt: now,

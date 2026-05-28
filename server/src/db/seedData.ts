@@ -1584,77 +1584,9 @@ function seedLaborRecords() {
 function seedInspections() {
   const db = getDatabase();
 
-  const inspections = [
-    {
-      id: 'INS001',
-      record_code: 'XC202604001',
-      inspection_type: '日常巡查',
-      inspector_id: 'USR001',
-      inspector_name: '张三',
-      greenhouse_name: '1号大棚',
-      check_date: '2026-04-28',
-      check_time: '10:00',
-      check_result: '正常',
-      issue_severity: 'none',
-      issue_text: '未发现问题',
-      images: null,
-      status: 'completed',
-      feedback_users: '["令狐冲"]',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    },
-    {
-      id: 'INS002',
-      record_code: 'XC202604002',
-      inspection_type: '日常巡查',
-      inspector_id: 'USR002',
-      inspector_name: '李四',
-      greenhouse_name: '2号大棚',
-      check_date: '2026-04-28',
-      check_time: '14:00',
-      check_result: '发现问题',
-      issue_severity: 'medium',
-      issue_text: '发现少量蚜虫，需要进行防治',
-      images: null,
-      status: 'pending',
-      feedback_users: '["任盈盈","向问天"]',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    },
-    {
-      id: 'INS003',
-      record_code: 'XC202604003',
-      inspection_type: '定期巡查',
-      inspector_id: 'USR001',
-      inspector_name: '张三',
-      greenhouse_name: '1号大棚',
-      check_date: '2026-04-29',
-      check_time: '09:00',
-      check_result: '正常',
-      issue_severity: 'none',
-      issue_text: '生长状况良好',
-      images: null,
-      status: 'completed',
-      feedback_users: '["乔峰"]',
-      create_time: new Date().toISOString(),
-      update_time: new Date().toISOString()
-    }
-  ];
-
-  for (const ins of inspections) {
-    db.run(`
-      INSERT OR IGNORE INTO inspections
-      (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
-       check_date, check_time, check_result, issue_severity, issue_text, images, status, feedback_users, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      ins.id, ins.record_code, ins.inspection_type, ins.inspector_id, ins.inspector_name,
-      ins.greenhouse_name, ins.check_date, ins.check_time, ins.check_result, ins.issue_severity,
-      ins.issue_text, ins.images, ins.status, ins.feedback_users, ins.create_time, ins.update_time
-    ]);
-  }
-
-  console.log(`已导入 ${inspections.length} 条巡查记录`);
+  // 注：旧版巡查记录种子数据（XC202604xxx格式）已移除
+  // 如需添加新的巡查记录种子数据，请使用新的 XT 前缀格式
+  console.log('已跳过巡查记录种子数据导入（使用新编码规则XT）');
 }
 
 /**

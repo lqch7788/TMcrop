@@ -819,6 +819,56 @@ router.get('/:id/records', (req: Request, res: Response) => {
 });
 
 /**
+ * 导出所有任务操作记录
+ */
+router.get('/records/export', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { start_date, end_date, action, task_code } = req.query;
+
+    let sql = 'SELECT * FROM task_operation_records WHERE 1=1';
+    const bindings: (string | number)[] = [];
+
+    if (start_date) {
+      sql += ' AND action_time >= ?';
+      bindings.push(start_date as string);
+    }
+
+    if (end_date) {
+      sql += ' AND action_time <= ?';
+      bindings.push(end_date as string);
+    }
+
+    if (action && action !== 'all') {
+      sql += ' AND action = ?';
+      bindings.push(action as string);
+    }
+
+    if (task_code) {
+      sql += ' AND task_code LIKE ?';
+      bindings.push(`%${task_code}%`);
+    }
+
+    sql += ' ORDER BY action_time DESC';
+
+    const items: Record<string, unknown>[] = [];
+    const stmt = db.prepare(sql);
+    if (bindings.length > 0) {
+      stmt.bind(bindings);
+    }
+    while (stmt.step()) {
+      items.push(stmt.getAsObject());
+    }
+    stmt.free();
+
+    res.json({ success: true, data: items });
+  } catch (error) {
+    console.error('导出任务操作记录失败:', error);
+    res.status(500).json({ success: false, error: '导出任务操作记录失败' });
+  }
+});
+
+/**
  * 记录任务操作
  */
 function recordTaskOperation(

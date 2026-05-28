@@ -1216,6 +1216,45 @@ export async function fixMissingSchema(): Promise<void> {
     else console.error('pesticide_pest_relation:', e.message);
   }
 
+  // V13.0: 种源打印记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS seed_source_print_records (
+        id TEXT PRIMARY KEY,
+        seed_source_id TEXT NOT NULL,
+        print_type TEXT NOT NULL,
+        print_count INTEGER DEFAULT 1,
+        operator TEXT,
+        label_numbers TEXT,
+        print_time TEXT DEFAULT (datetime('now','localtime')),
+        create_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ seed_source_print_records 表创建成功');
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_sspr_seed_source ON seed_source_print_records(seed_source_id)'); } catch {}
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• seed_source_print_records 已存在');
+    else console.error('seed_source_print_records:', e.message);
+  }
+
+  // 为 seed_sources 表添加打印相关列
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN print_count INTEGER DEFAULT 0`);
+    console.log('✓ seed_sources 表添加 print_count 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• seed_sources.print_count 列已存在');
+    else console.log('• seed_sources.print_count:', e.message);
+  }
+
+  // 为 seedlings 表添加打印相关列
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
+    console.log('✓ seedlings 表添加 print_count 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• seedlings.print_count 列已存在');
+    else console.log('• seedlings.print_count:', e.message);
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

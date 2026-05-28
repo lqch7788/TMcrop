@@ -140,6 +140,59 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
+// 导出所有操作日志
+router.get('/export/all', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { start_date, end_date, module, action, user } = req.query;
+
+    let sql = 'SELECT * FROM operation_logs WHERE 1=1';
+    const bindings: (string | number)[] = [];
+
+    if (start_date) {
+      sql += ' AND created_at >= ?';
+      bindings.push(start_date as string);
+    }
+
+    if (end_date) {
+      sql += ' AND created_at <= ?';
+      bindings.push(end_date as string);
+    }
+
+    if (module && module !== 'all') {
+      sql += ' AND module = ?';
+      bindings.push(module as string);
+    }
+
+    if (action && action !== 'all') {
+      sql += ' AND action = ?';
+      bindings.push(action as string);
+    }
+
+    if (user) {
+      sql += ' AND username LIKE ?';
+      bindings.push(`%${user}%`);
+    }
+
+    sql += ' ORDER BY created_at DESC';
+
+    const logs: Record<string, unknown>[] = [];
+    const stmt = db.prepare(sql);
+    if (bindings.length > 0) {
+      stmt.bind(bindings);
+    }
+    while (stmt.step()) {
+      logs.push(stmt.getAsObject());
+    }
+    stmt.free();
+
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    console.error('导出操作日志失败:', error);
+    res.status(500).json({ success: false, error: '导出操作日志失败' });
+  }
+});
+
 // 创建操作日志
 router.post('/', (req: Request, res: Response) => {
   try {
