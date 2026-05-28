@@ -38,7 +38,7 @@ export async function initDatabase(): Promise<Database> {
   // 修补 db.run() 和 stmt.bind() 自动将 undefined 绑定值转为 null（sql.js 不接受 undefined）
   const originalRun = db.run.bind(db);
   db.run = function(sql: string, params?: any[]): Database {
-    if (params && params.length > 0) {
+    if (params && Array.isArray(params) && params.length > 0) {
       params = params.map(v => v === undefined ? null : v);
     }
     return originalRun(sql, params);
@@ -49,7 +49,7 @@ export async function initDatabase(): Promise<Database> {
     const stmt = originalPrepare(sql);
     const originalBind = stmt.bind.bind(stmt);
     stmt.bind = function(params?: any[]): any {
-      if (params && params.length > 0) {
+      if (params && Array.isArray(params) && params.length > 0) {
         params = params.map(v => v === undefined ? null : v);
       }
       return originalBind(params);

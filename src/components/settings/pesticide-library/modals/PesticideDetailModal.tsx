@@ -51,6 +51,8 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
   const fields = [
     { label: '药剂编码', value: record.pesticideCode || '-', mono: true },
     { label: '药剂名称', value: record.pesticideName || '-', bold: true },
+    { label: '药剂成分', value: record.ingredient || '-' },
+    { label: '作用机制', value: record.mechanism || '-' },
     {
       label: '防治类型',
       value: record.controlType,
@@ -89,8 +91,12 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
             {record.specs.map((spec, index) => (
               <div
                 key={spec.id || index}
-                className="grid grid-cols-6 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm"
+                className="grid grid-cols-9 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm"
               >
+                <div>
+                  <span className="text-xs text-gray-500">品牌名称</span>
+                  <p className="text-gray-900">{spec.brandName || '-'}</p>
+                </div>
                 <div>
                   <span className="text-xs text-gray-500">含量</span>
                   <p className="text-gray-900 font-medium">{spec.specContent || '-'}</p>
@@ -105,17 +111,23 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
                 </div>
                 <div>
                   <span className="text-xs text-gray-500">建议用量</span>
-                  <p className="text-gray-900">
-                    {spec.suggestedDosage ? `${spec.suggestedDosage} ${spec.dosageUnit || 'g/L'}` : '-'}
-                  </p>
+                  <p className="text-gray-900">{spec.suggestedDosage || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">单位</span>
+                  <p className="text-gray-900">{spec.dosageUnit || '-'}</p>
                 </div>
                 <div>
                   <span className="text-xs text-gray-500">稀释比例</span>
                   <p className="text-gray-900">{spec.suggestedRatio || '-'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">单位</span>
-                  <p className="text-gray-900">{spec.dosageUnit || 'g/L'}</p>
+                  <span className="text-xs text-gray-500">作用机制</span>
+                  <p className="text-gray-900">{spec.mechanism || '-'}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">备注</span>
+                  <p className="text-gray-900">{spec.remark || '-'}</p>
                 </div>
               </div>
             ))}

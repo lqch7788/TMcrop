@@ -53,6 +53,7 @@ export interface PesticideSpecItem {
   dosageUnit: string;
   mechanism: string; // 作用机制
   brandName: string; // 品牌名称
+  remark: string; // 备注
 }
 
 interface PesticideSpecEditorProps {
@@ -73,6 +74,7 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
       dosageUnit: 'g/L',
       mechanism: '',
       brandName: '',
+      remark: '',
     };
     onChange([...specs, newSpec]);
   };
@@ -120,7 +122,7 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
           {specs.map((spec, index) => (
             <div
               key={index}
-              className="grid grid-cols-7 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 relative"
+              className="grid grid-cols-8 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 relative"
             >
               {!disabled && (
                 <Button
@@ -211,14 +213,29 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
               {/* 单位 */}
               <div>
                 <Label className="text-xs text-gray-500">单位</Label>
-                <Input
-                  type="text"
-                  value={spec.dosageUnit}
-                  onChange={(e) => handleSpecChange(index, 'dosageUnit', e.target.value)}
-                  placeholder="g/L"
+                <Select
+                  value={spec.dosageUnit || 'g/L'}
+                  onValueChange={(value) => handleSpecChange(index, 'dosageUnit', value)}
                   disabled={disabled}
-                  className="h-9 text-sm"
-                />
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="选择单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="g/桶">g/桶</SelectItem>
+                    <SelectItem value="kg/桶">kg/桶</SelectItem>
+                    <SelectItem value="mL/桶">mL/桶</SelectItem>
+                    <SelectItem value="L/桶">L/桶</SelectItem>
+                    <SelectItem value="g/亩">g/亩</SelectItem>
+                    <SelectItem value="kg/亩">kg/亩</SelectItem>
+                    <SelectItem value="mL/亩">mL/亩</SelectItem>
+                    <SelectItem value="L/亩">L/亩</SelectItem>
+                    <SelectItem value="g/hm²">g/hm²</SelectItem>
+                    <SelectItem value="kg/hm²">kg/hm²</SelectItem>
+                    <SelectItem value="倍液">倍液</SelectItem>
+                    <SelectItem value="其他">其他</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 建议稀释比例 */}
@@ -242,6 +259,19 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
                   value={spec.mechanism}
                   onChange={(e) => handleSpecChange(index, 'mechanism', e.target.value)}
                   placeholder="如 接触毒杀"
+                  disabled={disabled}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* 备注 */}
+              <div>
+                <Label className="text-xs text-gray-500">备注</Label>
+                <Input
+                  type="text"
+                  value={spec.remark}
+                  onChange={(e) => handleSpecChange(index, 'remark', e.target.value)}
+                  placeholder="补充说明"
                   disabled={disabled}
                   className="h-9 text-sm"
                 />

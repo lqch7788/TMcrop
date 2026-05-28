@@ -1077,6 +1077,33 @@ export async function fixMissingSchema(): Promise<void> {
     else console.log('• brand_name 列添加: ' + e.message);
   }
 
+  // 为 pesticide_library 表添加药剂成分字段
+  try {
+    db.run(`ALTER TABLE pesticide_library ADD COLUMN ingredient TEXT`);
+    console.log('✓ pesticide_library 表添加 ingredient 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• ingredient 列已存在');
+    else console.log('• ingredient 列添加: ' + e.message);
+  }
+
+  // 为 pesticide_library 表添加作用机制字段
+  try {
+    db.run(`ALTER TABLE pesticide_library ADD COLUMN mechanism TEXT`);
+    console.log('✓ pesticide_library 表添加 mechanism 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• mechanism 列已存在');
+    else console.log('• mechanism 列添加: ' + e.message);
+  }
+
+  // 为 pesticide_specs 表添加备注字段
+  try {
+    db.run(`ALTER TABLE pesticide_specs ADD COLUMN remark TEXT`);
+    console.log('✓ pesticide_specs 表添加 remark 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• remark 列已存在');
+    else console.log('• remark 列添加: ' + e.message);
+  }
+
   try {
     db.run(`
       CREATE TABLE IF NOT EXISTS pest_disease_dict (
@@ -1137,6 +1164,27 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('already exists')) console.log('• pesticide_records 已存在');
     else console.error('pesticide_records:', e.message);
+  }
+
+  // V12.0: 药剂-病虫害关联表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS pesticide_pest_relation (
+        id TEXT PRIMARY KEY,
+        pesticide_id TEXT NOT NULL,
+        pest_id TEXT NOT NULL,
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        UNIQUE(pesticide_id, pest_id)
+      )
+    `);
+    console.log('✓ pesticide_pest_relation 表创建成功');
+    // 创建索引
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_relation_pesticide ON pesticide_pest_relation(pesticide_id);'); } catch {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_relation_pest ON pesticide_pest_relation(pest_id);'); } catch {}
+    console.log('✓ pesticide_pest_relation 索引创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• pesticide_pest_relation 已存在');
+    else console.error('pesticide_pest_relation:', e.message);
   }
 
   saveDatabase();

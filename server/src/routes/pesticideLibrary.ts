@@ -11,19 +11,28 @@ const router = Router();
 /** 生成药剂编码 PC+类型标识+4位流水号 */
 function generatePesticideCode(db: any, controlType: string): string {
   const typeMap: Record<string, string> = { chemical: 'C', bio: 'B', physical: 'P' };
-  const prefix = `PC-${typeMap[controlType] || 'X'}`;
-  const allCodes = queryToObjects<{ pesticide_code: string }>(db,
-    `SELECT pesticide_code FROM pesticide_library WHERE control_type = ?`, [controlType],
-  );
+  const prefix = `PC-${typeMap[controlType] || 'X'}-`;
+
+  // Use raw query to get snake_case field names (queryToObjects applies camelCase mapping)
+  const stmt = db.prepare('SELECT pesticide_code FROM pesticide_library WHERE control_type = ?');
+  stmt.bind([controlType]);
+  const codes: string[] = [];
+  while (stmt.step()) {
+    const obj = stmt.getAsObject() as { pesticide_code?: string };
+    if (obj.pesticide_code) {
+      codes.push(obj.pesticide_code);
+    }
+  }
+  stmt.free();
+
   let maxSeq = 0;
-  for (const row of allCodes) {
-    const code = row.pesticide_code || '';
+  for (const code of codes) {
     if (code.startsWith(prefix)) {
       const seq = parseInt(code.split('-').pop() || '0', 10);
       if (seq > maxSeq) maxSeq = seq;
     }
   }
-  return `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
+  return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
 }
 
 /** GET /api/pesticide-library — 分页查询 */
@@ -80,10 +89,11 @@ router.post('/', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO pesticide_library (
       id, pesticide_code, pesticide_name, control_type, function_desc, taboo_desc,
-      target_pests, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      target_pests, ingredient, mechanism, status, create_time, update_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, code, body.pesticide_name, body.control_type, body.function_desc || null,
-       body.taboo_desc || null, body.target_pests || null, body.status || 'active', now, now]
+       body.taboo_desc || null, body.target_pests || null, body.ingredient || null,
+       body.mechanism || null, body.status || 'active', now, now]
     );
 
     const items = queryToObjects(db, `SELECT * FROM pesticide_library WHERE pesticide_code = ?`, [code]);
@@ -119,10 +129,11 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     db.run(`UPDATE pesticide_library SET pesticide_name=?, control_type=?, function_desc=?,
-      taboo_desc=?, target_pests=?, status=?, update_time=? WHERE id=?`,
+      taboo_desc=?, target_pests=?, ingredient=?, mechanism=?, status=?, update_time=? WHERE id=?`,
       [body.pesticide_name ?? existing[0].pesticide_name, body.control_type ?? existing[0].control_type,
        body.function_desc ?? existing[0].function_desc, body.taboo_desc ?? existing[0].taboo_desc,
-       body.target_pests ?? existing[0].target_pests, body.status ?? existing[0].status, now, id]
+       body.target_pests ?? existing[0].target_pests, body.ingredient ?? existing[0].ingredient,
+       body.mechanism ?? existing[0].mechanism, body.status ?? existing[0].status, now, id]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_library WHERE id = ?`, [id]);
     saveDatabase();
@@ -159,11 +170,11 @@ router.post('/:id/specs', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO pesticide_specs (
       id, pesticide_id, spec_content, formulation, manufacturer,
-      suggested_dosage, suggested_ratio, dosage_unit, mechanism, brand_name, status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      suggested_dosage, suggested_ratio, dosage_unit, mechanism, brand_name, remark, status, create_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [specId, id, body.spec_content || null, body.formulation || null, body.manufacturer || null,
        body.suggested_dosage || null, body.suggested_ratio || null, body.dosage_unit || null,
-       body.mechanism || null, body.brand_name || null, body.status || 'active', now]
+       body.mechanism || null, body.brand_name || null, body.remark || null, body.status || 'active', now]
     );
 
     const specs = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [specId]);
@@ -184,12 +195,12 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '规格不存在' }); return; }
 
     db.run(`UPDATE pesticide_specs SET spec_content=?, formulation=?, manufacturer=?,
-      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, mechanism=?, brand_name=?, status=? WHERE id=?`,
+      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, mechanism=?, brand_name=?, remark=?, status=? WHERE id=?`,
       [body.spec_content ?? existing[0].spec_content, body.formulation ?? existing[0].formulation,
        body.manufacturer ?? existing[0].manufacturer, body.suggested_dosage ?? existing[0].suggested_dosage,
        body.suggested_ratio ?? existing[0].suggested_ratio, body.dosage_unit ?? existing[0].dosage_unit,
        body.mechanism ?? existing[0].mechanism, body.brand_name ?? existing[0].brand_name,
-       body.status ?? existing[0].status, specId]
+       body.remark ?? existing[0].remark, body.status ?? existing[0].status, specId]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [specId]);
     saveDatabase();
@@ -227,6 +238,73 @@ router.get('/specs', (req: Request, res: Response) => {
     sql += ` ORDER BY ps.create_time DESC`;
     const items = queryToObjects(db, sql, params);
     res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** GET /api/pesticide-library/:id/relations — 获取药剂关联的病虫害列表 */
+router.get('/:id/relations', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const rows = queryToObjects(db, `
+      SELECT p.id, p.dict_code, p.dict_name, p.dict_type, p.target_crops, p.description
+      FROM pest_disease_dict p
+      JOIN pesticide_pest_relation r ON p.id = r.pest_id
+      WHERE r.pesticide_id = ?
+    `, [id]);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** PUT /api/pesticide-library/:id/relations — 批量更新关联 */
+router.put('/:id/relations', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { pestIds } = req.body;
+
+    if (!Array.isArray(pestIds)) {
+      return res.status(400).json({ success: false, error: 'pestIds must be an array' });
+    }
+
+    const db = getDatabase();
+
+    // 事务处理
+    const transaction = db.transaction(() => {
+      // 删除旧关联
+      db.run('DELETE FROM pesticide_pest_relation WHERE pesticide_id = ?', [id]);
+
+      // 插入新关联
+      for (const pestId of pestIds) {
+        db.run(`
+          INSERT INTO pesticide_pest_relation (id, pesticide_id, pest_id)
+          VALUES (?, ?, ?)
+        `, [`${id}_${pestId}`, id, pestId]);
+      }
+    });
+
+    transaction();
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** DELETE /api/pesticide-library/:id/relations/:pestId — 删除单个关联 */
+router.delete('/:id/relations/:pestId', (req: Request, res: Response) => {
+  try {
+    const { id, pestId } = req.params;
+    const db = getDatabase();
+
+    db.run('DELETE FROM pesticide_pest_relation WHERE pesticide_id = ? AND pest_id = ?', [id, pestId]);
+    saveDatabase();
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }

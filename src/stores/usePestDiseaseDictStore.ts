@@ -15,6 +15,13 @@ export interface PestDiseaseDict {
   createTime: string;
 }
 
+export interface PesticideForRelation {
+  id: string;
+  pesticideCode: string;
+  pesticideName: string;
+  controlType: 'chemical' | 'bio' | 'physical';
+}
+
 interface PestDiseaseDictState {
   items: PestDiseaseDict[];
   isLoading: boolean;
@@ -25,6 +32,10 @@ interface PestDiseaseDictState {
   updateItem: (id: string, updates: Partial<PestDiseaseDict>) => Promise<PestDiseaseDict | null>;
   deleteItem: (id: string) => Promise<boolean>;
   fetchByCrop: (cropName: string) => Promise<PestDiseaseDict[]>;
+  fetchNextCode: (type: 'pest' | 'disease') => Promise<string>;
+  fetchRelatedPesticides: (pestId: string) => Promise<PesticideForRelation[]>;
+  addRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
+  removeRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
 }
 
 const FIELD_MAP: Record<string, string> = {
@@ -122,6 +133,39 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
         return (Array.isArray(response.data ?? response) ? response.data : []) as PestDiseaseDict[];
       } catch {
         return [];
+      }
+    },
+
+    fetchNextCode: async (type) => {
+      const response = await enhancedApiClient.get<any>(`/pest-disease-dict/next-code?type=${type}`);
+      return (response as any).next_code || response.next_code || '';
+    },
+
+    fetchRelatedPesticides: async (pestId) => {
+      try {
+        const response = await enhancedApiClient.get<any>(`/pest-disease-dict/${pestId}/relations`);
+        const items = Array.isArray(response) ? response : response?.data ?? [];
+        return items as PesticideForRelation[];
+      } catch {
+        return [];
+      }
+    },
+
+    addRelation: async (pesticideId, pestId) => {
+      try {
+        await enhancedApiClient.post(`/pest-disease-dict/${pestId}/relations`, { pesticideId });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    removeRelation: async (pesticideId, pestId) => {
+      try {
+        await enhancedApiClient.delete(`/pest-disease-dict/${pestId}/relations/${pesticideId}`);
+        return true;
+      } catch {
+        return false;
       }
     },
   })
