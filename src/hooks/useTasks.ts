@@ -944,34 +944,76 @@ export function useTasks(): UseTasksReturn {
       materialCode: options?.materialCode,
     };
 
+    // 判断是否为临时任务
+    const isTempTask = task.dispatchMode === 'tempTask' || task.sourceType === 'tempTask';
+
+    // 对于临时任务，需要获取实际的数据库 id（而非 taskCode）
+    // useTempTaskStore.updateTask 内部也是通过相同逻辑查找 actual id
+    let actualDbId = id;
+    if (isTempTask) {
+      const store = useTempTaskStore.getState();
+      const existing = store.tasks.find(t => t.id === id || t.taskCode === id);
+      if (existing?.id) {
+        actualDbId = existing.id;
+      }
+    }
+
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
       if (options?.isFinal) {
-        // 最终提交调用 submit-acceptance
-        await fetch(`/api/farm-tasks/${id}/submit-acceptance`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            operator_id: task.assigneeId || '',
-            operator_name: task.assigneeName || '',
-            progress,
-            comment: options?.remarks || '',
-            feedback: feedbackData,
-          }),
-        });
+        // 最终提交：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
+        if (isTempTask) {
+          await fetch(`/api/temp-tasks/${actualDbId}/submit-progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              operator_id: task.assigneeId || '',
+              operator_name: task.assigneeName || '',
+              progress,
+              comment: options?.remarks || '',
+              feedback: feedbackData,
+            }),
+          });
+        } else {
+          await fetch(`/api/farm-tasks/${id}/submit-acceptance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              operator_id: task.assigneeId || '',
+              operator_name: task.assigneeName || '',
+              progress,
+              comment: options?.remarks || '',
+              feedback: feedbackData,
+            }),
+          });
+        }
       } else {
-        // 进度更新调用 progress
-        await fetch(`/api/farm-tasks/${id}/progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            operator_id: task.assigneeId || '',
-            operator_name: task.assigneeName || '',
-            progress,
-            comment: options?.remarks || '',
-            feedback: feedbackData,
-          }),
-        });
+        // 进度更新：临时任务调用 temp-tasks 端点，农事任务调用 farm-tasks 端点
+        if (isTempTask) {
+          await fetch(`/api/temp-tasks/${actualDbId}/submit-progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              operator_id: task.assigneeId || '',
+              operator_name: task.assigneeName || '',
+              progress,
+              comment: options?.remarks || '',
+              feedback: feedbackData,
+            }),
+          });
+        } else {
+          await fetch(`/api/farm-tasks/${id}/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              operator_id: task.assigneeId || '',
+              operator_name: task.assigneeName || '',
+              progress,
+              comment: options?.remarks || '',
+              feedback: feedbackData,
+            }),
+          });
+        }
       }
     }, 'submitProgress');
 
