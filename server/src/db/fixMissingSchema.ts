@@ -1059,6 +1059,24 @@ export async function fixMissingSchema(): Promise<void> {
     else console.error('pesticide_specs:', e.message);
   }
 
+  // 为 pesticide_specs 表添加作用机制字段
+  try {
+    db.run(`ALTER TABLE pesticide_specs ADD COLUMN mechanism TEXT`);
+    console.log('✓ pesticide_specs 表添加 mechanism 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• mechanism 列已存在');
+    else console.log('• mechanism 列添加: ' + e.message);
+  }
+
+  // 为 pesticide_specs 表添加品牌名称字段
+  try {
+    db.run(`ALTER TABLE pesticide_specs ADD COLUMN brand_name TEXT`);
+    console.log('✓ pesticide_specs 表添加 brand_name 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• brand_name 列已存在');
+    else console.log('• brand_name 列添加: ' + e.message);
+  }
+
   try {
     db.run(`
       CREATE TABLE IF NOT EXISTS pest_disease_dict (

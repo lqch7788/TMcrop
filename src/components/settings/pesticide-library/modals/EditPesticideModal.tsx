@@ -42,6 +42,9 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
   // 新增的规格（未保存到服务器）
   const [newSpecs, setNewSpecs] = useState<PesticideSpecItem[]>([]);
 
+  // 已删除的规格ID列表（从服务器端删除）
+  const [deletedSpecIds, setDeletedSpecIds] = useState<string[]>([]);
+
   // 选中的防治对象
   const [selectedPests, setSelectedPests] = useState<string[]>([]);
 
@@ -67,12 +70,15 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
 
       // 转换已有规格
       const existingSpecs: PesticideSpecItem[] = (record.specs || []).map((spec: PesticideSpec) => ({
+        id: spec.id,
         specContent: spec.specContent || '',
         formulation: spec.formulation || '',
         manufacturer: spec.manufacturer || '',
         suggestedDosage: spec.suggestedDosage || '',
         suggestedRatio: spec.suggestedRatio || '',
         dosageUnit: spec.dosageUnit || 'g/L',
+        mechanism: spec.mechanism || '',
+        brandName: spec.brandName || '',
       }));
       setSpecs(existingSpecs);
       setNewSpecs([]);
@@ -139,8 +145,43 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
             suggestedDosage: spec.suggestedDosage,
             suggestedRatio: spec.suggestedRatio,
             dosageUnit: spec.dosageUnit,
+            mechanism: spec.mechanism,
+            brandName: spec.brandName,
           } as Partial<PesticideSpec>);
         }
+      }
+    }
+
+    // 更新现有规格（检测变化）
+    const originalSpecs = record.specs || [];
+    for (let i = 0; i < specs.length; i++) {
+      const updated = specs[i];
+      const original = originalSpecs[i];
+      if (original && (
+        updated.specContent !== (original.specContent || '') ||
+        updated.formulation !== (original.formulation || '') ||
+        updated.manufacturer !== (original.manufacturer || '') ||
+        updated.suggestedDosage !== (original.suggestedDosage || '') ||
+        updated.suggestedRatio !== (original.suggestedRatio || '') ||
+        updated.dosageUnit !== (original.dosageUnit || '')
+      )) {
+        await store.updateSpec(original.id!, {
+          specContent: updated.specContent,
+          formulation: updated.formulation,
+          manufacturer: updated.manufacturer,
+          suggestedDosage: updated.suggestedDosage,
+          suggestedRatio: updated.suggestedRatio,
+          dosageUnit: updated.dosageUnit,
+          mechanism: updated.mechanism,
+          brandName: updated.brandName,
+        } as Partial<PesticideSpec>);
+      }
+    }
+
+    // 删除已移除的规格
+    if (deletedSpecIds.length > 0) {
+      for (const specId of deletedSpecIds) {
+        await store.deleteSpec(specId);
       }
     }
 
@@ -154,6 +195,14 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
     const existingCount = specs.length;
     const updatedExisting = updatedSpecs.slice(0, existingCount);
     const updatedNew = updatedSpecs.slice(existingCount);
+
+    // 检测是否有已有规格被删除
+    const existingIds = specs.map(s => s.id).filter(Boolean);
+    const updatedExistingIds = updatedExisting.map(s => s.id).filter(Boolean);
+    const deletedIds = existingIds.filter(id => !updatedExistingIds.includes(id));
+    if (deletedIds.length > 0) {
+      setDeletedSpecIds(prev => [...prev, ...deletedIds]);
+    }
 
     setSpecs(updatedExisting);
     setNewSpecs(updatedNew);

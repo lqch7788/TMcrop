@@ -7,14 +7,52 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
+
+// 农药剂型选项（完整列表）
+const FORMULATION_OPTIONS = [
+  { value: '可湿性粉剂', label: '可湿性粉剂 (WP)' },
+  { value: '水分散粒剂', label: '水分散粒剂 (WDG)' },
+  { value: '悬浮剂', label: '悬浮剂 (SC)' },
+  { value: '乳油', label: '乳油 (EC)' },
+  { value: '水剂', label: '水剂 (AS)' },
+  { value: '可溶性粉剂', label: '可溶性粉剂 (SP)' },
+  { value: '颗粒剂', label: '颗粒剂 (GR)' },
+  { value: '微胶囊悬浮剂', label: '微胶囊悬浮剂 (CS)' },
+  { value: '油剂', label: '油剂 (OL)' },
+  { value: '粉剂', label: '粉剂 (DP)' },
+  { value: '片剂', label: '片剂 (WT)' },
+  { value: '烟剂', label: '烟剂 (FU)' },
+  { value: '气雾剂', label: '气雾剂 (AE)' },
+  { value: '蚊香', label: '蚊香 (CO)' },
+  { value: '饵剂', label: '饵剂 (RB)' },
+  { value: '胶饵', label: '胶饵 (GL)' },
+  { value: '悬浮种衣剂', label: '悬浮种衣剂 (FS)' },
+  { value: '种子处理悬浮剂', label: '种子处理悬浮剂 (SS)' },
+  { value: '泡腾片剂', label: '泡腾片剂 (EB)' },
+  { value: '水乳剂', label: '水乳剂 (EW)' },
+  { value: '微乳剂', label: '微乳剂 (ME)' },
+  { value: '悬乳剂', label: '悬乳剂 (SE)' },
+  { value: '可分散油悬浮剂', label: '可分散油悬浮剂 (OD)' },
+  { value: '乳粒剂', label: '乳粒剂 (EG)' },
+  { value: '缓释剂', label: '缓释剂 (BR)' },
+  { value: '可分散液剂', label: '可分散液剂 (DC)' },
+  { value: '可湿性粒剂', label: '可湿性粒剂 (WG)' },
+  { value: '可溶液剂', label: '可溶液剂 (SL)' },
+  { value: '膏剂', label: '膏剂 (PA)' },
+  { value: '其他', label: '其他' },
+];
 
 export interface PesticideSpecItem {
+  id?: string; // 已有规格的ID（新增规格没有ID）
   specContent: string;
   formulation: string;
   manufacturer: string;
   suggestedDosage: string;
   suggestedRatio: string;
   dosageUnit: string;
+  mechanism: string; // 作用机制
+  brandName: string; // 品牌名称
 }
 
 interface PesticideSpecEditorProps {
@@ -33,6 +71,8 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
       suggestedDosage: '',
       suggestedRatio: '',
       dosageUnit: 'g/L',
+      mechanism: '',
+      brandName: '',
     };
     onChange([...specs, newSpec]);
   };
@@ -80,7 +120,7 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
           {specs.map((spec, index) => (
             <div
               key={index}
-              className="grid grid-cols-6 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 relative"
+              className="grid grid-cols-7 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 relative"
             >
               {!disabled && (
                 <Button
@@ -94,6 +134,19 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
                   <Trash2 className="w-3 h-3" />
                 </Button>
               )}
+
+              {/* 品牌名称 */}
+              <div>
+                <Label className="text-xs text-gray-500">品牌名称</Label>
+                <Input
+                  type="text"
+                  value={spec.brandName}
+                  onChange={(e) => handleSpecChange(index, 'brandName', e.target.value)}
+                  placeholder="如 大生"
+                  disabled={disabled}
+                  className="h-9 text-sm"
+                />
+              </div>
 
               {/* 含量 */}
               <div>
@@ -111,14 +164,22 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
               {/* 剂型 */}
               <div>
                 <Label className="text-xs text-gray-500">剂型</Label>
-                <Input
-                  type="text"
-                  value={spec.formulation}
-                  onChange={(e) => handleSpecChange(index, 'formulation', e.target.value)}
-                  placeholder="如 可湿性粉剂"
+                <Select
+                  value={spec.formulation || ''}
+                  onValueChange={(value) => handleSpecChange(index, 'formulation', value)}
                   disabled={disabled}
-                  className="h-9 text-sm"
-                />
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="选择剂型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FORMULATION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 生产厂家 */}
@@ -168,6 +229,19 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
                   value={spec.suggestedRatio}
                   onChange={(e) => handleSpecChange(index, 'suggestedRatio', e.target.value)}
                   placeholder="如 1:1000"
+                  disabled={disabled}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* 作用机制 */}
+              <div>
+                <Label className="text-xs text-gray-500">作用机制</Label>
+                <Input
+                  type="text"
+                  value={spec.mechanism}
+                  onChange={(e) => handleSpecChange(index, 'mechanism', e.target.value)}
+                  placeholder="如 接触毒杀"
                   disabled={disabled}
                   className="h-9 text-sm"
                 />
