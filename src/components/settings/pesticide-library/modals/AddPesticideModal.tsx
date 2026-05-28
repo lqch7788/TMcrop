@@ -113,6 +113,8 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
             suggestedDosage: spec.suggestedDosage,
             suggestedRatio: spec.suggestedRatio,
             dosageUnit: spec.dosageUnit,
+            mechanism: spec.mechanism,
+            brandName: spec.brandName,
           } as Partial<PesticideSpec>);
         }
       }

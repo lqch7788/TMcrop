@@ -30,7 +30,7 @@ function generatePesticideCode(db: any, controlType: string): string {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { control_type, pesticide_name, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { control_type, pesticide_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
@@ -38,7 +38,9 @@ router.get('/', (req: Request, res: Response) => {
     const params: any[] = [];
 
     if (control_type) { conditions.push('control_type = ?'); params.push(control_type); }
-    if (pesticide_name) { conditions.push("pesticide_name LIKE '%' || ? || '%'"); params.push(pesticide_name); }
+    // 支持 keyword 或 pesticide_name 参数
+    const nameFilter = keyword || pesticide_name;
+    if (nameFilter) { conditions.push("pesticide_name LIKE '%' || ? || '%'"); params.push(nameFilter); }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = execCount(db, `SELECT * FROM pesticide_library ${whereClause}`, params);
@@ -47,6 +49,16 @@ router.get('/', (req: Request, res: Response) => {
       `SELECT * FROM pesticide_library ${whereClause} ORDER BY create_time DESC LIMIT ? OFFSET ?`,
       [...params, limitNum, offset]
     );
+
+    // 为每个药剂查询对应的规格数据
+    for (const item of items) {
+      const specs = queryToObjects(db,
+        `SELECT * FROM pesticide_specs WHERE pesticide_id = ? ORDER BY create_time DESC`,
+        [item.id]
+      );
+      item.specs = specs;
+    }
+
     res.json({ success: true, data: items, meta: { total, page: pageNum, limit: limitNum } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
@@ -147,11 +159,11 @@ router.post('/:id/specs', (req: Request, res: Response) => {
 
     db.run(`INSERT INTO pesticide_specs (
       id, pesticide_id, spec_content, formulation, manufacturer,
-      suggested_dosage, suggested_ratio, dosage_unit, status, create_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      suggested_dosage, suggested_ratio, dosage_unit, mechanism, brand_name, status, create_time
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [specId, id, body.spec_content || null, body.formulation || null, body.manufacturer || null,
        body.suggested_dosage || null, body.suggested_ratio || null, body.dosage_unit || null,
-       body.status || 'active', now]
+       body.mechanism || null, body.brand_name || null, body.status || 'active', now]
     );
 
     const specs = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [specId]);
@@ -172,10 +184,11 @@ router.put('/specs/:specId', (req: Request, res: Response) => {
     if (existing.length === 0) { res.status(404).json({ success: false, error: '规格不存在' }); return; }
 
     db.run(`UPDATE pesticide_specs SET spec_content=?, formulation=?, manufacturer=?,
-      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, status=? WHERE id=?`,
+      suggested_dosage=?, suggested_ratio=?, dosage_unit=?, mechanism=?, brand_name=?, status=? WHERE id=?`,
       [body.spec_content ?? existing[0].spec_content, body.formulation ?? existing[0].formulation,
        body.manufacturer ?? existing[0].manufacturer, body.suggested_dosage ?? existing[0].suggested_dosage,
        body.suggested_ratio ?? existing[0].suggested_ratio, body.dosage_unit ?? existing[0].dosage_unit,
+       body.mechanism ?? existing[0].mechanism, body.brand_name ?? existing[0].brand_name,
        body.status ?? existing[0].status, specId]
     );
     const updated = queryToObjects(db, `SELECT * FROM pesticide_specs WHERE id = ?`, [specId]);

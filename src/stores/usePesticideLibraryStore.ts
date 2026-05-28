@@ -13,6 +13,8 @@ export interface PesticideSpec {
   suggestedDosage?: string;
   suggestedRatio?: string;
   dosageUnit?: string;
+  mechanism?: string; // 作用机制
+  brandName?: string; // 品牌名称
   status: string;
   createTime: string;
 }
@@ -54,7 +56,8 @@ const FIELD_MAP: Record<string, string> = {
 const SPEC_FIELD_MAP: Record<string, string> = {
   id: 'id', pesticide_id: 'pesticideId', spec_content: 'specContent',
   formulation: 'formulation', manufacturer: 'manufacturer', suggested_dosage: 'suggestedDosage',
-  suggested_ratio: 'suggestedRatio', dosage_unit: 'dosageUnit', status: 'status', create_time: 'createTime',
+  suggested_ratio: 'suggestedRatio', dosage_unit: 'dosageUnit', mechanism: 'mechanism',
+  brand_name: 'brandName', status: 'status', create_time: 'createTime',
 };
 
 function normalize(data: Record<string, unknown>, fieldMap: Record<string, string>): Record<string, unknown> {
@@ -86,6 +89,7 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
       set({ isLoading: true, error: null });
       try {
         const params = new URLSearchParams();
+        params.append('limit', '10000'); // 获取所有数据
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
         const response = await enhancedApiClient.get<any>(`/pesticide-library?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];
