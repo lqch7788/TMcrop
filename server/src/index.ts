@@ -83,6 +83,11 @@ async function start() {
     const { seedMaterialCodeCategories } = await import('./db/seedMaterialCodeCategories');
     seedMaterialCodeCategories();
 
+    // 导入药剂知识库种子数据（化学/生物/物理防治药剂）
+    console.log('正在导入药剂知识库数据...');
+    const { seedPesticideLibrary } = await import('./db/seedPesticideLibrary');
+    seedPesticideLibrary();
+
     // 种子数据加载完成后持久化到磁盘
     console.log('正在保存数据库...');
     saveDatabase();

@@ -274,8 +274,9 @@ router.put('/:id/relations', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    // 事务处理
-    const transaction = db.transaction(() => {
+    // 事务处理：使用原生 SQL 事务
+    db.run('BEGIN TRANSACTION');
+    try {
       // 删除旧关联
       db.run('DELETE FROM pesticide_pest_relation WHERE pesticide_id = ?', [id]);
 
@@ -286,9 +287,12 @@ router.put('/:id/relations', (req: Request, res: Response) => {
           VALUES (?, ?, ?)
         `, [`${id}_${pestId}`, id, pestId]);
       }
-    });
+      db.run('COMMIT');
+    } catch (e) {
+      db.run('ROLLBACK');
+      throw e;
+    }
 
-    transaction();
     saveDatabase();
     res.json({ success: true });
   } catch (error) {

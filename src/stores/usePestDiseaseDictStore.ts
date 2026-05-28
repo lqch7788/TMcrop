@@ -36,6 +36,7 @@ interface PestDiseaseDictState {
   fetchRelatedPesticides: (pestId: string) => Promise<PesticideForRelation[]>;
   addRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
   removeRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
+  updateRelations: (pestId: string, pesticideIds: string[]) => Promise<boolean>;
 }
 
 const FIELD_MAP: Record<string, string> = {
@@ -63,7 +64,7 @@ function denormalize(item: Partial<PestDiseaseDict>): Record<string, unknown> {
 }
 
 export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
-  (set) => ({
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
@@ -163,6 +164,31 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
     removeRelation: async (pesticideId, pestId) => {
       try {
         await enhancedApiClient.delete(`/pest-disease-dict/${pestId}/relations/${pesticideId}`);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    updateRelations: async (pestId, pesticideIds) => {
+      try {
+        // 获取当前关联
+        const current = await get().fetchRelatedPesticides(pestId);
+        const currentIds = current.map(p => p.id);
+
+        // 添加新的关联
+        for (const pesticideId of pesticideIds) {
+          if (!currentIds.includes(pesticideId)) {
+            await get().addRelation(pesticideId, pestId);
+          }
+        }
+
+        // 删除不再关联的
+        for (const pesticideId of currentIds) {
+          if (!pesticideIds.includes(pesticideId)) {
+            await get().removeRelation(pesticideId, pestId);
+          }
+        }
         return true;
       } catch {
         return false;

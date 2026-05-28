@@ -14,6 +14,7 @@ interface TaskAcceptanceModalProps {
   isOpen: boolean;
   task: Task | null;
   taskRecords: TaskRecord[];
+  isLoadingRecords?: boolean;
   onAccept: (comments?: string) => void;
   onReject: (reason: string) => void;
   onClose: () => void;
@@ -23,6 +24,7 @@ export function TaskAcceptanceModal({
   isOpen,
   task,
   taskRecords,
+  isLoadingRecords = false,
   onAccept,
   onReject,
   onClose,
@@ -33,10 +35,25 @@ export function TaskAcceptanceModal({
 
   if (!task) return null;
 
+  // 防御性处理：过滤无效日期记录
+  const validRecords = taskRecords.filter(r => r.actionTime && !isNaN(new Date(r.actionTime).getTime()));
+
   // 按时间倒序排列记录
-  const sortedRecords = [...taskRecords].sort(
+  const sortedRecords = [...validRecords].sort(
     (a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime()
   );
+
+  // 安全格式化日期
+  const formatDate = (dateStr: string): string => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '-';
+      return date.toLocaleString('zh-CN');
+    } catch {
+      return '-';
+    }
+  };
 
   const handleReject = () => {
     if (rejectReason.trim()) {
@@ -90,7 +107,9 @@ export function TaskAcceptanceModal({
             操作记录
           </h4>
           <div className="space-y-4 max-h-[400px] overflow-y-auto">
-            {sortedRecords.length === 0 ? (
+            {isLoadingRecords ? (
+              <p className="text-gray-500 text-sm text-center py-8">正在加载操作记录...</p>
+            ) : sortedRecords.length === 0 ? (
               <p className="text-gray-500 text-sm text-center py-8">暂无操作记录</p>
             ) : (
               sortedRecords.map((record, index) => {
@@ -137,7 +156,7 @@ export function TaskAcceptanceModal({
                           )}
                         </div>
                         <span className="text-xs text-gray-500">
-                          {new Date(record.actionTime).toLocaleString('zh-CN')}
+                          {formatDate(record.actionTime)}
                         </span>
                       </div>
 

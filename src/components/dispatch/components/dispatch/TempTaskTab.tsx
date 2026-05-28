@@ -4,7 +4,7 @@
  */
 
 import { useState, useReducer, useEffect, useCallback } from 'react';
-import { Plus, AlertTriangle, Edit, Trash2, Download, FileText } from 'lucide-react';
+import { Plus, AlertTriangle, Edit, Trash2, Download, FileText, Clock, User, Camera, MapPin, Mic } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
@@ -23,7 +23,8 @@ import { useTempTaskStore } from '../../../../stores';
 
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../../types/task';
-import { TaskRecordTimeline } from '../../../../components/common/TaskRecordTimeline';
+import { TempTaskAcceptanceAdapter } from '../../../farm/hub/modals/TempTaskAcceptanceAdapter';
+import { VerifyTempTaskModal } from './VerifyTempTaskModal';
 
 // 状态映射
 const statusMap: Record<string, { bg: string; color: string; label: string }> = {
@@ -553,157 +554,6 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
                 className={buttonClass}
               >
                 确认{title}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 验收确认弹窗组件（与农事任务验收流程一致）
-interface VerifyTempTaskModalProps {
-  isOpen: boolean;
-  task: TempTask | null;
-  onConfirm: (remarks?: string) => void;
-  onReject: (reason: string) => void;
-  onClose: () => void;
-}
-
-function VerifyTempTaskModal({ isOpen, task, onConfirm, onReject, onClose }: VerifyTempTaskModalProps) {
-  const [mode, setMode] = useState<'confirm' | 'reject'>('confirm');
-  const [remarks, setRemarks] = useState('');
-  const [rejectReason, setRejectReason] = useState('');
-
-  if (!isOpen || !task) return null;
-
-  const handleConfirm = () => {
-    if (mode === 'confirm') {
-      onConfirm(remarks || undefined);
-    } else {
-      if (!rejectReason.trim()) return;
-      onReject(rejectReason);
-    }
-    setRemarks('');
-    setRejectReason('');
-    setMode('confirm');
-  };
-
-  const handleClose = () => {
-    setRemarks('');
-    setRejectReason('');
-    setMode('confirm');
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">任务验收</h2>
-            <Button variant="ghost" size="icon" onClick={handleClose}>
-              ×
-            </Button>
-          </div>
-          <div className="p-6 space-y-5">
-            {/* 模式切换 */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setMode('confirm')}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  mode === 'confirm'
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                验收通过
-              </button>
-              <button
-                onClick={() => setMode('reject')}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  mode === 'reject'
-                    ? 'bg-red-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                驳回返工
-              </button>
-            </div>
-
-            {/* 任务信息 */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="font-medium text-gray-900">{task.title}</p>
-              <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-gray-500">
-                <p>任务编号：{task.taskCode}</p>
-                <p>执行人：{task.assigneeName}</p>
-                <p>任务类型：{task.tempTaskType || '其他'}</p>
-                <p>当前状态：待验收</p>
-              </div>
-            </div>
-
-            {/* 验收通过：备注（选填） */}
-            {mode === 'confirm' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  验收备注 <span className="text-gray-400">(选填)</span>
-                </label>
-                <textarea
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="请输入验收备注..."
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                />
-              </div>
-            )}
-
-            {/* 驳回：原因（必填） */}
-            {mode === 'reject' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  驳回原因 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="请输入驳回原因..."
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  rows={3}
-                />
-              </div>
-            )}
-
-            {/* 警示信息 */}
-            <div className={`flex items-start gap-3 p-4 rounded-lg border ${
-              mode === 'confirm'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                : 'bg-red-50 border-red-200 text-red-700'
-            }`}>
-              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium">
-                  {mode === 'confirm' ? '确认验收通过后，任务将标记为已完成' : '驳回后任务将返回给执行人重新处理'}
-                </p>
-                <p className="text-sm mt-1 opacity-80">
-                  {mode === 'confirm' ? '此操作不可撤销' : '请填写具体的驳回原因'}
-                </p>
-              </div>
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="secondary" onClick={handleClose}>
-                取消
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                disabled={mode === 'reject' && !rejectReason.trim()}
-                className={mode === 'confirm' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}
-              >
-                {mode === 'confirm' ? '确认验收通过' : '确认驳回'}
               </Button>
             </div>
           </div>
@@ -1882,24 +1732,113 @@ export const TempTaskTab: React.FC = () => {
               </div>
             )}
 
-            {/* 处理流转记录 - 添加与农事任务一致的工作量统计 */}
+            {/* 处理流转记录 - 参照巡查记录详情弹窗设计 */}
             {(() => {
-              // 计算实际完成工作量（与农事任务完全一致）
+              // 计算实际完成工作量
               let totalDays = 0;
               let totalHours = 0;
               let totalWorkers = 0;
               detailRecords.forEach((record: any) => {
                 if (record.feedback) {
-                  if (record.feedback.workloadDays) totalDays += record.feedback.workloadDays;
-                  if (record.feedback.workloadHours) totalHours += record.feedback.workloadHours;
-                  if (record.feedback.workers && record.feedback.workers > totalWorkers) totalWorkers = record.feedback.workers;
+                  const fb = typeof record.feedback === 'string' ? JSON.parse(record.feedback) : record.feedback;
+                  if (fb) {
+                    if (fb.workloadDays) totalDays += fb.workloadDays;
+                    if (fb.workloadHours) totalHours += fb.workloadHours;
+                    if (fb.workers && fb.workers > totalWorkers) totalWorkers = fb.workers;
+                  }
                 }
               });
               const hasWorkload = totalDays > 0 || totalHours > 0;
 
+              // 操作类型中文映射
+              const ACTION_LABELS: Record<string, string> = {
+                publish: '派发任务',
+                withdraw: '撤回任务',
+                cancel: '取消任务',
+                accept: '接单确认',
+                start: '开始执行',
+                progress: '进度更新',
+                submit_progress: '提交进度',
+                submit: '提交验收',
+                reject: '验收驳回',
+                complete: '验收通过',
+                overtime_continue: '超时继续',
+                overtime_abandon: '超时放弃',
+                reassign: '重新派发',
+                remind: '催办提醒',
+                extend_deadline: '延期',
+                continue: '继续执行',
+                create: '创建任务',
+              };
+
+              // 获取状态标签颜色
+              const getStatusColor = (status: string) => {
+                switch (status) {
+                  case 'completed':
+                  case '已完成':
+                    return 'bg-green-100 text-green-700';
+                  case 'waiting_acceptance':
+                  case '待验收':
+                    return 'bg-amber-100 text-amber-700';
+                  case 'in_progress':
+                  case '处理中':
+                    return 'bg-blue-100 text-blue-700';
+                  case 'pending':
+                  case '待处理':
+                  case '待接受':
+                    return 'bg-yellow-100 text-yellow-700';
+                  case 'rejected':
+                  case '返工中':
+                    return 'bg-red-100 text-red-700';
+                  default:
+                    return 'bg-gray-100 text-gray-700';
+                }
+              };
+
+              // 获取状态中文标签
+              const getStatusLabel = (status: string) => {
+                switch (status) {
+                  case 'draft': return '草稿';
+                  case 'pending': return '待接受';
+                  case 'accepted': return '已接受';
+                  case 'in_progress': return '处理中';
+                  case 'waiting_acceptance': return '待验收';
+                  case 'completed': return '已完成';
+                  case 'rejected': return '返工中';
+                  case 'failed': return '任务失败';
+                  case 'cancelled': return '已取消';
+                  case 'abandoned': return '已放弃';
+                  default: return status;
+                }
+              };
+
+              // 格式化时间
+              const formatTime = (timeStr: string) => {
+                const date = new Date(timeStr);
+                return date.toLocaleString('zh-CN', {
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              };
+
+              // 解析反馈数据
+              const parseFeedback = (feedback: any) => {
+                if (!feedback) return null;
+                if (typeof feedback === 'string') {
+                  try {
+                    return JSON.parse(feedback);
+                  } catch {
+                    return null;
+                  }
+                }
+                return feedback;
+              };
+
               return (
                 <>
-                  {/* 实际完成工作量统计 - 与农事任务一致 */}
+                  {/* 实际完成工作量统计 */}
                   {hasWorkload && (
                     <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
                       <h4 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-2">
@@ -1922,8 +1861,227 @@ export const TempTaskTab: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {/* 流转记录 */}
-                  <TaskRecordTimeline records={detailRecords} showStatusChange showFeedback />
+
+                  {/* 流转记录区块 - 参照巡查记录详情弹窗 */}
+                  {detailRecords.length > 0 && (
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                        <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                          <span>📋</span>
+                          处理流转记录（{detailRecords.length}条）
+                        </h4>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {detailRecords.map((record: any, index: number) => {
+                          const feedback = parseFeedback(record.feedback);
+                          return (
+                            <div key={record.id} className="p-4 hover:bg-gray-50 transition-colors">
+                              <div className="flex items-start gap-4">
+                                {/* 时间线节点 */}
+                                <div className="flex flex-col items-center">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                                    record.action === 'complete' ? 'bg-green-500' :
+                                    record.action === 'reject' ? 'bg-red-500' :
+                                    record.action === 'submit' ? 'bg-amber-500' :
+                                    record.action === 'publish' ? 'bg-blue-500' :
+                                    record.action === 'accept' ? 'bg-green-500' :
+                                    'bg-gray-500'
+                                  }`}>
+                                    {index + 1}
+                                  </div>
+                                  {index < detailRecords.length - 1 && (
+                                    <div className="w-0.5 h-full min-h-[40px] bg-gray-200 mt-1"></div>
+                                  )}
+                                </div>
+
+                                {/* 流转详情 */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2 mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-gray-900">{record.operatorName}</span>
+                                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                        record.action === 'complete' ? 'bg-green-100 text-green-700' :
+                                        record.action === 'reject' ? 'bg-red-100 text-red-700' :
+                                        record.action === 'submit' ? 'bg-amber-100 text-amber-700' :
+                                        record.action === 'publish' ? 'bg-blue-100 text-blue-700' :
+                                        record.action === 'accept' ? 'bg-green-100 text-green-700' :
+                                        'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {ACTION_LABELS[record.action] || record.actionName || record.action}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                                      {formatTime(record.actionTime)}
+                                    </span>
+                                  </div>
+
+                                  {/* 状态变化 */}
+                                  {(record.fromStatus || record.toStatus) && (
+                                    <div className="flex items-center gap-1 mb-1">
+                                      {record.fromStatus && (
+                                        <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.fromStatus)}`}>
+                                          {getStatusLabel(record.fromStatus)}
+                                        </span>
+                                      )}
+                                      <span className="text-gray-400">→</span>
+                                      {record.toStatus && (
+                                        <span className={`px-2 py-0.5 text-xs rounded ${getStatusColor(record.toStatus)}`}>
+                                          {getStatusLabel(record.toStatus)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* 进度显示 */}
+                                  {record.progress !== undefined && (
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <div className="flex-1 max-w-[120px] bg-gray-200 rounded-full h-1.5">
+                                        <div
+                                          className="h-full bg-blue-500 rounded-full"
+                                          style={{ width: `${record.progress}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="text-xs text-gray-500">{record.progress}%</span>
+                                    </div>
+                                  )}
+
+                                  {/* 备注/驳回原因 */}
+                                  {(record.comment || record.reason) && (
+                                    <div className="text-sm text-gray-600 bg-gray-50 rounded px-2 py-1 mb-1">
+                                      {record.reason && (
+                                        <div className="text-red-600 mb-1">
+                                          <span className="font-medium">驳回原因：</span>
+                                          {record.reason}
+                                        </div>
+                                      )}
+                                      {record.comment && <div>{record.comment}</div>}
+                                    </div>
+                                  )}
+
+                                  {/* 反馈数据展示 - 参照巡查记录详情弹窗 */}
+                                  {feedback && (
+                                    <div className="mt-2 space-y-2">
+                                      {/* GPS位置 */}
+                                      {feedback.gpsLocation && (
+                                        <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1">
+                                          <span>📍</span>
+                                          <span>位置打卡：</span>
+                                          <span className="font-mono">
+                                            {feedback.gpsLocation.lat?.toFixed(6)}, {feedback.gpsLocation.lng?.toFixed(6)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* 作业前照片 - 兼容 images 字段 */}
+                                      {feedback.images && feedback.images.length > 0 && (
+                                        <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <span>📷</span>
+                                            <span>作业前照片：{feedback.images.length}张</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1">
+                                            {feedback.images.map((img: string, idx: number) => (
+                                              <img
+                                                key={idx}
+                                                src={img}
+                                                alt={`作业前${idx + 1}`}
+                                                className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={() => window.open(img, '_blank')}
+                                                title="点击查看原图"
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* 作业后照片 - photosAfter 字段 */}
+                                      {feedback.photosAfter && feedback.photosAfter.length > 0 && (
+                                        <div className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <span>📷</span>
+                                            <span>作业后照片：{feedback.photosAfter.length}张</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1">
+                                            {feedback.photosAfter.map((img: string, idx: number) => (
+                                              <img
+                                                key={idx}
+                                                src={img}
+                                                alt={`作业后${idx + 1}`}
+                                                className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                                onClick={() => window.open(img, '_blank')}
+                                                title="点击查看原图"
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* 语音备注 */}
+                                      {feedback.voiceNote && (
+                                        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">
+                                          <span>🎤</span>
+                                          <span>语音备注（已录音）</span>
+                                        </div>
+                                      )}
+
+                                      {/* 工作量 */}
+                                      {(feedback.workloadDays !== undefined || feedback.workloadHours !== undefined || feedback.workers !== undefined) && (
+                                        <div className="text-xs text-cyan-600 bg-cyan-50 rounded px-2 py-1">
+                                          <span>⏱️</span>
+                                          <span>工作量：</span>
+                                          {feedback.workloadDays !== undefined && <span>{feedback.workloadDays}天</span>}
+                                          {feedback.workloadDays !== undefined && feedback.workloadHours !== undefined && <span> + </span>}
+                                          {feedback.workloadHours !== undefined && <span>{feedback.workloadHours}小时</span>}
+                                          {feedback.workers !== undefined && <span>，{feedback.workers}人</span>}
+                                        </div>
+                                      )}
+
+                                      {/* 物料使用 */}
+                                      {feedback.materials && feedback.materials.length > 0 && (
+                                        <div className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
+                                          <div className="flex items-center gap-1 mb-1">
+                                            <span>📦</span>
+                                            <span>物料使用：</span>
+                                          </div>
+                                          {feedback.materials.map((m: any, idx: number) => (
+                                            <div key={idx} className="ml-4">
+                                              {m.name} × {m.qty} {m.unit}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* 物资编码/扫码 */}
+                                      {feedback.materialCode && (
+                                        <div className="text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
+                                          <span>🔗</span>
+                                          <span>物资编码：{feedback.materialCode}</span>
+                                        </div>
+                                      )}
+
+                                      {/* 文字反馈 */}
+                                      {feedback.text && (
+                                        <div className="text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
+                                          {feedback.text}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 无流转记录提示 */}
+                  {detailRecords.length === 0 && (
+                    <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                      暂无流转记录
+                    </div>
+                  )}
                 </>
               );
             })()}
@@ -2001,7 +2159,7 @@ export const TempTaskTab: React.FC = () => {
       />
 
       {/* 验收确认弹窗（与农事任务验收流程一致） */}
-      <VerifyTempTaskModal
+      <TempTaskAcceptanceAdapter
         isOpen={showVerifyModal}
         task={verifyTargetTask}
         onConfirm={handleVerifyConfirm}

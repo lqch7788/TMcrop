@@ -1104,6 +1104,35 @@ export async function fixMissingSchema(): Promise<void> {
     else console.log('• remark 列添加: ' + e.message);
   }
 
+  // 为 plantings 表添加缺失的列
+  const plantingsColumns = [
+    { name: 'crop_code', sql: 'ALTER TABLE plantings ADD COLUMN crop_code TEXT' },
+    { name: 'area_id', sql: 'ALTER TABLE plantings ADD COLUMN area_id TEXT' },
+    { name: 'root_name', sql: 'ALTER TABLE plantings ADD COLUMN root_name TEXT' },
+    { name: 'soil_ph', sql: 'ALTER TABLE plantings ADD COLUMN soil_ph REAL' },
+    { name: 'soil_ec', sql: 'ALTER TABLE plantings ADD COLUMN soil_ec REAL' },
+    { name: 'attrition_rate', sql: 'ALTER TABLE plantings ADD COLUMN attrition_rate REAL' },
+    { name: 'transplant_count', sql: 'ALTER TABLE plantings ADD COLUMN transplant_count INTEGER DEFAULT 0' },
+    { name: 'transplant_date', sql: 'ALTER TABLE plantings ADD COLUMN transplant_date TEXT' },
+    { name: 'is_harvest', sql: 'ALTER TABLE plantings ADD COLUMN is_harvest INTEGER DEFAULT 0' },
+    { name: 'harvest_date', sql: 'ALTER TABLE plantings ADD COLUMN harvest_date TEXT' },
+    { name: 'print_count', sql: 'ALTER TABLE plantings ADD COLUMN print_count INTEGER DEFAULT 0' },
+    { name: 'traceability_code', sql: 'ALTER TABLE plantings ADD COLUMN traceability_code TEXT' },
+    { name: 'pictures', sql: 'ALTER TABLE plantings ADD COLUMN pictures TEXT' },
+    { name: 'production_plan_id', sql: 'ALTER TABLE plantings ADD COLUMN production_plan_id TEXT' },
+    { name: 'production_plan_code', sql: 'ALTER TABLE plantings ADD COLUMN production_plan_code TEXT' },
+  ];
+
+  for (const col of plantingsColumns) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ plantings 表添加 ${col.name} 列成功`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) console.log(`• plantings.${col.name} 列已存在`);
+      else console.log(`• plantings.${col.name} 列添加: ${e.message}`);
+    }
+  }
+
   try {
     db.run(`
       CREATE TABLE IF NOT EXISTS pest_disease_dict (

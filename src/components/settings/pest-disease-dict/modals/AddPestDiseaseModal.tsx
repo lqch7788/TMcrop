@@ -9,7 +9,7 @@ import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
-import { usePestDiseaseDictStore } from '@/stores';
+import { usePestDiseaseDictStore, usePesticideLibraryStore } from '@/stores';
 
 interface AddPestDiseaseModalProps {
   isOpen: boolean;
@@ -29,10 +29,18 @@ const defaultForm = {
 
 export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddPestDiseaseModalProps) {
   const store = usePestDiseaseDictStore();
+  const pesticideStore = usePesticideLibraryStore();
 
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
+
+  // 选中的关联药剂
+  const [selectedPesticides, setSelectedPesticides] = useState<string[]>([]);
+
+  // 药剂搜索和过滤
+  const [pesticideSearch, setPesticideSearch] = useState('');
+  const [pesticideTypeFilter, setPesticideTypeFilter] = useState<'all' | 'chemical' | 'bio' | 'physical'>('all');
 
   // 生成编码
   const generateCode = async () => {
@@ -46,6 +54,11 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
   useEffect(() => {
     if (isOpen) {
       setForm({ ...defaultForm, dictType });
+      setSelectedPesticides([]);
+      setPesticideSearch('');
+      setPesticideTypeFilter('all');
+      // 确保药剂列表已加载（强制刷新获取所有药剂）
+      pesticideStore.fetchItems();
     }
   }, [isOpen, dictType]);
 
@@ -54,11 +67,35 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
+  // 切换药剂选中状态
+  const togglePesticide = (pesticideId: string) => {
+    setSelectedPesticides(prev =>
+      prev.includes(pesticideId)
+        ? prev.filter(id => id !== pesticideId)
+        : [...prev, pesticideId]
+    );
+  };
+
+  // 过滤后的药剂列表（支持名称、编码、功能描述搜索）
+  const filteredPesticides = pesticideStore.items.filter((p) => {
+    const searchLower = pesticideSearch.toLowerCase();
+    const matchesSearch =
+      pesticideSearch === '' ||
+      p.pesticideName.toLowerCase().includes(searchLower) ||
+      p.pesticideCode.toLowerCase().includes(searchLower) ||
+      (p.functionDesc && p.functionDesc.toLowerCase().includes(searchLower)) ||
+      (p.ingredient && p.ingredient.toLowerCase().includes(searchLower));
+    const matchesType = pesticideTypeFilter === 'all' || p.controlType === pesticideTypeFilter;
+    return matchesSearch && matchesType;
+  });
+
   // 提交表单
   const handleSubmit = async () => {
     if (!form.dictName.trim()) return; // 基本校验
     setSubmitting(true);
-    await store.createItem({
+
+    // 创建病虫害记录
+    const newItem = await store.createItem({
       dictCode: form.dictCode,
       dictName: form.dictName,
       dictType: form.dictType,
@@ -66,6 +103,12 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       description: form.description,
       status: 'active',
     });
+
+    // 如果有关联的药剂，建立关联
+    if (newItem && selectedPesticides.length > 0) {
+      await store.updateRelations(newItem.id, selectedPesticides);
+    }
+
     setSubmitting(false);
     onSaved();
   };
@@ -157,6 +200,131 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: 关联药剂 */}
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <h3 className="text-base font-bold text-gray-900 mb-2">💊 关联药剂</h3>
+          <p className="text-sm text-gray-500 mb-3">选择能治疗该病虫害的药剂（支持名称、编码、功能描述搜索）</p>
+          {/* 搜索框 */}
+          <div className="mb-3">
+            <Input
+              type="text"
+              value={pesticideSearch}
+              onChange={(e) => setPesticideSearch(e.target.value)}
+              placeholder="搜索药剂名称、编码或功能..."
+              className="w-full h-10 px-4 text-sm"
+            />
+          </div>
+          {/* 类型筛选按钮 - 彩色图块 */}
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setPesticideTypeFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pesticideTypeFilter === 'all'
+                  ? 'bg-gray-800 text-white shadow-md'
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-300'
+              }`}
+            >
+              全部
+            </button>
+            <button
+              type="button"
+              onClick={() => setPesticideTypeFilter('chemical')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pesticideTypeFilter === 'chemical'
+                  ? 'bg-red-500 text-white shadow-md'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+              }`}
+            >
+              🧪 化学
+            </button>
+            <button
+              type="button"
+              onClick={() => setPesticideTypeFilter('bio')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pesticideTypeFilter === 'bio'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+              }`}
+            >
+              🌿 生物
+            </button>
+            <button
+              type="button"
+              onClick={() => setPesticideTypeFilter('physical')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                pesticideTypeFilter === 'physical'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+              }`}
+            >
+              🔧 物理
+            </button>
+          </div>
+          {/* 左右列表 */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* 左侧：可选列表 */}
+            <div>
+              <div className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <span className="mr-2">📋</span> 可选药剂
+                <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded-full">{filteredPesticides.length}</span>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto border border-gray-300 rounded-lg bg-white p-2 space-y-1">
+                {filteredPesticides.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8 text-sm">无匹配药剂</div>
+                ) : (
+                  filteredPesticides.map((pesticide) => (
+                    <button
+                      key={pesticide.id}
+                      type="button"
+                      onClick={() => togglePesticide(pesticide.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                        selectedPesticides.includes(pesticide.id)
+                          ? 'bg-green-100 text-green-700 border border-green-300'
+                          : 'hover:bg-gray-50 text-gray-700 border border-transparent'
+                      }`}
+                    >
+                      <span className="font-medium text-base">{pesticide.pesticideName}</span>
+                      <span className="text-xs text-gray-500 ml-2">{pesticide.pesticideCode}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            {/* 右侧：已选列表 */}
+            <div>
+              <div className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                <span className="mr-2">✅</span> 已选药剂
+                <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{selectedPesticides.length}</span>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto border border-green-200 rounded-lg bg-green-50 p-2 space-y-1">
+                {selectedPesticides.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8 text-sm">请从左侧选择</div>
+                ) : (
+                  selectedPesticides.map((id) => {
+                    const pesticide = pesticideStore.items.find((p) => p.id === id);
+                    return pesticide ? (
+                      <div key={id} className="flex items-center justify-between px-3 py-2 bg-white rounded-lg border border-green-200">
+                        <div>
+                          <div className="font-medium text-gray-800">{pesticide.pesticideName}</div>
+                          <div className="text-xs text-gray-500">{pesticide.pesticideCode}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => togglePesticide(id)}
+                          className="w-6 h-6 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : null;
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>

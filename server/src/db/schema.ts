@@ -498,10 +498,13 @@ export function initializeDatabase() {
       source_type TEXT,
       source_id TEXT,
       source_name TEXT,
+      crop_code TEXT,
       crop_name TEXT,
       crop_variety TEXT,
-      greenhouse_name TEXT,
+      area_id TEXT,
       area_name TEXT,
+      root_name TEXT,
+      greenhouse_name TEXT,
       planting_date TEXT,
       planting_quantity INTEGER DEFAULT 0,
       planted_quantity INTEGER DEFAULT 0,
@@ -515,7 +518,19 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      soil_ph REAL,
+      soil_ec REAL,
+      attrition_rate REAL,
+      transplant_count INTEGER DEFAULT 0,
+      transplant_date TEXT,
+      is_harvest INTEGER DEFAULT 0,
+      harvest_date TEXT,
+      print_count INTEGER DEFAULT 0,
+      traceability_code TEXT,
+      pictures TEXT,
+      production_plan_id TEXT,
+      production_plan_code TEXT
     )
   `);
 
@@ -2762,6 +2777,8 @@ export function initializeDatabase() {
       function_desc TEXT,
       taboo_desc TEXT,
       target_pests TEXT,
+      ingredient TEXT,
+      mechanism TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime'))
@@ -2779,6 +2796,8 @@ export function initializeDatabase() {
       suggested_dosage TEXT,
       suggested_ratio TEXT,
       dosage_unit TEXT,
+      brand_name TEXT,
+      remark TEXT,
       status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (pesticide_id) REFERENCES pesticide_library(id) ON DELETE CASCADE
