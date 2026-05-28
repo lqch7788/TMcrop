@@ -74,21 +74,36 @@ export function TaskAcceptanceAdapter({
     const allRecords = [...local];
     for (const apiRecord of api) {
       // 将后端记录转换为 TaskRecord 格式
-      const actionTime = apiRecord.action_time || new Date().toISOString();
-      const createdAt = apiRecord.create_time || actionTime;
+      // API 返回的是 camelCase 格式: actionTime, createTime 等
+      const actionTime = apiRecord.actionTime || apiRecord.action_time || new Date().toISOString();
+      const createdAt = apiRecord.createTime || apiRecord.create_time || actionTime;
+      // 解析 feedback 字段（可能是字符串或对象）
+      let feedback: TaskRecord['feedback'] = undefined;
+      if (apiRecord.feedback) {
+        if (typeof apiRecord.feedback === 'string') {
+          try {
+            feedback = JSON.parse(apiRecord.feedback);
+          } catch {
+            feedback = undefined;
+          }
+        } else if (typeof apiRecord.feedback === 'object') {
+          feedback = apiRecord.feedback;
+        }
+      }
       const converted: TaskRecord = {
         id: apiRecord.id,
-        taskId: apiRecord.task_id,
-        operatorId: apiRecord.operator_id,
-        operatorName: apiRecord.operator_name,
+        taskId: apiRecord.taskId || apiRecord.task_id,
+        operatorId: apiRecord.operatorId || apiRecord.operator_id,
+        operatorName: apiRecord.operatorName || apiRecord.operator_name,
         action: apiRecord.action,
-        actionName: apiRecord.action_name,
-        fromStatus: apiRecord.from_status,
-        toStatus: apiRecord.to_status,
+        actionName: apiRecord.actionName || apiRecord.action_name,
+        fromStatus: apiRecord.fromStatus || apiRecord.from_status,
+        toStatus: apiRecord.toStatus || apiRecord.to_status,
         progress: apiRecord.progress,
+        progressIncrement: apiRecord.progressIncrement,
         comment: apiRecord.comment,
         reason: apiRecord.reason,
-        feedback: apiRecord.feedback ? (typeof apiRecord.feedback === 'string' ? JSON.parse(apiRecord.feedback) : apiRecord.feedback) : null,
+        feedback,
         actionTime,
         createdAt,
       };

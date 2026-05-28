@@ -65,12 +65,19 @@ export function VerifyTempTaskModal({
 
   if (!isOpen || !task) return null;
 
-  // 防御性处理：过滤无效日期记录
-  const validRecords = records.filter((r: any) => r.action_time && !isNaN(new Date(r.action_time).getTime()));
+  // 防御性处理：过滤无效日期记录（兼容驼峰和下划线两种字段名）
+  const validRecords = records.filter((r: any) => {
+    const actionTime = r.actionTime || r.action_time;
+    return actionTime && !isNaN(new Date(actionTime).getTime());
+  });
 
   // 按时间倒序排列记录
   const sortedRecords = [...validRecords].sort(
-    (a: any, b: any) => new Date(b.action_time).getTime() - new Date(a.action_time).getTime()
+    (a: any, b: any) => {
+      const aTime = new Date(a.actionTime || a.action_time).getTime();
+      const bTime = new Date(b.actionTime || b.action_time).getTime();
+      return bTime - aTime;
+    }
   );
 
   // 安全格式化日期
@@ -119,9 +126,9 @@ export function VerifyTempTaskModal({
       <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
-            <h2 className="text-lg font-semibold text-gray-900">任务验收 - {task.taskCode}</h2>
-            <Button variant="ghost" size="icon" onClick={handleClose}>
+          <div className="flex items-center justify-between px-6 py-4 bg-emerald-500 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-white">任务验收 - {task.taskCode}</h2>
+            <Button variant="ghost" size="icon" onClick={handleClose} className="text-white hover:bg-emerald-600">
               ×
             </Button>
           </div>
@@ -163,8 +170,8 @@ export function VerifyTempTaskModal({
                   <p className="text-gray-500 text-sm text-center py-8">暂无操作记录</p>
                 ) : (
                   sortedRecords.map((record: any, index: number) => {
-                    const actionConfig = TEMP_TASK_ACTION_CONFIG[record.action] || { bg: 'bg-gray-100', color: 'text-gray-700', label: record.action_name || record.action };
-                    const statusConfig = TEMP_TASK_STATUS_CONFIG[record.to_status] || { bg: 'bg-gray-100', color: 'text-gray-700', label: record.to_status };
+                    const actionConfig = TEMP_TASK_ACTION_CONFIG[record.action] || { bg: 'bg-gray-100', color: 'text-gray-700', label: record.actionName || record.action_name || record.action };
+                    const statusConfig = TEMP_TASK_STATUS_CONFIG[record.toStatus || record.to_status] || { bg: 'bg-gray-100', color: 'text-gray-700', label: record.toStatus || record.to_status };
                     const isLatest = index === 0;
                     const feedback = parseFeedback(record.feedback);
 
@@ -193,7 +200,7 @@ export function VerifyTempTaskModal({
                               >
                                 {actionConfig.label}
                               </span>
-                              {record.from_status && (
+                              {(record.fromStatus || record.from_status) && (
                                 <>
                                   <span className="text-gray-400 text-xs">→</span>
                                   <span
@@ -207,14 +214,14 @@ export function VerifyTempTaskModal({
                               )}
                             </div>
                             <span className="text-xs text-gray-500">
-                              {formatDate(record.action_time)}
+                              {formatDate(record.actionTime || record.action_time)}
                             </span>
                           </div>
 
                           {/* 操作人 */}
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                             <User className="w-3 h-3" />
-                            <span>{record.operator_name || '-'}</span>
+                            <span>{record.operatorName || record.operator_name || '-'}</span>
                           </div>
 
                           {/* 进度信息 */}

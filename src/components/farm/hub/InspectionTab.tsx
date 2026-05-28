@@ -11,17 +11,17 @@ import { InspectionSearch, InspectionSearchFilters } from './components/Inspecti
 import { InspectionToolbar } from './components/InspectionToolbar';
 import { CreateInspectionModal } from './modals/CreateInspectionModal';
 import { DetailInspectionModal } from './modals/DetailInspectionModal';
+import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
 import { BatchEditModal } from './modals/BatchEditModal';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
 import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructureStore } from '../../../stores';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import QRScanner, { QRData } from '../../common/QRScanner';
-import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '@/components/ui';
-import { MapPin, Camera, Package, Mic, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { MapPin, Camera, Package, Mic } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 
 // 巡查类型配置
@@ -1073,226 +1073,32 @@ export function InspectionTab({
         onScanSuccess={handleQRScanSuccess}
       />
 
-      {/* 问题验收弹窗 */}
-      <Modal
-        isOpen={acceptanceModal.isOpen}
-        onClose={() => {
-          setAcceptanceModal({ isOpen: false, problemId: null });
-          setAcceptanceComment('');
-          setRejectionReason('');
-        }}
-        title="问题验收"
-        size="xl"
-      >
-        {acceptanceModal.problemId && (
-          <div className="space-y-4">
-            {/* 实时获取最新问题数据 */}
-            {(() => {
-              const problem = mergedProblems.find(p => p.id === acceptanceModal.problemId);
-              if (!problem) return null;
-              return (
-                <>
-                  {/* 处理结果信息 */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">处理人</span>
-                      <span className="text-sm font-medium">{problem.handler || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">处理日期</span>
-                      <span className="text-sm font-medium">{problem.handleDate || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">处理结果</span>
-                    </div>
-                    <div className="bg-white rounded p-3 text-sm">
-                      {problem.handleResult || '无处理结果'}
-                    </div>
-                  </div>
-
-                  {/* 返工次数提示 */}
-                  {(problem.reworkCount ?? 0) > 0 && (
-                    <div className={`text-sm p-3 rounded-lg border ${
-                      (problem.reworkCount ?? 0) >= 2
-                        ? 'bg-red-50 text-red-700 border-red-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      <div className="font-medium">
-                        {(problem.reworkCount ?? 0) >= 2
-                          ? '⚠️ 已返工多次，将退回问题分派页面重新分派'
-                          : `已返工${problem.reworkCount}次，再次返工将退回问题分派`
-                        }
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 执行人反馈详情 */}
-                  {(() => {
-                    // 找到最后一个 submit 类型的流转记录，提取 feedbackData
-                    const submitRecord = [...(problem.flowRecords || [])]
-                      .reverse()
-                      .find(r => r.action === 'submit');
-                    const feedbackData = submitRecord?.feedbackData;
-                    if (!feedbackData) return null;
-
-                    return (
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">执行人反馈详情</h4>
-                        <div className="space-y-4">
-                          {/* GPS 位置 */}
-                          {feedbackData.gpsLocation && (
-                            <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-                              <MapPin className="w-5 h-5 text-emerald-600" />
-                              <div className="flex-1">
-                                <div className="text-xs text-emerald-600 mb-1">GPS 位置</div>
-                                <div className="text-sm font-mono text-gray-800">
-                                  {feedbackData.gpsLocation.lat.toFixed(6)}, {feedbackData.gpsLocation.lng.toFixed(6)}
-                                </div>
-                              </div>
-                              <a
-                                href={`https://maps.google.com/?q=${feedbackData.gpsLocation.lat},${feedbackData.gpsLocation.lng}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1.5 bg-emerald-500 text-white rounded text-xs hover:bg-emerald-600"
-                              >
-                                查看地图
-                              </a>
-                            </div>
-                          )}
-
-                          {/* 作业前照片 */}
-                          {feedbackData.photosBefore && feedbackData.photosBefore.length > 0 && (
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Camera className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm font-medium text-gray-700">作业前照片 ({feedbackData.photosBefore.length}张)</span>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {feedbackData.photosBefore.map((img, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={img}
-                                    alt={`作业前照片${idx + 1}`}
-                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
-                                    onClick={() => window.open(img, '_blank')}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 作业后照片 */}
-                          {feedbackData.photosAfter && feedbackData.photosAfter.length > 0 && (
-                            <div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Camera className="w-4 h-4 text-orange-600" />
-                                <span className="text-sm font-medium text-gray-700">作业后照片 ({feedbackData.photosAfter.length}张)</span>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {feedbackData.photosAfter.map((img, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={img}
-                                    alt={`作业后照片${idx + 1}`}
-                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
-                                    onClick={() => window.open(img, '_blank')}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 物资编码 */}
-                          {feedbackData.materialCode && (
-                            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-                              <Package className="w-5 h-5 text-purple-600" />
-                              <div className="flex-1">
-                                <div className="text-xs text-purple-600 mb-1">物资编码</div>
-                                <div className="text-sm font-mono text-gray-800">{feedbackData.materialCode}</div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 语音备注 */}
-                          {feedbackData.voiceNote && (
-                            <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-                              <Mic className="w-5 h-5 text-red-600" />
-                              <div className="flex-1">
-                                <div className="text-xs text-red-600 mb-1">语音备注</div>
-                                <div className="text-sm text-gray-800">已录制语音</div>
-                              </div>
-                              <audio controls className="h-8">
-                                <source src={feedbackData.voiceNote} type="audio/webm" />
-                              </audio>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* 流转记录 */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">处理流转记录</h4>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {(problem.flowRecords || []).map((record: any) => (
-                        <div key={record.id} className="flex gap-3 text-xs">
-                          <span className="text-gray-400 whitespace-nowrap">
-                            {new Date(record.actionTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <span className="font-medium text-gray-700">{record.operatorName}</span>
-                          <span className="text-gray-500">
-                            {record.action === 'report' && '上报问题'}
-                            {record.action === 'dispatch' && '分派任务'}
-                            {record.action === 'accept' && '接单'}
-                            {record.action === 'reject' && '拒绝'}
-                            {record.action === 'submit' && '提交反馈'}
-                            {record.action === 'approve' && '验收通过'}
-                            {record.action === 'reject_acceptance' && '验收返工'}
-                          </span>
-                          {record.comment && <span className="text-gray-400">- {record.comment}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 验收操作 */}
-                  <div className="border-t pt-4">
-                    <div className="flex gap-3 mb-4">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleApproveAcceptance()}
-                        className="flex-1"
-                      >
-                        <ThumbsUp className="w-4 h-4" />
-                        验收通过
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          const reason = prompt('请输入返工原因：');
-                          if (reason) {
-                            handleRejectToDispatch(reason);
-                          }
-                        }}
-                        className="flex-1"
-                      >
-                        <ThumbsDown className="w-4 h-4" />
-                        返工
-                      </Button>
-                    </div>
-                    <div className="text-xs text-gray-500 text-center">
-                      通过：问题关闭，流转结束 | 返工：第1次给原执行人，第2次退分派重分
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-      </Modal>
+      {/* 问题验收弹窗 - 使用统一风格的验收弹窗组件 */}
+      {acceptanceModal.problemId && (
+        (() => {
+          const problem = mergedProblems.find(p => p.id === acceptanceModal.problemId);
+          if (!problem) return null;
+          return (
+            <InspectionAcceptanceModal
+              isOpen={acceptanceModal.isOpen}
+              problem={problem}
+              records={problem.flowRecords || []}
+              isLoadingRecords={false}
+              onAccept={(comments) => {
+                handleApproveAcceptance();
+              }}
+              onReject={(reason) => {
+                handleRejectToDispatch(reason);
+              }}
+              onClose={() => {
+                setAcceptanceModal({ isOpen: false, problemId: null });
+                setAcceptanceComment('');
+                setRejectionReason('');
+              }}
+            />
+          );
+        })()
+      )}
     </div>
   );
 }
