@@ -819,24 +819,31 @@ router.get('/:id/records', (req: Request, res: Response) => {
 });
 
 /**
- * 导出所有任务操作记录
+ * 导出所有任务操作记录（支持 today=true 获取今日记录）
  */
 router.get('/records/export', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { start_date, end_date, action, task_code } = req.query;
+    const { start_date, end_date, action, task_code, today } = req.query;
 
     let sql = 'SELECT * FROM task_operation_records WHERE 1=1';
     const bindings: (string | number)[] = [];
 
-    if (start_date) {
-      sql += ' AND action_time >= ?';
-      bindings.push(start_date as string);
-    }
+    // 支持 today=true 参数获取今日记录
+    if (today === 'true') {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      sql += ' AND DATE(action_time) = ?';
+      bindings.push(todayStr);
+    } else {
+      if (start_date) {
+        sql += ' AND action_time >= ?';
+        bindings.push(start_date as string);
+      }
 
-    if (end_date) {
-      sql += ' AND action_time <= ?';
-      bindings.push(end_date as string);
+      if (end_date) {
+        sql += ' AND action_time <= ?';
+        bindings.push(end_date as string);
+      }
     }
 
     if (action && action !== 'all') {
