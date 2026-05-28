@@ -32,7 +32,11 @@ interface UseTempTaskFormProps {
 const generateTaskCode = (existingTasks?: TempTask[]): string => {
   const tasks = existingTasks || (useTempTaskStore.getState().tasks as unknown as TempTask[]);
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+  // 使用本地时间（避免 UTC 时区问题，中国时区 UTC+8）
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
 
   // 查找当天已有的任务编号
   const todayPrefix = `TT${dateStr}`;

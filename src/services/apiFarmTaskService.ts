@@ -244,6 +244,25 @@ export async function getTaskRecords(taskId: string): Promise<any[]> {
 }
 
 /**
+ * 导出任务操作记录
+ */
+export async function exportTaskRecords(filters?: {
+  start_date?: string;
+  end_date?: string;
+  action?: string;
+  task_code?: string;
+}): Promise<any[]> {
+  const params = new URLSearchParams();
+  if (filters?.start_date) params.append('start_date', filters.start_date);
+  if (filters?.end_date) params.append('end_date', filters.end_date);
+  if (filters?.action) params.append('action', filters.action);
+  if (filters?.task_code) params.append('task_code', filters.task_code);
+  const queryString = params.toString();
+  const url = queryString ? `/farm-tasks/records/export?${queryString}` : '/farm-tasks/records/export';
+  return await enhancedApiClient.get<any[]>(url);
+}
+
+/**
  * 获取逾期任务列表
  * 降级策略：API → IndexedDB 缓存
  */

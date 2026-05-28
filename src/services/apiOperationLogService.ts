@@ -93,7 +93,10 @@ export async function getOperationLogs(filters?: OperationLogFilters): Promise<O
     if (filters.limit) params.limit = String(filters.limit);
   }
 
-  const data = await enhancedApiClient.get<OperationLogResult>('/operation-logs');
+  // 构建查询参数字符串（enhancedApiClient.get 不支持 params，需要手动拼接）
+  const queryString = new URLSearchParams(params).toString();
+  const url = queryString ? `/operation-logs?${queryString}` : '/operation-logs';
+  const data = await enhancedApiClient.get<OperationLogResult>(url);
   return data;
 }
 
@@ -144,6 +147,20 @@ export async function createOperationLog(log: {
   status?: 'success' | 'warning' | 'error' | 'info';
   errorMessage?: string;
 }): Promise<{ id: string; createdAt: string }> {
-  const result = await enhancedApiClient.post<{ id: string; createdAt: string }>('/operation-logs', log);
+  // 转换为 snake_case 格式（后端数据库使用 snake_case）
+  const snakeCaseLog: Record<string, unknown> = {
+    user_id: log.userId,
+    username: log.username,
+    action: log.action,
+    module: log.module,
+    resource_type: log.resourceType,
+    resource_id: log.resourceId,
+    description: log.description,
+    old_value: log.oldValue,
+    new_value: log.newValue,
+    status: log.status,
+    error_message: log.errorMessage,
+  };
+  const result = await enhancedApiClient.post<{ id: string; createdAt: string }>('/operation-logs', snakeCaseLog);
   return result;
 }

@@ -346,7 +346,8 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
   const createTempDispatchTask = useCallback(async (input: UnifiedTaskInput): Promise<TempTask | null> => {
     const taskCode = generateTaskCode('TT', farmTasks);
 
-    const newTempTask: Omit<TempTask, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'> = {
+    const newTempTask: Omit<TempTask, 'id' | 'createdAt' | 'updatedAt'> & { taskCode: string } = {
+      taskCode,  // 传递生成的任务编号
       title: input.taskName,
       type: input.taskType,
       typeName: input.operationType || input.taskType || '临时任务',

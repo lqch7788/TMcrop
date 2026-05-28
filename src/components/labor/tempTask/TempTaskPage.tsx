@@ -672,6 +672,7 @@ export function TempTaskPage() {
 
         // 使用 addTempTask 创建临时任务（直接存入 useTempTaskStore，同步到"我的任务-临时任务处理"）
         const newTask = addTempTask({
+          taskCode: taskData.taskCode,  // 传递用户生成的任务编号
           title: taskData.title || '',
           type: taskData.tempTaskType || 'other',
           typeName: TEMP_TASK_TYPES.find(t => t.value === taskData.tempTaskType)?.label || '其他',

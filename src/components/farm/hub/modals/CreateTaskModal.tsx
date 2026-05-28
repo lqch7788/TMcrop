@@ -274,6 +274,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
     console.log('[CreateTaskModal] assignee:', finalAssigneeName, 'id:', finalAssigneeId);
 
     const createdTask = tasksHook.createTask({
+      id: newTask.taskId,  // 传递用户生成的任务编号
+      taskCode: newTask.taskId,
       title: typeLabels || '农事任务',
       type: newTask.types[0] || 'other',
       typeName: typeLabels,

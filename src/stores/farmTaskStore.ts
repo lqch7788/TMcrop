@@ -186,7 +186,10 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
       addTask: async (task) => {
         const tempId = `TEMP-${Date.now()}`;
-        const taskCode = `NS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+        // 优先使用用户生成的任务编号（前端 form 已经生成了正确的 NS+日期+序号 格式）
+        // 如果前端没有传递，则使用前端传入的 id 或 taskCode
+        // 只有当前两者都没有时，才生成新的（这不应该发生，因为前端总是会生成）
+        const taskCode = task.taskCode || task.id || `NS${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
         const now = new Date().toISOString();
 
         const newTask: Task = {

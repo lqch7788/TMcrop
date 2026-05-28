@@ -645,7 +645,10 @@ export function useTasks(): UseTasksReturn {
       (finalAssigneeName ? `EMP_${finalAssigneeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)}` : '');
 
     // 准备 Store 需要的任务数据（完整字段映射，确保数据不丢失）
+    // 注意：如果前端传递了 id 或 taskCode，优先使用，否则后端会生成新的
+    const taskId = taskData.id || (taskData as any).taskCode || '';
     const apiTaskData = {
+      ...(taskId ? { id: taskId, task_code: taskId } : {}),
       title: taskData.title || '',
       type: taskData.type || '',
       typeName: taskData.typeName || '',
@@ -735,6 +738,10 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
 
+    // 创建操作记录
+    const record = createTaskRecord(task, 'publish', task.status);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
       await fetch(`/api/farm-tasks/${id}/publish`, {
@@ -753,7 +760,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 撤回任务（pending → cancelled，撤回原因记录在操作记录中）
   const withdrawTask = useCallback((id: string, reason: string) => {
@@ -761,6 +768,10 @@ export function useTasks(): UseTasksReturn {
     if (!task || task.status !== 'pending') return;
 
     const now = new Date().toISOString();
+
+    // 创建操作记录
+    const record = createTaskRecord(task, 'withdraw', task.status, { reason });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -782,7 +793,7 @@ export function useTasks(): UseTasksReturn {
       cancelledAt: now,
       cancelledBy: task.assignerId,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 取消任务（彻底取消，后续不再执行，保留执行人信息用于审计追溯）
   const cancelTask = useCallback((id: string, reason: string) => {
@@ -790,6 +801,10 @@ export function useTasks(): UseTasksReturn {
     if (!task || !['pending', 'accepted', 'in_progress'].includes(task.status)) return;
 
     const now = new Date().toISOString();
+
+    // 创建操作记录
+    const record = createTaskRecord(task, 'cancel', task.status, { reason });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -811,7 +826,7 @@ export function useTasks(): UseTasksReturn {
       cancelledAt: now,
       cancelledBy: task.assignerId,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 接受任务（执行人在任务中心点击接受）- 状态从 pending 变为 accepted（已接受），提交首次进度后自动进入 in_progress
   const acceptTask = useCallback((id: string) => {
@@ -821,6 +836,10 @@ export function useTasks(): UseTasksReturn {
     const now = new Date();
     const nowStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().slice(0, 5);
+
+    // 创建操作记录
+    const record = createTaskRecord(task, 'accept', task.status);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -861,7 +880,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now.toISOString(),
       version: task.version + 1,
     });
-  }, [tasks, addAttendance]);
+  }, [tasks, addAttendance, createTaskRecord, saveTaskRecords]);
 
   // 选择执行人（用于待派工任务）- 设置执行人，状态变为 pending（待接受）
   const acceptAndAssign = useCallback((id: string, assigneeId: string, assigneeName: string) => {
@@ -957,6 +976,19 @@ export function useTasks(): UseTasksReturn {
         actualDbId = existing.id;
       }
     }
+
+    // 创建操作记录（包含反馈数据）
+    const record = createTaskRecord(
+      task,
+      action,
+      task.status,
+      {
+        progress,
+        progressIncrement,
+        feedback: feedbackData,
+      }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -1074,7 +1106,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: nowIso,
       version: task.version + 1,
     });
-  }, [tasks, attendance, updateAttendance, syncWorkLogFromTask]);
+  }, [tasks, attendance, updateAttendance, syncWorkLogFromTask, createTaskRecord, saveTaskRecords]);
 
   // 超时处理
   const handleOvertime = useCallback((
@@ -1131,6 +1163,10 @@ export function useTasks(): UseTasksReturn {
 
     const now = new Date().toISOString();
 
+    // 创建操作记录
+    const record = createTaskRecord(task, 'complete', task.status, { comment: comments });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
+
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
       await fetch(`/api/farm-tasks/${id}/complete`, {
@@ -1182,7 +1218,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks, attendance, updateAttendance]);
+  }, [tasks, attendance, updateAttendance, createTaskRecord, saveTaskRecords]);
 
   // 验收驳回
   const rejectForRework = useCallback((id: string, reason: string) => {
@@ -1200,6 +1236,10 @@ export function useTasks(): UseTasksReturn {
       reworkAt: now,
       taskStatusBeforeRework: task.status,
     };
+
+    // 创建操作记录
+    const record = createTaskRecord(task, 'reject', task.status, { reason });
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -1223,7 +1263,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 继续执行（返工后）
   const continueExecution = useCallback((id: string) => {
@@ -1231,6 +1271,10 @@ export function useTasks(): UseTasksReturn {
     if (!task || task.status !== 'rejected') return;
 
     const now = new Date().toISOString();
+
+    // 创建操作记录
+    const record = createTaskRecord(task, 'continue', task.status);
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -1250,7 +1294,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 执行人拒绝任务（拒绝后任务状态变为rejected，可重新派发）
   const rejectByExecutor = useCallback((id: string, rejectReason: string, executorId: string, executorName: string) => {
@@ -1261,6 +1305,15 @@ export function useTasks(): UseTasksReturn {
     }
 
     const now = new Date().toISOString();
+
+    // 创建操作记录
+    const record = createTaskRecord(
+      { ...task, assigneeId: executorId, assigneeName: executorName },
+      'reject',
+      task.status,
+      { reason: rejectReason }
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -1285,7 +1338,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 重新派发
   const reassignTask = useCallback((id: string, newAssigneeId: string, newAssigneeName: string) => {
@@ -1300,6 +1353,14 @@ export function useTasks(): UseTasksReturn {
     const finalAssigneeId = mustClearAssignee ? '' : newAssigneeId;
     const finalAssigneeName = mustClearAssignee ? '' : newAssigneeName;
     const finalStatus: TaskStatus = 'pending';
+
+    // 创建操作记录
+    const record = createTaskRecord(
+      { ...task, assigneeId: finalAssigneeId, assigneeName: finalAssigneeName },
+      'reassign',
+      task.status
+    );
+    saveTaskRecords([record, ...taskRecordsRef.current]);
 
     // 调用后端 API 持久化操作记录
     syncToApi(async () => {
@@ -1326,7 +1387,7 @@ export function useTasks(): UseTasksReturn {
       updatedAt: now,
       version: task.version + 1,
     });
-  }, [tasks]);
+  }, [tasks, createTaskRecord, saveTaskRecords]);
 
   // 催办
   const sendReminder = useCallback((id: string, message?: string) => {

@@ -5,9 +5,10 @@
 
 import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
+import { exportTaskRecords } from '../../../services/apiFarmTaskService';
+import { getOperationLogs } from '../../../services/apiOperationLogService';
 import { X, Download } from 'lucide-react';
-import { Button, Label, DatePicker } from '@/components/ui';
-import { Input } from '../../ui/input';
+import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
 interface OperationRecordPanelProps {
@@ -35,15 +36,133 @@ const ACTION_TYPE_OPTIONS = [
   })),
 ];
 
+/**
+ * 导出任务操作记录到文件
+ */
+async function handleExportTaskRecords(format: 'xlsx' | 'csv' | 'xls') {
+  try {
+    const data = await exportTaskRecords();
+
+    const headers = ['任务编号', '任务标题', '操作人', '操作类型', '操作名称', '原状态', '新状态', '进度', '备注', '原因', '操作时间', '创建时间'];
+    const exportData = (data || []).map((record: any) => ({
+      '任务编号': record.task_code || '',
+      '任务标题': record.task_title || '',
+      '操作人': record.operator_name || '',
+      '操作类型': record.action || '',
+      '操作名称': record.action_name || '',
+      '原状态': record.from_status || '',
+      '新状态': record.to_status || '',
+      '进度': record.progress !== null ? `${record.progress}%` : '',
+      '备注': record.comment || '',
+      '原因': record.reason || '',
+      '操作时间': record.action_time || '',
+      '创建时间': record.create_time || '',
+    }));
+
+    let content = '';
+    let mimeType = '';
+    let extension = format;
+
+    if (format === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+    } else {
+      // Excel 格式
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    }
+
+    const fileName = `任务操作记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const blob = new Blob(['﻿' + content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log('[导出] 任务操作记录导出成功，共', exportData.length, '条');
+  } catch (error) {
+    console.error('[导出] 任务操作记录导出失败:', error);
+  }
+}
+
+/**
+ * 导出通用操作日志到文件
+ */
+async function handleExportOperationLogs(format: 'xlsx' | 'csv' | 'xls') {
+  try {
+    const result = await getOperationLogs({ limit: 10000 });
+    const data = result?.data || [];
+
+    const headers = ['用户名', '操作类型', '模块', '资源类型', '资源ID', '描述', '状态', 'IP地址', 'UserAgent', '创建时间'];
+    const exportData = (data || []).map((log: any) => ({
+      '用户名': log.username || '',
+      '操作类型': log.action || '',
+      '模块': log.module || '',
+      '资源类型': log.resource_type || '',
+      '资源ID': log.resource_id || '',
+      '描述': log.description || '',
+      '状态': log.status || '',
+      'IP地址': log.ip_address || '',
+      'UserAgent': log.user_agent || '',
+      '创建时间': log.created_at || '',
+    }));
+
+    let content = '';
+    let mimeType = '';
+    let extension = format;
+
+    if (format === 'csv') {
+      content = headers.join(',') + '\n' + exportData.map(row =>
+        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
+      ).join('\n');
+      mimeType = 'text/csv;charset=utf-8';
+    } else {
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      mimeType = 'application/vnd.ms-excel;charset=utf-8';
+      extension = 'xls';
+    }
+
+    const fileName = `操作日志_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const blob = new Blob(['﻿' + content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log('[导出] 操作日志导出成功，共', exportData.length, '条');
+  } catch (error) {
+    console.error('[导出] 操作日志导出失败:', error);
+  }
+}
+
 export function OperationRecordPanel({ records, onClose }: OperationRecordPanelProps) {
   const [filterType, setFilterType] = useState('all');
   const [filterDate, setFilterDate] = useState('');
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const filteredRecords = records.filter((record) => {
     if (filterType !== 'all' && record.actionType !== filterType) return false;
     if (filterDate && !record.timestamp.startsWith(filterDate)) return false;
     return true;
   });
+
+  const handleExport = (format: 'xlsx' | 'csv' | 'xls') => {
+    // 同时导出两种记录
+    handleExportTaskRecords(format);
+    handleExportOperationLogs(format);
+    setExportMenuOpen(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -55,11 +174,33 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             操作记录
           </h2>
-          <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" className="flex items-center gap-1">
+          <div className="flex items-center gap-2 relative">
+            <Button
+              variant="default"
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={() => setExportMenuOpen(!exportMenuOpen)}
+            >
               <Download className="w-4 h-4" />
               导出
             </Button>
+            {/* 导出菜单 */}
+            {exportMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 min-w-[120px]">
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                  onClick={() => handleExport('xlsx')}
+                >
+                  导出为 Excel
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                  onClick={() => handleExport('csv')}
+                >
+                  导出为 CSV
+                </button>
+              </div>
+            )}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-5 h-5" />
             </Button>
@@ -86,10 +227,11 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">日期:</span>
-            <DatePicker
-              selected={filterDate ? new Date(filterDate) : undefined}
-              onChange={(date) => setFilterDate(date.toISOString().split('T')[0])}
-              placeholder="选择日期"
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
           {(filterType !== 'all' || filterDate) && (
