@@ -1,11 +1,11 @@
 /**
  * 生产计划数据 Zustand Store (V2.1 架构 - 已简化)
  * 管理生产计划的完整 CRUD 数据流
- * 数据流：enhancedApiClient → Store → 页面组件
+ * 数据流：API → Store → 页面组件
  */
 import { create } from 'zustand';
 import { CropBatch } from '../types';
-import * as planService from '../services/apiProductionPlanLocalService';
+import * as apiService from '../services/apiProductionPlanService';
 
 interface ProductionPlanFilters {
   status?: string;
@@ -33,12 +33,11 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
     isLoading: false,
     error: null,
 
-    fetchPlans: async () => {
+    fetchPlans: async (filters) => {
       set({ isLoading: true, error: null });
       try {
-        const data = await planService.getProductionPlans();
-        const safeData = Array.isArray(data) ? data : [];
-        set({ plans: safeData as unknown as CropBatch[], isLoading: false });
+        const data = await apiService.getProductionPlans(filters);
+        set({ plans: data, isLoading: false });
       } catch (error) {
         console.error('[useProductionPlanStore] 获取生产计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
@@ -46,24 +45,23 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
     },
 
     addPlan: async (plan) => {
-      const result = await planService.addProductionPlan(plan as any);
-      const newPlan = { ...plan, id: (result as any).id || '' } as CropBatch;
-      set((state) => ({ plans: [newPlan, ...state.plans] }));
-      return newPlan;
+      const result = await apiService.createProductionPlan(plan);
+      set((state) => ({ plans: [result, ...state.plans] }));
+      return result;
     },
 
     updatePlan: async (id, updates) => {
-      const result = await planService.updateProductionPlan(id, updates as any);
+      const result = await apiService.updateProductionPlan(id, updates);
       if (result) {
         set((state) => ({
-          plans: state.plans.map((p) => (p.id === id ? { ...p, ...(result as any) } : p)),
+          plans: state.plans.map((p) => (p.id === id ? { ...p, ...result } : p)),
         }));
       }
-      return result as unknown as CropBatch | null;
+      return result;
     },
 
     deletePlan: async (id) => {
-      const result = await planService.deleteProductionPlan(id);
+      const result = await apiService.deleteProductionPlan(id);
       if (result) {
         set((state) => ({ plans: state.plans.filter((p) => p.id !== id) }));
       }
@@ -71,7 +69,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
     },
 
     deletePlans: async (ids) => {
-      const result = await planService.deleteProductionPlans(ids);
+      const result = await apiService.deleteProductionPlans(ids);
       if (result) {
         set((state) => ({ plans: state.plans.filter((p) => !ids.includes(p.id)) }));
       }
