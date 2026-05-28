@@ -1,10 +1,10 @@
 /**
  * 病虫害字典表格组件
- * 列：编码、名称、类型（虫害/病害Badge）、适用作物、描述、操作（编辑/删除）
+ * 列：编码、名称、类型（虫害/病害Badge）、适用作物、描述、操作（详情/编辑/删除）
  * 类型Badge：pest(虫害-橙色)、disease(病害-紫色)
  */
 import React, { useState } from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Eye, Edit2, Trash2 } from 'lucide-react';
 import { PestDiseaseDict } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/Pagination';
 interface PestDiseaseDictTableProps {
   data: PestDiseaseDict[];
   isLoading: boolean;
+  onDetail: (record: PestDiseaseDict) => void;
   onEdit: (record: PestDiseaseDict) => void;
   onDelete: (id: string) => void;
 }
@@ -21,6 +22,7 @@ interface PestDiseaseDictTableProps {
 export function PestDiseaseDictTable({
   data,
   isLoading,
+  onDetail,
   onEdit,
   onDelete,
 }: PestDiseaseDictTableProps) {
@@ -64,7 +66,7 @@ export function PestDiseaseDictTable({
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
             <TableRow className="hover:bg-transparent">
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">编码</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">名称</TableHead>
@@ -74,7 +76,7 @@ export function PestDiseaseDictTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-gray-200">
+          <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="px-4 py-12 text-center text-gray-400">
@@ -85,31 +87,40 @@ export function PestDiseaseDictTable({
               currentData.map((record) => (
                 <TableRow
                   key={record.id}
-                  className="hover:bg-emerald-50 transition-colors"
+                  className="hover:bg-blue-100 transition-colors duration-150"
                 >
                   {/* 编码 - 蓝色链接 */}
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-2 whitespace-nowrap">
                     <span className="font-mono text-sm text-blue-600">{record.dictCode}</span>
                   </TableCell>
                   {/* 名称 - 加粗 */}
-                  <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
+                  <TableCell className="px-4 py-2 text-sm font-bold text-gray-900 whitespace-nowrap">
                     {record.dictName}
                   </TableCell>
                   {/* 类型 - Badge */}
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-2 whitespace-nowrap">
                     {getTypeBadge(record.dictType)}
                   </TableCell>
                   {/* 适用作物 */}
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">
                     {record.targetCrops || '-'}
                   </TableCell>
                   {/* 描述 */}
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                  <TableCell className="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">
                     {record.description || '-'}
                   </TableCell>
                   {/* 操作区 */}
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-2 whitespace-nowrap">
                     <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDetail(record)}
+                        className="text-gray-500 hover:text-blue-600"
+                        title="查看详情"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

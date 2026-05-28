@@ -119,10 +119,11 @@ export function PesticideLibraryTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap w-8"></TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">编码</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂名称</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">药剂成分</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作用机制</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治类型</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">生产厂家</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
               {!exportMode && (
                 <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
               )}
@@ -184,21 +185,25 @@ export function PesticideLibraryTable({
                     <TableCell className="px-4 py-3 text-sm font-bold text-gray-900 whitespace-nowrap">
                       {record.pesticideName || '-'}
                     </TableCell>
+                    {/* 药剂成分 */}
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
+                      {record.ingredient || '-'}
+                    </TableCell>
+                    {/* 作用机制 */}
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[100px] truncate">
+                      {record.mechanism || '-'}
+                    </TableCell>
                     {/* 防治类型 - Badge */}
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       {getControlTypeBadge(record.controlType)}
                     </TableCell>
+                    {/* 功能说明 */}
+                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">
+                      {record.functionDesc || '-'}
+                    </TableCell>
                     {/* 规格数 */}
                     <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.specs?.length || 0}
-                    </TableCell>
-                    {/* 生产厂家 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {record.specs?.[0]?.manufacturer || '-'}
-                    </TableCell>
-                    {/* 功能说明 */}
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">
-                      {record.functionDesc || '-'}
                     </TableCell>
                     {!exportMode && (
                       /* 操作区 */
@@ -238,7 +243,7 @@ export function PesticideLibraryTable({
                   {/* 展开行 - 规格明细 */}
                   {expandedRows.has(record.id) && (
                     <TableRow key={`${record.id}-expanded`} className="bg-emerald-50/50">
-                      <TableCell colSpan={8} className="px-4 py-3">
+                      <TableCell colSpan={9} className="px-4 py-3">
                         <div className="text-sm">
                           <div className="font-semibold text-emerald-800 mb-2">规格明细</div>
                           {(record.specs && record.specs.length > 0) ? (
@@ -252,7 +257,7 @@ export function PesticideLibraryTable({
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">建议用量</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">单位</th>
                                   <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">稀释比例</th>
-                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">作用机制</th>
+                                  <th className="px-3 py-2 text-left text-sm font-semibold text-emerald-800">备注</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-emerald-100">
@@ -265,7 +270,7 @@ export function PesticideLibraryTable({
                                     <td className="px-3 py-2 text-sm text-emerald-700">{spec.suggestedDosage || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-emerald-700">{spec.dosageUnit || '-'}</td>
                                     <td className="px-3 py-2 text-sm text-emerald-700">{spec.suggestedRatio || '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.mechanism || '-'}</td>
+                                    <td className="px-3 py-2 text-sm text-emerald-700">{spec.remark || '-'}</td>
                                   </tr>
                                 ))}
                               </tbody>

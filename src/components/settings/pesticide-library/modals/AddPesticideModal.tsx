@@ -28,6 +28,8 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
   const [form, setForm] = useState({
     pesticideCode: '',
     pesticideName: '',
+    ingredient: '',
+    mechanism: '',
     functionDesc: '',
     tabooDesc: '',
     targetPests: '',
@@ -54,8 +56,10 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
   React.useEffect(() => {
     if (isOpen) {
       setForm({
-        pesticideCode: `PC${Date.now()}`,
+        pesticideCode: '',
         pesticideName: '',
+        ingredient: '',
+        mechanism: '',
         functionDesc: '',
         tabooDesc: '',
         targetPests: '',
@@ -65,6 +69,33 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       setSelectedPests([]);
     }
   }, [isOpen, controlType]);
+
+  // 生成编码
+  const generateCode = () => {
+    const prefix = localControlType === 'chemical' ? 'PC-C-' : localControlType === 'bio' ? 'PC-B-' : 'PC-P-';
+    // 获取当前类型最大的编码
+    const existingCodes = store.items
+      .filter(item => item.controlType === localControlType)
+      .map(item => item.pesticideCode)
+      .filter(code => code && code.startsWith(prefix));
+    let maxNum = 0;
+    existingCodes.forEach(code => {
+      const match = code.match(/PC-[CBP]-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    const newNum = maxNum + 1;
+    const newCode = `${prefix}${newNum.toString().padStart(4, '0')}`;
+    setForm(prev => ({ ...prev, pesticideCode: newCode }));
+  };
+
+  // 检测编码是否重复
+  const checkCodeExists = (code: string): boolean => {
+    if (!code) return false;
+    return store.items.some(item => item.pesticideCode === code);
+  };
 
   // 切换防治对象
   const togglePest = (pestId: string) => {
@@ -89,6 +120,14 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       await showAlert('请输入药剂名称');
       return;
     }
+    if (!form.pesticideCode.trim()) {
+      await showAlert('请点击生成按钮获取药剂编码');
+      return;
+    }
+    if (checkCodeExists(form.pesticideCode)) {
+      await showAlert('该编码已存在，请点击生成按钮获取新编码');
+      return;
+    }
 
     setSubmitting(true);
 
@@ -97,6 +136,8 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
       pesticideCode: form.pesticideCode,
       pesticideName: form.pesticideName,
       controlType: localControlType as 'chemical' | 'bio' | 'physical',
+      ingredient: form.ingredient,
+      mechanism: form.mechanism,
       functionDesc: form.functionDesc,
       tabooDesc: form.tabooDesc,
       targetPests: getTargetPestsName() || form.targetPests,
@@ -115,6 +156,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
             dosageUnit: spec.dosageUnit,
             mechanism: spec.mechanism,
             brandName: spec.brandName,
+            remark: spec.remark,
           } as Partial<PesticideSpec>);
         }
       }
@@ -159,13 +201,27 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                 <Label className="text-gray-900">
                   药剂编码 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  type="text"
-                  value={form.pesticideCode}
-                  onChange={(e) => updateField('pesticideCode', e.target.value)}
-                  placeholder="自动生成"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={form.pesticideCode}
+                    onChange={(e) => updateField('pesticideCode', e.target.value)}
+                    placeholder="点击生成获取编码"
+                    className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={generateCode}
+                    className="px-3"
+                  >
+                    生成
+                  </Button>
+                </div>
+                {form.pesticideCode && checkCodeExists(form.pesticideCode) && (
+                  <p className="text-xs text-red-500 mt-1">编码已存在，请重新生成</p>
+                )}
               </div>
               <div>
                 <Label className="text-gray-900">
@@ -176,6 +232,30 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                   value={form.pesticideName}
                   onChange={(e) => updateField('pesticideName', e.target.value)}
                   placeholder="请输入药剂名称"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* 药剂成分 */}
+              <div>
+                <Label className="text-gray-900">药剂成分</Label>
+                <Input
+                  type="text"
+                  value={form.ingredient}
+                  onChange={(e) => updateField('ingredient', e.target.value)}
+                  placeholder="如 啶虫脒、高效氯氟氰菊酯"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              {/* 作用机制 */}
+              <div>
+                <Label className="text-gray-900">作用机制</Label>
+                <Input
+                  type="text"
+                  value={form.mechanism}
+                  onChange={(e) => updateField('mechanism', e.target.value)}
+                  placeholder="如 触杀、胃毒、熏蒸"
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>

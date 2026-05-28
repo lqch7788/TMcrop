@@ -1,19 +1,20 @@
 /**
  * 病虫害字典主页面组件
  * Tab切换：虫害 / 病害
- * 顶部操作栏：新增按钮、搜索框
+ * 顶部操作栏：搜索框、适用作物筛选、状态筛选、新增按钮
  * 表格显示：编码、名称、类型、适用作物、描述、操作
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bug, Plus, Search, ArrowLeft } from 'lucide-react';
+import { Bug, Plus, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { usePestDiseaseDictStore, PestDiseaseDict } from '@/stores';
-import { PestDiseaseDictFilter } from './PestDiseaseDictFilter';
+import { showConfirm } from '@/lib/dialogService';
 import { PestDiseaseDictTable } from './PestDiseaseDictTable';
 import { AddPestDiseaseModal } from './modals/AddPestDiseaseModal';
 import { EditPestDiseaseModal } from './modals/EditPestDiseaseModal';
+import { PestDiseaseDetailModal } from './modals/PestDiseaseDetailModal';
 
 type TabType = 'pest' | 'disease';
 
@@ -33,27 +34,29 @@ export default function PestDiseaseDictPage() {
   // 模态框状态
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTarget, setEditTarget] = useState<PestDiseaseDict | null>(null);
+  const [detailTarget, setDetailTarget] = useState<PestDiseaseDict | null>(null);
 
   // ========== 数据加载 ==========
   useEffect(() => {
-    store.fetchItems({});
+    store.fetchItems({ limit: '10000' });
   }, []);
 
   // ========== Tab切换时重新加载数据 ==========
   useEffect(() => {
     setFilters({ dictType: activeTab });
-    store.fetchItems({ dictType: activeTab });
+    // 获取所有数据用于统计，不限制类型
+    store.fetchItems({ limit: '10000' });
   }, [activeTab]);
 
   // ========== 筛选处理 ==========
   const handleSearch = useCallback(() => {
-    store.fetchItems({ ...filters, keyword: searchKeyword });
+    store.fetchItems({ ...filters, keyword: searchKeyword, limit: '10000' });
   }, [filters, searchKeyword, store]);
 
   const handleReset = useCallback(() => {
     setFilters({ dictType: activeTab });
     setSearchKeyword('');
-    store.fetchItems({ dictType: activeTab });
+    store.fetchItems({ dictType: activeTab, limit: '10000' });
   }, [activeTab, store]);
 
   const handleFilterChange = useCallback((newFilters: Record<string, string>) => {
@@ -63,23 +66,30 @@ export default function PestDiseaseDictPage() {
   // ========== CRUD 处理 ==========
   const handleAdd = useCallback(() => setShowAddModal(true), []);
 
+  const handleDetail = useCallback((record: PestDiseaseDict) => {
+    setDetailTarget(record);
+  }, []);
+
   const handleEdit = useCallback((record: PestDiseaseDict) => {
     setEditTarget(record);
   }, []);
 
-  const handleDelete = useCallback((id: string) => {
-    store.deleteItem(id);
+  const handleDelete = useCallback(async (id: string) => {
+    const ok = await showConfirm('确定删除该病虫害吗？\n\n删除后，被引用的信息将无法完整显示。');
+    if (ok) {
+      store.deleteItem(id);
+    }
   }, [store]);
 
   // ========== 编辑保存后刷新 ==========
   const handleEditSaved = useCallback(() => {
     setEditTarget(null);
-    store.fetchItems({ dictType: activeTab });
+    store.fetchItems({ dictType: activeTab, limit: '10000' });
   }, [activeTab, store]);
 
   const handleAddSaved = useCallback(() => {
     setShowAddModal(false);
-    store.fetchItems({ dictType: activeTab });
+    store.fetchItems({ dictType: activeTab, limit: '10000' });
   }, [activeTab, store]);
 
   // ========== 根据Tab过滤数据 ==========
@@ -125,9 +135,9 @@ export default function PestDiseaseDictPage() {
           <div className="flex">
             <button
               onClick={() => setActiveTab('pest')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === 'pest'
-                  ? 'border-orange-500 text-orange-600 bg-orange-50'
+                  ? 'border-green-500 text-green-600 bg-green-100'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -136,13 +146,13 @@ export default function PestDiseaseDictPage() {
             </button>
             <button
               onClick={() => setActiveTab('disease')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${
                 activeTab === 'disease'
-                  ? 'border-purple-500 text-purple-600 bg-purple-50'
+                  ? 'border-green-500 text-green-600 bg-green-100'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <Bug className="w-4 h-4 inline mr-2" />
+              <AlertTriangle className="w-4 h-4 inline mr-2" />
               病害 ({stats.diseaseCount})
             </button>
           </div>
@@ -150,9 +160,9 @@ export default function PestDiseaseDictPage() {
 
         {/* 顶部操作栏 */}
         <div className="px-4 py-3 flex items-center justify-between gap-4 border-b border-gray-100">
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3 flex-1 flex-wrap">
             {/* 搜索框 */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="text"
@@ -163,10 +173,32 @@ export default function PestDiseaseDictPage() {
                 className="pl-9 h-10"
               />
             </div>
-            <Button variant="secondary" size="sm" onClick={handleSearch}>
+            {/* 适用作物 */}
+            <div className="w-40">
+              <Input
+                type="text"
+                value={filters.targetCrops || ''}
+                onChange={(e) => handleFilterChange({ ...filters, targetCrops: e.target.value })}
+                placeholder="适用作物"
+                className="h-10"
+              />
+            </div>
+            {/* 状态 */}
+            <div className="w-28">
+              <select
+                value={filters.status || ''}
+                onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
+                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-orange-500 bg-white"
+              >
+                <option value="">状态</option>
+                <option value="active">启用</option>
+                <option value="inactive">禁用</option>
+              </select>
+            </div>
+            <Button variant="default" size="sm" onClick={handleSearch}>
               搜索
             </Button>
-            <Button variant="secondary" size="sm" onClick={handleReset}>
+            <Button variant="outline" size="sm" onClick={handleReset}>
               重置
             </Button>
           </div>
@@ -174,16 +206,6 @@ export default function PestDiseaseDictPage() {
             <Plus className="w-4 h-4" />
             新增{activeTab === 'pest' ? '虫害' : '病害'}
           </Button>
-        </div>
-
-        {/* FilterBar */}
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-          <PestDiseaseDictFilter
-            filters={filters}
-            onChange={handleFilterChange}
-            onSearch={handleSearch}
-            onReset={handleReset}
-          />
         </div>
 
         {/* 错误提示 */}
@@ -197,6 +219,7 @@ export default function PestDiseaseDictPage() {
         <PestDiseaseDictTable
           data={filteredItems}
           isLoading={isLoading}
+          onDetail={handleDetail}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
@@ -217,6 +240,13 @@ export default function PestDiseaseDictPage() {
           record={editTarget}
           onClose={() => setEditTarget(null)}
           onSaved={handleEditSaved}
+        />
+      )}
+      {detailTarget && (
+        <PestDiseaseDetailModal
+          isOpen={!!detailTarget}
+          record={detailTarget}
+          onClose={() => setDetailTarget(null)}
         />
       )}
     </div>

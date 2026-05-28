@@ -15,6 +15,7 @@ export interface PesticideSpec {
   dosageUnit?: string;
   mechanism?: string; // 作用机制
   brandName?: string; // 品牌名称
+  remark?: string; // 备注
   status: string;
   createTime: string;
 }
@@ -27,10 +28,21 @@ export interface PesticideLibrary {
   functionDesc?: string;
   tabooDesc?: string;
   targetPests?: string;
+  ingredient?: string; // 药剂成分
+  mechanism?: string; // 作用机制
   status: string;
   createTime: string;
   updateTime: string;
   specs?: PesticideSpec[];
+}
+
+export interface PestDiseaseForRelation {
+  id: string;
+  dictCode: string;
+  dictName: string;
+  dictType: 'pest' | 'disease';
+  targetCrops?: string;
+  description?: string;
 }
 
 interface PesticideLibraryState {
@@ -45,19 +57,22 @@ interface PesticideLibraryState {
   createSpec: (pesticideId: string, spec: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
   updateSpec: (specId: string, spec: Partial<PesticideSpec>) => Promise<PesticideSpec | null>;
   deleteSpec: (specId: string) => Promise<boolean>;
+  fetchRelatedPests: (pesticideId: string) => Promise<PestDiseaseForRelation[]>;
+  updateRelations: (pesticideId: string, pestIds: string[]) => Promise<boolean>;
+  removeRelation: (pesticideId: string, pestId: string) => Promise<boolean>;
 }
 
 const FIELD_MAP: Record<string, string> = {
   id: 'id', pesticide_code: 'pesticideCode', pesticide_name: 'pesticideName',
   control_type: 'controlType', function_desc: 'functionDesc', taboo_desc: 'tabooDesc',
-  target_pests: 'targetPests', status: 'status', create_time: 'createTime', update_time: 'updateTime',
+  target_pests: 'targetPests', ingredient: 'ingredient', mechanism: 'mechanism', status: 'status', create_time: 'createTime', update_time: 'updateTime',
 };
 
 const SPEC_FIELD_MAP: Record<string, string> = {
   id: 'id', pesticide_id: 'pesticideId', spec_content: 'specContent',
   formulation: 'formulation', manufacturer: 'manufacturer', suggested_dosage: 'suggestedDosage',
   suggested_ratio: 'suggestedRatio', dosage_unit: 'dosageUnit', mechanism: 'mechanism',
-  brand_name: 'brandName', status: 'status', create_time: 'createTime',
+  brand_name: 'brandName', remark: 'remark', status: 'status', create_time: 'createTime',
 };
 
 function normalize(data: Record<string, unknown>, fieldMap: Record<string, string>): Record<string, unknown> {
@@ -192,6 +207,34 @@ export const usePesticideLibraryStore = create<PesticideLibraryState>()(
         return true;
       } catch (err) {
         set({ error: (err as Error).message });
+        return false;
+      }
+    },
+
+    fetchRelatedPests: async (pesticideId) => {
+      try {
+        const response = await enhancedApiClient.get<any>(`/pesticide-library/${pesticideId}/relations`);
+        const items = Array.isArray(response) ? response : response?.data ?? [];
+        return items as PestDiseaseForRelation[];
+      } catch {
+        return [];
+      }
+    },
+
+    updateRelations: async (pesticideId, pestIds) => {
+      try {
+        await enhancedApiClient.put(`/pesticide-library/${pesticideId}/relations`, { pestIds });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    removeRelation: async (pesticideId, pestId) => {
+      try {
+        await enhancedApiClient.delete(`/pesticide-library/${pesticideId}/relations/${pestId}`);
+        return true;
+      } catch {
         return false;
       }
     },

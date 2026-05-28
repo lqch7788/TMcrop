@@ -20,6 +20,7 @@ interface AddPestDiseaseModalProps {
 
 // 默认表单数据
 const defaultForm = {
+  dictCode: '',
   dictName: '',
   dictType: 'pest' as const,
   targetCrops: '',
@@ -31,6 +32,15 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
 
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+
+  // 生成编码
+  const generateCode = async () => {
+    setGeneratingCode(true);
+    const nextCode = await store.fetchNextCode(form.dictType);
+    setForm(prev => ({ ...prev, dictCode: nextCode }));
+    setGeneratingCode(false);
+  };
 
   // 重置表单
   useEffect(() => {
@@ -49,6 +59,7 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
     if (!form.dictName.trim()) return; // 基本校验
     setSubmitting(true);
     await store.createItem({
+      dictCode: form.dictCode,
       dictName: form.dictName,
       dictType: form.dictType,
       targetCrops: form.targetCrops,
@@ -64,7 +75,7 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
       isOpen={isOpen}
       onClose={onClose}
       title={`新增${form.dictType === 'pest' ? '虫害' : '病害'}字典`}
-      size="md"
+      size="xxl"
       showFooter={false}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
@@ -72,6 +83,30 @@ export function AddPestDiseaseModal({ isOpen, dictType, onClose, onSaved }: AddP
         <div>
           <h3 className="text-sm font-bold text-gray-900 mb-3">📋 基础信息</h3>
           <div className="space-y-3">
+            <div>
+              <Label className="text-gray-900">
+                病虫害编码
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={form.dictCode}
+                  readOnly
+                  placeholder="点击生成获取编码"
+                  className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none font-mono bg-gray-50"
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={generateCode}
+                  disabled={generatingCode}
+                  className="px-3"
+                >
+                  {generatingCode ? '生成中...' : '生成'}
+                </Button>
+              </div>
+            </div>
             <div>
               <Label className="text-gray-900">
                 病虫害名称 <span className="text-red-500">*</span>

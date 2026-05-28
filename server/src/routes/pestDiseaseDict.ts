@@ -8,6 +8,40 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+/** GET /api/pest-disease-dict/next-code — 获取下一个可用编码 */
+router.get('/next-code', (req: Request, res: Response) => {
+  const { type } = req.query;
+  if (!type || !['pest', 'disease'].includes(type as string)) {
+    return res.status(400).json({ error: 'type must be pest or disease' });
+  }
+
+  const prefix = type === 'pest' ? 'PD-P-' : 'PD-D-';
+  const db = getDatabase();
+
+  const stmt = db.prepare(
+    `SELECT dict_code FROM pest_disease_dict WHERE dict_type = ? AND dict_code LIKE ? ORDER BY dict_code DESC LIMIT 1`
+  );
+  stmt.bind([type, `${prefix}%`]);
+
+  let lastCode = '';
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { dict_code: string };
+    lastCode = row.dict_code || '';
+  }
+  stmt.free();
+
+  let nextNum = 1;
+  if (lastCode) {
+    const match = lastCode.match(/PD-[PD]-(\d+)/);
+    if (match) {
+      nextNum = parseInt(match[1], 10) + 1;
+    }
+  }
+
+  const nextCode = `${prefix}${nextNum.toString().padStart(4, '0')}`;
+  res.json({ next_code: nextCode });
+});
+
 /** 生成字典编码 KC-B-/KC-D-+4位流水号 */
 function generateDictCode(db: any, dictType: string): string {
   const prefix = dictType === 'pest' ? 'KC-B-' : 'KC-D-';
@@ -29,15 +63,16 @@ function generateDictCode(db: any, dictType: string): string {
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { dict_type, dict_name, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { dictType, dict_name, keyword, page = '1', limit = '20' } = req.query as Record<string, string>;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const limitNum = Math.min(10000, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (dict_type) { conditions.push('dict_type = ?'); params.push(dict_type); }
+    if (dictType) { conditions.push('dict_type = ?'); params.push(dictType); }
     if (dict_name) { conditions.push("dict_name LIKE '%' || ? || '%'"); params.push(dict_name); }
+    if (keyword) { conditions.push("dict_name LIKE '%' || ? || '%'"); params.push(keyword); }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = execCount(db, `SELECT * FROM pest_disease_dict ${whereClause}`, params);
@@ -61,7 +96,8 @@ router.post('/', (req: Request, res: Response) => {
       res.status(400).json({ success: false, error: '病虫害名称和类型为必填项' });
       return;
     }
-    const code = generateDictCode(db, body.dict_type);
+    // 如果提供了 dictCode 则使用，否则自动生成
+    const code = body.dict_code || generateDictCode(db, body.dict_type);
     const now = new Date().toISOString();
     const id = `pdd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -116,14 +152,24 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-/** DELETE /api/pest-disease-dict/:id — 删除 */
+/** DELETE /api/pest-disease-dict/:id — 删除（需检查关联） */
 router.delete('/:id', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
+
+    // 检查是否有关联药剂
+    const related = db.prepare(
+      'SELECT COUNT(*) as count FROM pesticide_pest_relation WHERE pest_id = ?'
+    ).get(id) as { count: number };
+
+    if (related.count > 0) {
+      return res.status(400).json({ success: false, error: '该病虫害存在关联药剂，无法删除' });
+    }
+
     db.run(`DELETE FROM pest_disease_dict WHERE id = ?`, [id]);
     saveDatabase();
-    res.json({ success: false, data: { id } });
+    res.json({ success: true, data: { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -139,6 +185,71 @@ router.get('/by-crop/:cropName', (req: Request, res: Response) => {
       [`%${cropName}%`]
     );
     res.json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** GET /api/pest-disease-dict/:id/relations — 获取病虫害关联的药剂列表 */
+router.get('/:id/relations', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const rows = queryToObjects(db, `
+      SELECT pl.id, pl.pesticide_code, pl.pesticide_name, pl.control_type
+      FROM pesticide_library pl
+      JOIN pesticide_pest_relation r ON pl.id = r.pesticide_id
+      WHERE r.pest_id = ?
+    `, [id]);
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** POST /api/pest-disease-dict/:pestId/relations — 添加关联 */
+router.post('/:pestId/relations', (req: Request, res: Response) => {
+  try {
+    const { pestId } = req.params;
+    const { pesticideId } = req.body;
+
+    if (!pesticideId) {
+      return res.status(400).json({ success: false, error: 'pesticideId is required' });
+    }
+
+    const db = getDatabase();
+    const id = `${pesticideId}_${pestId}`;
+
+    try {
+      db.prepare(`
+        INSERT INTO pesticide_pest_relation (id, pesticide_id, pest_id)
+        VALUES (?, ?, ?)
+      `).run(id, pesticideId, pestId);
+      saveDatabase();
+      res.json({ success: true, id });
+    } catch (e: any) {
+      if (e.message.includes('UNIQUE constraint')) {
+        return res.status(400).json({ success: false, error: '该关联已存在' });
+      }
+      throw e;
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/** DELETE /api/pest-disease-dict/:pestId/relations/:pesticideId — 删除关联 */
+router.delete('/:pestId/relations/:pesticideId', (req: Request, res: Response) => {
+  try {
+    const { pestId, pesticideId } = req.params;
+    const db = getDatabase();
+
+    db.prepare('DELETE FROM pesticide_pest_relation WHERE pest_id = ? AND pesticide_id = ?')
+      .run(pestId, pesticideId);
+    saveDatabase();
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
