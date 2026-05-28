@@ -593,72 +593,99 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                           {/* 反馈数据展示（位置、照片、语音等） */}
                           {record.feedbackData && (
                             <div className="mt-2 space-y-2">
-                              {/* GPS位置 */}
-                              {record.feedbackData.gpsLocation && (
-                                <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1">
-                                  <span>📍</span>
-                                  <span>位置打卡：</span>
-                                  <span className="font-mono">
-                                    {record.feedbackData.gpsLocation.lat.toFixed(6)}, {record.feedbackData.gpsLocation.lng.toFixed(6)}
-                                  </span>
-                                </div>
-                              )}
+                              {/* 解析 feedbackData，规范化嵌套的 workloadConfirm */}
+                              {(() => {
+                                const fd = record.feedbackData;
+                                // 规范化 workloadConfirm 嵌套结构
+                                const feedback = {
+                                  ...fd,
+                                  workloadDays: fd.workloadDays ?? fd.workloadConfirm?.days,
+                                  workloadHours: fd.workloadHours ?? fd.workloadConfirm?.hours,
+                                  workers: fd.workers ?? fd.workloadConfirm?.workers,
+                                };
+                                return (
+                                  <>
+                                    {/* GPS位置 */}
+                                    {feedback.gpsLocation && (
+                                      <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1">
+                                        <span>📍</span>
+                                        <span>位置打卡：</span>
+                                        <span className="font-mono">
+                                          {feedback.gpsLocation.lat?.toFixed(6) || '-'}, {feedback.gpsLocation.lng?.toFixed(6) || '-'}
+                                        </span>
+                                      </div>
+                                    )}
 
-                              {/* 作业前照片 */}
-                              {record.feedbackData.photosBefore && record.feedbackData.photosBefore.length > 0 && (
-                                <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
-                                  <span>📷</span>
-                                  <span>作业前照片：{record.feedbackData.photosBefore.length}张</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {record.feedbackData.photosBefore.map((img, idx) => (
-                                      <img
-                                        key={idx}
-                                        src={img}
-                                        alt={`作业前${idx + 1}`}
-                                        className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                        onClick={() => window.open(img, '_blank')}
-                                        title="点击查看原图"
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                                    {/* 作业前照片 */}
+                                    {feedback.photosBefore && feedback.photosBefore.length > 0 && (
+                                      <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
+                                        <span>📷</span>
+                                        <span>作业前照片：{feedback.photosBefore.length}张</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {feedback.photosBefore.map((img, idx) => (
+                                            <img
+                                              key={idx}
+                                              src={img}
+                                              alt={`作业前${idx + 1}`}
+                                              className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                              onClick={() => window.open(img, '_blank')}
+                                              title="点击查看原图"
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
 
-                              {/* 作业后照片 */}
-                              {record.feedbackData.photosAfter && record.feedbackData.photosAfter.length > 0 && (
-                                <div className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
-                                  <span>📷</span>
-                                  <span>作业后照片：{record.feedbackData.photosAfter.length}张</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {record.feedbackData.photosAfter.map((img, idx) => (
-                                      <img
-                                        key={idx}
-                                        src={img}
-                                        alt={`作业后${idx + 1}`}
-                                        className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
-                                        onClick={() => window.open(img, '_blank')}
-                                        title="点击查看原图"
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                                    {/* 作业后照片 */}
+                                    {feedback.photosAfter && feedback.photosAfter.length > 0 && (
+                                      <div className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
+                                        <span>📷</span>
+                                        <span>作业后照片：{feedback.photosAfter.length}张</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {feedback.photosAfter.map((img, idx) => (
+                                            <img
+                                              key={idx}
+                                              src={img}
+                                              alt={`作业后${idx + 1}`}
+                                              className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                              onClick={() => window.open(img, '_blank')}
+                                              title="点击查看原图"
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
 
-                              {/* 物资编码 */}
-                              {record.feedbackData.materialCode && (
-                                <div className="text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
-                                  <span>📦</span>
-                                  <span>物资编码：{record.feedbackData.materialCode}</span>
-                                </div>
-                              )}
+                                    {/* 物资编码 */}
+                                    {feedback.materialCode && (
+                                      <div className="text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
+                                        <span>📦</span>
+                                        <span>物资编码：{feedback.materialCode}</span>
+                                      </div>
+                                    )}
 
-                              {/* 语音备注 */}
-                              {record.feedbackData.voiceNote && (
-                                <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1">
-                                  <span>🎤</span>
-                                  <span>语音备注（已录音）</span>
-                                </div>
-                              )}
+                                    {/* 语音备注 */}
+                                    {feedback.voiceNote && (
+                                      <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1">
+                                        <span>🎤</span>
+                                        <span>语音备注（已录音）</span>
+                                      </div>
+                                    )}
+
+                                    {/* 工作量 */}
+                                    {(feedback.workloadDays !== undefined || feedback.workloadHours !== undefined || feedback.workers !== undefined) && (
+                                      <div className="text-xs text-cyan-600 bg-cyan-50 rounded px-2 py-1">
+                                        <span>⏱️</span>
+                                        <span>工作量：</span>
+                                        {feedback.workloadDays !== undefined && <span>{feedback.workloadDays}天</span>}
+                                        {feedback.workloadDays !== undefined && feedback.workloadHours !== undefined && <span> + </span>}
+                                        {feedback.workloadHours !== undefined && <span>{feedback.workloadHours}小时</span>}
+                                        {feedback.workers !== undefined && <span>，{feedback.workers}人</span>}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

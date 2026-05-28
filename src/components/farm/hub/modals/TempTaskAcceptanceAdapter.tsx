@@ -50,7 +50,6 @@ export function TempTaskAcceptanceAdapter({
 
   useEffect(() => {
     if (!isOpen || !task?.id) {
-      console.log('[TempTaskAcceptanceAdapter] 跳过：isOpen=', isOpen, 'task?.id=', task?.id);
       setRecords([]);
       return;
     }
@@ -58,42 +57,21 @@ export function TempTaskAcceptanceAdapter({
     // 从后端 API 加载任务记录
     setIsLoadingRecords(true);
     const taskId = task.id;
-    console.log('[TempTaskAcceptanceAdapter] 开始加载操作记录, taskId:', taskId, 'task.taskCode:', task.taskCode);
-
     const url = `/temp-tasks/${taskId}/records`;
-    console.log('[TempTaskAcceptanceAdapter] 发送请求 URL:', url);
 
-    // 直接使用 fetch 测试 API 连通性
-    fetch(url)
-      .then(res => {
-        console.log('[TempTaskAcceptanceAdapter] fetch 响应状态:', res.status);
-        return res.json();
-      })
-      .then(result => {
-        console.log('[TempTaskAcceptanceAdapter] fetch JSON 结果:', JSON.stringify(result));
-        if (result.success && Array.isArray(result.data)) {
-          setRecords(result.data);
-        } else {
-          console.error('[TempTaskAcceptanceAdapter] 数据格式错误:', result);
-          setRecords([]);
-        }
+    // 使用 enhancedApiClient 发送请求（它会自动处理 API 基础 URL）
+    enhancedApiClient.get<any[]>(url)
+      .then((apiRecords) => {
+        // apiRecords 已经是提取后的数据数组（enhancedApiClient 会自动提取 result.data）
+        const recordsArray = Array.isArray(apiRecords) ? apiRecords : [];
+        setRecords(recordsArray);
       })
       .catch((err) => {
-        console.error('[TempTaskAcceptanceAdapter] fetch 请求失败:', err);
+        console.error('[TempTaskAcceptanceAdapter] 加载任务记录失败:', err);
         setRecords([]);
       })
       .finally(() => {
-        console.log('[TempTaskAcceptanceAdapter] 请求完成，设置 isLoadingRecords=false');
         setIsLoadingRecords(false);
-      });
-
-    // 同时使用 enhancedApiClient 发送请求（用于对比）
-    enhancedApiClient.get<any[]>(url)
-      .then((apiRecords) => {
-        console.log('[TempTaskAcceptanceAdapter] enhancedApiClient 返回记录数:', apiRecords?.length || 0);
-      })
-      .catch((err) => {
-        console.error('[TempTaskAcceptanceAdapter] enhancedApiClient 请求失败:', err);
       });
   }, [isOpen, task?.id]);
 
