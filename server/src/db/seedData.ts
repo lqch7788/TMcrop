@@ -7,6 +7,8 @@ import { getDatabase, saveDatabase } from './index';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
+import { seedPesticideLibrary } from './seedPesticideLibrary';
+import { seedPestDiseaseDict } from './seedPestDiseaseDict';
 
 /**
  * 导入作物品种数据
@@ -3425,9 +3427,19 @@ function seedBusinessTasks() {
 
 /**
  * 导入巡查记录数据（完整版）
+ * 注意：只在表为空时才插入，避免覆盖用户删除的数据
  */
 function seedBusinessInspectionRecords() {
   const db = getDatabase();
+
+  // 检查是否已有巡查记录，避免覆盖用户数据
+  const existingCount = db.exec('SELECT COUNT(*) as cnt FROM inspections');
+  const count = existingCount.length > 0 && existingCount[0].values.length > 0
+    ? Number(existingCount[0].values[0][0]) : 0;
+  if (count > 0) {
+    console.log(`巡查记录表已有 ${count} 条数据，跳过种子数据导入`);
+    return;
+  }
 
   const inspections = [
     {
@@ -4863,6 +4875,808 @@ function seedMaterialTypes() {
 }
 
 /**
+ * 导入公告数据
+ */
+function seedAnnouncements() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM announcements');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`公告数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const announcements = [
+    { id: 'ANNOUNCEMENT_001', code: 'N2026041501', title: '关于2026年春季种植计划的通知', type: '生产公告', category: '生产计划', priority: '高', status: '已发布', sender: '生产管理部', date: '2026-04-15', deadline: '2026-05-15', readCount: 156, recipients: '全体基地', content: '为确保2026年春季种植工作顺利开展，现将种植计划通知如下：一、种植品种选择...二、播种时间安排...三、技术要点说明...' },
+    { id: 'ANNOUNCEMENT_002', code: 'N2026041801', title: '温室环境控制标准更新', type: '生产公告', category: '技术标准', priority: '高', status: '已发布', sender: '技术部', date: '2026-04-18', deadline: '2026-05-01', readCount: 142, recipients: '温室管理人员', content: '根据最新研究成果，现对温室环境控制标准进行更新：一、温度控制标准...二、湿度控制标准...三、光照控制标准...' },
+    { id: 'ANNOUNCEMENT_003', code: 'N2026042001', title: '劳动节放假安排通知', type: '行政公告', category: '行政通知', priority: '中', status: '已发布', sender: '行政人事部', date: '2026-04-20', deadline: '2026-05-10', readCount: 234, recipients: '全体员工', content: '根据国家法定节假日安排，现将劳动节放假事宜通知如下...放假时间：5月1日至5月5日...' },
+    { id: 'ANNOUNCEMENT_004', code: 'N2026042201', title: '新员工入职培训通知', type: '行政公告', category: '培训通知', priority: '中', status: '审批中', sender: '行政人事部', date: '2026-04-22', deadline: '2026-05-05', readCount: 0, recipients: '新入职员工', content: '欢迎新员工加入公司，现将入职培训安排通知如下...' },
+    { id: 'ANNOUNCEMENT_005', code: 'N2026042501', title: '农药使用安全规范', type: '生产公告', category: '安全规范', priority: '高', status: '已发布', sender: '安全生产部', date: '2026-04-25', deadline: '2026-06-01', readCount: 128, recipients: '生产人员', content: '为确保农药使用安全，特制定本规范：一、农药储存规范...二、农药使用规范...三、安全防护要求...' },
+    { id: 'ANNOUNCEMENT_006', code: 'N2026042801', title: '办公设备采购通知', type: '行政公告', category: '采购通知', priority: '低', status: '草稿', sender: '行政部', date: '2026-04-28', deadline: '2026-05-15', readCount: 0, recipients: '各部门负责人', content: '根据公司需求，现计划采购一批办公设备...' },
+    { id: 'ANNOUNCEMENT_007', code: 'N2026050101', title: '采收标准更新通知', type: '生产公告', category: '技术标准', priority: '高', status: '已发布', sender: '质量管理部', date: '2026-05-01', deadline: '2026-05-15', readCount: 98, recipients: '采收人员', content: '为提高产品质量，现对采收标准进行更新...' },
+    { id: 'ANNOUNCEMENT_008', code: 'N2026050501', title: '安全生产月活动通知', type: '行政公告', category: '活动通知', priority: '中', status: '已发布', sender: '安全生产部', date: '2026-05-05', deadline: '2026-06-05', readCount: 187, recipients: '全体员工', content: '为提高全员安全意识，现将安全生产月活动安排通知如下...' },
+    { id: 'ANNOUNCEMENT_009', code: 'N2026050801', title: '灌溉系统维护通知', type: '生产公告', category: '设备维护', priority: '中', status: '审批中', sender: '设备管理部', date: '2026-05-08', deadline: '2026-05-20', readCount: 0, recipients: '设备维护人员', content: '为确保灌溉系统正常运行，现将维护计划如下...' },
+    { id: 'ANNOUNCEMENT_010', code: 'N2026051001', title: '考勤管理制度修订', type: '行政公告', category: '制度修订', priority: '高', status: '已发布', sender: '行政人事部', date: '2026-05-10', deadline: '2026-06-01', readCount: 210, recipients: '全体员工', content: '为规范考勤管理，现对考勤管理制度进行修订...' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO announcements (id, code, title, type, category, priority, status, sender, date, deadline, read_count, recipients, content, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of announcements) {
+    stmt.run([item.id, item.code, item.title, item.type, item.category, item.priority, item.status, item.sender, item.date, item.deadline, item.readCount, item.recipients, item.content, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入公告种子数据: ${announcements.length}条`);
+}
+
+/**
+ * 导入技术方案数据
+ */
+function seedTechSolutions() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM tech_solutions');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`技术方案数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const techSolutions = [
+    { id: 'TECH_001', solution_code: 'T2026040101', solution_title: '红生菜春季大棚种植技术方案', crop_name: '红生菜', crop_code: 'PD010200600', planting_mode: '大棚种植', stage: '播种期', version: 'V1.0', content: '一、品种选择：选用抗病性强、品质优良的红生菜品种...\n二、播种时间：3月中旬至4月上旬...\n三、温度管理：白天20-25℃，夜间10-15℃...\n四、湿度管理：相对湿度保持在60-70%...\n五、病虫害防治：重点防治霜霉病、灰霉病...', author: '张技术员', author_id: 'USER_001', status: 'draft', batch_status: 'draft', priority: '高', remarks: '春季重点方案' },
+    { id: 'TECH_002', solution_code: 'T2026040201', solution_title: '菠菜周年生产技术方案', crop_name: '菠菜', crop_code: 'PD010100300', planting_mode: '露地种植', stage: '全周期', version: 'V1.0', content: '一、品种选择：选择耐热、耐寒的优质菠菜品种...\n二、茬口安排：春播、夏播、秋播、冬播四季安排...\n三、播种技术：条播或撒播，覆土1-2cm...\n四、田间管理：及时间苗、合理施肥、科学浇水...\n五、采收标准：株高20-30cm，叶片浓绿...', author: '李农艺师', author_id: 'USER_002', status: 'draft', batch_status: 'draft', priority: '中', remarks: '周年供应方案' },
+    { id: 'TECH_003', solution_code: 'T2026041501', solution_title: '番茄嫁接育苗技术方案', crop_name: '番茄', crop_code: 'PD020100100', planting_mode: '设施栽培', stage: '育苗期', version: 'V1.0', content: '一、砧木选择：选用抗青枯病、根腐病的野生番茄...\n二、接穗选择：选用优质、高产、商品性好的品种...\n三、嫁接方法：劈接法或套管接...\n四、愈合期管理：温度25-28℃，湿度85%以上...\n五、炼苗与定植：逐渐通风降温，增强抗性...', author: '王技术员', author_id: 'USER_003', status: 'draft', batch_status: 'draft', priority: '高', remarks: '提高抗病性' },
+    { id: 'TECH_004', solution_code: 'T2026042001', solution_title: '黄瓜霜霉病防治技术方案', crop_name: '黄瓜', crop_code: 'PD020200100', planting_mode: '大棚种植', stage: '生长期', version: 'V1.0', content: '一、病害识别：叶片出现多角形病斑，背面有灰色霉层...\n二、发病条件：温度15-22℃，湿度85%以上...\n三、农业防治：选用抗病品种、加强通风降湿...\n四、化学防治：发病初期用百菌清、霜脲氰等喷雾...\n五、生物防治：可用枯草芽孢杆菌叶面喷施...', author: '赵技术员', author_id: 'USER_004', status: 'draft', batch_status: 'draft', priority: '高', remarks: '病害防治重点' },
+    { id: 'TECH_005', solution_code: 'T2026050101', solution_title: '有机肥替代化肥技术方案', crop_name: '通用', crop_code: '', planting_mode: '通用', stage: '全周期', version: 'V1.0', content: '一、有机肥种类：商品有机肥、腐熟农家肥、饼肥等...\n二、施用方法：基肥为主，追肥为辅...\n三、施用量：根据土壤肥力和作物需求确定...\n四、注意事项：腐熟彻底、适量施用、配合化肥...\n五、效果评估：土壤有机质含量、作物产量品质...', author: '孙农艺师', author_id: 'USER_005', status: 'draft', batch_status: 'draft', priority: '中', remarks: '绿色生产方案' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO tech_solutions (id, solution_code, solution_title, crop_name, crop_code, planting_mode, stage, version, content, author, author_id, status, batch_status, priority, remarks, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of techSolutions) {
+    stmt.run([item.id, item.solution_code, item.solution_title, item.crop_name, item.crop_code, item.planting_mode, item.stage, item.version, item.content, item.author, item.author_id, item.status, item.batch_status, item.priority, item.remarks, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入技术方案种子数据: ${techSolutions.length}条`);
+}
+
+/**
+ * 导入指标数据
+ */
+function seedIndicators() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM indicators');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`指标数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const indicators = [
+    { id: 'INDICATOR_001', code: 'PROD_001', name: '产量达成率', category: '生产', unit: '%', target: 95, actual: 0, trend: 'up', frequency: 'monthly', source: '采收记录', warning: 90, weight: 20 },
+    { id: 'INDICATOR_002', code: 'PROD_002', name: '优质品率', category: '质量', unit: '%', target: 90, actual: 0, trend: 'up', frequency: 'monthly', source: '质检记录', warning: 85, weight: 25 },
+    { id: 'INDICATOR_003', code: 'PROD_003', name: '种植成活率', category: '生产', unit: '%', target: 92, actual: 0, trend: 'up', frequency: 'seasonly', source: '种植记录', warning: 88, weight: 20 },
+    { id: 'INDICATOR_004', code: 'COST_001', name: '物料成本率', category: '成本', unit: '%', target: 35, actual: 0, trend: 'stable', frequency: 'monthly', source: '成本统计', warning: 38, weight: 15 },
+    { id: 'INDICATOR_005', code: 'COST_002', name: '人工成本率', category: '成本', unit: '%', target: 25, actual: 0, trend: 'stable', frequency: 'monthly', source: '人工统计', warning: 28, weight: 10 },
+    { id: 'INDICATOR_006', code: 'EFFI_001', name: '人均产出', category: '效率', unit: 'kg/人', target: 500, actual: 0, trend: 'up', frequency: 'monthly', source: '产出统计', warning: 450, weight: 10 },
+    { id: 'INDICATOR_007', code: 'SAFE_001', name: '安全事故数', category: '安全', unit: '次', target: 0, actual: 0, trend: 'down', frequency: 'monthly', source: '安全记录', warning: 1, weight: 0 },
+    { id: 'INDICATOR_008', code: 'QUAL_001', name: '客户满意度', category: '质量', unit: '%', target: 95, actual: 0, trend: 'up', frequency: 'quarterly', source: '客户反馈', warning: 90, weight: 0 },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO indicators (id, code, name, category, unit, target, actual, trend, frequency, source, warning, weight, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of indicators) {
+    stmt.run([item.id, item.code, item.name, item.category, item.unit, item.target, item.actual, item.trend, item.frequency, item.source, item.warning, item.weight, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入指标种子数据: ${indicators.length}条`);
+}
+
+/**
+ * 导入施肥记录
+ */
+function seedFertilizerRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM fertilizer_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`施肥记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'FERT_001', fertilizer_code: 'F2026050101', farm_task_id: '', production_plan_code: '', planting_id: '', planting_code: '', greenhouse_id: '', greenhouse_name: '1号温室', area_name: 'A区', crop_name: '红生菜', crop_variety: '红生菜', fertilizer_name: '有机肥', fertilizer_type: 'organic', dilution_ratio: '1:10', quantity: 50, unit: '千克', unit_price: 2.5, total_cost: 125, fertilize_time: '2026-05-01 09:00:00', operator_id: 'WORKER_001', operator_name: '张三', data_source: 'manual', status: 'completed' },
+    { id: 'FERT_002', fertilizer_code: 'F2026050201', farm_task_id: '', production_plan_code: '', planting_id: '', planting_code: '', greenhouse_id: '', greenhouse_name: '2号温室', area_name: 'B区', crop_name: '菠菜', crop_variety: '大叶菠菜', fertilizer_name: '复合肥', fertilizer_type: 'compound', dilution_ratio: '1:20', quantity: 30, unit: '千克', unit_price: 3.2, total_cost: 96, fertilize_time: '2026-05-02 10:30:00', operator_id: 'WORKER_002', operator_name: '李四', data_source: 'manual', status: 'completed' },
+    { id: 'FERT_003', fertilizer_code: 'F2026050501', farm_task_id: '', production_plan_code: '', planting_id: '', planting_code: '', greenhouse_id: '', greenhouse_name: '1号温室', area_name: 'A区', crop_name: '红生菜', crop_variety: '红生菜', fertilizer_name: '水溶肥', fertilizer_type: 'water_soluble', dilution_ratio: '1:50', quantity: 20, unit: '千克', unit_price: 8.5, total_cost: 170, fertilize_time: '2026-05-05 08:00:00', operator_id: 'WORKER_001', operator_name: '张三', data_source: 'manual', status: 'completed' },
+    { id: 'FERT_004', fertilizer_code: 'F2026050801', farm_task_id: '', production_plan_code: '', planting_id: '', planting_code: '', greenhouse_id: '', greenhouse_name: '3号温室', area_name: 'C区', crop_name: '番茄', crop_variety: '大粉番茄', fertilizer_name: '微生物肥', fertilizer_type: 'microbial', dilution_ratio: '1:30', quantity: 40, unit: '千克', unit_price: 5.0, total_cost: 200, fertilize_time: '2026-05-08 14:00:00', operator_id: 'WORKER_003', operator_name: '王五', data_source: 'manual', status: 'completed' },
+    { id: 'FERT_005', fertilizer_code: 'F2026051001', farm_task_id: '', production_plan_code: '', planting_id: '', planting_code: '', greenhouse_id: '', greenhouse_name: '2号温室', area_name: 'B区', crop_name: '菠菜', crop_variety: '大叶菠菜', fertilizer_name: '叶面肥', fertilizer_type: 'foliar', dilution_ratio: '1:100', quantity: 15, unit: '千克', unit_price: 12.0, total_cost: 180, fertilize_time: '2026-05-10 16:30:00', operator_id: 'WORKER_002', operator_name: '李四', data_source: 'manual', status: 'completed' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO fertilizer_records (id, fertilizer_code, farm_task_id, production_plan_code, planting_id, planting_code, greenhouse_id, greenhouse_name, area_name, crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit, unit_price, total_cost, fertilize_time, operator_id, operator_name, data_source, status, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.fertilizer_code, item.farm_task_id, item.production_plan_code, item.planting_id, item.planting_code, item.greenhouse_id, item.greenhouse_name, item.area_name, item.crop_name, item.crop_variety, item.fertilizer_name, item.fertilizer_type, item.dilution_ratio, item.quantity, item.unit, item.unit_price, item.total_cost, item.fertilize_time, item.operator_id, item.operator_name, item.data_source, item.status, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入施肥记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入病虫害防治记录
+ */
+function seedPesticideRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM pesticide_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`病虫害防治记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'PEST_001', record_code: 'PC2026050201', spray_time: '2026-05-02 08:00:00', operator_id: 'WORKER_001', operator_name: '张三', crop_name: '红生菜', greenhouse_name: '1号温室', control_type: 'chemical', pesticide_id: 'PEST_CHEM_001', pesticide_name: '百菌清', pesticide_type: '杀菌剂', spec_id: '', spec_content: '75%可湿性粉剂', dosage: 100, dosage_unit: 'g/亩', dilution_ratio: '1:800', target_pest: '霜霉病', application_method: '叶面喷雾', bio_agent_id: '', bio_agent_name: '', bio_agent_type: '', equipment_name: '背负式喷雾器', equipment_count: '2', use_leaf_fertilizer: 'no', leaf_fertilizer_name: '', leaf_fertilizer_dosage: 0, leaf_fertilizer_unit: '', description: '预防性喷施', photos: '', status: 'completed' },
+    { id: 'PEST_002', record_code: 'PC2026050501', spray_time: '2026-05-05 09:30:00', operator_id: 'WORKER_002', operator_name: '李四', crop_name: '菠菜', greenhouse_name: '2号温室', control_type: 'chemical', pesticide_id: 'PEST_CHEM_002', pesticide_name: '吡虫啉', pesticide_type: '杀虫剂', spec_id: '', spec_content: '10%可湿性粉剂', dosage: 50, dosage_unit: 'g/亩', dilution_ratio: '1:2000', target_pest: '蚜虫', application_method: '叶面喷雾', bio_agent_id: '', bio_agent_name: '', bio_agent_type: '', equipment_name: '背负式喷雾器', equipment_count: '2', use_leaf_fertilizer: 'no', leaf_fertilizer_name: '', leaf_fertilizer_dosage: 0, leaf_fertilizer_unit: '', description: '治疗性喷施', photos: '', status: 'completed' },
+    { id: 'PEST_003', record_code: 'PC2026050801', spray_time: '2026-05-08 07:00:00', operator_id: 'WORKER_003', operator_name: '王五', crop_name: '番茄', greenhouse_name: '3号温室', control_type: 'bio', pesticide_id: 'PEST_BIO_001', pesticide_name: '枯草芽孢杆菌', pesticide_type: '生物制剂', spec_id: '', spec_content: '100亿活芽孢/g', dosage: 200, dosage_unit: 'g/亩', dilution_ratio: '1:500', target_pest: '土传病害', application_method: '灌根', bio_agent_id: 'BIO_001', bio_agent_name: '枯草芽孢杆菌', bio_agent_type: '有益菌', equipment_name: '灌溉系统', equipment_count: '1', use_leaf_fertilizer: 'no', leaf_fertilizer_name: '', leaf_fertilizer_dosage: 0, leaf_fertilizer_unit: '', description: '生物防治', photos: '', status: 'completed' },
+    { id: 'PEST_004', record_code: 'PC2026051001', spray_time: '2026-05-10 10:00:00', operator_id: 'WORKER_001', operator_name: '张三', crop_name: '黄瓜', greenhouse_name: '4号温室', control_type: 'chemical', pesticide_id: 'PEST_CHEM_003', pesticide_name: '霜脲氰', pesticide_type: '杀菌剂', spec_id: '', spec_content: '50%水分散粒剂', dosage: 80, dosage_unit: 'g/亩', dilution_ratio: '1:1500', target_pest: '霜霉病', application_method: '叶面喷雾', bio_agent_id: '', bio_agent_name: '', bio_agent_type: '', equipment_name: '电动喷雾器', equipment_count: '3', use_leaf_fertilizer: 'yes', leaf_fertilizer_name: '磷酸二氢钾', leaf_fertilizer_dosage: 100, leaf_fertilizer_unit: 'g/亩', description: '综合防治', photos: '', status: 'completed' },
+  ];
+  for (const item of records) {
+    db.run(`INSERT INTO pesticide_records (id, record_code, spray_time, operator_id, operator_name, crop_name, greenhouse_name, control_type, pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content, dosage, dosage_unit, dilution_ratio, target_pest, application_method, bio_agent_id, bio_agent_name, bio_agent_type, equipment_name, equipment_count, use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit, description, photos, status, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [item.id, item.record_code, item.spray_time, item.operator_id, item.operator_name, item.crop_name, item.greenhouse_name, item.control_type, item.pesticide_id, item.pesticide_name, item.pesticide_type, item.spec_id, item.spec_content, item.dosage, item.dosage_unit, item.dilution_ratio, item.target_pest, item.application_method, item.bio_agent_id, item.bio_agent_name, item.bio_agent_type, item.equipment_name, item.equipment_count, item.use_leaf_fertilizer, item.leaf_fertilizer_name, item.leaf_fertilizer_dosage, item.leaf_fertilizer_unit, item.description, item.photos, item.status, now, now]);
+  }
+  console.log(`已导入病虫害防治记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入物料数据
+ */
+function seedMaterials() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM materials');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`物料数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const materials = [
+    { id: 1, code: 'MAT_FERT_001', name: '有机肥', category: '肥料', specification: '50kg/袋', unit: '袋', quantity: 100, minStock: 20, maxStock: 500, price: '125', supplier: '有机肥供应商A', location: 'A区-01-01', barcode: '', batchNo: 'B20260501', productionDate: '2026-05-01', expiryDate: '2027-05-01', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 2, code: 'MAT_FERT_002', name: '复合肥', category: '肥料', specification: '50kg/袋', unit: '袋', quantity: 80, minStock: 20, maxStock: 400, price: '160', supplier: '化肥供应商B', location: 'A区-01-02', barcode: '', batchNo: 'B20260502', productionDate: '2026-05-02', expiryDate: '2027-05-02', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 3, code: 'MAT_PEST_001', name: '百菌清', category: '农药', specification: '75%可湿性粉剂', unit: '包', quantity: 50, minStock: 10, maxStock: 200, price: '25', supplier: '农药供应商C', location: 'B区-02-01', barcode: '', batchNo: 'B20260503', productionDate: '2026-05-03', expiryDate: '2028-05-03', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 4, code: 'MAT_PEST_002', name: '吡虫啉', category: '农药', specification: '10%可湿性粉剂', unit: '包', quantity: 40, minStock: 10, maxStock: 150, price: '18', supplier: '农药供应商C', location: 'B区-02-02', barcode: '', batchNo: 'B20260504', productionDate: '2026-05-04', expiryDate: '2028-05-04', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 5, code: 'MAT_TOOL_001', name: '背负式喷雾器', category: '工具', specification: '16L', unit: '台', quantity: 20, minStock: 5, maxStock: 50, price: '85', supplier: '工具供应商D', location: 'C区-03-01', barcode: '', batchNo: 'B20260505', productionDate: '2026-05-05', expiryDate: '', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 6, code: 'MAT_SEED_001', name: '红生菜种子', category: '种子', specification: '100g/袋', unit: '袋', quantity: 30, minStock: 10, maxStock: 100, price: '45', supplier: '种子供应商E', location: 'D区-04-01', barcode: '', batchNo: 'B20260506', productionDate: '2026-04-01', expiryDate: '2027-04-01', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 7, code: 'MAT_SEED_002', name: '菠菜种子', category: '种子', specification: '100g/袋', unit: '袋', quantity: 25, minStock: 10, maxStock: 100, price: '38', supplier: '种子供应商E', location: 'D区-04-02', barcode: '', batchNo: 'B20260507', productionDate: '2026-04-02', expiryDate: '2027-04-02', lastUpdateTime: now, dataStatus: '启用' },
+    { id: 8, code: 'MAT_FILM_001', name: '农膜', category: '农用资材', specification: '2m×100m', unit: '卷', quantity: 15, minStock: 5, maxStock: 50, price: '120', supplier: '资材供应商F', location: 'E区-05-01', barcode: '', batchNo: 'B20260508', productionDate: '2026-03-01', expiryDate: '2027-03-01', lastUpdateTime: now, dataStatus: '启用' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO materials (id, code, name, category, specification, unit, quantity, minStock, maxStock, price, supplier, location, barcode, batchNo, productionDate, expiryDate, lastUpdateTime, dataStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of materials) {
+    stmt.run([item.id, item.code, item.name, item.category, item.specification, item.unit, item.quantity, item.minStock, item.maxStock, item.price, item.supplier, item.location, item.barcode, item.batchNo, item.productionDate, item.expiryDate, item.lastUpdateTime, item.dataStatus]);
+  }
+  stmt.free();
+  console.log(`已导入物料种子数据: ${materials.length}条`);
+}
+
+/**
+ * 导入排班数据
+ */
+function seedSchedules() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM schedules');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`排班数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const schedules = [
+    { id: 'SCH_001', staff_id: 'WORKER_001', staff_name: '张三', date: '2026-05-25', shift: '早班', work_zone: '1号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_002', staff_id: 'WORKER_002', staff_name: '李四', date: '2026-05-25', shift: '早班', work_zone: '2号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_003', staff_id: 'WORKER_003', staff_name: '王五', date: '2026-05-25', shift: '中班', work_zone: '3号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_004', staff_id: 'WORKER_001', staff_name: '张三', date: '2026-05-26', shift: '早班', work_zone: '1号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_005', staff_id: 'WORKER_002', staff_name: '李四', date: '2026-05-26', shift: '早班', work_zone: '2号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_006', staff_id: 'WORKER_003', staff_name: '王五', date: '2026-05-26', shift: '中班', work_zone: '3号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_007', staff_id: 'WORKER_001', staff_name: '张三', date: '2026-05-27', shift: '早班', work_zone: '1号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+    { id: 'SCH_008', staff_id: 'WORKER_002', staff_name: '李四', date: '2026-05-27', shift: '早班', work_zone: '2号温室', status: '已排班', check_in: '', check_out: '', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO schedules (id, staff_id, staff_name, date, shift, work_zone, status, check_in, check_out, remarks, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of schedules) {
+    stmt.run([item.id, item.staff_id, item.staff_name, item.date, item.shift, item.work_zone, item.status, item.check_in, item.check_out, item.remarks, 1, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入排班种子数据: ${schedules.length}条`);
+}
+
+/**
+ * 导入考勤记录
+ */
+function seedAttendanceRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM attendance_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`考勤记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'ATT_001', worker_id: 'WORKER_001', name: '张三', dept: '生产部', date: '2026-05-20', check_in: '08:00', check_out: '17:30', hours: 8.5, status: '正常', status_class: 'normal', task_id: '', batch_id: '', remarks: '' },
+    { id: 'ATT_002', worker_id: 'WORKER_002', name: '李四', dept: '生产部', date: '2026-05-20', check_in: '08:15', check_out: '17:30', hours: 8.25, status: '正常', status_class: 'normal', task_id: '', batch_id: '', remarks: '' },
+    { id: 'ATT_003', worker_id: 'WORKER_003', name: '王五', dept: '生产部', date: '2026-05-20', check_in: '08:00', check_out: '20:00', hours: 12, status: '加班', status_class: 'overtime', task_id: '', batch_id: '', remarks: '夜间采收加班' },
+    { id: 'ATT_004', worker_id: 'WORKER_001', name: '张三', dept: '生产部', date: '2026-05-21', check_in: '08:00', check_out: '17:30', hours: 8.5, status: '正常', status_class: 'normal', task_id: '', batch_id: '', remarks: '' },
+    { id: 'ATT_005', worker_id: 'WORKER_002', name: '李四', dept: '生产部', date: '2026-05-21', check_in: '08:30', check_out: '18:00', hours: 8.5, status: '正常', status_class: 'normal', task_id: '', batch_id: '', remarks: '' },
+    { id: 'ATT_006', worker_id: 'WORKER_003', name: '王五', dept: '生产部', date: '2026-05-21', check_in: '08:00', check_out: '17:30', hours: 8.5, status: '正常', status_class: 'normal', task_id: '', batch_id: '', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO attendance_records (id, worker_id, name, dept, date, check_in, check_out, hours, status, status_class, task_id, batch_id, remarks, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.worker_id, item.name, item.dept, item.date, item.check_in, item.check_out, item.hours, item.status, item.status_class, item.task_id, item.batch_id, item.remarks, 1, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入考勤记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入员工数据
+ */
+function seedEmployees() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM employees');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`员工数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const employees = [
+    { id: 'EMP_001', employee_code: 'EMP001', name: '张三', gender: '男', phone: '13800138001', id_card: '320101199001011234', position_id: 'POS_001', position_name: '生产组长', department_id: 'DEPT_001', department_name: '生产部', employee_type: '正式', hire_date: '2024-01-15', status: 'active', skills: '种植,采收,施肥', remarks: '' },
+    { id: 'EMP_002', employee_code: 'EMP002', name: '李四', gender: '女', phone: '13800138002', id_card: '320101199002022345', position_id: 'POS_002', position_name: '农艺师', department_id: 'DEPT_002', department_name: '技术部', employee_type: '正式', hire_date: '2024-03-20', status: 'active', skills: '病虫害防治,施肥方案', remarks: '' },
+    { id: 'EMP_003', employee_code: 'EMP003', name: '王五', gender: '男', phone: '13800138003', id_card: '320101199003033456', position_id: 'POS_001', position_name: '生产组长', department_id: 'DEPT_001', department_name: '生产部', employee_type: '正式', hire_date: '2024-02-10', status: 'active', skills: '种植,采收,灌溉', remarks: '' },
+    { id: 'EMP_004', employee_code: 'EMP004', name: '赵六', gender: '女', phone: '13800138004', id_card: '320101199004044567', position_id: 'POS_003', position_name: '质检员', department_id: 'DEPT_003', department_name: '质量部', employee_type: '正式', hire_date: '2024-04-05', status: 'active', skills: '质检,包装', remarks: '' },
+    { id: 'EMP_005', employee_code: 'EMP005', name: '钱七', gender: '男', phone: '13800138005', id_card: '320101199005055678', position_id: 'POS_004', position_name: '仓库管理员', department_id: 'DEPT_004', department_name: '仓储部', employee_type: '正式', hire_date: '2024-05-12', status: 'active', skills: '仓储管理,物料管理', remarks: '' },
+    { id: 'EMP_006', employee_code: 'EMP006', name: '孙八', gender: '女', phone: '13800138006', id_card: '320101199006066789', position_id: 'POS_005', position_name: '人事专员', department_id: 'DEPT_005', department_name: '人事部', employee_type: '正式', hire_date: '2024-06-18', status: 'active', skills: '招聘,考勤', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO employees (id, employee_code, name, gender, phone, id_card, position_id, position_name, department_id, department_name, employee_type, hire_date, status, skills, remarks, create_by, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of employees) {
+    stmt.run([item.id, item.employee_code, item.name, item.gender, item.phone, item.id_card, item.position_id, item.position_name, item.department_id, item.department_name, item.employee_type, item.hire_date, item.status, item.skills, item.remarks, 'system', now, now]);
+  }
+  stmt.free();
+  console.log(`已导入员工种子数据: ${employees.length}条`);
+}
+
+/**
+ * 导入加班记录
+ */
+function seedOvertimeRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM overtime_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`加班记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'OT_001', worker_id: 'WORKER_003', worker_name: '王五', overtime_type: 'workday', work_date: '2026-05-20', start_time: '17:30', end_time: '20:00', hours: 2.5, base_salary: 5000, hourly_rate: 30, overtime_pay: 75, reason: '紧急采收任务', status: 'pending', approval_code: '', approved_at: '', department_id: 'DEPT_001', department_name: '生产部', greenhouse_id: '', greenhouse_name: '3号温室', remarks: '' },
+    { id: 'OT_002', worker_id: 'WORKER_001', worker_name: '张三', overtime_type: 'weekend', work_date: '2026-05-24', start_time: '08:00', end_time: '12:00', hours: 4, base_salary: 5000, hourly_rate: 40, overtime_pay: 160, reason: '周末施肥任务', status: 'pending', approval_code: '', approved_at: '', department_id: 'DEPT_001', department_name: '生产部', greenhouse_id: '', greenhouse_name: '1号温室', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO overtime_records (id, worker_id, worker_name, overtime_type, work_date, start_time, end_time, hours, base_salary, hourly_rate, overtime_pay, reason, status, approval_code, approved_at, department_id, department_name, greenhouse_id, greenhouse_name, remarks, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.worker_id, item.worker_name, item.overtime_type, item.work_date, item.start_time, item.end_time, item.hours, item.base_salary, item.hourly_rate, item.overtime_pay, item.reason, item.status, item.approval_code, item.approved_at, item.department_id, item.department_name, item.greenhouse_id, item.greenhouse_name, item.remarks, 1, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入加班记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入请假记录
+ */
+function seedLeaveRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM leave_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`请假记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'LV_001', worker_id: 'WORKER_002', worker_name: '李四', leave_type: '年假', start_date: '2026-05-15', end_date: '2026-05-17', days: 3, reason: '家庭事务', status: 'approved', approval_code: 'APPROVAL_LV_001', approved_at: '2026-05-10', department_id: 'DEPT_001', department_name: '生产部', remarks: '' },
+    { id: 'LV_002', worker_id: 'WORKER_004', worker_name: '赵六', leave_type: '病假', start_date: '2026-05-22', end_date: '2026-05-22', days: 1, reason: '身体不适', status: 'approved', approval_code: 'APPROVAL_LV_002', approved_at: '2026-05-21', department_id: 'DEPT_003', department_name: '质量部', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO leave_records (id, worker_id, worker_name, leave_type, start_date, end_date, days, reason, status, approval_code, approved_at, department_id, department_name, remarks, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.worker_id, item.worker_name, item.leave_type, item.start_date, item.end_date, item.days, item.reason, item.status, item.approval_code, item.approved_at, item.department_id, item.department_name, item.remarks, 1, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入请假记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入工资预算记录
+ */
+function seedSalaryBudgetRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM salary_budget_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`工资预算记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'SAL_001', budget_code: 'SAL_BUD_202605', dept_id: 'DEPT_001', dept_name: '生产部', budget_month: '2026-05', total_base_salary: 30000, total_overtime_pay: 1500, total_bonus: 5000, grand_total: 36500, status: 'pending', status_label: '待审批', applicant_id: 'EMP_006', applicant_name: '孙八', apply_date: '2026-05-20', remark: '5月份工资预算' },
+    { id: 'SAL_002', budget_code: 'SAL_BUD_202604', dept_id: 'DEPT_001', dept_name: '生产部', budget_month: '2026-04', total_base_salary: 28000, total_overtime_pay: 1200, total_bonus: 4000, grand_total: 33200, status: 'approved', status_label: '已审批', applicant_id: 'EMP_006', applicant_name: '孙八', apply_date: '2026-04-20', remark: '4月份工资预算' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO salary_budget_records (id, budget_code, dept_id, dept_name, budget_month, total_base_salary, total_overtime_pay, total_bonus, grand_total, status, status_label, applicant_id, applicant_name, apply_date, remark, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.budget_code, item.dept_id, item.dept_name, item.budget_month, item.total_base_salary, item.total_overtime_pay, item.total_bonus, item.grand_total, item.status, item.status_label, item.applicant_id, item.applicant_name, item.apply_date, item.remark, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入工资预算记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入入职管理记录
+ */
+function seedOnboardingRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM onboarding_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`入职管理记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'ONB_001', oid: 'ONB_OID_001', name: '周九', id_card: '320101199501011234', phone: '13900139001', position: '生产工人', department: '生产部', department_oid: 'DEPT_001', contract_type: '全职', daily_wage: 0, hourly_wage: 28, join_date: '2026-05-15', status: 'in_progress', progress: '资料收集中', request_code: '', recruitment_id: '', operator_id: 'EMP_006', operator_name: '孙八', approved_at: '', remarks: '' },
+    { id: 'ONB_002', oid: 'ONB_OID_002', name: '吴十', id_card: '320101199502022345', phone: '13900139002', position: '技术员', department: '技术部', department_oid: 'DEPT_002', contract_type: '全职', daily_wage: 0, hourly_wage: 35, join_date: '2026-05-20', status: 'completed', progress: '已完成', request_code: '', recruitment_id: '', operator_id: 'EMP_006', operator_name: '孙八', approved_at: '2026-05-18', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO onboarding_records (id, oid, name, id_card, phone, position, department, department_oid, contract_type, daily_wage, hourly_wage, join_date, status, progress, request_code, recruitment_id, operator_id, operator_name, approved_at, remarks, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.oid, item.name, item.id_card, item.phone, item.position, item.department, item.department_oid, item.contract_type, item.daily_wage, item.hourly_wage, item.join_date, item.status, item.progress, item.request_code, item.recruitment_id, item.operator_id, item.operator_name, item.approved_at, item.remarks, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入入职管理记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入离职管理记录
+ */
+function seedResignationRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM resignation_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`离职管理记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'RES_001', resignation_code: 'RES_20260501', worker_id: 'WORKER_OLD_001', worker_name: '陈旧', department: '生产部', position: '生产工人', resignation_type: '主动离职', reason: '个人发展', expected_last_day: '2026-05-31', actual_last_day: '', handover_user_id: 'WORKER_001', handover_user_name: '张三', handover_note: '工作已交接', status: 'pending', status_label: '待审批', approver: '', approve_time: '', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO resignation_records (id, resignation_code, worker_id, worker_name, department, position, resignation_type, reason, expected_last_day, actual_last_day, handover_user_id, handover_user_name, handover_note, status, status_label, approver, approve_time, remarks, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.resignation_code, item.worker_id, item.worker_name, item.department, item.position, item.resignation_type, item.reason, item.expected_last_day, item.actual_last_day, item.handover_user_id, item.handover_user_name, item.handover_note, item.status, item.status_label, item.approver, item.approve_time, item.remarks, now, now]);
+  }
+  stmt.free();
+  console.log(`已导入离职管理记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入招聘管理记录
+ */
+function seedRecruitmentRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM recruitment_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`招聘管理记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'REC_001', recruitment_code: 'REC_20260501', dept_id: 'DEPT_001', dept_name: '生产部', position_id: 'POS_001', position: '生产工人', headcount: 3, employment_type: '全职', salary_min: 4000, salary_max: 6000, priority: 'normal', priority_label: '普通', status: 'open', status_label: '招聘中', reason: '业务扩展', remarks: '急招', applicant_id: '', applicant_name: '', apply_date: '2026-05-01', approve_time: '', approver: '', create_time: now },
+    { id: 'REC_002', recruitment_code: 'REC_20260502', dept_id: 'DEPT_002', dept_name: '技术部', position_id: 'POS_002', position: '农艺师', headcount: 1, employment_type: '全职', salary_min: 6000, salary_max: 8000, priority: 'high', priority_label: '紧急', status: 'open', status_label: '招聘中', reason: '技术团队扩充', remarks: '', applicant_id: '', applicant_name: '', apply_date: '2026-05-05', approve_time: '', approver: '', create_time: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO recruitment_records (id, recruitment_code, dept_id, dept_name, position_id, position, headcount, employment_type, salary_min, salary_max, priority, priority_label, status, status_label, reason, remarks, applicant_id, applicant_name, apply_date, approve_time, approver, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.recruitment_code, item.dept_id, item.dept_name, item.position_id, item.position, item.headcount, item.employment_type, item.salary_min, item.salary_max, item.priority, item.priority_label, item.status, item.status_label, item.reason, item.remarks, item.applicant_id, item.applicant_name, item.apply_date, item.approve_time, item.approver, item.create_time, now]);
+  }
+  stmt.free();
+  console.log(`已导入招聘管理记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入合同续签记录
+ */
+function seedContractRenewalRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM contract_renewal_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`合同续签记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const records = [
+    { id: 'CON_001', employee_id: 'EMP_001', employee_name: '张三', department: '生产部', position: '生产组长', current_contract_end: '2026-06-30', new_contract_start: '2026-07-01', new_contract_end: '2027-06-30', renewal_period: 12, new_salary: 6500, terms_change: '薪资调整', status: 'pending', status_label: '待审批', approver: '', approve_time: '', remarks: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO contract_renewal_records (id, employee_id, employee_name, department, position, current_contract_end, new_contract_start, new_contract_end, renewal_period, new_salary, terms_change, status, status_label, approver, approve_time, remarks, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of records) {
+    stmt.run([item.id, item.employee_id, item.employee_name, item.department, item.position, item.current_contract_end, item.new_contract_start, item.new_contract_end, item.renewal_period, item.new_salary, item.terms_change, item.status, item.status_label, item.approver, item.approve_time, item.remarks, now]);
+  }
+  stmt.free();
+  console.log(`已导入合同续签记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入种植标签
+ */
+function seedPlantLabels() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM plant_labels');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`种植标签已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const labels = [
+    { id: 1, label_number: 'LBL_20260501_001', planting_id: 'PLT_001', seedling_id: '', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+    { id: 2, label_number: 'LBL_20260501_002', planting_id: 'PLT_001', seedling_id: '', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+    { id: 3, label_number: 'LBL_20260502_001', planting_id: 'PLT_002', seedling_id: '', move_in_area_id: 2, move_in_area_name: '2号温室-B区', move_in_date: '2026-05-02', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO plant_labels (id, label_number, planting_id, seedling_id, move_in_area_id, move_in_area_name, move_in_date, move_out_area_id, move_out_area_name, move_out_date, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of labels) {
+    stmt.run([item.id, item.label_number, item.planting_id, item.seedling_id, item.move_in_area_id, item.move_in_area_name, item.move_in_date, item.move_out_area_id, item.move_out_area_name, item.move_out_date, item.create_time]);
+  }
+  stmt.free();
+  console.log(`已导入种植标签种子数据: ${labels.length}条`);
+}
+
+/**
+ * 导入种植设置
+ */
+function seedPlantSettings() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM plant_settings');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`种植设置已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const settings = [
+    { id: 1, oid: 'PS_OID_001', setting_key: 'default_growth_cycle', setting_value: '90', crop_variety_oid: '', icon_url: '', description: '默认生长周期（天）', status: 'active', created_at: now, updated_at: now },
+    { id: 2, oid: 'PS_OID_002', setting_key: 'default_planting_density', setting_value: '30', crop_variety_oid: '', icon_url: '', description: '默认种植密度（株/平方米）', status: 'active', created_at: now, updated_at: now },
+    { id: 3, oid: 'PS_OID_003', setting_key: 'harvest_standard_height', setting_value: '25', crop_variety_oid: '', icon_url: '', description: '采收标准株高（cm）', status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO plant_settings (id, oid, setting_key, setting_value, crop_variety_oid, icon_url, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of settings) {
+    stmt.run([item.id, item.oid, item.setting_key, item.setting_value, item.crop_variety_oid, item.icon_url, item.description, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入种植设置种子数据: ${settings.length}条`);
+}
+
+/**
+ * 导入水肥配置
+ */
+function seedWaterFertilizerConfigs() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM water_fertilizer_configs');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`水肥配置已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const configs = [
+    { id: 1, oid: 'WF_OID_001', partition_oid: 'PART_001', device_oid: 'DEV_WF_001', device_code: 'WF-001', machine_addr: '1', mac_addr: '00:11:22:33:44:55', start_time: '08:00', end_time: '18:00', interval_value: 2, interval_unit: 'hour', mix_ratio_a: 1.0, mix_ratio_b: 0.5, mix_ratio_c: 0.3, total_water: 1000, water_unit: 'L', description: '1号温室水肥配置', status: 'active', created_at: now, updated_at: now },
+    { id: 2, oid: 'WF_OID_002', partition_oid: 'PART_002', device_oid: 'DEV_WF_002', device_code: 'WF-002', machine_addr: '2', mac_addr: '00:11:22:33:44:66', start_time: '07:00', end_time: '19:00', interval_value: 3, interval_unit: 'hour', mix_ratio_a: 1.0, mix_ratio_b: 0.6, mix_ratio_c: 0.4, total_water: 1500, water_unit: 'L', description: '2号温室水肥配置', status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO water_fertilizer_configs (id, oid, partition_oid, device_oid, device_code, machine_addr, mac_addr, start_time, end_time, interval_value, interval_unit, mix_ratio_a, mix_ratio_b, mix_ratio_c, total_water, water_unit, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of configs) {
+    stmt.run([item.id, item.oid, item.partition_oid, item.device_oid, item.device_code, item.machine_addr, item.mac_addr, item.start_time, item.end_time, item.interval_value, item.interval_unit, item.mix_ratio_a, item.mix_ratio_b, item.mix_ratio_c, item.total_water, item.water_unit, item.description, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入水肥配置种子数据: ${configs.length}条`);
+}
+
+/**
+ * 导入能源配置
+ */
+function seedEnergyConfigs() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM energy_configs');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`能源配置已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const configs = [
+    { id: 1, oid: 'EN_OID_001', partition_oid: 'PART_001', energy_type: 'electricity', device_oid: 'DEV_EN_001', device_name: '1号温室电表', meter_code: 'ELEC_METER_001', unit: 'kWh', description: '1号温室用电计量', status: 'active', created_at: now, updated_at: now },
+    { id: 2, oid: 'EN_OID_002', partition_oid: 'PART_001', energy_type: 'water', device_oid: 'DEV_EN_002', device_name: '1号温室水表', meter_code: 'WATER_METER_001', unit: 'm³', description: '1号温室用水计量', status: 'active', created_at: now, updated_at: now },
+    { id: 3, oid: 'EN_OID_003', partition_oid: 'PART_002', energy_type: 'electricity', device_oid: 'DEV_EN_003', device_name: '2号温室电表', meter_code: 'ELEC_METER_002', unit: 'kWh', description: '2号温室用电计量', status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO energy_configs (id, oid, partition_oid, energy_type, device_oid, device_name, meter_code, unit, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of configs) {
+    stmt.run([item.id, item.oid, item.partition_oid, item.energy_type, item.device_oid, item.device_name, item.meter_code, item.unit, item.description, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入能源配置种子数据: ${configs.length}条`);
+}
+
+/**
+ * 导入设备系统
+ */
+function seedDeviceSystems() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM device_systems');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`设备系统已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const systems = [
+    { id: 1, oid: 'DS_OID_001', system_code: 'DS_001', system_name: '灌溉系统', system_type: 'irrigation', idc_oid: 'IDC_001', description: '温室灌溉控制系统', status: 'active', created_at: now, updated_at: now },
+    { id: 2, oid: 'DS_OID_002', system_code: 'DS_002', system_name: '通风系统', system_type: 'ventilation', idc_oid: 'IDC_001', description: '温室通风控制系统', status: 'active', created_at: now, updated_at: now },
+    { id: 3, oid: 'DS_OID_003', system_code: 'DS_003', system_name: '温控系统', system_type: 'climate', idc_oid: 'IDC_001', description: '温室温度控制系统', status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO device_systems (id, oid, system_code, system_name, system_type, idc_oid, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of systems) {
+    stmt.run([item.id, item.oid, item.system_code, item.system_name, item.system_type, item.idc_oid, item.description, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入设备系统种子数据: ${systems.length}条`);
+}
+
+/**
+ * 导入分区管理
+ */
+function seedFarmPartitions() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM farm_partitions');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`分区管理已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const partitions = [
+    { id: 1, oid: 'PART_001', parent_oid: '', name: '1号温室', area_type: 'greenhouse', greenhouse_type: '薄膜温室', area: 1000, area_unit: 'm²', manager_oid: 'MGR_001', manager_name: '张三', hmi_device_oid: '', sensor_config: '', camera_config: '', water_fertilizer_config: 'WF-001', address: '基地东区', description: '', sort_order: 1, status: 'active', created_at: now, updated_at: now },
+    { id: 2, oid: 'PART_002', parent_oid: '', name: '2号温室', area_type: 'greenhouse', greenhouse_type: '薄膜温室', area: 1200, area_unit: 'm²', manager_oid: 'MGR_002', manager_name: '李四', hmi_device_oid: '', sensor_config: '', camera_config: '', water_fertilizer_config: 'WF-002', address: '基地东区', description: '', sort_order: 2, status: 'active', created_at: now, updated_at: now },
+    { id: 3, oid: 'PART_003', parent_oid: '', name: '3号温室', area_type: 'greenhouse', greenhouse_type: '智能温室', area: 1500, area_unit: 'm²', manager_oid: 'MGR_003', manager_name: '王五', hmi_device_oid: '', sensor_config: '', camera_config: '', water_fertilizer_config: 'WF-003', address: '基地西区', description: '', sort_order: 3, status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO farm_partitions (id, oid, parent_oid, name, area_type, greenhouse_type, area, area_unit, manager_oid, manager_name, hmi_device_oid, sensor_config, camera_config, water_fertilizer_config, address, description, sort_order, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of partitions) {
+    stmt.run([item.id, item.oid, item.parent_oid, item.name, item.area_type, item.greenhouse_type, item.area, item.area_unit, item.manager_oid, item.manager_name, item.hmi_device_oid, item.sensor_config, item.camera_config, item.water_fertilizer_config, item.address, item.description, item.sort_order, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入分区管理种子数据: ${partitions.length}条`);
+}
+
+/**
+ * 导入基地数据
+ */
+function seedBases() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM bases');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`基地数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const bases = [
+    { id: 1, oid: 'BASE_001', code: 'BASE001', name: '示范种植基地', company_oid: 'COMPANY_001', company_name: '农业科技公司', area: 50, unit: '亩', province: '江苏省', city: '南京市', lng: 118.78, lat: 32.06, manager: '基地负责人', phone: '13900139000', soil_type: '壤土', ph: 6.5, status: 'active', intro: '综合性示范种植基地', greenhouse_count: 5, field_area: 30, created_at: now, updated_at: now, deleted_at: '' },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO bases (id, oid, code, name, company_oid, company_name, area, unit, province, city, lng, lat, manager, phone, soil_type, ph, status, intro, greenhouse_count, field_area, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of bases) {
+    stmt.run([item.id, item.oid, item.code, item.name, item.company_oid, item.company_name, item.area, item.unit, item.province, item.city, item.lng, item.lat, item.manager, item.phone, item.soil_type, item.ph, item.status, item.intro, item.greenhouse_count, item.field_area, item.created_at, item.updated_at, item.deleted_at]);
+  }
+  stmt.free();
+  console.log(`已导入基地种子数据: ${bases.length}条`);
+}
+
+/**
+ * 导入地块数据
+ */
+function seedBlocks() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM blocks');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`地块数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const blocks = [
+    { id: 'BLOCK_001', oid: 'BLOCK_001', block_code: 'B001', block_name: '1号地块', zone_oid: 'ZONE_001', zone_name: '东区', block_type: '露地', area: 5, sort_order: 1, status: 'active', created_at: now, updated_at: now },
+    { id: 'BLOCK_002', oid: 'BLOCK_002', block_code: 'B002', block_name: '2号地块', zone_oid: 'ZONE_001', zone_name: '东区', block_type: '露地', area: 6, sort_order: 2, status: 'active', created_at: now, updated_at: now },
+    { id: 'BLOCK_003', oid: 'BLOCK_003', block_code: 'B003', block_name: '3号地块', zone_oid: 'ZONE_002', zone_name: '西区', block_type: '大棚', area: 3, sort_order: 1, status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO blocks (id, oid, block_code, block_name, zone_oid, zone_name, block_type, area, sort_order, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of blocks) {
+    stmt.run([item.id, item.oid, item.block_code, item.block_name, item.zone_oid, item.zone_name, item.block_type, item.area, item.sort_order, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入地块种子数据: ${blocks.length}条`);
+}
+
+/**
+ * 导入班组数据
+ */
+function seedTeams() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM teams');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`班组数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const teams = [
+    { id: 'TEAM_001', oid: 'TEAM_OID_001', team_code: 'T001', team_name: '生产一班', department_oid: 'DEPT_001', department_name: '生产部', leader_id: 'WORKER_001', leader_name: '张三', shift_type: '常白班', member_count: 5, status: 'active', created_at: now, updated_at: now },
+    { id: 'TEAM_002', oid: 'TEAM_OID_002', team_code: 'T002', team_name: '生产二班', department_oid: 'DEPT_001', department_name: '生产部', leader_id: 'WORKER_002', leader_name: '李四', shift_type: '常白班', member_count: 4, status: 'active', created_at: now, updated_at: now },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO teams (id, oid, team_code, team_name, department_oid, department_name, leader_id, leader_name, shift_type, member_count, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of teams) {
+    stmt.run([item.id, item.oid, item.team_code, item.team_name, item.department_oid, item.department_name, item.leader_id, item.leader_name, item.shift_type, item.member_count, item.status, item.created_at, item.updated_at]);
+  }
+  stmt.free();
+  console.log(`已导入班组种子数据: ${teams.length}条`);
+}
+
+/**
+ * 导入班组分配数据
+ */
+function seedTeamMembers() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM team_members');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`班组分配已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const members = [
+    { id: 'TM_001', team_id: 'TEAM_001', worker_id: 'WORKER_001', role: 'leader', joined_at: '2024-01-15', created_at: now, updated_at: now, version: 1 },
+    { id: 'TM_002', team_id: 'TEAM_001', worker_id: 'WORKER_OLD_002', role: 'member', joined_at: '2024-02-01', created_at: now, updated_at: now, version: 1 },
+    { id: 'TM_003', team_id: 'TEAM_001', worker_id: 'WORKER_OLD_003', role: 'member', joined_at: '2024-03-15', created_at: now, updated_at: now, version: 1 },
+    { id: 'TM_004', team_id: 'TEAM_002', worker_id: 'WORKER_002', role: 'leader', joined_at: '2024-03-20', created_at: now, updated_at: now, version: 1 },
+    { id: 'TM_005', team_id: 'TEAM_002', worker_id: 'WORKER_OLD_004', role: 'member', joined_at: '2024-04-01', created_at: now, updated_at: now, version: 1 },
+  ];
+
+  const stmt = db.prepare(`INSERT INTO team_members (id, team_id, worker_id, role, joined_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  for (const item of members) {
+    stmt.run([item.id, item.team_id, item.worker_id, item.role, item.joined_at, item.created_at, item.updated_at, item.version]);
+  }
+  stmt.free();
+  console.log(`已导入班组分配种子数据: ${members.length}条`);
+}
+
+/**
+ * 导入入库记录种子数据
+ */
+function seedInboundRecords() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM inbound_records');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`入库记录已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const records = [
+    { code: 'IN2026041501', inboundDate: '2026-04-15', supplier: '有机肥供应商A', operator: '王建国', status: 'completed', materials: JSON.stringify([{ code: 'MAT_FERT_001', name: '有机肥', category: '肥料', bigCategory: '肥料', midCategory: '有机肥', subCategory: '普通有机肥', specification: '50kg/袋', unit: '袋', quantity: 20, price: '125', location: 'A区-01-01', batchNo: 'B20260415', productionDate: '2026-04-01', expiryDate: '2027-04-01' }, { code: 'MAT_FERT_002', name: '复合肥', category: '肥料', bigCategory: '肥料', midCategory: '复合肥', subCategory: '通用复合肥', specification: '50kg/袋', unit: '袋', quantity: 15, price: '160', location: 'A区-01-02', batchNo: 'B20260415', productionDate: '2026-04-05', expiryDate: '2027-04-05' }]) },
+    { code: 'IN2026042001', inboundDate: '2026-04-20', supplier: '农药供应商C', operator: '李明辉', status: 'completed', materials: JSON.stringify([{ code: 'MAT_PEST_001', name: '百菌清', category: '农药', bigCategory: '农药', midCategory: '杀菌剂', subCategory: '有机杀菌剂', specification: '75%可湿性粉剂', unit: '包', quantity: 30, price: '25', location: 'B区-02-01', batchNo: 'B20260420', productionDate: '2026-04-10', expiryDate: '2028-04-10' }, { code: 'MAT_PEST_002', name: '吡虫啉', category: '农药', bigCategory: '农药', midCategory: '杀虫剂', subCategory: '烟碱类', specification: '10%可湿性粉剂', unit: '包', quantity: 25, price: '18', location: 'B区-02-02', batchNo: 'B20260420', productionDate: '2026-04-15', expiryDate: '2028-04-15' }]) },
+    { code: 'IN2026050501', inboundDate: '2026-05-05', supplier: '种子供应商E', operator: '王建国', status: 'completed', materials: JSON.stringify([{ code: 'MAT_SEED_001', name: '红生菜种子', category: '种子', bigCategory: '种子', midCategory: '蔬菜种子', subCategory: '叶菜类', specification: '100g/袋', unit: '袋', quantity: 20, price: '45', location: 'D区-04-01', batchNo: 'B20260501', productionDate: '2026-04-01', expiryDate: '2027-04-01' }, { code: 'MAT_SEED_002', name: '菠菜种子', category: '种子', bigCategory: '种子', midCategory: '蔬菜种子', subCategory: '叶菜类', specification: '100g/袋', unit: '袋', quantity: 18, price: '38', location: 'D区-04-02', batchNo: 'B20260502', productionDate: '2026-04-02', expiryDate: '2027-04-02' }]) },
+    { code: 'IN2026051001', inboundDate: '2026-05-10', supplier: '工具供应商D', operator: '李明辉', status: 'completed', materials: JSON.stringify([{ code: 'MAT_TOOL_001', name: '背负式喷雾器', category: '工具', bigCategory: '工具', midCategory: '植保工具', subCategory: '喷雾器', specification: '16L', unit: '台', quantity: 10, price: '85', location: 'C区-03-01', batchNo: 'B20260508', productionDate: '2026-05-01', expiryDate: '', remarks: '' }]) },
+    { code: 'IN2026051501', inboundDate: '2026-05-15', supplier: '资材供应商F', operator: '王建国', status: 'pending', materials: JSON.stringify([{ code: 'MAT_FILM_001', name: '农膜', category: '农用资材', bigCategory: '农用资材', midCategory: '薄膜', subCategory: '地膜', specification: '2m×100m', unit: '卷', quantity: 8, price: '120', location: 'E区-05-01', batchNo: 'B20260510', productionDate: '2026-03-01', expiryDate: '2027-03-01', remarks: '' }]) }
+  ];
+
+  for (const record of records) {
+    db.run(`INSERT INTO inbound_records (code, inboundDate, supplier, operator, status, materials, voidedDate) VALUES (?, ?, ?, ?, ?, ?, ?)`, [record.code, record.inboundDate, record.supplier, record.operator, record.status, record.materials, null]);
+  }
+  console.log(`已导入入库记录种子数据: ${records.length}条`);
+}
+
+/**
+ * 导入库存种子数据
+ */
+function seedInventoryStock() {
+  const db = getDatabase();
+
+  const existing = db.exec('SELECT COUNT(*) FROM inventory_stock');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`库存数据已存在 (${count} 条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const stocks = [
+    { id: 'STOCK_001', instance_id: 'CI001', stock_type: 'material', business_id: 'IN2026041501', business_type: 'inbound', business_code: 'IN2026041501', crop_id: null, crop_name: null, variety_id: null, variety_name: null, current_quantity: 200, frozen_quantity: 0, available_quantity: 200, unit: 'kg', warehouse_id: 'WH001', warehouse_name: '中心仓库', inbound_date: '2026-04-15', source_type: 'purchase', production_plan_code: null, source_instance_id: null, status: 'in_stock', version: 1, create_time: now, update_time: now },
+    { id: 'STOCK_002', instance_id: 'CI002', stock_type: 'material', business_id: 'IN2026042001', business_type: 'inbound', business_code: 'IN2026042001', crop_id: null, crop_name: null, variety_id: null, variety_name: null, current_quantity: 150, frozen_quantity: 0, available_quantity: 150, unit: 'kg', warehouse_id: 'WH001', warehouse_name: '中心仓库', inbound_date: '2026-04-20', source_type: 'purchase', production_plan_code: null, source_instance_id: null, status: 'in_stock', version: 1, create_time: now, update_time: now },
+    { id: 'STOCK_003', instance_id: 'CI003', stock_type: 'material', business_id: 'IN2026050501', business_type: 'inbound', business_code: 'IN2026050501', crop_id: null, crop_name: null, variety_id: null, variety_name: null, current_quantity: 100, frozen_quantity: 0, available_quantity: 100, unit: 'kg', warehouse_id: 'WH002', warehouse_name: '种子仓库', inbound_date: '2026-05-05', source_type: 'purchase', production_plan_code: null, source_instance_id: null, status: 'in_stock', version: 1, create_time: now, update_time: now },
+    { id: 'STOCK_004', instance_id: 'CI004', stock_type: 'material', business_id: 'IN2026051001', business_type: 'inbound', business_code: 'IN2026051001', crop_id: null, crop_name: null, variety_id: null, variety_name: null, current_quantity: 50, frozen_quantity: 0, available_quantity: 50, unit: '台', warehouse_id: 'WH003', warehouse_name: '工具仓库', inbound_date: '2026-05-10', source_type: 'purchase', production_plan_code: null, source_instance_id: null, status: 'in_stock', version: 1, create_time: now, update_time: now },
+    { id: 'STOCK_005', instance_id: 'CI005', stock_type: 'material', business_id: 'IN2026051501', business_type: 'inbound', business_code: 'IN2026051501', crop_id: null, crop_name: null, variety_id: null, variety_name: null, current_quantity: 80, frozen_quantity: 0, available_quantity: 80, unit: '卷', warehouse_id: 'WH001', warehouse_name: '中心仓库', inbound_date: '2026-05-15', source_type: 'purchase', production_plan_code: null, source_instance_id: null, status: 'in_stock', version: 1, create_time: now, update_time: now }
+  ];
+
+  for (const stock of stocks) {
+    db.run(`INSERT INTO inventory_stock (id, instance_id, stock_type, business_id, business_type, business_code, crop_id, crop_name, variety_id, variety_name, current_quantity, frozen_quantity, available_quantity, unit, warehouse_id, warehouse_name, inbound_date, source_type, production_plan_code, source_instance_id, status, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [stock.id, stock.instance_id, stock.stock_type, stock.business_id, stock.business_type, stock.business_code, stock.crop_id, stock.crop_name, stock.variety_id, stock.variety_name, stock.current_quantity, stock.frozen_quantity, stock.available_quantity, stock.unit, stock.warehouse_id, stock.warehouse_name, stock.inbound_date, stock.source_type, stock.production_plan_code, stock.source_instance_id, stock.status, stock.version, stock.create_time, stock.update_time]);
+  }
+  console.log(`已导入库存种子数据: ${stocks.length}条`);
+}
+
+/**
  * 导出数据库
  */
 export function exportDatabase() {
@@ -4900,6 +5714,36 @@ export function exportDatabase() {
   seedApprovalAmountThresholds();
   seedApprovalTypeRules();
   seedMaterialTypes();
+  seedPesticideLibrary();
+  seedPestDiseaseDict();
+  seedAnnouncements();
+  seedTechSolutions();
+  seedIndicators();
+  seedFertilizerRecords();
+  seedPesticideRecords();
+  seedMaterials();
+  seedSchedules();
+  seedAttendanceRecords();
+  seedEmployees();
+  seedOvertimeRecords();
+  seedLeaveRecords();
+  seedSalaryBudgetRecords();
+  seedOnboardingRecords();
+  seedResignationRecords();
+  seedRecruitmentRecords();
+  seedContractRenewalRecords();
+  seedPlantLabels();
+  seedPlantSettings();
+  seedWaterFertilizerConfigs();
+  seedEnergyConfigs();
+  seedDeviceSystems();
+  seedFarmPartitions();
+  seedBases();
+  seedBlocks();
+  seedTeams();
+  seedTeamMembers();
+  seedInboundRecords();
+  seedInventoryStock();
 
   saveDatabase();
   console.log('数据库种子数据导入完成');

@@ -42,9 +42,9 @@ router.get('/next-code', (req: Request, res: Response) => {
   res.json({ next_code: nextCode });
 });
 
-/** 生成字典编码 KC-B-/KC-D-+4位流水号 */
+/** 生成字典编码 PD-P-/PD-D-+4位流水号 */
 function generateDictCode(db: any, dictType: string): string {
-  const prefix = dictType === 'pest' ? 'KC-B-' : 'KC-D-';
+  const prefix = dictType === 'pest' ? 'PD-P-' : 'PD-D-';
   const allCodes = queryToObjects<{ dict_code: string }>(db,
     `SELECT dict_code FROM pest_disease_dict WHERE dict_type = ?`, [dictType],
   );
@@ -223,10 +223,10 @@ router.post('/:pestId/relations', (req: Request, res: Response) => {
     const id = `${pesticideId}_${pestId}`;
 
     try {
-      db.prepare(`
+      db.run(`
         INSERT INTO pesticide_pest_relation (id, pesticide_id, pest_id)
         VALUES (?, ?, ?)
-      `).run(id, pesticideId, pestId);
+      `, [id, pesticideId, pestId]);
       saveDatabase();
       res.json({ success: true, id });
     } catch (e: any) {

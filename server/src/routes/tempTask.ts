@@ -231,13 +231,21 @@ function recordTempTaskOperation(
 router.get('/:id/records', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log('[GET /temp-tasks/:id/records] id =', id);
     const db = getDatabase();
+
+    // 先检查 task_operation_records 表中有什么记录
+    const allRecords = queryToObjects(db, 'SELECT id, task_id, action, action_time FROM task_operation_records LIMIT 5');
+    console.log('[GET /temp-tasks/:id/records] 表中前5条记录:', allRecords);
+
     const items = queryToObjects(db,
       'SELECT * FROM task_operation_records WHERE task_id = ? ORDER BY action_time DESC',
       [id]);
+    console.log('[GET /temp-tasks/:id/records] 查询结果, id=', id, '记录数:', items.length);
 
     res.json({ success: true, data: items });
   } catch (error) {
+    console.error('[GET /temp-tasks/:id/records] 错误:', error);
     res.status(500).json({ success: false, error: '获取任务操作记录失败' });
   }
 });
@@ -538,15 +546,21 @@ router.put('/:id', (req: Request, res: Response) => {
       else if (newStatus === 'completed') actionName = '验收通过';
       else if (newStatus === 'rejected') actionName = '验收返工';
       else if (newStatus === 'cancelled') actionName = '取消任务';
+      // 如果 operator_id 为空，使用任务的 assignee 信息
+      const operatorId = updates.operator_id || task.assignee_id || task.assigner_id || '';
+      const operatorName = updates.operator_name || task.assignee_name || task.assigner_name || '';
       recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-        updates.operator_id || '', updates.operator_name || '',
+        operatorId, operatorName,
         'status_change', actionName, oldStatus, newStatus);
     }
 
     // 重新分派记录
     if (oldAssigneeId !== newAssigneeId && updates.reassign === true) {
+      // 如果 operator_id 为空，使用任务的 assignee 信息
+      const operatorId = updates.operator_id || task.assignee_id || task.assigner_id || '';
+      const operatorName = updates.operator_name || task.assignee_name || task.assigner_name || '';
       recordTempTaskOperation(db, id, task.task_code, task.task_title || task.title,
-        updates.operator_id || '', updates.operator_name || '',
+        operatorId, operatorName,
         'reassign', '重新分派', oldStatus, newStatus, undefined,
         `重新分派给 ${newAssigneeName} 处理`);
     }
