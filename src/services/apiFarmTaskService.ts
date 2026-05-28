@@ -263,6 +263,14 @@ export async function exportTaskRecords(filters?: {
 }
 
 /**
+ * 获取今日任务操作记录（用于"今日操作记录"组件）
+ */
+export async function getTodayTaskRecords(): Promise<any[]> {
+  const data = await enhancedApiClient.get<any[]>('/farm-tasks/records/export?today=true');
+  return data || [];
+}
+
+/**
  * 获取逾期任务列表
  * 降级策略：API → IndexedDB 缓存
  */

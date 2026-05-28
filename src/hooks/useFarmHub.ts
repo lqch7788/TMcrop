@@ -12,6 +12,7 @@ import { STORAGE_KEYS } from './useLocalStorage';
 import { InspectionRecord } from '../types';
 import { useInspectionDataStore, useProblemStore } from '../stores';
 import { getOperationLogs, type OperationLog as ApiOperationLog } from '../services/apiOperationLogService';
+import { getTodayTaskRecords } from '../services/apiFarmTaskService';
 export interface InspectionSearchFilters {
   recordCode: string;
   inspectorName: string;
@@ -223,6 +224,8 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   const [inspections, setInspections] = useState<InspectionRecord[]>(getInitialInspections());
   const [operationRecords, setOperationRecords] = useState<WorkLogRecord[]>([]);
   const [apiOperationRecords, setApiOperationRecords] = useState<UnifiedOperationRecord[]>([]);
+  // 今日任务操作记录（从API获取，不再从localStorage读取）
+  const [todayTaskRecords, setTodayTaskRecords] = useState<UnifiedOperationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 当前Tab
@@ -392,6 +395,25 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
     } finally {
       setIsLoading(false);
       console.log('[useFarmHub] loadData 完成');
+
+      // 从后端 API 拉取今日任务操作记录（替换 localStorage）
+      getTodayTaskRecords().then(taskRecords => {
+        const records: UnifiedOperationRecord[] = (taskRecords || []).map((record: any) => ({
+          id: record.id || `task-${Date.now()}-${Math.random()}`,
+          timestamp: record.action_time || record.created_at || '',
+          operatorName: record.operator_name || '未知',
+          operatorType: 'user',
+          actionType: mapTaskActionToType(record.action),
+          targetType: 'task',
+          targetCode: record.task_code || '',
+          targetTitle: record.task_title || '',
+          content: `${record.operator_name || '未知'} ${getActionText(record.action)} 任务【${record.task_title || ''}】`,
+          extra: record,
+        }));
+        setTodayTaskRecords(records);
+      }).catch(() => {
+        // API 不可用时静默降级
+      });
 
       // 从后端 API 拉取操作日志（数据库持久化数据）
       getOperationLogs({ limit: 100 }).then(result => {
@@ -567,33 +589,11 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   // 构建统一操作记录
   const recentRecords = useMemo((): UnifiedOperationRecord[] => {
     const records: UnifiedOperationRecord[] = [];
-    const today = getTodayString();
 
-    // 从任务记录转换
-    const taskRecordsData = localStorage.getItem(`${STORAGE_KEYS.TASKS}_records`);
-    if (taskRecordsData) {
-      try {
-        const taskRecords = JSON.parse(taskRecordsData);
-        taskRecords.slice(0, 20).forEach((record: { id?: string; actionTime?: string; createdAt?: string; operatorName?: string; action?: string; taskCode?: string; taskTitle?: string }) => {
-          records.push({
-            id: record.id || `task-${Date.now()}-${Math.random()}`,
-            timestamp: record.actionTime || record.createdAt,
-            operatorName: record.operatorName || '未知',
-            operatorType: 'user',
-            actionType: mapTaskActionToType(record.action),
-            targetType: 'task',
-            targetCode: record.taskCode || '',
-            targetTitle: record.taskTitle || '',
-            content: `${record.operatorName} ${getActionText(record.action)} 任务【${record.taskTitle}】`,
-            extra: record,
-          });
-        });
-      } catch (e) {
-        // 解析任务记录失败
-      }
-    }
+    // 使用从 API 获取的今日任务操作记录（不再从 localStorage 读取）
+    records.push(...todayTaskRecords);
 
-    // 从工作日志转换
+    // 从工作日志转换（工作日志仍使用 localStorage，这是合理的降级方案）
     operationRecords.slice(0, 10).forEach(log => {
       records.push({
         id: `log-${log.id}`,
@@ -624,7 +624,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       seen.add(r.id);
       return true;
     }).slice(0, 20);
-  }, [operationRecords, apiOperationRecords]);
+  }, [operationRecords, apiOperationRecords, todayTaskRecords]);
 
   // 过滤后的数据实例
   const filteredTasks = getFilteredTasks();

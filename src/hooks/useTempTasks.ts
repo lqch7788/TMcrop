@@ -341,25 +341,14 @@ export function useTempTasks(): UseTempTasksReturn {
       setTempTasks(storeTasks.map(mapStoreTaskToTempTask));
     }
   }, [storeTasks]);
-  // 操作记录状态
+  // 操作记录状态（仅内存状态，后端数据库已有持久化）
+  // 注：临时任务操作记录已通过后端 API 保存到 task_operation_records 表
+  // 不再使用 localStorage，避免数据不一致
   const [operationRecords, setOperationRecords] = useState<TempTaskOperationRecord[]>([]);
 
-  // 从 localStorage 读取操作记录
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('yuanxingtu_tempTasks_operations');
-      if (stored) {
-        setOperationRecords(JSON.parse(stored));
-      }
-    } catch (e) {
-      console.warn('Failed to load temp task operation records:', e);
-    }
-  }, []);
-
-  // 保存操作记录到 localStorage
+  // 保存操作记录（仅内存状态，不写 localStorage）
   const saveOperationRecords = useCallback((records: TempTaskOperationRecord[]) => {
     setOperationRecords(records);
-    localStorage.setItem('yuanxingtu_tempTasks_operations', JSON.stringify(records));
   }, []);
 
   // 添加临时任务
