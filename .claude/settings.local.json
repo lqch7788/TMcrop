@@ -289,7 +289,12 @@
       "Bash(NODE_PATH=\"D:/iAGS/yujiang.Foil.Node.Npm/node_modules;D:/iAGS/yujiang.Foil.Node.Npm/win64-node8.15.1/node_modules\" node start.js)",
       "Bash(npx vue-tsc *)",
       "Bash(D:/TMcrop/yuanxingtu/V1.1/sqlite3.exe *)",
-      "Bash(grep -E \"\\\\.tsx$\")"
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\([f\\\\\"action={r['action']}, actionName={r['actionName']}\\\\\" for r in d['data']]\\)\\)\")",
+      "Bash(dir \"D:\\\\TMcrop\\\\yuanxingtu\\\\V1.1\\\\src\\\\components\\\\farm\")",
+      "Bash(npx ts-node -e ' *)",
+      "Bash(pkill -f \"tsx.*src/index\")"
     ]
   }
 }
