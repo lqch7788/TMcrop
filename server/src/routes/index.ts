@@ -28,6 +28,7 @@ import approvalWorkflowRouter from './approvalWorkflow';
 import approvalRouter from './approval';
 import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
+import workLogRouter from './workLog';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
 import techSolutionRouter from './techSolution';
@@ -73,6 +74,7 @@ import farmTaskSchedulesRouter from './farmTaskSchedules';
 import farmTaskSwapRequestsRouter from './farmTaskSwapRequests';
 import pestRecordsRouter from './pesticideRecords';
 import pesticideLibraryRouter from './pesticideLibrary';
+import fertilizerLibraryRouter from './fertilizerLibrary';
 import pestDiseaseDictRouter from './pestDiseaseDict';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
@@ -171,6 +173,9 @@ router.use('/approval-linkage', requireAuth, approvalLinkageRouter);
 
 // 操作日志路由 - 需要认证
 router.use('/operation-logs', requireAuth, operationLogRouter);
+
+// 工作日志路由 - 需要认证
+router.use('/work-logs', requireAuth, workLogRouter);
 
 // 订单路由 - 需要认证
 router.use('/crop-orders', requireAuth, cropOrderRouter);
@@ -301,6 +306,7 @@ router.use('/device-distributions', requireAuth, deviceDistributionRouter);
 // 病虫害防治管理路由 - V12.0
 router.use('/pest-records', requireAuth, pestRecordsRouter);
 router.use('/pesticide-library', requireAuth, pesticideLibraryRouter);
+router.use('/fertilizer-library', requireAuth, fertilizerLibraryRouter);
 router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
 
 // 健康检查 - 增强版

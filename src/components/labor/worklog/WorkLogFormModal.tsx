@@ -221,13 +221,9 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
       isOpen={open}
       onClose={onClose}
       title={log ? '编辑日志' : '新建日志'}
-      size="md"
+      size="xxl"
       showFooter={true}
-      headerAction={
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
-        </Button>
-      }
+      showCloseButton={false}
       footer={footer}
     >
       {content}

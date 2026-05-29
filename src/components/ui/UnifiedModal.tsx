@@ -13,6 +13,7 @@ interface UnifiedModalProps {
   submitText?: string;
   cancelText?: string;
   showMaximize?: boolean;
+  showCloseButton?: boolean;
   enableDrag?: boolean;
   enableResize?: boolean;
   width?: number;
@@ -36,6 +37,7 @@ export function UnifiedModal({
   submitText = '保存',
   cancelText = '取消',
   showMaximize = true,
+  showCloseButton = true,
   enableDrag = true,
   enableResize = true,
   width,
@@ -54,6 +56,7 @@ export function UnifiedModal({
       cancelText={cancelText}
       headerAction={headerAction}
       showMaximize={showMaximize}
+      showCloseButton={showCloseButton}
       enableDrag={enableDrag}
       enableResize={enableResize}
       width={width}

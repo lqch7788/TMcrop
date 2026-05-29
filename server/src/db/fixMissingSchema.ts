@@ -1059,6 +1059,53 @@ export async function fixMissingSchema(): Promise<void> {
     else console.error('pesticide_specs:', e.message);
   }
 
+  // V12.0: 肥料库表（如果从旧版本升级）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS fertilizer_library (
+        id TEXT PRIMARY KEY,
+        fertilizer_code TEXT NOT NULL UNIQUE,
+        fertilizer_name TEXT NOT NULL,
+        fertilizer_type TEXT CHECK(fertilizer_type IN ('organic', 'inorganic', 'water_soluble', 'compound', 'bio', 'slow_release', 'trace')),
+        application_timing TEXT,
+        function_desc TEXT,
+        taboo_desc TEXT,
+        shelf_life TEXT,
+        storage_condition TEXT,
+        supplier_info TEXT,
+        status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        update_time TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ fertilizer_library 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• fertilizer_library 已存在');
+    else console.error('fertilizer_library:', e.message);
+  }
+
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS fertilizer_specs (
+        id TEXT PRIMARY KEY,
+        fertilizer_id TEXT NOT NULL,
+        spec_content TEXT,
+        manufacturer TEXT,
+        suggested_dosage TEXT,
+        suggested_ratio TEXT,
+        dosage_unit TEXT,
+        remark TEXT,
+        status TEXT DEFAULT 'active',
+        create_time TEXT DEFAULT (datetime('now','localtime')),
+        FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✓ fertilizer_specs 表创建成功');
+  } catch (e: any) {
+    if (e.message.includes('already exists')) console.log('• fertilizer_specs 已存在');
+    else console.error('fertilizer_specs:', e.message);
+  }
+
   // 为 pesticide_specs 表添加作用机制字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN mechanism TEXT`);

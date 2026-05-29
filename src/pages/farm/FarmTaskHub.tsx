@@ -581,7 +581,7 @@ export function FarmTaskHub() {
       {/* 操作记录面板 */}
       {showRecordPanel && (
         <OperationRecordPanel
-          records={hub.state.recentRecords}
+          records={hub.state.allRecords}
           onClose={() => setShowRecordPanel(false)}
         />
       )}

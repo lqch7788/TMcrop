@@ -14,7 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
-import { useFertilizerStore, useProductionPlanStore } from '@/stores';
+import { useFertilizerStore, useProductionPlanStore, useFertilizerLibraryStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 import type { CropVariety } from '@/types/cropVariety';
@@ -42,10 +42,13 @@ const defaultForm = {
   operatorName: '',
   dataSource: 'manual' as const,
   description: '',
+  inputMode: 'library' as 'library' | 'manual',
+  selectedFertilizerId: '',
 };
 
 export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddModalProps) {
   const store = useFertilizerStore();
+  const fertilizerLibraryStore = useFertilizerLibraryStore();
 
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
@@ -96,10 +99,15 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     }
   }, []);
 
+  // 加载肥料库数据
+  useEffect(() => {
+    fertilizerLibraryStore.fetchItems({ limit: '10000' });
+  }, [fertilizerLibraryStore]);
+
   // 重置表单
   useEffect(() => {
     if (isOpen) {
-      setForm(defaultForm);
+      setForm({ ...defaultForm, inputMode: 'library', selectedFertilizerId: '' });
       setCropCode('');
       setSelectedCrop(null);
       setPlanSearchKeyword('');
@@ -128,7 +136,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       return;
     }
     setSubmitting(true);
-    await store.createItem({
+    const payload: Record<string, any> = {
       fertilizerCode: form.fertilizerCode,
       fertilizerName: form.fertilizerName,
       fertilizerType: form.fertilizerType,
@@ -143,7 +151,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       operatorName: form.operatorName,
       dataSource: form.dataSource,
       description: form.description,
-    });
+      inputMode: form.inputMode,
+      selectedFertilizerId: form.selectedFertilizerId,
+    };
+    await store.createItem(payload);
     setSubmitting(false);
     onSaved();
   };
@@ -319,6 +330,62 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
         <div>
           <SectionTitle title="肥料与用量" icon="🧪" />
           <div className="space-y-3">
+            {/* 模式切换：库选择 / 手动输入 */}
+            <div className="flex gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="inputMode"
+                  value="library"
+                  checked={form.inputMode === 'library'}
+                  onChange={() => setForm(f => ({ ...f, inputMode: 'library', selectedFertilizerId: '' }))}
+                />
+                从库选择
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="inputMode"
+                  value="manual"
+                  checked={form.inputMode === 'manual'}
+                  onChange={() => setForm(f => ({ ...f, inputMode: 'manual', selectedFertilizerId: '' }))}
+                />
+                手动输入
+              </label>
+            </div>
+
+            {/* 从库选择模式 */}
+            {form.inputMode === 'library' && (
+              <div className="mb-4">
+                <Label className="text-gray-900">选择肥料</Label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={form.selectedFertilizerId}
+                  onChange={(e) => {
+                    const selected = fertilizerLibraryStore.items.find(i => i.id === e.target.value);
+                    if (selected) {
+                      setForm(f => ({
+                        ...f,
+                        selectedFertilizerId: selected.id,
+                        fertilizerName: selected.fertilizerName,
+                        fertilizerType: selected.fertilizerType || '',
+                        dilutionRatio: selected.specs?.[0]?.suggestedRatio || '',
+                      }));
+                    }
+                  }}
+                >
+                  <option value="">-- 请选择肥料 --</option>
+                  {fertilizerLibraryStore.items
+                    .filter(item => item.status === 'active')
+                    .map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.fertilizerName} ({item.fertilizerCode})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-900">肥料类型</Label>
@@ -329,18 +396,20 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   placeholder="选择肥料类型"
                 />
               </div>
-              <div>
-                <Label className="text-gray-900">
-                  肥料名称 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="text"
-                  value={form.fertilizerName}
-                  onChange={(e) => updateField('fertilizerName', e.target.value)}
-                  placeholder="请输入肥料名称"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
+              {form.inputMode === 'manual' && (
+                <div>
+                  <Label className="text-gray-900">
+                    肥料名称 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="text"
+                    value={form.fertilizerName}
+                    onChange={(e) => updateField('fertilizerName', e.target.value)}
+                    placeholder="请输入肥料名称"
+                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-4 gap-4">
               <div>
