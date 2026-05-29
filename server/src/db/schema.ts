@@ -1642,6 +1642,25 @@ export function initializeDatabase() {
     )
   `);
 
+  // ========== V6.0 Phase 4: 用户基地权限表 ==========
+  // 用户基地权限表（控制用户可以访问哪些基地的数据）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_base_permissions (
+      id TEXT PRIMARY KEY,
+      user_oid TEXT NOT NULL,
+      base_oid TEXT NOT NULL,
+      base_name TEXT NOT NULL,
+      access_level TEXT DEFAULT 'read' CHECK(access_level IN ('none', 'read', 'write', 'admin')),
+      created_at TEXT,
+      updated_at TEXT,
+      UNIQUE(user_oid, base_oid)
+    )
+  `);
+
+  // 用户基地权限表索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_user_base_permissions_user ON user_base_permissions(user_oid)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_user_base_permissions_base ON user_base_permissions(base_oid)`);
+
   // 项目/APP 配置表（多应用隔离，定义各应用使用的表名）
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (

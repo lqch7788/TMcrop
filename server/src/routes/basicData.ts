@@ -1174,7 +1174,18 @@ router.post('/greenhouses', (req, res) => {
     ]);
 
     saveDatabase();
-    res.json({ success: true, message: '温室创建成功', data: { id, oid, code, name } });
+
+    // 查询刚创建的完整记录并返回
+    const newRecord = db.exec(`SELECT * FROM greenhouses WHERE oid = '${oid}'`);
+    const columns = newRecord[0]?.columns || [];
+    const values = newRecord[0]?.values?.[0] || [];
+    const greenhouse: Record<string, any> = {};
+    columns.forEach((col: string, i: number) => {
+      const camelCol = col.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
+      greenhouse[camelCol] = values[i];
+    });
+
+    res.json({ success: true, message: '温室创建成功', data: greenhouse });
   } catch (error) {
     console.error('创建温室失败:', error);
     res.status(500).json({ success: false, error: '创建温室失败' });

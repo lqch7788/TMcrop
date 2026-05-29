@@ -5,12 +5,13 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Building2, Key, Users, GitBranch, ArrowLeft } from 'lucide-react';
+import { Shield, Building2, Key, Users, GitBranch, ArrowLeft, MapPin } from 'lucide-react';
 import OrganizationManagement from './OrganizationManagement';
 import RoleManagement from './RoleManagement';
 import AuthorityConfiguration from './AuthorityConfiguration';
 import UserManagement from './UserManagement';
 import UserAuthorityConfig from './UserAuthorityConfig';
+import UserBasePermission from './UserBasePermission';
 
 const TABS = [
   { key: 'organizations', label: '组织管理', icon: Building2, desc: '组织架构树形管理' },
@@ -18,6 +19,7 @@ const TABS = [
   { key: 'authority', label: '权限配置', icon: Key, desc: '工序菜单与角色权限矩阵' },
   { key: 'users', label: '用户管理', icon: Users, desc: '用户账号与角色分配' },
   { key: 'user-authority', label: '用户权限覆盖', icon: GitBranch, desc: '特定用户权限覆盖' },
+  { key: 'user-base', label: '用户基地权限', icon: MapPin, desc: '用户对基地的访问权限' },
 ];
 
 export default function UserPermissionHub() {
@@ -30,6 +32,7 @@ export default function UserPermissionHub() {
       case 'authority': return <AuthorityConfiguration />;
       case 'users': return <UserManagement />;
       case 'user-authority': return <UserAuthorityConfig />;
+      case 'user-base': return <UserBasePermission />;
       default: return null;
     }
   };

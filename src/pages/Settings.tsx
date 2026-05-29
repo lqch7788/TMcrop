@@ -3,7 +3,7 @@ import {
   Settings as SettingsIcon, MapPin, ScrollText, Users, Target, ChevronRight,
   ArrowLeft, Building2, Building, Layers, Shield, Bell, GitBranch, Monitor,
   Warehouse, FileText, BookOpen, Settings as SettingsCog, BarChart3, Database,
-  Clock, DollarSign, Server, DatabaseBackup, Sprout,
+  Clock, DollarSign, Server, DatabaseBackup,
   // iAGS 集成新增图标
   Grid3X3, Radio, Video, Droplets, Zap, AlertTriangle, Bug, Wrench, Tractor,
   MonitorCheck, Package,
@@ -21,8 +21,7 @@ const basicDataSections = [
 
 // 组2: 农场结构 — 基地 · 大棚 · 分区 · 区块（物理空间架构）
 const farmStructureSections = [
-  { icon: Sprout, label: '基地架构', path: '/settings/farm-structure', desc: '公司基地 · 设施管理 · 区块结构' },
-  { icon: Building2, label: '基地运营中心', path: '/settings/base-operations', desc: '设施管理 · 区域划分 · 种植记录' },
+  { icon: Building2, label: '基地运营中心', path: '/settings/base-operations?baseOid=base_1780023508412', desc: '设施管理 · 区域划分 · 种植记录' },
 ];
 
 // 组3: 权限管理 — 安全与流程控制
