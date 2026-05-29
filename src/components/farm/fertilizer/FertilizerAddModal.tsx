@@ -17,7 +17,6 @@ import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, useProductionPlanStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
-import * as cropVarietyService from '@/services/cropVarietyService';
 import type { CropVariety } from '@/types/cropVariety';
 import { showAlert } from '@/lib/dialogService';
 
@@ -81,13 +80,6 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // 初始化品种库
-  useEffect(() => {
-    if (isOpen) {
-      cropVarietyService.initVarieties();
-    }
-  }, [isOpen]);
 
   // 作物选择处理
   const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {

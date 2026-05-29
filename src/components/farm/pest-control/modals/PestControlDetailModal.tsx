@@ -188,11 +188,11 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-xs text-red-600 block">农药名称</span>
+                    <span className="text-xs text-red-600 block">药剂名称</span>
                     <span className="text-sm font-medium text-gray-900">{record.pesticideName || '-'}</span>
                   </div>
                   <div>
-                    <span className="text-xs text-red-600 block">农药类型</span>
+                    <span className="text-xs text-red-600 block">药剂类型</span>
                     <span className="text-sm font-medium text-gray-900">{getDictLabel('pesticide_type', record.pesticideType || '') || '-'}</span>
                   </div>
                   <div>

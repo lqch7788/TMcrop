@@ -9,7 +9,7 @@ import { Download } from 'lucide-react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { SeedSource } from '../../../../types/crop';
-import { printLabel } from '../../../../services/seedSourceService';
+import { printLabel } from '../../../../services/apiSeedSourceService';
 import { useUserStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
@@ -67,7 +67,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const remainingCount = record?.availableCount || 0;
 
   // 处理打印
-  const handlePrint = () => {
+  const handlePrint = async () => {
     setLoading(true);
     try {
       let labelsToPrint: string[] = [];
@@ -75,18 +75,18 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       if (printMode === 'single') {
         if (!previewLabel) { showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [previewLabel];
-        printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
+        await printLabel(record.id, 'new', 1, currentOperator, [previewLabel]);
       } else if (printMode === 'multi') {
         if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); return; }
         labelsToPrint = [...selectedLabels];
-        printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
+        await printLabel(record.id, 'batch', selectedLabels.length, currentOperator, selectedLabels);
       } else {
         // 批量生成
         const startIdx = allLabelNumbers.length;
         for (let i = 0; i < printCount; i++) {
           labelsToPrint.push(`${record.seedCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
         }
-        printLabel(record.id, 'new', printCount, currentOperator, labelsToPrint);
+        await printLabel(record.id, 'new', printCount, currentOperator, labelsToPrint);
         // 刷新标签列表（从record字段生成，避免localStorage ID不匹配）
         const totalCount = allLabelNumbers.length + printCount;
         const refreshed: string[] = [];

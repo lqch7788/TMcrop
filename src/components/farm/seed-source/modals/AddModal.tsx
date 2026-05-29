@@ -12,8 +12,7 @@ import { SourceType, StockStatus, PropagationType, PropagationStatus, BreedingMe
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { generateSeedCode } from '../../../../services/apiSeedSourceService';
-import * as cropInstanceService from '../../../../services/cropInstanceService';
-import * as cropVarietyService from '../../../../services/cropVarietyService';
+import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as supplierService from '../../../../services/supplierService';
 import { CropVariety } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
@@ -126,12 +125,6 @@ export function AddModal({
 
   // 快速新增弹窗状态
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-
-  // 初始化
-  useEffect(() => {
-    // 初始化品种库
-    cropVarietyService.initVarieties();
-  }, []);
 
   // 搜索供应商
   useEffect(() => {
@@ -323,7 +316,7 @@ export function AddModal({
 
     // 同时创建作物实例记录
     try {
-      const instance = cropInstanceService.createInstance(
+      const instance = await cropInstanceService.createInstance(
         {
           cropCategory: formData.cropCategory,
           cropName: formData.cropName,
@@ -447,10 +440,10 @@ export function AddModal({
             <Label className="text-gray-900">入库方式</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { value: PropagationType.EXTERNAL, label: '外购入库', Icon: ShoppingCart },
-                { value: PropagationType.BREEDING, label: '育种计划产出', Icon: Dna },
-                { value: PropagationType.SEED_SAVING, label: '种植留种', Icon: Sprout },
-                { value: PropagationType.ASEXUAL, label: '无性繁殖', Icon: Scissors },
+                { value: PropagationType.EXTERNAL, label: '外购入库', desc: '来自外部供应商的种子采购', Icon: ShoppingCart },
+                { value: PropagationType.BREEDING, label: '育种计划产出', desc: '关联生产批次，自动化管理', Icon: Dna },
+                { value: PropagationType.SEED_SAVING, label: '种植留种', desc: '自产自留，品质稳定', Icon: Sprout },
+                { value: PropagationType.ASEXUAL, label: '无性繁殖', desc: '分株、扦插等无性繁殖方式', Icon: Scissors },
               ].map((opt) => {
                 const IconComponent = opt.Icon;
                 return (
@@ -470,9 +463,12 @@ export function AddModal({
                       : 'border-gray-200 bg-white hover:border-gray-400 hover:bg-white'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
-                    <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <IconComponent className={`w-4 h-4 ${formData.propagationType === opt.value ? 'text-emerald-600' : 'text-gray-500'}`} />
+                      <span className="text-sm font-medium text-gray-900">{opt.label}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 leading-tight">{opt.desc}</span>
                   </div>
                 </Button>
                 );
@@ -550,18 +546,15 @@ export function AddModal({
             )}
           </div>
 
-          {/* 来源途径 */}
+          {/* 来源途径 - 根据入库方式自动设置 */}
           <div>
             <Label className="text-gray-900">来源途径</Label>
-            <DictSelect
-              category="source_origin"
-              value={formData.sourceOrigin}
-              onChange={(value) => setFormData({ ...formData, sourceOrigin: value as SourceOrigin })}
-              placeholder="选择来源途径"
+            <Input
+              type="text"
+              value={formData.propagationType === PropagationType.EXTERNAL ? '外部采购' : '自主产出'}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
             />
-            {formData.sourceOrigin === 'other' && (
-              <p className="mt-1 text-xs text-gray-400">请在备注中说明具体来源</p>
-            )}
           </div>
 
           {/* ===== 育种计划产出字段 ===== */}
@@ -744,8 +737,8 @@ export function AddModal({
             </>
           )}
 
-          {/* 供应商 - 外部采购时必填，其他来源可选（搜索模式） */}
-          {formData.propagationType === PropagationType.EXTERNAL ? (
+          {/* 供应商 - 只在外购入库时显示 */}
+          {formData.propagationType === PropagationType.EXTERNAL && (
             <div ref={supplierSearchRef} className="relative">
               <Label className="text-gray-900">
                 <span className="text-red-500">*</span> 供应商
@@ -838,22 +831,11 @@ export function AddModal({
                 </div>
               )}
             </div>
-          ) : (
-            <div>
-              <Label className="text-gray-900">供应商（可选）</Label>
-              <Input
-                type="text"
-                value={formData.supplierName}
-                onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                placeholder="内部来源无需填写"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
-                readOnly
-              />
-            </div>
           )}
 
-          {/* V3.0 生产计划关联 - 只显示育种计划类型 */}
-          <div>
+          {/* V3.0 生产计划关联 - 只在育种计划产出时显示 */}
+          {formData.propagationType === PropagationType.BREEDING && (
+            <div>
             <Label className="text-gray-900">关联生产计划</Label>
             <Select
               value={formData.productionPlanId || '__none__'}
@@ -875,7 +857,7 @@ export function AddModal({
               </SelectTrigger>
               <SelectContent>
                 {cropBatches.filter(b =>
-                  (b.batchStatus === 'published' || b.batchStatus === 'in_progress') &&
+                  b.batchStatus === 'in_progress' &&
                   b.planType === PlanType.SEED_BREEDING
                 ).map(batch => (
                   <SelectItem key={batch.id} value={batch.id}>
@@ -884,8 +866,9 @@ export function AddModal({
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-xs text-gray-400">只显示育种计划类型的生产批次</p>
+            <p className="mt-1 text-xs text-gray-400">只显示执行中的育种计划</p>
           </div>
+          )}
 
           {/* 采购/入库日期 - 根据来源途径动态显示标签 */}
           <div>

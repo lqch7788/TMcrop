@@ -11,7 +11,7 @@ import { SettingsProvider } from './contexts/SettingsContext';
 import GlobalDialog from './components/common/GlobalDialog';
 import { autoInitializeData } from './utils/dataInitializer';
 import { syncManager } from './services/syncManager';
-import { useAuthStore, useSystemConfigStore } from './stores';
+import { useAuthStore, useSystemConfigStore, useCropVarietyStore } from './stores';
 import { useThemeConfig } from './hooks/useThemeConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
@@ -438,6 +438,12 @@ function App() {
       // ★ V3.0 Phase 5: Store就绪后动态更新QueryClient默认选项
       configureQueryClient();
     });
+  }, []);
+
+  // 预加载作物品种数据（供 CropCodeSelector 等组件使用）
+  useEffect(() => {
+    const { loadVarietyOptions } = useCropVarietyStore.getState();
+    loadVarietyOptions();
   }, []);
 
   // ★ V3.0 Phase 4: 动态主题 — 同步 theme.* 配置到 CSS 变量

@@ -362,3 +362,68 @@ export async function getPlantingsForSeedSaving(): Promise<any[]> {
   const data = await enhancedApiClient.get<any[]>('/seed-sources/available-for-seed-saving');
   return data;
 }
+
+// ========== 打印记录 API ==========
+
+/**
+ * 打印记录结构
+ */
+export interface SeedSourcePrintRecord {
+  id: string;
+  seed_source_id: string;
+  print_type: string;
+  print_count: number;
+  operator: string;
+  label_numbers: string[];
+  print_time: string;
+  create_time: string;
+}
+
+/**
+ * 获取打印记录
+ */
+export async function getPrintRecords(seedSourceId: string): Promise<SeedSourcePrintRecord[]> {
+  const data = await enhancedApiClient.get<SeedSourcePrintRecord[]>(`/seed-sources/${seedSourceId}/print-records`);
+  // 解析 label_numbers JSON 字符串
+  return (data || []).map(record => ({
+    ...record,
+    label_numbers: typeof record.label_numbers === 'string'
+      ? JSON.parse(record.label_numbers)
+      : record.label_numbers || []
+  }));
+}
+
+/**
+ * 创建打印记录
+ */
+export async function createPrintRecord(
+  seedSourceId: string,
+  printType: string,
+  printCount: number,
+  operator: string,
+  labelNumbers?: string[]
+): Promise<{ id: string; printCount: number }> {
+  const result = await enhancedApiClient.post<{ id: string; printCount: number }>(
+    `/seed-sources/${seedSourceId}/print`,
+    { printType, printCount, operator, labelNumbers }
+  );
+  return result;
+}
+
+/**
+ * 打印标签（便捷函数）
+ */
+export async function printLabel(
+  seedSourceId: string,
+  printType: string,
+  printCount: number,
+  operator: string,
+  labelNumbers?: string[]
+): Promise<boolean> {
+  try {
+    await createPrintRecord(seedSourceId, printType, printCount, operator, labelNumbers);
+    return true;
+  } catch {
+    return false;
+  }
+}

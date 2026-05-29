@@ -1,16 +1,11 @@
 /**
  * 生产汇总统计 API 服务
  * 对接后端 /api/summary 和 /api/problems/daily-summary
- * API失败时降级到 localStorage
+ *
+ * 核心原则：服务器数据是唯一真相来源
  */
 
 import { enhancedApiClient as apiClient } from '../lib/apiClient';
-
-// localStorage 配置
-const BATCH_STATS_KEY = 'yuanxingtu_batch_stats';
-const YIELD_STATS_KEY = 'yuanxingtu_yield_stats';
-const COST_STATS_KEY = 'yuanxingtu_cost_stats';
-const LABOR_STATS_KEY = 'yuanxingtu_labor_stats';
 
 // ============================================
 // 类型定义
@@ -161,46 +156,12 @@ export interface ProductionIndicators {
   overall_score: number;
 }
 
-// 默认空数据
-const defaultBatchStats: BatchStatsItem[] = [];
-const defaultYieldStats: YieldStatsItem[] = [];
-
-// ============================================
-// localStorage 操作
-// ============================================
-
-function getStoredBatchStats(): BatchStatsItem[] {
-  try {
-    const stored = localStorage.getItem(BATCH_STATS_KEY);
-    return stored ? JSON.parse(stored) : defaultBatchStats;
-  } catch {
-    return defaultBatchStats;
-  }
-}
-
-function saveBatchStats(data: BatchStatsItem[]): void {
-  localStorage.setItem(BATCH_STATS_KEY, JSON.stringify(data));
-}
-
-function getStoredYieldStats(): YieldStatsItem[] {
-  try {
-    const stored = localStorage.getItem(YIELD_STATS_KEY);
-    return stored ? JSON.parse(stored) : defaultYieldStats;
-  } catch {
-    return defaultYieldStats;
-  }
-}
-
-function saveYieldStats(data: YieldStatsItem[]): void {
-  localStorage.setItem(YIELD_STATS_KEY, JSON.stringify(data));
-}
-
 // ============================================
 // 批次统计 API
 // ============================================
 
 /**
- * 获取批次汇总统计（带localStorage降级）
+ * 获取批次汇总统计
  * GET /api/summary/batch-stats
  */
 export async function getBatchStats(filters?: {
@@ -218,14 +179,7 @@ export async function getBatchStats(filters?: {
     if (filters.start_date) params.start_date = filters.start_date;
     if (filters.end_date) params.end_date = filters.end_date;
   }
-  try {
-    const data = await apiClient.get<BatchStatsItem[]>('/summary/batch-stats', params);
-    saveBatchStats(data);
-    return data;
-  } catch (error) {
-    console.warn('[汇总API] 获取批次统计失败，降级到localStorage:', error);
-    return getStoredBatchStats();
-  }
+  return await apiClient.get<BatchStatsItem[]>('/summary/batch-stats', params);
 }
 
 // ============================================
@@ -233,7 +187,7 @@ export async function getBatchStats(filters?: {
 // ============================================
 
 /**
- * 获取产量统计（带localStorage降级）
+ * 获取产量统计
  * GET /api/summary/yield-stats
  */
 export async function getYieldStats(filters?: {
@@ -251,14 +205,7 @@ export async function getYieldStats(filters?: {
     if (filters.crop_name) params.crop_name = filters.crop_name;
     if (filters.greenhouse_name) params.greenhouse_name = filters.greenhouse_name;
   }
-  try {
-    const data = await apiClient.get<YieldStatsItem[]>('/summary/yield-stats', params);
-    saveYieldStats(data);
-    return data;
-  } catch (error) {
-    console.warn('[汇总API] 获取产量统计失败，降级到localStorage:', error);
-    return getStoredYieldStats();
-  }
+  return await apiClient.get<YieldStatsItem[]>('/summary/yield-stats', params);
 }
 
 // ============================================

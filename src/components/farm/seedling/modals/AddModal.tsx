@@ -9,7 +9,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '@/components/ui/button';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
-import { generateSeedlingCodeByDate } from '../../../../services/seedlingService';
+import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import CropCodeSelector from '../../common/CropCodeSelector';
@@ -204,9 +204,9 @@ export function AddModal({
   }, [formData.startDate, formData.expectedEndDate]);
 
   // 点击生成批次号按钮（直接用当天日期）
-  const handleGenerateSeedlingCode = () => {
+  const handleGenerateSeedlingCode = async () => {
     const today = new Date();
-    const code = generateSeedlingCodeByDate(today);
+    const code = await generateSeedlingCodeByDate(today);
     setFormData({ ...formData, seedlingCode: code });
   };
 

@@ -684,7 +684,9 @@ const defaultDictionaries: DictionarySeed[] = [
   { id: 'PT002', categoryCode: 'pesticide_type', dictCode: 'fungicide', dictLabel: '杀菌剂', dictValue: 'fungicide', color: 'blue', sortOrder: 2, isDefault: 0, status: 'active' },
   { id: 'PT003', categoryCode: 'pesticide_type', dictCode: 'herbicide', dictLabel: '除草剂', dictValue: 'herbicide', color: 'green', sortOrder: 3, isDefault: 0, status: 'active' },
   { id: 'PT004', categoryCode: 'pesticide_type', dictCode: 'acaricide', dictLabel: '杀螨剂', dictValue: 'acaricide', color: 'orange', sortOrder: 4, isDefault: 0, status: 'active' },
-  { id: 'PT005', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PT005', categoryCode: 'pesticide_type', dictCode: 'protective', dictLabel: '保护剂', dictValue: 'protective', color: 'cyan', sortOrder: 5, isDefault: 0, status: 'active' },
+  { id: 'PT006', categoryCode: 'pesticide_type', dictCode: 'adjuvant', dictLabel: '助剂', dictValue: 'adjuvant', color: 'pink', sortOrder: 6, isDefault: 0, status: 'active' },
+  { id: 'PT007', categoryCode: 'pesticide_type', dictCode: 'other', dictLabel: '其他', dictValue: 'other', color: 'gray', sortOrder: 7, isDefault: 0, status: 'active' },
   // 施用方法（V12.0新增）
   { id: 'AM001', categoryCode: 'application_method', dictCode: 'spray', dictLabel: '喷雾', dictValue: 'spray', color: 'blue', sortOrder: 1, isDefault: 0, status: 'active' },
   { id: 'AM002', categoryCode: 'application_method', dictCode: 'drench', dictLabel: '灌根', dictValue: 'drench', color: 'green', sortOrder: 2, isDefault: 0, status: 'active' },

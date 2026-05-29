@@ -3,10 +3,10 @@
  * 显示二维码的移入移出轨迹
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, TransplantHistory, TransplantAction } from '../../../../types/crop';
-import { getTransplantHistory } from '../../../../services/seedlingService';
+import { getTransplantHistory } from '../../../../services/apiSeedlingService';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 
@@ -17,15 +17,21 @@ interface TransplantHistoryModalProps {
 }
 
 export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHistoryModalProps) {
-  // 获取栽种履历数据
-  const historyData = getTransplantHistory(record.id);
+  const [historyData, setHistoryData] = useState<TransplantHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 获取所有二维码编号
-  const labelNumbers = historyData.length > 0
-    ? historyData.map(h => h.labelNumber)
-    : generateDefaultLabels(record);
-
-  const [selectedLabel, setSelectedLabel] = useState<string>(labelNumbers[0] || '');
+  useEffect(() => {
+    if (isOpen && record?.id) {
+      setIsLoading(true);
+      getTransplantHistory(record.id).then(data => {
+        setHistoryData(data);
+        setIsLoading(false);
+      }).catch(() => {
+        setHistoryData([]);
+        setIsLoading(false);
+      });
+    }
+  }, [isOpen, record?.id]);
 
   // 生成默认标签列表（如果没有历史数据）
   function generateDefaultLabels(seedling: Seedling): string[] {
@@ -38,6 +44,19 @@ export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHi
     }
     return labels;
   }
+
+  // 获取所有二维码编号
+  const labelNumbers = historyData.length > 0
+    ? historyData.map(h => h.labelNumber)
+    : generateDefaultLabels(record);
+
+  const [selectedLabel, setSelectedLabel] = useState<string>('');
+
+  useEffect(() => {
+    if (labelNumbers.length > 0 && !selectedLabel) {
+      setSelectedLabel(labelNumbers[0]);
+    }
+  }, [labelNumbers, selectedLabel]);
 
   // 获取当前选中的履历
   const currentHistory = historyData.find(h => h.labelNumber === selectedLabel);
@@ -68,6 +87,22 @@ export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHi
       default: return action;
     }
   };
+
+  if (isLoading) {
+    return (
+      <UnifiedModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`栽种历史 - ${record.seedlingCode}`}
+        size="xl"
+        showFooter={false}
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </UnifiedModal>
+    );
+  }
 
   return (
     <UnifiedModal

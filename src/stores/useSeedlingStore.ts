@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { Seedling, DailyRecord } from '../types/crop';
-import * as seedlingService from '../services/seedlingService';
+import * as seedlingService from '../services/apiSeedlingService';
 
 interface SeedlingState {
   items: Seedling[];

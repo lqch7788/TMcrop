@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { FileText, Search, Eye, Download, AlertTriangle, ArrowLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui/Pagination';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { enhancedApiClient } from '../lib/apiClient';
+import * as XLSX from 'xlsx';
 
 interface OperationLog {
   id: string;
@@ -34,6 +36,18 @@ interface LogStats {
 
 const EMPTY_STATS: LogStats = { total: 0, today: 0, info: 0, warning: 0, error: 0 };
 
+// 模块筛选选项（按系统架构分类）
+const MODULE_OPTIONS = [
+  { value: 'all', label: '全部模块' },
+  { value: 'farm', label: '农事管理' },
+  { value: 'crop', label: '作物管理' },
+  { value: 'schedule', label: '计划管理' },
+  { value: 'labor', label: '用工管理' },
+  { value: 'material', label: '物资管理' },
+  { value: 'system', label: '系统设置' },
+  { value: 'approval', label: '审批' },
+];
+
 export default function AuditLog() {
   const [logs, setLogs] = useState<OperationLog[]>([]);
   const [stats, setStats] = useState<LogStats>(EMPTY_STATS);
@@ -46,8 +60,13 @@ export default function AuditLog() {
   const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(50);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('excel');
+  const [exportMode, setExportMode] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -72,11 +91,14 @@ export default function AuditLog() {
         const data = logsResult.value;
         if (Array.isArray(data)) {
           setLogs(data);
+          setTotalRecords(data.length);
         } else if (data && Array.isArray(data.data)) {
           setLogs(data.data);
           setTotalPages(data.meta?.totalPages || data.totalPages || 1);
+          setTotalRecords(data.meta?.total || data.total || 0);
         } else {
           setLogs([]);
+          setTotalRecords(0);
         }
       } else {
         console.error('获取日志失败:', logsResult.reason);
@@ -103,7 +125,7 @@ export default function AuditLog() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, filterUser, filterModule, filterLevel, filterDate]);
+  }, [currentPage, searchTerm, filterUser, filterModule, filterLevel, filterDate, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -121,8 +143,6 @@ export default function AuditLog() {
       (log.username && log.username.includes(filterUser));
     return matchSearch && matchUser;
   });
-
-  const modules = [...new Set(logs.map((l) => l.module).filter(Boolean))];
 
   const getLevelColor = (status: string | undefined) => {
     const level = status || 'info';
@@ -144,6 +164,55 @@ export default function AuditLog() {
     return map[s || 'info'] || s || '信息';
   };
 
+  // 模块名称映射（与筛选框一致）
+  const getModuleDisplayName = (module: string | undefined) => {
+    if (!module) return '-';
+    // 农事相关模块统一显示为"农事管理"
+    const farmModules = ['农事任务', '临时任务', '巡查', '问题'];
+    if (farmModules.includes(module)) return '农事管理';
+    return module;
+  };
+
+  // 操作类型中文映射
+  const getActionLabel = (action: string | undefined) => {
+    if (!action) return '-';
+    const actionMap: Record<string, string> = {
+      // 通用
+      'create': '创建',
+      'update': '更新',
+      'delete': '删除',
+      'login': '登录',
+      'logout': '登出',
+      'export': '导出',
+      'import': '导入',
+      // 审批
+      'approval': '审批',
+      'approval_approved': '审批通过',
+      'approval_rejected': '审批拒绝',
+      'approval_cancelled': '审批取消',
+      'submit': '提交',
+      'approve': '批准',
+      'reject': '驳回',
+      // 农事任务
+      'publish': '发布',
+      'assign': '分派',
+      'accept': '接受',
+      'start': '开始',
+      'complete': '完成',
+      'submit_acceptance': '提交验收',
+      'withdraw': '撤回',
+      'reassign': '重新分派',
+      'extend_deadline': '延期',
+      'cancel': '取消',
+      'abandon': '放弃',
+      'overtime_continue': '超时继续',
+      'overtime_abandon': '超时放弃',
+      // 其他
+      'remind': '催办',
+    };
+    return actionMap[action] || action;
+  };
+
   const getActionColor = (action: string) => {
     if (action.includes('LOGIN') || action.includes('登录')) return 'bg-emerald-100 text-emerald-700';
     if (action.includes('CREATE') || action.includes('新建')) return 'bg-blue-100 text-blue-700';
@@ -154,27 +223,55 @@ export default function AuditLog() {
     return 'bg-gray-100 text-gray-700';
   };
 
-  const exportLogs = () => {
-    const csv = [
-      ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'].join(','),
-      ...filteredLogs
-        .map((log) =>
-          [
-            log.created_at,
-            log.username,
-            log.action,
-            log.module,
-            log.description,
-            log.ipAddress || '-',
-            log.level || log.status || 'info',
-          ].join(',')
-        ),
-    ].join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const handleExportClick = () => {
+    setShowExportModal(true);
+  };
+
+  const handleDoExport = () => {
+    const dataToExport = selectedIds.length > 0
+      ? filteredLogs.filter((log: any) => selectedIds.includes(log.id))
+      : filteredLogs;
+
+    if (dataToExport.length === 0) {
+      alert('没有可导出的数据');
+      return;
+    }
+
+    const headers = ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'];
+    const rows = dataToExport.map((log: any) => [
+      log.created_at,
+      log.username || '系统',
+      getActionLabel(log.action),
+      getModuleDisplayName(log.module),
+      log.description || '',
+      log.ip_address || '-',
+      getLevelLabel(log.level || log.status),
+    ]);
+
+    if (exportFormat === 'csv') {
+      const BOM = '﻿';
+      const csvContent = BOM + [headers, ...rows].map(row =>
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `操作日志_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+    } else {
+      // Excel 格式
+      const excelHeaders = ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'];
+      const excelData = [excelHeaders, ...rows];
+      const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '操作日志');
+      const ext = 'xlsx';
+      XLSX.writeFile(workbook, `操作日志_${new Date().toISOString().slice(0, 10)}.${ext}`);
+    }
+
+    setShowExportModal(false);
+    setExportMode(false);
+    setSelectedIds([]);
   };
 
   return (
@@ -245,8 +342,9 @@ export default function AuditLog() {
             onChange={(e) => { setFilterModule(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
-            <option value="all">全部模块</option>
-            {modules.map((m) => <option key={m} value={m}>{m}</option>)}
+            {MODULE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
           <select
             value={filterLevel}
@@ -267,10 +365,22 @@ export default function AuditLog() {
           <Button size="sm" onClick={fetchData}>
             刷新
           </Button>
-          <Button size="sm" onClick={exportLogs}>
-            <Download className="w-4 h-4" />
-            导出日志
-          </Button>
+          {exportMode ? (
+            <>
+              <Button size="sm" variant="outline" onClick={() => { setExportMode(false); setSelectedIds([]); }}>
+                取消
+              </Button>
+              <Button size="sm" onClick={handleExportClick}>
+                <Download className="w-4 h-4" />
+                确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={() => setExportMode(true)}>
+              <Download className="w-4 h-4" />
+              导出
+            </Button>
+          )}
         </div>
       </div>
 
@@ -290,6 +400,22 @@ export default function AuditLog() {
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
+                {exportMode && (
+                  <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length > 0 && selectedIds.length === filteredLogs.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredLogs.map((log: any) => log.id));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                      className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">时间</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">用户</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
@@ -300,8 +426,24 @@ export default function AuditLog() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300 bg-white">
-              {filteredLogs.map((log) => (
+              {filteredLogs.map((log: any) => (
                 <tr key={log.id} className="hover:bg-gray-50">
+                  {exportMode && (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(log.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds([...selectedIds, log.id]);
+                          } else {
+                            setSelectedIds(selectedIds.filter((id: string) => id !== log.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-emerald-600 border-gray-400 rounded focus:ring-emerald-500"
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '-'}
                   </td>
@@ -314,9 +456,9 @@ export default function AuditLog() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>{log.action}</span>
+                    <span className={`px-2 py-1 text-xs rounded ${getActionColor(log.action)}`}>{getActionLabel(log.action)}</span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{log.module || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{getModuleDisplayName(log.module)}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={log.description}>
                     {log.description || '-'}
                   </td>
@@ -344,13 +486,13 @@ export default function AuditLog() {
 
       {/* 分页 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
-        <div className="text-sm text-gray-500">共 {filteredLogs.length} 条</div>
+        <div className="text-sm text-gray-500">共 {totalRecords} 条</div>
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages || 1}
           onPageChange={setCurrentPage}
           pageSize={pageSize}
-          onPageSizeChange={(size) => { setCurrentPage(1); }}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
           pageSizeOptions={[10, 20, 50]}
           showPageSize
         />
@@ -397,6 +539,16 @@ export default function AuditLog() {
           </div>
         </div>
       )}
+
+      {/* 导出格式选择弹窗 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        exportFormat={exportFormat}
+        selectedCount={selectedIds.length > 0 ? selectedIds.length : filteredLogs.length}
+        onFormatChange={setExportFormat}
+        onConfirm={handleDoExport}
+      />
     </div>
   );
 }
