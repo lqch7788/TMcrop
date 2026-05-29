@@ -76,6 +76,7 @@ import pestRecordsRouter from './pesticideRecords';
 import pesticideLibraryRouter from './pesticideLibrary';
 import fertilizerLibraryRouter from './fertilizerLibrary';
 import pestDiseaseDictRouter from './pestDiseaseDict';
+import userBasePermissionsRouter from './userBasePermissions';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -308,6 +309,9 @@ router.use('/pest-records', requireAuth, pestRecordsRouter);
 router.use('/pesticide-library', requireAuth, pesticideLibraryRouter);
 router.use('/fertilizer-library', requireAuth, fertilizerLibraryRouter);
 router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
+
+// 用户基地权限管理路由
+router.use('/user-base-permissions', requireAuth, userBasePermissionsRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

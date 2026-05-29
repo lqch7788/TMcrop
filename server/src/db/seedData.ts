@@ -112,7 +112,7 @@ function seedCropVarieties() {
 
   for (const v of cropVarieties) {
     db.run(`
-      INSERT OR REPLACE INTO crop_varieties
+      INSERT OR IGNORE INTO crop_varieties
       (id, crop_code, category_code, category_name, type_code, type_name,
        variety_code, variety_name, sub_variety1_code, sub_variety1_name,
        detail_variety_code, status, create_time, update_time)
@@ -195,7 +195,7 @@ function seedInventory() {
 
   for (const inv of inventoryData) {
     db.run(`
-      INSERT OR REPLACE INTO inventory
+      INSERT OR IGNORE INTO inventory
       (id, product_code, crop_name, variety, quantity, unit, grade,
        warehouse_name, storage_location, harvest_date, storage_date,
        batch_code, greenhouse_name, planting_mode, status, create_time, update_time)
@@ -238,7 +238,7 @@ function seedSuppliers() {
   const nowStr = new Date().toISOString();
   for (const sup of suppliers) {
     db.run(`
-      INSERT OR REPLACE INTO suppliers
+      INSERT OR IGNORE INTO suppliers
       (id, supplier_code, supplier_name, contact_person, contact_phone,
        mobile_phone, work_phone, fax, address, supplier_type, supplier_attribute,
        status, country, province, city, bank_name, bank_card_number,
@@ -468,7 +468,7 @@ function seedSeedSources() {
 
   for (const ss of seedSources) {
     db.run(`
-      INSERT OR REPLACE INTO seed_sources
+      INSERT OR IGNORE INTO seed_sources
       (id, source_code, source_name, source_type, source_origin,
        crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
        supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
@@ -600,7 +600,7 @@ function seedPropagationSeedSources() {
 
   for (const ps of propagationSources as any[]) {
     db.run(`
-      INSERT OR REPLACE INTO seed_sources
+      INSERT OR IGNORE INTO seed_sources
       (id, source_code, source_name, source_type, source_origin,
        crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
        supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
@@ -975,7 +975,7 @@ function seedProductionPlans() {
 
   for (const plan of productionPlans) {
     db.run(`
-      INSERT OR REPLACE INTO production_plans
+      INSERT OR IGNORE INTO production_plans
       (id, plan_code, plan_name, plan_type, crop_name, crop_variety,
        greenhouse_name, area_name, planned_quantity, actual_quantity,
        planting_date, expected_harvest_date, actual_harvest_date,
@@ -1127,7 +1127,7 @@ function seedSeedlings() {
 
   for (const sd of seedlings) {
     db.run(`
-      INSERT OR REPLACE INTO seedlings
+      INSERT OR IGNORE INTO seedlings
       (id, seedling_code, source_id, source_name, production_plan_code, crop_name, crop_variety,
        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, create_by, create_time, update_time)
@@ -1225,7 +1225,7 @@ function seedPlantings() {
 
   for (const pl of plantings) {
     db.run(`
-      INSERT OR REPLACE INTO plantings
+      INSERT OR IGNORE INTO plantings
       (id, planting_code, source_type, source_id, source_name, crop_name, crop_variety,
        greenhouse_name, area_name, planting_date, planting_quantity, planted_quantity,
        survival_quantity, survival_rate, growth_status, expected_harvest_date, status, create_by, create_time, update_time)
@@ -1475,7 +1475,7 @@ function seedHarvestRecords() {
 
   for (const hv of harvests) {
     db.run(`
-      INSERT OR REPLACE INTO harvest_records
+      INSERT OR IGNORE INTO harvest_records
       (id, harvest_code, source_id, source_name, crop_name, crop_variety, greenhouse_name,
        harvest_date, harvest_quantity, unit, unit_price, total_amount, quality_grade,
        buyer_id, buyer_name, sales_channel, status, create_by, create_time, update_time)
@@ -1563,7 +1563,7 @@ function seedLaborRecords() {
 
   for (const record of records) {
     db.run(`
-      INSERT OR REPLACE INTO labor_records
+      INSERT OR IGNORE INTO labor_records
       (id, worker_id, worker_name, work_type, work_date, work_hours, hourly_rate,
        total_amount, greenhouse_id, greenhouse_name, task_description, status, remarks, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1878,7 +1878,7 @@ function seedCropInstances() {
 
   for (const ci of instances) {
     db.run(`
-      INSERT OR REPLACE INTO crop_instances
+      INSERT OR IGNORE INTO crop_instances
       (id, instance_code, order_id, order_code, crop_category, crop_name, crop_variety,
        category_code, type_code, sub_code, source_origin, source_description,
        initial_quantity, current_quantity, planted_quantity, harvested_quantity, status,
@@ -2065,7 +2065,7 @@ function seedGreenhouses() {
     const baseName = existingBaseName ? existingBaseName : gh.base_name;
 
     db.run(`
-      INSERT OR REPLACE INTO greenhouses
+      INSERT OR IGNORE INTO greenhouses
       (id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
        company_id, company_name, lng, lat, crop, growth_day, manager, phone,
        soil_type, ph, intro, greenhouse_count, field_area, status, created_at, updated_at)
@@ -2142,7 +2142,7 @@ function seedZones() {
 
   for (const zone of zones) {
     db.run(`
-      INSERT OR REPLACE INTO zones
+      INSERT OR IGNORE INTO zones
       (id, oid, zone_code, zone_name, greenhouse_oid, greenhouse_name, zone_type, area, sort_order, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [
@@ -2756,7 +2756,7 @@ function seedSystemConfigs() {
 
   for (const config of configs) {
     db.run(`
-      INSERT OR REPLACE INTO system_configs
+      INSERT OR IGNORE INTO system_configs
       (id, config_key, config_value, config_type, category, description, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
     `, [
@@ -2813,7 +2813,7 @@ function seedUsersAndRoles() {
 
   for (const role of roles) {
     db.run(`
-      INSERT OR REPLACE INTO roles
+      INSERT OR IGNORE INTO roles
       (id, oid, role_code, role_name, description, is_system, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [role.id, role.oid, role.role_code, role.role_name, role.description, role.is_system, role.status, now, now]);
@@ -2894,7 +2894,7 @@ function seedUsersAndRoles() {
 
   for (const perm of permissions) {
     db.run(`
-      INSERT OR REPLACE INTO permissions
+      INSERT OR IGNORE INTO permissions
       (id, oid, permission_code, permission_name, category, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
     `, [perm.id, perm.oid, perm.permission_code, perm.permission_name, perm.category, now, now]);
@@ -2903,7 +2903,7 @@ function seedUsersAndRoles() {
   // ========== 管理员角色赋于所有权限 ==========
   for (const perm of permissions) {
     db.run(`
-      INSERT OR REPLACE INTO role_permissions
+      INSERT OR IGNORE INTO role_permissions
       (id, role_oid, permission_oid, created_at)
       VALUES (?, 'ROLE_ADMIN', ?, ?)
     `, [`rp-admin-${perm.id}`, perm.oid, now]);
@@ -2928,7 +2928,7 @@ function seedUsersAndRoles() {
   };
 
   db.run(`
-    INSERT OR REPLACE INTO users
+    INSERT OR IGNORE INTO users
     (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
@@ -2956,7 +2956,7 @@ function seedUsersAndRoles() {
   };
 
   db.run(`
-    INSERT OR REPLACE INTO users
+    INSERT OR IGNORE INTO users
     (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
@@ -2984,7 +2984,7 @@ function seedUsersAndRoles() {
   };
 
   db.run(`
-    INSERT OR REPLACE INTO users
+    INSERT OR IGNORE INTO users
     (id, oid, username, password_hash, real_name, org_oid, org_name, department_oid, department_name, position, email, phone, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
@@ -2997,21 +2997,21 @@ function seedUsersAndRoles() {
   // ========== 用户角色关联 ==========
   // 陆启闯 关联 管理员角色（含所有权限）
   db.run(`
-    INSERT OR REPLACE INTO user_roles
+    INSERT OR IGNORE INTO user_roles
     (id, user_oid, role_oid, created_at)
     VALUES (?, 'USER_ADMIN_001', 'ROLE_ADMIN', ?)
   `, ['ur-admin-001', now]);
 
   // 张俊生 关联 管理员角色（含编辑权限，无删除）
   db.run(`
-    INSERT OR REPLACE INTO user_roles
+    INSERT OR IGNORE INTO user_roles
     (id, user_oid, role_oid, created_at)
     VALUES (?, 'USER_MANAGER_001', 'ROLE_MANAGER', ?)
   `, ['ur-manager-001', now]);
 
   // 王建国 关联 普通用户角色（仅查看）
   db.run(`
-    INSERT OR REPLACE INTO user_roles
+    INSERT OR IGNORE INTO user_roles
     (id, user_oid, role_oid, created_at)
     VALUES (?, 'USER_REGULAR_001', 'ROLE_USER', ?)
   `, ['ur-user-001', now]);
@@ -3041,7 +3041,7 @@ function seedAuthorityData() {
 
   for (const org of orgs) {
     db.run(`
-      INSERT OR REPLACE INTO organizations (id, oid, parent_oid, aid, name, org_type, sort_order, status, description, department_id, department_name, created_at, updated_at)
+      INSERT OR IGNORE INTO organizations (id, oid, parent_oid, aid, name, org_type, sort_order, status, description, department_id, department_name, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [org.id, org.oid, org.parent_oid, org.oid, org.name, org.org_type, org.sort_number, org.status, org.description, org.department_id, org.department_id ? org.name : null, now, now]);
   }
@@ -3058,7 +3058,7 @@ function seedAuthorityData() {
 
   for (const action of actions) {
     db.run(`
-      INSERT OR REPLACE INTO actions (id, oid, action_code, action_name, category, sort_order, sort_number, status, created_at, updated_at)
+      INSERT OR IGNORE INTO actions (id, oid, action_code, action_name, category, sort_order, sort_number, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [action.id, action.oid, action.code, action.name, action.category, action.sort_number, action.sort_number, now, now]);
   }
@@ -3136,7 +3136,7 @@ function seedAuthorityData() {
 
   for (const proc of processes) {
     db.run(`
-      INSERT OR REPLACE INTO processes (id, oid, process_code, process_name, parent_oid, route, app_type, is_hidden, sort_order, status, created_at, updated_at)
+      INSERT OR IGNORE INTO processes (id, oid, process_code, process_name, parent_oid, route, app_type, is_hidden, sort_order, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [proc.id, proc.oid, proc.code, proc.name, proc.parent_oid, proc.route, proc.app_type, proc.is_hidden, proc.sort_number, now, now]);
   }
@@ -3149,7 +3149,7 @@ function seedAuthorityData() {
   for (const processOid of allProcessOids) {
     for (const actionOid of allActionOids) {
       db.run(`
-        INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+        INSERT OR IGNORE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
         VALUES (?, ?, ?, ?, 1, ?, ?)
       `, [`ra-admin-${processOid}-${actionOid}`, 'ROLE_ADMIN', processOid, actionOid, now, now]);
     }
@@ -3160,7 +3160,7 @@ function seedAuthorityData() {
   for (const processOid of allProcessOids) {
     for (const actionOid of managerActionOids) {
       db.run(`
-        INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+        INSERT OR IGNORE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
         VALUES (?, ?, ?, ?, 1, ?, ?)
       `, [`ra-manager-${processOid}-${actionOid}`, 'ROLE_MANAGER', processOid, actionOid, now, now]);
     }
@@ -3169,7 +3169,7 @@ function seedAuthorityData() {
   // ROLE_USER: 仅查看所有
   for (const processOid of allProcessOids) {
     db.run(`
-      INSERT OR REPLACE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
+      INSERT OR IGNORE INTO roles_authority (id, role_oid, process_oid, action_oid, value, created_at, updated_at)
       VALUES (?, ?, ?, ?, 1, ?, ?)
     `, [`ra-user-${processOid}-view`, 'ROLE_USER', processOid, 'ACT001', now, now]);
   }
@@ -3178,7 +3178,7 @@ function seedAuthorityData() {
   // ROLE_ADMIN: 可看所有组织数据
   for (const org of orgs) {
     db.run(`
-      INSERT OR REPLACE INTO roles_data_authority (id, role_oid, org_oid, created_at)
+      INSERT OR IGNORE INTO roles_data_authority (id, role_oid, org_oid, created_at)
       VALUES (?, ?, ?, ?)
     `, [`rda-admin-${org.oid}`, 'ROLE_ADMIN', org.oid, now]);
   }
@@ -3186,7 +3186,7 @@ function seedAuthorityData() {
   // ROLE_MANAGER: 可看生产部+技术部
   ['ORG002', 'ORG003'].forEach(orgOid => {
     db.run(`
-      INSERT OR REPLACE INTO roles_data_authority (id, role_oid, org_oid, created_at)
+      INSERT OR IGNORE INTO roles_data_authority (id, role_oid, org_oid, created_at)
       VALUES (?, ?, ?, ?)
     `, [`rda-manager-${orgOid}`, 'ROLE_MANAGER', orgOid, now]);
   });
@@ -3334,7 +3334,7 @@ function seedBusinessCropBatches() {
 
   for (const batch of cropBatches) {
     db.run(`
-      INSERT OR REPLACE INTO crop_batches
+      INSERT OR IGNORE INTO crop_batches
       (id, batch_code, plan_type, plan_type_name, crop_name, crop_type, variety,
        greenhouse_id, greenhouse_name, planting_area, stage, stage_name,
        start_date, expected_harvest_date, target_yield, actual_yield, status, planting_mode,
@@ -3420,7 +3420,7 @@ function seedBusinessInspectionRecords() {
 
   for (const ins of inspections) {
     db.run(`
-      INSERT OR REPLACE INTO inspections
+      INSERT OR IGNORE INTO inspections
       (id, record_code, inspection_type, inspector_id, inspector_name, greenhouse_name,
        check_date, check_time, check_result, issue_severity, issue_text, images, status,
        feedback_users, create_time, update_time)
@@ -3488,7 +3488,7 @@ function seedBusinessWorkers() {
 
   for (const worker of workers) {
     db.run(`
-      INSERT OR REPLACE INTO workers
+      INSERT OR IGNORE INTO workers
       (id, worker_id, name, gender, age, birth_date, id_card, phone, email, wechat,
        address, residence_address, emergency_contact, emergency_relation, emergency_phone,
        department, team, position, work_area, skill_level, skill_tags, work_years,
@@ -3754,7 +3754,7 @@ function seedBusinessPurchasePlans() {
 
   for (const plan of purchasePlans) {
     db.run(`
-      INSERT OR REPLACE INTO purchase_plans
+      INSERT OR IGNORE INTO purchase_plans
       (id, plan_code, plan_title, plan_type, department_id, department_name,
        applicant_id, applicant_name, apply_date, expected_date,
        supplier_id, supplier_name, total_amount, priority, status, approval_status,
@@ -3785,7 +3785,7 @@ function seedBusinessMaterialRequests() {
 
   for (const req of materialRequests) {
     db.run(`
-      INSERT OR REPLACE INTO material_requests
+      INSERT OR IGNORE INTO material_requests
       (id, request_code, batch_id, batch_code, greenhouse_id, greenhouse_name,
        requester_id, requester_name, request_date, materials, status,
        approver_id, approver_name, approve_date, approver_comment, create_time, update_time)
@@ -3823,7 +3823,7 @@ function seedBusinessProduceInventory() {
 
   for (const inv of produceInventory) {
     db.run(`
-      INSERT OR REPLACE INTO produce_inventory
+      INSERT OR IGNORE INTO produce_inventory
       (id, harvest_record_id, product_code, crop_name, variety, stock_type, quantity, unit,
        grade, quality, warehouse_id, warehouse_name, storage_location, harvest_date, storage_date,
        expiration_date, alert_settings, batch_code, greenhouse_name, planting_mode, status,
@@ -3858,7 +3858,7 @@ function seedBusinessHarvestRecords() {
 
   for (const record of harvestRecords) {
     db.run(`
-      INSERT OR REPLACE INTO harvest_records
+      INSERT OR IGNORE INTO harvest_records
       (id, harvest_code, source_id, source_name, crop_name, crop_variety, greenhouse_id, greenhouse_name,
        harvest_date, harvest_quantity, unit, quality, grade, harvester_ids, harvester_names,
        warehouse_id, warehouse_name, status, auditor, planting_mode, target_yield, create_time, update_time)
@@ -3946,7 +3946,7 @@ function seedBusinessApprovals() {
 
   for (const approval of approvals) {
     db.run(`
-      INSERT OR REPLACE INTO approvals
+      INSERT OR IGNORE INTO approvals
       (id, code, type, type_name, category, title, description, applicant_id, applicant_name,
        applicant_department, apply_date, apply_time, current_step, total_steps, approvers, records,
        status, priority, reminder_count, related_batch_code, business_link, create_time, update_time)
@@ -3992,7 +3992,7 @@ function seedMaterialReturns() {
 
   for (const ret of returns) {
     db.run(`
-      INSERT OR REPLACE INTO material_returns
+      INSERT OR IGNORE INTO material_returns
       (id, code, date, type, applicant, department, warehouseLocation, status, statusClass,
        remark, operator, reviewer, reviewDate, rejectReason, materials, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -4191,7 +4191,7 @@ function seedMaterialCosts() {
 
   for (const record of records) {
     db.run(`
-      INSERT OR REPLACE INTO material_costs
+      INSERT OR IGNORE INTO material_costs
       (id, cost_code, cost_type, cost_name, category, batch_id, batch_code,
        greenhouse_id, greenhouse_name, crop_name, material_name, material_type,
        unit, quantity, unit_price, total_amount, cost_date,
@@ -4336,7 +4336,7 @@ function seedEnergyCosts() {
 
   for (const record of records) {
     db.run(`
-      INSERT OR REPLACE INTO energy_costs
+      INSERT OR IGNORE INTO energy_costs
       (id, cost_code, cost_type, greenhouse_id, greenhouse_name, batch_id, batch_code,
        crop_name, quantity, unit, unit_price, total_amount, cost_date,
        meter_start, meter_end, remarks, create_by, create_time, update_time,

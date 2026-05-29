@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -430,6 +430,14 @@ export function ParkArchivePage() {
               <p className="text-gray-500">地块与园区全景档案管理</p>
             </div>
           </div>
+          {/* 基地架构配置入口 */}
+          <button
+            onClick={() => navigate('/settings/bases')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            配置基地架构
+          </button>
         </div>
       </div>
 

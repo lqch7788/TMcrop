@@ -94,6 +94,14 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <Home className="w-5 h-5 text-emerald-600" />
             </button>
+            {/* 当前基地名称 */}
+            <button
+              onClick={() => navigate('/park-archive')}
+              className="ml-2 text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline"
+              title="返回园区总览"
+            >
+              宁波北仑基地 &gt;&gt;
+            </button>
           </div>
         </div>
 

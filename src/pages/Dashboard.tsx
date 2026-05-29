@@ -1,6 +1,6 @@
 // Dashboard 页面主组件
 // 基地总览页面 - 实时监控农业生产运营状况
-import { LayoutDashboard, MapPin } from 'lucide-react';
+import { LayoutDashboard, MapPin, Settings } from 'lucide-react';
 
 // 导入已有组件
 import { StatCard } from '../components/dashboard/cards/StatCard';
@@ -103,6 +103,14 @@ export default function Dashboard() {
               <p className="text-gray-500">实时监控农业生产运营状况</p>
             </div>
           </div>
+          {/* 基地架构配置入口 */}
+          <button
+            onClick={() => navigate('/settings/bases')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            配置基地架构
+          </button>
         </div>
       </div>
 

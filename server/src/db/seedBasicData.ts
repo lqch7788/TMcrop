@@ -1153,7 +1153,7 @@ export function seedDepartments() {
 
   for (const dept of defaultDepartments) {
     db.run(`
-      INSERT OR REPLACE INTO departments
+      INSERT OR IGNORE INTO departments
       (id, oid, code, name, manager_id, manager_name, parent_oid, sort_number, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1182,7 +1182,7 @@ export function seedWarehouses() {
 
   for (const wh of defaultWarehouses) {
     db.run(`
-      INSERT OR REPLACE INTO warehouses
+      INSERT OR IGNORE INTO warehouses
       (id, oid, name, code, location, capacity, current_stock, warehouse_type, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1221,7 +1221,7 @@ export function seedGreenhouses() {
     const baseName = existingBaseName ? existingBaseName : (gh.baseName || '');
 
     db.run(`
-      INSERT OR REPLACE INTO greenhouses
+      INSERT OR IGNORE INTO greenhouses
       (id, oid, code, name, greenhouse_type, area, location, base_oid, base_name, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1251,7 +1251,7 @@ export function seedPositions() {
 
   for (const pos of defaultPositions) {
     db.run(`
-      INSERT OR REPLACE INTO positions
+      INSERT OR IGNORE INTO positions
       (id, oid, code, name, department_oid, department_name, level, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1279,7 +1279,7 @@ export function seedTeams() {
 
   for (const team of defaultTeams) {
     db.run(`
-      INSERT OR REPLACE INTO teams
+      INSERT OR IGNORE INTO teams
       (id, oid, team_code, team_name, department_oid, department_name, leader_id, leader_name, shift_type, member_count, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1310,7 +1310,7 @@ export function seedDictionaryCategories() {
 
   for (const cat of defaultDictionaryCategories) {
     db.run(`
-      INSERT OR REPLACE INTO dictionary_categories
+      INSERT OR IGNORE INTO dictionary_categories
       (id, code, name, module, description, sort_order, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1405,7 +1405,7 @@ export function seedNotificationChannels() {
 
   for (const channel of defaultNotificationChannels) {
     db.run(`
-      INSERT OR REPLACE INTO notification_channels
+      INSERT OR IGNORE INTO notification_channels
       (id, oid, channel_code, channel_name, channel_type, is_active, config, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1432,7 +1432,7 @@ export function seedNotificationRules() {
 
   for (const rule of defaultNotificationRules) {
     db.run(`
-      INSERT OR REPLACE INTO notification_rules
+      INSERT OR IGNORE INTO notification_rules
       (id, oid, rule_code, rule_name, event_type, recipient_type, recipient_ids, channel_ids, frequency, template, is_active, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -1463,7 +1463,7 @@ export function seedApprovalWorkflows() {
 
   for (const workflow of defaultApprovalWorkflows) {
     db.run(`
-      INSERT OR REPLACE INTO approval_workflows
+      INSERT OR IGNORE INTO approval_workflows
       (id, name, code, description, module, trigger_condition, nodes, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
