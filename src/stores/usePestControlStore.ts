@@ -29,6 +29,9 @@ export interface PestControlData {
   bioAgentType?: string;
   equipmentName?: string;
   equipmentCount?: string;
+  pesticideList?: string;
+  bioAgentList?: string;
+  equipmentList?: string;
   useLeafFertilizer: 'yes' | 'no';
   leafFertilizerName?: string;
   leafFertilizerDosage?: number;
@@ -64,6 +67,9 @@ const FIELD_MAP: Record<string, string> = {
   bio_agent_type: 'bioAgentType',
   equipment_name: 'equipmentName',
   equipment_count: 'equipmentCount',
+  pesticide_list: 'pesticideList',
+  bio_agent_list: 'bioAgentList',
+  equipment_list: 'equipmentList',
   use_leaf_fertilizer: 'useLeafFertilizer',
   leaf_fertilizer_name: 'leafFertilizerName',
   leaf_fertilizer_dosage: 'leafFertilizerDosage',

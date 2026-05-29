@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { Eye, Edit2, Trash2, Plus, Download, ChevronDown, ChevronRight } from 'lucide-react';
-import { PestControlData } from '@/stores';
+import { PestControlData, useDictionaryStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -101,6 +101,15 @@ export function PestControlTable({
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+  const dictionaries = useDictionaryStore((s) => s.dictionaries);
+
+  // 获取字典项标签
+  const getDictLabel = (category: string, code: string) => {
+    if (!code || !dictionaries.length) return code;
+    const items = dictionaries.filter(d => (d as any).categoryCode === category);
+    const item = items.find(d => (d as any).dictCode === code);
+    return item ? (item as any).dictLabel : code;
+  };
 
   const totalPages = Math.ceil(data.length / pageSize) || 1;
   const showCheckbox = operationMode === 'delete';
@@ -193,10 +202,10 @@ export function PestControlTable({
       {/* 表格 */}
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <TableRow className="hover:bg-transparent">
+          <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600">
+            <TableRow className="hover:bg-blue-400/30">
               {showCheckbox && (
-                <TableHead className="py-3 font-semibold text-white whitespace-nowrap w-12">
+                <TableHead className="py-3 font-bold text-white whitespace-nowrap w-12">
                   <Input
                     type="checkbox"
                     checked={data.length > 0 && selectedIds.length === data.length}
@@ -205,21 +214,21 @@ export function PestControlTable({
                   />
                 </TableHead>
               )}
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap w-10"></TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">编号</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治日期</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治类型</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">作物</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">防治区域</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作人</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施用方法</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">目标病虫害</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">备注</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">状态</TableHead>
-              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">操作</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap w-10"></TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">编号</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">防治日期</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">防治类型</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">作物</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">防治区域</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">操作人</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">施用方法</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">目标病虫害</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">备注</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">状态</TableHead>
+              <TableHead className="py-3 font-bold text-white whitespace-nowrap">操作</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-gray-200">
+          <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={showCheckbox ? 13 : 12} className="px-4 py-12 text-center text-gray-400">
@@ -238,7 +247,7 @@ export function PestControlTable({
                   <React.Fragment key={record.id}>
                     {/* 主行 */}
                     <TableRow
-                      className={`hover:bg-emerald-50 transition-colors ${expanded ? 'bg-emerald-50' : ''}`}
+                      className="bg-white hover:bg-emerald-50 transition-colors"
                     >
                       {showCheckbox && (
                         <TableCell className="px-4 py-3">
@@ -303,7 +312,7 @@ export function PestControlTable({
                       </TableCell>
                       {/* 施用方法 */}
                       <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                        {record.applicationMethod || '-'}
+                        {getDictLabel('application_method', record.applicationMethod || '') || '-'}
                       </TableCell>
                       {/* 目标病虫害 */}
                       <TableCell className="px-4 py-3">
@@ -371,38 +380,35 @@ export function PestControlTable({
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             {/* 左侧：防治详情表格 */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <div className="px-3 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold">
-                                防治详情
-                              </div>
                               <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                  <thead className="bg-emerald-50 text-emerald-700">
+                                  <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
                                     <tr>
                                       {record.controlType === 'chemical' && (
                                         <>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">序号</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">药剂名称</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">药剂类型</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">用药量</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">单位</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">稀释倍数</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">序号</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">药剂名称</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">药剂类型</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">用药量</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">单位</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">稀释倍数</th>
                                         </>
                                       )}
                                       {record.controlType === 'bio' && (
                                         <>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">序号</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">制剂名称</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">制剂类型</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">用量</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">单位</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">稀释倍数</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">序号</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">制剂名称</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">制剂类型</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">用量</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">单位</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">稀释倍数</th>
                                         </>
                                       )}
                                       {record.controlType === 'physical' && (
                                         <>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">序号</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">设备/方式</th>
-                                          <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">用量/次数</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">序号</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">设备/方式</th>
+                                          <th className="px-3 py-2 text-left font-bold whitespace-nowrap">用量/次数</th>
                                         </>
                                       )}
                                     </tr>
@@ -419,7 +425,7 @@ export function PestControlTable({
                                         <tr key={idx} className="hover:bg-emerald-50">
                                           <td className="px-3 py-2 text-center text-gray-500">{idx + 1}</td>
                                           <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
-                                          <td className="px-3 py-2 text-gray-600">{item.type || '-'}</td>
+                                          <td className="px-3 py-2 text-gray-600">{getDictLabel('pesticide_type', item.type) || '-'}</td>
                                           <td className="px-3 py-2 text-orange-600 font-medium">{item.dosage || '-'}</td>
                                           <td className="px-3 py-2 text-gray-600">{item.unit || '-'}</td>
                                           <td className="px-3 py-2 text-gray-600">{item.ratio || '-'}</td>
@@ -437,7 +443,7 @@ export function PestControlTable({
                                         <tr key={idx} className="hover:bg-emerald-50">
                                           <td className="px-3 py-2 text-center text-gray-500">{idx + 1}</td>
                                           <td className="px-3 py-2 font-medium text-gray-900">{item.name || '-'}</td>
-                                          <td className="px-3 py-2 text-gray-600">{item.type || '-'}</td>
+                                          <td className="px-3 py-2 text-gray-600">{getDictLabel('bio_agent_type', item.type) || '-'}</td>
                                           <td className="px-3 py-2 text-orange-600 font-medium">{item.dosage || '-'}</td>
                                           <td className="px-3 py-2 text-gray-600">{item.unit || '-'}</td>
                                           <td className="px-3 py-2 text-gray-600">{item.ratio || '-'}</td>
@@ -463,19 +469,16 @@ export function PestControlTable({
 
                             {/* 右侧：叶面肥联用 */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <div className="px-3 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-sm font-semibold">
-                                叶面肥联用 {record.useLeafFertilizer === 'yes' ? '' : '（未启用）'}
-                              </div>
                               {record.useLeafFertilizer === 'yes' ? (
                                 <div className="overflow-x-auto">
                                   <table className="w-full text-sm">
-                                    <thead className="bg-emerald-50 text-emerald-700">
+                                    <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
                                       <tr>
-                                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">序号</th>
-                                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">叶面肥名称</th>
-                                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">用量</th>
-                                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">单位</th>
-                                        <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">稀释倍数</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">序号</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">叶面肥名称</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">用量</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">单位</th>
+                                        <th className="px-3 py-2 text-left font-bold whitespace-nowrap">稀释倍数</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">

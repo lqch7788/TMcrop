@@ -92,16 +92,16 @@ router.post('/', (req: Request, res: Response) => {
       use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit,
       description, photos, status, create_time, update_time
     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.sprayTime, body.operatorId || null, body.operatorName || null, body.cropName,
-       body.greenhouseName || null, body.controlType, body.pesticideId || null, body.pesticideName || null,
-       body.pesticideType || null, body.specId || null, body.specContent || null,
-       body.dosage || null, body.dosageUnit || null, body.dilutionRatio || null,
-       body.targetPest || null, body.applicationMethod || null,
-       body.bioAgentId || null, body.bioAgentName || null, body.bioAgentType || null,
-       body.equipmentName || null, body.equipmentCount || null,
-       body.pesticideList || null, body.bioAgentList || null, body.equipmentList || null,
-       body.useLeafFertilizer || 'no', body.leafFertilizerName || null,
-       body.leafFertilizerDosage || null, body.leafFertilizerUnit || null,
+      [id, code, body.spray_time, body.operator_id || null, body.operator_name || null, body.crop_name,
+       body.greenhouse_name || null, body.control_type, body.pesticide_id || null, body.pesticide_name || null,
+       body.pesticide_type || null, body.spec_id || null, body.spec_content || null,
+       body.dosage || null, body.dosage_unit || null, body.dilution_ratio || null,
+       body.target_pest || null, body.application_method || null,
+       body.bio_agent_id || null, body.bio_agent_name || null, body.bio_agent_type || null,
+       body.equipment_name || null, body.equipment_count || null,
+       body.pesticide_list || null, body.bio_agent_list || null, body.equipment_list || null,
+       body.use_leaf_fertilizer || 'no', body.leaf_fertilizer_name || null,
+       body.leaf_fertilizer_dosage || null, body.leaf_fertilizer_unit || null,
        body.description || null, body.photos || null, body.status || 'completed', now, now]
     );
 
