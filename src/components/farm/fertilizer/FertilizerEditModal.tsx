@@ -12,7 +12,7 @@ import { Label } from '../../ui/label';
 import { TextArea } from '../../ui/TextArea';
 import { DictSelect } from '../../common/settings/DictSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
-import { useFertilizerStore, FertilizerData } from '@/stores';
+import { useFertilizerStore, useFertilizerLibraryStore, FertilizerData } from '@/stores';
 import type { CropVariety } from '@/types/cropVariety';
 
 interface FertilizerEditModalProps {
@@ -24,6 +24,7 @@ interface FertilizerEditModalProps {
 
 export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: FertilizerEditModalProps) {
   const store = useFertilizerStore();
+  const fertilizerLibraryStore = useFertilizerLibraryStore();
   const isIot = record.dataSource === 'auto_iot';
 
   const [form, setForm] = useState({
@@ -40,6 +41,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     fertilizeTime: '',
     operatorName: '',
     description: '',
+    inputMode: 'library' as 'library' | 'manual',
+    selectedFertilizerId: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [cropCode, setCropCode] = useState('');
@@ -64,6 +67,8 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
   // 预填充数据
   useEffect(() => {
     if (isOpen && record) {
+      // 根据是否有 fertilizerId（关联到库）决定 inputMode
+      const hasFertilizerId = !!(record as any).fertilizerId;
       setForm({
         fertilizerCode: record.fertilizerCode || '',
         fertilizerName: record.fertilizerName || '',
@@ -78,9 +83,16 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         fertilizeTime: record.fertilizeTime || '',
         operatorName: record.operatorName || '',
         description: record.description || '',
+        inputMode: hasFertilizerId ? 'library' : 'manual',
+        selectedFertilizerId: (record as any).fertilizerId || '',
       });
     }
   }, [isOpen, record]);
+
+  // 加载肥料库数据
+  useEffect(() => {
+    fertilizerLibraryStore.fetchItems({ limit: '10000' });
+  }, [fertilizerLibraryStore]);
 
   const updateField = useCallback((field: string, value: any) => {
     if (isIot) return;
@@ -96,7 +108,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
   const handleSubmit = async () => {
     if (!form.fertilizerName.trim() || isIot) return;
     setSubmitting(true);
-    await store.updateItem(record.id, {
+    const payload: Record<string, any> = {
       fertilizerCode: form.fertilizerCode,
       fertilizerName: form.fertilizerName,
       fertilizerType: form.fertilizerType,
@@ -110,7 +122,10 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
       fertilizeTime: form.fertilizeTime,
       operatorName: form.operatorName,
       description: form.description,
-    });
+      inputMode: form.inputMode,
+      selectedFertilizerId: form.selectedFertilizerId,
+    };
+    await store.updateItem(record.id, payload);
     setSubmitting(false);
     onSaved();
   };
@@ -173,6 +188,64 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         <div>
           <SectionTitle title="肥料与用量" icon="🧪" />
           <div className="space-y-3">
+            {/* 模式切换：库选择 / 手动输入 - 非 IoT 模式显示 */}
+            {!isIot && (
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="inputMode"
+                    value="library"
+                    checked={form.inputMode === 'library'}
+                    onChange={() => setForm(f => ({ ...f, inputMode: 'library', selectedFertilizerId: '' }))}
+                  />
+                  从库选择
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="inputMode"
+                    value="manual"
+                    checked={form.inputMode === 'manual'}
+                    onChange={() => setForm(f => ({ ...f, inputMode: 'manual', selectedFertilizerId: '' }))}
+                  />
+                  手动输入
+                </label>
+              </div>
+            )}
+
+            {/* 从库选择模式 - 非 IoT 模式显示 */}
+            {!isIot && form.inputMode === 'library' && (
+              <div className="mb-4">
+                <Label className="text-gray-900">选择肥料</Label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={form.selectedFertilizerId}
+                  onChange={(e) => {
+                    const selected = fertilizerLibraryStore.items.find(i => i.id === e.target.value);
+                    if (selected) {
+                      setForm(f => ({
+                        ...f,
+                        selectedFertilizerId: selected.id,
+                        fertilizerName: selected.fertilizerName,
+                        fertilizerType: selected.fertilizerType || '',
+                        dilutionRatio: selected.specs?.[0]?.suggestedRatio || '',
+                      }));
+                    }
+                  }}
+                >
+                  <option value="">-- 请选择肥料 --</option>
+                  {fertilizerLibraryStore.items
+                    .filter(item => item.status === 'active')
+                    .map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.fertilizerName} ({item.fertilizerCode})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-gray-900">肥料类型</Label>
@@ -184,16 +257,18 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
                   disabled={isIot}
                 />
               </div>
-              <div>
-                <Label className="text-gray-900">肥料名称 <span className="text-red-500">*</span></Label>
-                <Input
-                  type="text"
-                  value={form.fertilizerName}
-                  onChange={(e) => updateField('fertilizerName', e.target.value)}
-                  disabled={isIot}
-                  className={inputClass}
-                />
-              </div>
+              {form.inputMode === 'manual' && !isIot && (
+                <div>
+                  <Label className="text-gray-900">肥料名称 <span className="text-red-500">*</span></Label>
+                  <Input
+                    type="text"
+                    value={form.fertilizerName}
+                    onChange={(e) => updateField('fertilizerName', e.target.value)}
+                    disabled={isIot}
+                    className={inputClass}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-4 gap-4">
               <div>

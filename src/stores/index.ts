@@ -346,3 +346,7 @@ export type { PesticideLibrary, PesticideSpec } from './usePesticideLibraryStore
 
 export { usePestDiseaseDictStore } from './usePestDiseaseDictStore';
 export type { PestDiseaseDict } from './usePestDiseaseDictStore';
+
+// V12.0: 肥料库管理 Store
+export { useFertilizerLibraryStore } from './useFertilizerLibraryStore';
+export type { FertilizerLibrary, FertilizerSpec } from './useFertilizerLibraryStore';

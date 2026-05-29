@@ -25,6 +25,7 @@ interface ModalProps {
   headerAction?: React.ReactNode;
   bodyClassName?: string;
   showMaximize?: boolean;
+  showCloseButton?: boolean;
   enableDrag?: boolean;
   enableResize?: boolean;
   bottomContent?: React.ReactNode;
@@ -66,6 +67,7 @@ export function Modal({
   headerAction,
   bodyClassName = '',
   showMaximize = true,
+  showCloseButton = true,
   enableDrag = true,
   enableResize = true,
   bottomContent,
@@ -285,14 +287,16 @@ export function Modal({
               </>
             )}
             {/* Close Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-white hover:bg-emerald-500"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            {showCloseButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="text-white hover:bg-emerald-500"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            )}
           </div>
         </div>
 

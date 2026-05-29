@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTasks, Task } from '../../../hooks/useTasks';
-import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useProductionPlanStore, usePesticideLibraryStore, usePestDiseaseDictStore } from '../../../stores';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
@@ -14,6 +14,9 @@ import { Input } from '../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { TextArea } from '../../ui/TextArea';
 import { showAlert } from '@/lib/dialogService';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { DictSelect } from '@/components/common/settings/DictSelect';
+import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 
 interface CreateTaskModalProps {
   onClose: () => void;
@@ -32,6 +35,15 @@ type Worker = User & {
   currentLoad?: number;
 };
 
+// 药剂条目（病虫害防治用）
+interface PesticideItem {
+  name: string;       // 药剂名称
+  type: string;       // 药剂类型
+  dosage: number;      // 用药量
+  unit: string;       // 单位
+  ratio: string;      // 稀释倍数
+}
+
 /**
  * 新建任务弹窗组件
  */
@@ -43,6 +55,8 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
   const storePlans = useProductionPlanStore((state) => state.plans);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
+  const pesticideStore = usePesticideLibraryStore();
+  const pestDiseaseStore = usePestDiseaseDictStore();
 
   useEffect(() => {
     if (users.length === 0) {
@@ -75,6 +89,38 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   const [priority, setPriority] = useState<'urgent' | 'high' | 'medium' | 'low'>('medium');
   const [assigneeId, setAssigneeId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 病虫害防治专用：药剂列表
+  const [pesticides, setPesticides] = useState<PesticideItem[]>([]);
+  // 病虫害防治专用：目标病虫害
+  const [targetPests, setTargetPests] = useState<string[]>([]);
+
+  // 药剂选项（化学防治用）
+  const pesticideOptions = useMemo(() =>
+    pesticideStore.items
+      .filter(p => p.controlType === 'chemical')
+      .map(p => ({
+        value: p.pesticideName,
+        label: p.pesticideName,
+        searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+      })),
+    [pesticideStore.items]
+  );
+
+  // 病虫害选项（用于搜索选择）
+  const pestDiseaseOptions = useMemo(() =>
+    pestDiseaseStore.items.map(p => ({
+      value: p.dictName,
+      label: p.dictName,
+      searchText: `${p.dictCode} ${p.targetCrops || ''}`,
+    })),
+    [pestDiseaseStore.items]
+  );
+
+  // 加载药剂库和病虫害字典
+  useEffect(() => {
+    pesticideStore.fetchItems();
+    pestDiseaseStore.fetchItems();
+  }, []);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -308,6 +354,158 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
               className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </div>
+
+          {/* 病虫害防治专用配置 */}
+          {taskType === 'pest_control' && (
+            <div className="bg-red-50 rounded-lg p-4 border border-red-100">
+              <h4 className="text-sm font-bold text-gray-900 mb-3">病虫害防治配置</h4>
+              <div className="space-y-3">
+                {/* 目标病虫害 */}
+                <div>
+                  <Label className="text-gray-700 text-xs mb-1 block">目标病虫害</Label>
+                  <div className="space-y-2">
+                    {targetPests.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {targetPests.map((pest, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200"
+                          >
+                            {pest}
+                            <button
+                              type="button"
+                              onClick={() => setTargetPests(targetPests.filter((_, i) => i !== idx))}
+                              className="ml-1.5 text-orange-500 hover:text-orange-700 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <SearchableSelect
+                      value=""
+                      onChange={(val) => {
+                        if (val && !targetPests.includes(val)) {
+                          setTargetPests([...targetPests, val]);
+                        }
+                      }}
+                      options={pestDiseaseOptions.filter(p => !targetPests.includes(p.value))}
+                      placeholder="搜索添加目标病虫害"
+                    />
+                  </div>
+                </div>
+
+                {/* 药剂列表 */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-gray-700 text-xs">药剂列表</Label>
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        setPesticides([...pesticides, { name: '', type: '', dosage: 0, unit: '克', ratio: '' }]);
+                      }}
+                    >
+                      + 新增药剂
+                    </Button>
+                  </div>
+                  {pesticides.length === 0 ? (
+                    <div className="text-center text-gray-400 py-4 text-sm border border-dashed border-gray-300 rounded-lg">
+                      点击上方"新增药剂"添加
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {pesticides.map((item, index) => (
+                        <div key={index} className="grid grid-cols-6 gap-2 items-end bg-white p-2 rounded-lg">
+                          <div>
+                            <Label className="text-gray-700 text-xs mb-1 block">药剂名称</Label>
+                            <SearchableSelect
+                              value={item.name}
+                              onChange={(val) => {
+                                const newList = [...pesticides];
+                                newList[index] = { ...item, name: val };
+                                setPesticides(newList);
+                              }}
+                              options={pesticideOptions}
+                              placeholder="选择药剂"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-700 text-xs mb-1 block">类型</Label>
+                            <DictSelect
+                              category="pesticide_type"
+                              value={item.type}
+                              onChange={(val) => {
+                                const newList = [...pesticides];
+                                newList[index] = { ...item, type: val };
+                                setPesticides(newList);
+                              }}
+                              placeholder="类型"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-700 text-xs mb-1 block">用药量</Label>
+                            <Input
+                              type="number"
+                              value={item.dosage || ''}
+                              onChange={(e) => {
+                                const newList = [...pesticides];
+                                newList[index] = { ...item, dosage: Number(e.target.value) };
+                                setPesticides(newList);
+                              }}
+                              min="0"
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-700 text-xs mb-1 block">单位</Label>
+                            <UnitDictSelect
+                              value={item.unit}
+                              onChange={(val) => {
+                                const newList = [...pesticides];
+                                newList[index] = { ...item, unit: val };
+                                setPesticides(newList);
+                              }}
+                              placeholder="克 (g)"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-gray-700 text-xs mb-1 block">稀释倍数</Label>
+                            <Input
+                              type="text"
+                              value={item.ratio}
+                              onChange={(e) => {
+                                const newList = [...pesticides];
+                                newList[index] = { ...item, ratio: e.target.value };
+                                setPesticides(newList);
+                              }}
+                              placeholder="如: 1000"
+                              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div className="mb-1">
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setPesticides(pesticides.filter((_, i) => i !== index));
+                              }}
+                            >
+                              删除
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 底部操作 */}

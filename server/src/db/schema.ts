@@ -2804,6 +2804,42 @@ export function initializeDatabase() {
     )
   `);
 
+  // 肥料库主表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS fertilizer_library (
+      id TEXT PRIMARY KEY,
+      fertilizer_code TEXT NOT NULL UNIQUE,
+      fertilizer_name TEXT NOT NULL,
+      fertilizer_type TEXT CHECK(fertilizer_type IN ('organic', 'inorganic', 'water_soluble', 'compound', 'bio', 'slow_release', 'trace')),
+      application_timing TEXT,
+      function_desc TEXT,
+      taboo_desc TEXT,
+      shelf_life TEXT,
+      storage_condition TEXT,
+      supplier_info TEXT,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      update_time TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // 肥料规格子表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS fertilizer_specs (
+      id TEXT PRIMARY KEY,
+      fertilizer_id TEXT NOT NULL,
+      spec_content TEXT,
+      manufacturer TEXT,
+      suggested_dosage TEXT,
+      suggested_ratio TEXT,
+      dosage_unit TEXT,
+      remark TEXT,
+      status TEXT DEFAULT 'active',
+      create_time TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
+    )
+  `);
+
   // 病虫害字典表
   db.run(`
     CREATE TABLE IF NOT EXISTS pest_disease_dict (
@@ -2933,6 +2969,45 @@ export function initializeDatabase() {
   } catch (e) {}
 
   console.log('库存中心表初始化完成');
+
+  // ========== V12.0: 工作日志表 ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS work_logs (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      date TEXT NOT NULL,
+      worker TEXT NOT NULL,
+      weather TEXT DEFAULT '晴',
+      temperature TEXT DEFAULT '25°C',
+      crop TEXT DEFAULT '',
+      greenhouse TEXT DEFAULT '',
+      growth_status TEXT DEFAULT '良好',
+      tasks TEXT DEFAULT '',
+      problems TEXT DEFAULT '无',
+      solutions TEXT DEFAULT '-',
+      task_id TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
+      task_code TEXT,
+      task_type TEXT,
+      task_type_name TEXT,
+      progress REAL,
+      workload_hours REAL,
+      workload_days REAL,
+      workers INTEGER,
+      submit_time TEXT,
+      feedback_text TEXT,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+
+  // 为 work_logs 表添加索引
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_work_logs_date ON work_logs(date)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_work_logs_worker ON work_logs(worker)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_work_logs_greenhouse ON work_logs(greenhouse)`);
+  } catch (e) {}
 
   // 创建索引
   try {

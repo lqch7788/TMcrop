@@ -246,7 +246,13 @@ export function TempTaskTable({
                 <TableCell className="px-3 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    {task.dueDate}
+                    {task.dueDate ? (
+                      task.dueDate.includes('T')
+                        ? `${task.dueDate.split('T')[0]} ${task.dueDate.split('T')[1]?.substring(0, 2) || '00'}:00`
+                        : task.dueDate.length > 13
+                          ? `${task.dueDate.substring(0, 10)} ${task.dueDate.substring(11, 13)}:00`
+                          : task.dueDate
+                    ) : '-'}
                   </div>
                 </TableCell>
                 <TableCell className="px-3 py-3 text-center text-sm text-gray-600">

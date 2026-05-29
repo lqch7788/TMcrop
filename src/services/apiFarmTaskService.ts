@@ -271,6 +271,14 @@ export async function getTodayTaskRecords(): Promise<any[]> {
 }
 
 /**
+ * 获取全部任务操作记录（用于"查看全部"弹窗）
+ */
+export async function getAllTaskRecords(): Promise<any[]> {
+  const data = await enhancedApiClient.get<any[]>('/farm-tasks/records/export');
+  return data || [];
+}
+
+/**
  * 获取逾期任务列表
  * 降级策略：API → IndexedDB 缓存
  */

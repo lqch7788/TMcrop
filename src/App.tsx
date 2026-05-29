@@ -51,7 +51,6 @@ import WarehouseManagement from './pages/WarehouseManagement';
 import TeamManagement from './pages/TeamManagement';
 import CostAccounting from './pages/CostAccounting';
 import AuditLog from './pages/AuditLog';
-import BlockManagement from './pages/BlockManagement';
 import BackupRecovery from './pages/system/BackupRecovery';
 import SystemMonitorPage from './pages/system/SystemMonitor';
 // iAGS 集成新增页面（Phase 0 占位）
@@ -67,7 +66,6 @@ import PlantSettingManagement from './pages/system/PlantSettingManagement';
 import DeviceDistributionManagement from './pages/system/DeviceDistributionManagement';
 import DataMigration from './pages/system/DataMigration';
 
-import BaseSettings from './pages/BaseSettings';
 import DeviceMonitor from './pages/DeviceMonitor';
 import AlertInfo from './pages/AlertInfo';
 import Indicators from './pages/Indicators';
@@ -94,6 +92,7 @@ import Approved from './pages/Approved';
 import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
 import FarmStructureManagement from './pages/farm/FarmStructureManagement';
+import BaseOperationsCenter from './pages/BaseOperationsCenter';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
 
@@ -101,6 +100,7 @@ import CropVarietyManagement from './components/farm/crop-variety/CropVarietyMan
 import PestControlPage from './components/farm/pest-control/PestControlPage';
 import PesticideLibraryPage from './components/settings/pesticide-library/PesticideLibraryPage';
 import PestDiseaseDictPage from './components/settings/pest-disease-dict/PestDiseaseDictPage';
+import FertilizerLibraryPage from './components/settings/fertilizer-library/FertilizerLibraryPage';
 
 import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
@@ -262,12 +262,13 @@ function AppContent() {
             {/* 病虫害防治管理 */}
             <Route path="pesticide-library" element={<PesticideLibraryPage />} />
             <Route path="pest-disease-dict" element={<PestDiseaseDictPage />} />
+            <Route path="fertilizer-library" element={<FertilizerLibraryPage />} />
 
             <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
-            <Route path="bases" element={<BaseSettings />} />
-            <Route path="block" element={<BlockManagement />} />
+            <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
+            <Route path="base-operations" element={<BaseOperationsCenter />} />
             <Route path="monitor" element={<SystemMonitorPage />} />
             <Route path="backup" element={<BackupRecovery />} />
             {/* iAGS 集成新增路由（Phase 0 占位） */}

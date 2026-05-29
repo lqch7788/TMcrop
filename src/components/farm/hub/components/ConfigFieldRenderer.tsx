@@ -3,13 +3,14 @@
  * 根据配置项类型动态渲染不同的输入控件
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button, Label } from '@/components/ui';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { TextArea } from '../../../ui/TextArea';
 import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
+import { useDictionaryStore, getDictItems } from '@/stores';
 
 interface ConfigFieldRendererProps {
   /** 配置项定义 */
@@ -45,6 +46,16 @@ export function ConfigFieldRenderer({
 
   // 生成唯一ID
   const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // 确保数据词典已加载
+  const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  const loading = useDictionaryStore((state) => state.loading);
+  useEffect(() => {
+    const hasValidData = dictionaries.length > 0 && 'categoryCode' in dictionaries[0];
+    if ((dictionaries.length === 0 || !hasValidData) && !loading) {
+      useDictionaryStore.getState().loadDictionaries();
+    }
+  }, [dictionaries.length, loading]);
 
   // ========== 渲染文本输入 ==========
   const renderTextInput = () => (
@@ -246,6 +257,26 @@ export function ConfigFieldRenderer({
               disabled={disabled}
               className={`${baseInputClass} text-sm`}
             />
+          </div>
+        );
+
+      case 'dict':
+        return (
+          <div key={fieldDef.key} className="flex-1 min-w-[120px]">
+            <Label className="text-xs text-gray-500 mb-1">{fieldDef.label}</Label>
+            <select
+              value={fieldValue as string}
+              onChange={e => onEntryChange(fieldDef.key, e.target.value)}
+              disabled={disabled}
+              className={`${baseInputClass} text-sm`}
+            >
+              <option value="">选择单位</option>
+              {(fieldDef.dictCategory ? getDictItems(fieldDef.dictCategory) : []).map(item => (
+                <option key={item.dictCode} value={item.dictValue || item.dictCode}>
+                  {item.dictLabel}
+                </option>
+              ))}
+            </select>
           </div>
         );
 

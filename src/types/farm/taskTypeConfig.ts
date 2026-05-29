@@ -23,13 +23,15 @@ export interface EntryFieldDef {
   /** 显示标签 */
   label: string;
   /** 字段类型 */
-  type: 'text' | 'select' | 'number';
+  type: 'text' | 'select' | 'number' | 'dict';
   /** 单位 */
   unit?: string;
   /** 下拉选项（当type为select时） */
   options?: { value: string; label: string }[];
   /** 占位文本 */
   placeholder?: string;
+  /** 数据词典分类（当type为dict时） */
+  dictCategory?: string;
 }
 
 /**
@@ -146,10 +148,21 @@ const fertilizationConfig: TaskTypeConfig = {
             ],
           },
           {
+            key: 'fertilizerName',
+            label: '肥料名称',
+            type: 'text',
+            placeholder: '手动输入肥料名称',
+          },
+          {
             key: 'quantity',
             label: '用量',
             type: 'number',
-            unit: 'kg/亩',
+          },
+          {
+            key: 'quantityUnit',
+            label: '单位',
+            type: 'dict',
+            dictCategory: 'dosage_unit',
           },
           {
             key: 'dilutionRatio',
@@ -273,8 +286,8 @@ const rootIrrigationConfig: TaskTypeConfig = {
  * 任务类型配置数据 - 植保
  */
 const pesticideConfig: TaskTypeConfig = {
-  value: 'pesticide',
-  label: '植保',
+  value: 'pest_control',
+  label: '病虫害防治',
   icon: 'Bug',
   color: 'bg-red-500',
   category: 'agriculture',
@@ -329,7 +342,12 @@ const pesticideConfig: TaskTypeConfig = {
             key: 'dosage',
             label: '用量',
             type: 'number',
-            unit: 'g/亩',
+          },
+          {
+            key: 'dosageUnit',
+            label: '单位',
+            type: 'dict',
+            dictCategory: 'dosage_unit',
           },
           {
             key: 'dilutionRatio',
