@@ -1205,15 +1205,25 @@ export function seedWarehouses() {
 
 /**
  * 导入温室大棚数据
+ * 保留已有的 base_oid 和 base_name 关联
  */
 export function seedGreenhouses() {
   const db = getDatabase();
 
   for (const gh of defaultGreenhouses) {
+    // 检查是否已存在记录及其 base_oid
+    const existing = db.exec(`SELECT base_oid, base_name FROM greenhouses WHERE oid = ?`, [gh.oid]);
+    const existingBaseOid = existing.length > 0 && existing[0].values.length > 0 && existing[0].values[0][0] ? existing[0].values[0][0] : null;
+    const existingBaseName = existing.length > 0 && existing[0].values.length > 0 && existing[0].values[0][1] ? existing[0].values[0][1] : null;
+
+    // 优先使用已有的 base_oid，避免种子数据覆盖重要关联
+    const baseOid = existingBaseOid ? existingBaseOid : (gh.baseOid || '');
+    const baseName = existingBaseName ? existingBaseName : (gh.baseName || '');
+
     db.run(`
       INSERT OR REPLACE INTO greenhouses
-      (id, oid, code, name, greenhouse_type, area, location, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, oid, code, name, greenhouse_type, area, location, base_oid, base_name, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       gh.id,
       gh.oid,
@@ -1222,6 +1232,8 @@ export function seedGreenhouses() {
       gh.greenhouseType,
       gh.area,
       gh.location,
+      baseOid,
+      baseName,
       gh.status,
       gh.createTime || new Date().toISOString(),
       gh.createTime || new Date().toISOString()
@@ -1814,6 +1826,59 @@ export function seedIndicatorEvaluations() {
   if (inserted > 0) console.log(`已导入 ${inserted} 条指标评估数据`);
 }
 
+/**
+ * 导入肥料知识库种子数据（有机肥、无机肥）
+ * 用于补充数据库中缺失的肥料类型数据
+ */
+function seedFertilizerLibrary() {
+  const db = getDatabase();
+
+  // 检查是否已有数据
+  const existing = db.exec('SELECT COUNT(*) FROM fertilizer_library WHERE fertilizer_type IN (\'organic\', \'inorganic\')');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`肥料知识库有机肥/无机肥已存在 (${count}条)，跳过导入`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const fertilizers = [
+    // 有机肥
+    { name: '腐熟牛粪', type: 'organic', timing: 'base', functionDesc: '富含有机质和氮磷钾，改良土壤结构，提高土壤保水保肥能力。', tabooDesc: '未经腐熟的新鲜粪便不可直接施用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '腐熟羊粪', type: 'organic', timing: 'base', functionDesc: '有机质含量高，肥效持久，改善土壤微生态。', tabooDesc: '应充分腐熟后使用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '腐熟猪粪', type: 'organic', timing: 'base', functionDesc: '氮磷钾含量较高，营养全面，肥效较好。', tabooDesc: '需堆肥发酵腐熟后使用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '鸡粪有机肥', type: 'organic', timing: 'base', functionDesc: '养分含量高，有机质丰富，快速提升土壤肥力。', tabooDesc: '必须充分腐熟，否则易烧根。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '商品有机肥', type: 'organic', timing: 'base,dressing', functionDesc: '经工厂化处理的有机肥料，养分稳定，使用方便。', tabooDesc: '根据产品说明适量使用。', shelfLife: '2年', storage: '阴凉干燥处保存' },
+    { name: '堆肥', type: 'organic', timing: 'base', functionDesc: '利用农作物秸秆、畜禽粪便等堆制而成，改良土壤效果好。', tabooDesc: '确保堆肥温度达到发酵要求。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '沼渣', type: 'organic', timing: 'base', functionDesc: '沼气发酵后的残留物，含有丰富有机质和微生物。', tabooDesc: '使用前需晾干或堆置一段时间。', shelfLife: '1年', storage: '阴凉通风处保存' },
+    { name: '饼肥', type: 'organic', timing: 'base,dressing', functionDesc: '油料作物种子榨油后的残渣，养分含量高。', tabooDesc: '需腐熟后使用，不能直接接触根系。', shelfLife: '2年', storage: '阴凉干燥处保存' },
+    // 无机肥
+    { name: '尿素', type: 'inorganic', timing: 'base,dressing', functionDesc: '高浓度氮肥，氮含量46%，肥效快。', tabooDesc: '不能直接接触叶片，避免高温时施用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '碳酸氢铵', type: 'inorganic', timing: 'base,dressing', functionDesc: '含氮17%左右，肥效快，挥发性强。', tabooDesc: '深施覆土，避免在温室密闭环境使用。', shelfLife: '6个月', storage: '阴凉干燥处保存' },
+    { name: '硫酸铵', type: 'inorganic', timing: 'base,dressing', functionDesc: '含氮20%左右，生理酸性肥料。', tabooDesc: '长期使用注意土壤酸化。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '磷酸二铵', type: 'inorganic', timing: 'base', functionDesc: '含氮18%、五氧化二磷46%，高浓度复合肥。', tabooDesc: '避免与碱性肥料混用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '过磷酸钙', type: 'inorganic', timing: 'base', functionDesc: '水溶性磷肥，含五氧化二磷12-20%。', tabooDesc: '应集中施于根系附近。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '硫酸钾', type: 'inorganic', timing: 'base,dressing', functionDesc: '含钾50%左右，生理酸性肥料。', tabooDesc: '避免在酸性土壤连续大量使用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '氯化钾', type: 'inorganic', timing: 'base,dressing', functionDesc: '含钾60%左右，价格较低的钾肥。', tabooDesc: '忌氯作物（如烟草、马铃薯）禁用。', shelfLife: '长期', storage: '阴凉干燥处保存' },
+    { name: '硝酸钾', type: 'inorganic', timing: 'dressing,foliar', functionDesc: '含氮13%、钾46%，速效复合肥。', tabooDesc: '避免高温时叶面喷施。', shelfLife: '1年', storage: '阴凉干燥处保存' },
+  ];
+
+  let codeIndex = 1;
+  for (const fert of fertilizers) {
+    const id = `fl-seed-${Date.now()}-${codeIndex}`;
+    const code = `FG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${String(codeIndex).padStart(4, '0')}`;
+    db.run(`
+      INSERT INTO fertilizer_library
+      (id, fertilizer_code, fertilizer_name, fertilizer_type, application_timing,
+       function_desc, taboo_desc, shelf_life, storage_condition, status, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, code, fert.name, fert.type, fert.timing, fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage, 'active', now, now]);
+    codeIndex++;
+  }
+
+  console.log(`已导入 ${fertilizers.length} 条肥料知识库种子数据`);
+}
+
 export function exportBasicData() {
   seedDepartments();
   seedWarehouses();
@@ -1827,6 +1892,7 @@ export function exportBasicData() {
   seedNotificationRules();
   seedApprovalWorkflows();
   seedCodeRuleCategories();
+  seedFertilizerLibrary();
   saveDatabase();
   console.log('基础数据导入完成');
 }

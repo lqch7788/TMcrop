@@ -89,10 +89,12 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     }
   }, [isOpen, record]);
 
-  // 加载肥料库数据
+  // 获取 fetchItems 方法 (稳定的函数引用，避免 useEffect 依赖对象引用导致无限循环)
+  const fetchLibraryItems = useFertilizerLibraryStore(state => state.fetchItems);
+
   useEffect(() => {
-    fertilizerLibraryStore.fetchItems({ limit: '10000' });
-  }, [fertilizerLibraryStore]);
+    fetchLibraryItems({ limit: '10000' });
+  }, [fetchLibraryItems]);
 
   const updateField = useCallback((field: string, value: any) => {
     if (isIot) return;
