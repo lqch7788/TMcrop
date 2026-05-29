@@ -1,24 +1,11 @@
 /**
- * 基地架构管理 — 统一入口页面（基地空间架构 V1.0）
- * 4 TAB: 公司基地 / 设施管理 / 区块划分 / 种植记录
+ * 基地架构管理页面（基地空间架构 V1.0）
+ * 功能：公司基地管理（管理员配置入口）
+ * 日常运营请使用「基地运营中心」
  */
-import { useState } from 'react';
-import { LayoutDashboard, ArrowLeft } from 'lucide-react';
 import CompanyBaseTab from '../../components/farm-structure/CompanyBaseTab';
-import FacilityTab from '../../components/farm-structure/FacilityTab';
-import BlockTab from '../../components/farm-structure/BlockTab';
-import PlantingRecordTab from '../../components/farm-structure/PlantingRecordTab';
-
-const TABS = [
-  { key: 'company-base', label: '公司基地' },
-  { key: 'facility', label: '设施管理' },
-  { key: 'block', label: '区块划分' },
-  { key: 'planting-record', label: '种植记录' },
-] as const;
 
 export default function FarmStructureManagement() {
-  const [activeTab, setActiveTab] = useState<string>('company-base');
-
   return (
     <div className="space-y-6">
       {/* 页面头部 */}
@@ -30,45 +17,35 @@ export default function FarmStructureManagement() {
               className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
               title="返回系统设置"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </a>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <LayoutDashboard className="w-6 h-6 text-white" />
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">基地架构管理</h1>
-              <p className="text-gray-500">公司基地、设施管理、区块划分和种植记录</p>
+              <p className="text-gray-500">公司基地结构配置（管理员入口）</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* TAB 切换栏 */}
-      <div className="flex gap-0 border-b border-gray-200">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`
-              px-5 py-3 text-sm font-medium border-b-2 transition-colors
-              ${activeTab === tab.key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-400'
-              }
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* 说明文字 */}
+      <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+        <p className="text-sm text-blue-700">
+          <span className="font-semibold">提示：</span>
+          基地架构用于配置公司-基地的层级结构。日常运营（温室管理、区域划分、种植记录）请使用「
+          <a href="/settings/base-operations" className="underline font-medium">基地运营中心</a>
+          」。
+        </p>
       </div>
 
-      {/* TAB 内容区 */}
-      <div className="min-h-[600px]">
-        {activeTab === 'company-base' && <CompanyBaseTab />}
-        {activeTab === 'facility' && <FacilityTab />}
-        {activeTab === 'block' && <BlockTab />}
-        {activeTab === 'planting-record' && <PlantingRecordTab />}
-      </div>
+      {/* 公司基地 TAB */}
+      <CompanyBaseTab />
     </div>
   );
 }

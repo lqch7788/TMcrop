@@ -85,6 +85,8 @@ export default function CompanyBaseTab() {
       // addBase 已经更新了本地 store，不需要再调用 loadBases
       setShowModal(false);
       setEditingBase(null);
+      // 通知园区总览页面刷新数据
+      window.dispatchEvent(new CustomEvent('farmStructureUpdated'));
     } catch (err) {
       await showAlert('保存失败: ' + (err instanceof Error ? err.message : '未知错误'));
     }
@@ -96,6 +98,8 @@ export default function CompanyBaseTab() {
     try {
       await removeBase(showDeleteConfirm.oid);
       setShowDeleteConfirm(null);
+      // 通知园区总览页面刷新数据
+      window.dispatchEvent(new CustomEvent('farmStructureUpdated'));
     } catch (err) {
       await showAlert('删除失败');
     }

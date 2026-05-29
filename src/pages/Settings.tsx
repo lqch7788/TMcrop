@@ -6,7 +6,7 @@ import {
   Clock, DollarSign, Server, DatabaseBackup, Sprout,
   // iAGS 集成新增图标
   Grid3X3, Radio, Video, Droplets, Zap, AlertTriangle, Bug, Wrench, Tractor,
-  MonitorCheck,
+  MonitorCheck, Package,
 } from 'lucide-react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 
@@ -21,11 +21,8 @@ const basicDataSections = [
 
 // 组2: 农场结构 — 基地 · 大棚 · 分区 · 区块（物理空间架构）
 const farmStructureSections = [
-  { icon: Building2, label: '基地设置', path: '/settings/bases', desc: '管理基地信息配置' },
-  { icon: Sprout, label: '基地架构', path: '/settings/farm-structure', desc: '公司基地 · 设施管理 · 区块划分 · 种植记录' },
-  { icon: Layers, label: '区块管理', path: '/settings/block', desc: '管理基地下的种植区块' },
-  { icon: Grid3X3, label: '分区管理', path: '/settings/partitions', desc: '大棚和种植分区层级管理 · 传感器/水肥/摄像头关联', isIags: true },
-  { icon: Radio, label: '区域系统', path: '/settings/area-systems', desc: '分区与设备系统的关联映射配置', isIags: true },
+  { icon: Sprout, label: '基地架构', path: '/settings/farm-structure', desc: '公司基地 · 设施管理 · 区块结构' },
+  { icon: Building2, label: '基地运营中心', path: '/settings/base-operations', desc: '设施管理 · 区域划分 · 种植记录' },
 ];
 
 // 组3: 权限管理 — 安全与流程控制
@@ -39,10 +36,10 @@ const permissionSections = [
 const productionSections = [
   { icon: Database, label: '作物品种库', path: '/settings/crop-variety', desc: '统一管理系统作物品种编码' },
   { icon: ScrollText, label: '工序管理', path: '/settings/processes', desc: '定义标准农事工序' },
-  { icon: Tractor, label: '种植设置', path: '/settings/plant-settings', desc: '种植图标和品种种植参数配置', isIags: true },
   { icon: DollarSign, label: '成本核算', path: '/settings/cost-accounting', desc: '成本类别和预算管理' },
   { icon: Bug, label: '药剂库', path: '/settings/pesticide-library', desc: '管理药剂信息、规格参数和生产厂家' },
   { icon: AlertTriangle, label: '病虫害字典', path: '/settings/pest-disease-dict', desc: '管理病虫害类型、名称和防治方法' },
+  { icon: Package, label: '肥料库', path: '/settings/fertilizer-library', desc: '管理肥料信息、规格参数和供应商' },
 ];
 
 // 组5: IoT设备 — 硬件设备参数和管理（iAGS集成）
@@ -53,14 +50,17 @@ const iotDeviceSections = [
   { icon: Monitor, label: '设备管理', path: '/settings/device', desc: 'IoT设备注册与监控配置' },
   { icon: MonitorCheck, label: '设备分配', path: '/settings/device-distribution', desc: 'IoT设备分配到温室区域 + 运行参数', isIags: true },
   { icon: Bug, label: '工程调试', path: '/settings/project-debug', desc: 'HMI版本、数据库测试、系统诊断工具', isIags: true },
+  { icon: Grid3X3, label: '分区管理', path: '/settings/partitions', desc: '大棚和种植分区层级管理 · 传感器/水肥/摄像头关联', isIags: true },
+  { icon: Radio, label: '区域系统', path: '/settings/area-systems', desc: '分区与设备系统的关联映射配置', isIags: true },
+  { icon: Tractor, label: '种植设置', path: '/settings/plant-settings', desc: '种植图标和品种种植参数配置', isIags: true },
+  { icon: Zap, label: '能耗管理', path: '/settings/energy-configs', desc: '大棚能耗类型和计量设备配置', isIags: true },
+  { icon: AlertTriangle, label: '警报管理', path: '/settings/alarm-configs', desc: '三级警报级别和通知规则配置', isIags: true },
 ];
 
 // 组6: 监控告警 — 系统监控与合规
 const monitorSections = [
   { icon: Server, label: '系统监控', path: '/settings/monitor', desc: '服务器和服务运行状态监控' },
   { icon: DatabaseBackup, label: '备份恢复', path: '/settings/backup', desc: '数据备份与恢复管理' },
-  { icon: Zap, label: '能耗管理', path: '/settings/energy-configs', desc: '大棚能耗类型和计量设备配置', isIags: true },
-  { icon: AlertTriangle, label: '警报管理', path: '/settings/alarm-configs', desc: '三级警报级别和通知规则配置', isIags: true },
 ];
 
 // 组7: 运营管理 — 仓库、班组与人事

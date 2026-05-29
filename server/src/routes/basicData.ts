@@ -444,6 +444,7 @@ router.post('/zones', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [id, oid, zoneCode, zoneName, baseOid || '', zoneType || '', area || 0, sortOrder || 0, now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '区域创建成功', data: { id, oid, zoneCode, zoneName } });
   } catch (error) {
     console.error('创建区域失败:', error);
@@ -476,6 +477,7 @@ router.put('/zones/:id', (req, res) => {
       WHERE id = ?
     `, [zoneName, zoneCode, baseOid, zoneType, area, sortOrder, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '区域更新成功' });
   } catch (error) {
     console.error('更新区域失败:', error);
@@ -495,6 +497,7 @@ router.delete('/zones/:id', (req, res) => {
 
     db.run(`UPDATE zones SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '区域删除成功' });
   } catch (error) {
     console.error('删除区域失败:', error);
@@ -561,6 +564,7 @@ router.post('/blocks', (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [id, oid, blockCode, blockName, zoneOid || '', blockType || '', area || 0, sortOrder || 0, now, now]);
 
+    saveDatabase();
     res.json({ success: true, message: '地块创建成功', data: { id, oid, blockCode, blockName } });
   } catch (error) {
     console.error('创建地块失败:', error);
@@ -593,6 +597,7 @@ router.put('/blocks/:id', (req, res) => {
       WHERE id = ?
     `, [blockName, blockCode, zoneOid, blockType, area, sortOrder, status, now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '地块更新成功' });
   } catch (error) {
     console.error('更新地块失败:', error);
@@ -612,6 +617,7 @@ router.delete('/blocks/:id', (req, res) => {
 
     db.run(`UPDATE blocks SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '地块删除成功' });
   } catch (error) {
     console.error('删除地块失败:', error);
@@ -1167,6 +1173,7 @@ router.post('/greenhouses', (req, res) => {
       now, now
     ]);
 
+    saveDatabase();
     res.json({ success: true, message: '温室创建成功', data: { id, oid, code, name } });
   } catch (error) {
     console.error('创建温室失败:', error);
@@ -1224,6 +1231,7 @@ router.put('/greenhouses/:id', (req, res) => {
       now, id
     ]);
 
+    saveDatabase();
     res.json({ success: true, message: '温室更新成功' });
   } catch (error) {
     console.error('更新温室失败:', error);
@@ -1243,6 +1251,7 @@ router.delete('/greenhouses/:id', (req, res) => {
 
     db.run(`UPDATE greenhouses SET status = 'inactive', updated_at = ? WHERE id = ?`, [now, id]);
 
+    saveDatabase();
     res.json({ success: true, message: '温室删除成功' });
   } catch (error) {
     console.error('删除温室失败:', error);
