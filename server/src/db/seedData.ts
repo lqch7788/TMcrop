@@ -2055,6 +2055,15 @@ function seedGreenhouses() {
   ];
 
   for (const gh of greenhouses) {
+    // 保留已有的 base_oid 关联（避免种子数据覆盖正确的基地关联）
+    const existing = db.exec(`SELECT base_oid, base_name FROM greenhouses WHERE oid = ?`, [gh.oid]);
+    const existingBaseOid = existing.length > 0 && existing[0].values.length > 0 && existing[0].values[0][0] ? existing[0].values[0][0] : null;
+    const existingBaseName = existing.length > 0 && existing[0].values.length > 0 && existing[0].values[0][1] ? existing[0].values[0][1] : null;
+
+    // 优先使用已有的 base_oid
+    const baseOid = existingBaseOid ? existingBaseOid : gh.base_oid;
+    const baseName = existingBaseName ? existingBaseName : gh.base_name;
+
     db.run(`
       INSERT OR REPLACE INTO greenhouses
       (id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
@@ -2063,7 +2072,7 @@ function seedGreenhouses() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       gh.id, gh.oid, gh.code, gh.name, gh.greenhouse_type, gh.area, gh.location,
-      gh.base_oid, gh.base_name, gh.company_id, gh.company_name,
+      baseOid, baseName, gh.company_id, gh.company_name,
       gh.lng, gh.lat, gh.crop, gh.growth_day, gh.manager, gh.phone,
       gh.soil_type, gh.ph, gh.intro, gh.greenhouse_count, gh.field_area,
       gh.status, new Date().toISOString(), new Date().toISOString()

@@ -2828,6 +2828,7 @@ export function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS fertilizer_specs (
       id TEXT PRIMARY KEY,
       fertilizer_id TEXT NOT NULL,
+      brand_name TEXT,
       spec_content TEXT,
       manufacturer TEXT,
       suggested_dosage TEXT,

@@ -14,7 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { DictSelect } from '../../common/settings/DictSelect';
 import { GreenhouseSelect } from '../../common/settings/GreenhouseSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
-import { useFertilizerStore, useProductionPlanStore, useFertilizerLibraryStore } from '@/stores';
+import { useFertilizerStore, useProductionPlanStore, useFertilizerLibraryStore, usePlantingStore } from '@/stores';
 import { validateDateNotFuture } from '@/lib/validators';
 import FertilizerCodeGenerator from './FertilizerCodeGenerator';
 import type { CropVariety } from '@/types/cropVariety';
@@ -44,6 +44,9 @@ const defaultForm = {
   description: '',
   inputMode: 'library' as 'library' | 'manual',
   selectedFertilizerId: '',
+  // 关联种植记录
+  plantingId: '',
+  plantingCode: '',
 };
 
 export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddModalProps) {
@@ -61,6 +64,12 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
   const [showPlanSearch, setShowPlanSearch] = useState(false);
   const planSearchRef = useRef<HTMLDivElement>(null);
 
+  // 种植记录搜索状态
+  const [plantingSearchKeyword, setPlantingSearchKeyword] = useState('');
+  const [selectedPlantingLabel, setSelectedPlantingLabel] = useState(''); // 选中显示文本
+  const [showPlantingSearch, setShowPlantingSearch] = useState(false);
+  const plantingSearchRef = useRef<HTMLDivElement>(null);
+
   // 获取生产计划列表（过滤已完成）
   const planOptions = useMemo(() => {
     const plans = useProductionPlanStore.getState().plans;
@@ -73,11 +82,33 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     );
   }, [planSearchKeyword]);
 
-  // 点击外部关闭计划搜索
+  // 获取种植记录列表（过滤未采收）
+  const plantingOptions = useMemo(() => {
+    const plantings = usePlantingStore.getState().items;
+    const activePlantings = plantings.filter(p => !p.isHarvest);
+    if (!plantingSearchKeyword.trim()) return activePlantings;
+    const kw = plantingSearchKeyword.toLowerCase();
+    return activePlantings.filter(p =>
+      (p.plantCode || '').toLowerCase().includes(kw) ||
+      (p.cropName || '').toLowerCase().includes(kw) ||
+      (p.rootName || '').toLowerCase().includes(kw)
+    );
+  }, [plantingSearchKeyword]);
+
+  // 当前选中肥料的品牌名称
+  const selectedFertilizerBrand = useMemo(() => {
+    const selected = fertilizerLibraryStore.items.find(i => i.id === form.selectedFertilizerId);
+    return selected?.specs?.[0]?.brandName || '-';
+  }, [fertilizerLibraryStore.items, form.selectedFertilizerId]);
+
+  // 点击外部关闭搜索下拉
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (planSearchRef.current && !planSearchRef.current.contains(e.target as Node)) {
         setShowPlanSearch(false);
+      }
+      if (plantingSearchRef.current && !plantingSearchRef.current.contains(e.target as Node)) {
+        setShowPlantingSearch(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -99,10 +130,12 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
     }
   }, []);
 
-  // 加载肥料库数据
+  // 获取 fetchItems 方法 (稳定的函数引用，避免 useEffect 依赖对象引用导致无限循环)
+  const fetchLibraryItems = useFertilizerLibraryStore(state => state.fetchItems);
+
   useEffect(() => {
-    fertilizerLibraryStore.fetchItems({ limit: '10000' });
-  }, [fertilizerLibraryStore]);
+    fetchLibraryItems({ limit: '10000' });
+  }, [fetchLibraryItems]);
 
   // 重置表单
   useEffect(() => {
@@ -112,6 +145,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       setSelectedCrop(null);
       setPlanSearchKeyword('');
       setSelectedPlanLabel('');
+      setPlantingSearchKeyword('');
+      setSelectedPlantingLabel('');
+      // 加载种植记录列表
+      usePlantingStore.getState().loadItems();
     }
   }, [isOpen]);
 
@@ -153,6 +190,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       description: form.description,
       inputMode: form.inputMode,
       selectedFertilizerId: form.selectedFertilizerId,
+      plantingId: form.plantingId,
+      plantingCode: form.plantingCode,
     };
     await store.createItem(payload);
     setSubmitting(false);
@@ -312,15 +351,155 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   </>
                 )}
               </div>
-              <div>
+              <div ref={plantingSearchRef} className="relative">
                 <Label className="text-gray-900">关联种植记录</Label>
+                {/* 已选中记录 */}
+                {selectedPlantingLabel ? (
+                  <div className={`p-2 border rounded-lg ${
+                    form.plantingId
+                      ? 'bg-purple-50 border-purple-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-medium ${
+                        form.plantingId ? 'text-purple-800' : 'text-gray-500'
+                      }`}>
+                        {selectedPlantingLabel}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          updateField('plantingId', '');
+                          updateField('plantingCode', '');
+                          updateField('greenhouseName', '');
+                          updateField('cropName', '');
+                          setCropCode('');
+                          setSelectedCrop(null);
+                          setPlantingSearchKeyword('');
+                          setSelectedPlantingLabel('');
+                        }}
+                      >
+                        <X className={`w-4 h-4 ${form.plantingId ? 'text-purple-600' : 'text-gray-400'}`} />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex">
+                      <Input
+                        type="text"
+                        value={plantingSearchKeyword}
+                        onChange={(e) => { setPlantingSearchKeyword(e.target.value); setShowPlantingSearch(true); }}
+                        onFocus={() => setShowPlantingSearch(true)}
+                        placeholder="搜索种植记录批号..."
+                        className="flex-1 px-3 py-2 border border-gray-400 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowPlantingSearch(!showPlantingSearch)}
+                        className="border border-l-0 border-gray-400 rounded-l-none rounded-r-lg"
+                      >
+                        <Search className="w-4 h-4 text-gray-500" />
+                      </Button>
+                    </div>
+                    {/* 下拉选项 */}
+                    {showPlantingSearch && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        {/* 第一个选项：不关联 */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            updateField('plantingId', '');
+                            updateField('plantingCode', '');
+                            updateField('greenhouseName', '');
+                            updateField('cropName', '');
+                            setCropCode('');
+                            setSelectedCrop(null);
+                            setPlantingSearchKeyword('');
+                            setSelectedPlantingLabel('不关联种植记录');
+                            setShowPlantingSearch(false);
+                          }}
+                          className="w-full justify-start rounded-none border-b border-gray-100"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">不关联种植记录</span>
+                        </Button>
+                        {plantingOptions.length > 0 ? (
+                          plantingOptions.map((planting) => (
+                            <Button
+                              key={planting.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                updateField('plantingId', planting.id);
+                                updateField('plantingCode', planting.plantCode);
+                                updateField('greenhouseName', planting.rootName || planting.areaName || '');
+                                updateField('cropName', planting.cropName || '');
+                                setPlantingSearchKeyword(planting.plantCode);
+                                setSelectedPlantingLabel(planting.plantCode);
+                                setShowPlantingSearch(false);
+                              }}
+                              className="w-full justify-start rounded-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{planting.plantCode}</p>
+                                <p className="text-xs text-gray-500">{planting.cropName || ''} · {planting.rootName || planting.areaName || ''}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                planting.isHarvest ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                              }`}>
+                                {planting.isHarvest ? '已采收' : '种植中'}
+                              </span>
+                            </Button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-sm text-gray-400">
+                            无匹配的种植记录
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 温室位置 + 作物品种 - 移动到关联种植记录后面 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-900">温室位置</Label>
                 <Input
                   type="text"
-                  value={form.plantingCode || ''}
-                  onChange={(e) => updateField('plantingCode', e.target.value)}
-                  placeholder="可选，输入种植记录编号"
+                  value={form.greenhouseName}
+                  onChange={(e) => updateField('greenhouseName', e.target.value)}
+                  placeholder="请输入温室位置"
                   className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+              <div>
+                <Label className="text-gray-900">作物品种</Label>
+                <CropCodeSelector
+                  value={cropCode}
+                  onChange={handleCropCodeChange}
+                  placeholder="搜索或选择作物品种..."
+                  size="md"
+                  showFullPath={true}
+                />
+                {selectedCrop && (
+                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                    <div className="text-emerald-700">
+                      {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                      {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -354,49 +533,33 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               </label>
             </div>
 
-            {/* 从库选择模式 */}
-            {form.inputMode === 'library' && (
-              <div className="mb-4">
-                <Label className="text-gray-900">选择肥料</Label>
+            {/* 肥料类型 + 选择肥料/肥料名称 + 品牌名称 */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="text-gray-900">肥料类型</Label>
                 <select
-                  className="w-full border rounded px-3 py-2"
-                  value={form.selectedFertilizerId}
+                  className="w-full h-10 border border-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  value={form.fertilizerType}
                   onChange={(e) => {
-                    const selected = fertilizerLibraryStore.items.find(i => i.id === e.target.value);
-                    if (selected) {
-                      setForm(f => ({
-                        ...f,
-                        selectedFertilizerId: selected.id,
-                        fertilizerName: selected.fertilizerName,
-                        fertilizerType: selected.fertilizerType || '',
-                        dilutionRatio: selected.specs?.[0]?.suggestedRatio || '',
-                      }));
+                    updateField('fertilizerType', e.target.value);
+                    if (form.selectedFertilizerId) {
+                      updateField('selectedFertilizerId', '');
+                      updateField('fertilizerName', '');
+                      updateField('dilutionRatio', '');
                     }
                   }}
                 >
-                  <option value="">-- 请选择肥料 --</option>
-                  {fertilizerLibraryStore.items
-                    .filter(item => item.status === 'active')
-                    .map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.fertilizerName} ({item.fertilizerCode})
-                      </option>
-                    ))}
+                  <option value="">选择肥料类型</option>
+                  <option value="organic">有机肥</option>
+                  <option value="inorganic">无机肥</option>
+                  <option value="water_soluble">水溶肥</option>
+                  <option value="compound">复合肥</option>
+                  <option value="bio">生物肥</option>
+                  <option value="slow_release">缓释肥</option>
+                  <option value="trace">微量元素肥</option>
                 </select>
               </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-900">肥料类型</Label>
-                <DictSelect
-                  category="fertilizer_type"
-                  value={form.fertilizerType}
-                  onChange={(value) => updateField('fertilizerType', value)}
-                  placeholder="选择肥料类型"
-                />
-              </div>
-              {form.inputMode === 'manual' && (
+              {form.inputMode === 'manual' ? (
                 <div>
                   <Label className="text-gray-900">
                     肥料名称 <span className="text-red-500">*</span>
@@ -407,6 +570,46 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                     onChange={(e) => updateField('fertilizerName', e.target.value)}
                     placeholder="请输入肥料名称"
                     className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-gray-900">选择肥料</Label>
+                  <select
+                    className="w-full h-10 border border-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={form.selectedFertilizerId}
+                    onChange={(e) => {
+                      const selected = fertilizerLibraryStore.items.find(i => i.id === e.target.value);
+                      if (selected) {
+                        setForm(f => ({
+                          ...f,
+                          selectedFertilizerId: selected.id,
+                          fertilizerName: selected.fertilizerName,
+                          fertilizerType: selected.fertilizerType || '',
+                          dilutionRatio: selected.specs?.[0]?.suggestedRatio || '',
+                        }));
+                      }
+                    }}
+                  >
+                    <option value="">-- 请先选择肥料类型 --</option>
+                    {fertilizerLibraryStore.items
+                      .filter(item => item.status === 'active' && (!form.fertilizerType || item.fertilizerType === form.fertilizerType))
+                      .map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.fertilizerName}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+              {form.inputMode === 'library' && (
+                <div>
+                  <Label className="text-gray-900">品牌名称</Label>
+                  <Input
+                    type="text"
+                    value={selectedFertilizerBrand}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600"
                   />
                 </div>
               )}
@@ -468,40 +671,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           </div>
         </div>
 
-        {/* Section 3: 位置与时间 */}
+        {/* Section 3: 时间 */}
         <div>
-          <SectionTitle title="位置与时间" icon="📍" />
+          <SectionTitle title="时间" icon="📅" />
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-gray-900">温室位置</Label>
-                <Input
-                  type="text"
-                  value={form.greenhouseName}
-                  onChange={(e) => updateField('greenhouseName', e.target.value)}
-                  placeholder="请输入温室位置"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-900">作物品种</Label>
-                <CropCodeSelector
-                  value={cropCode}
-                  onChange={handleCropCodeChange}
-                  placeholder="搜索或选择作物品种..."
-                  size="md"
-                  showFullPath={true}
-                />
-                {selectedCrop && (
-                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-                    <div className="text-emerald-700">
-                      {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
-                      {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
             <div>
               <Label className="text-gray-900">施肥时间</Label>
               <Input

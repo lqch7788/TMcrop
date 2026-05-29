@@ -1106,6 +1106,24 @@ export async function fixMissingSchema(): Promise<void> {
     else console.error('fertilizer_specs:', e.message);
   }
 
+  // 为 fertilizer_specs 表添加品牌名称字段
+  try {
+    db.run(`ALTER TABLE fertilizer_specs ADD COLUMN brand_name TEXT`);
+    console.log('✓ fertilizer_specs 表添加 brand_name 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• brand_name 列已存在');
+    else console.log('• brand_name 列添加: ' + e.message);
+  }
+
+  // V12.0: 为 fertilizer_library 表添加 application_timing 字段（替换 fertilizer_category）
+  try {
+    db.run(`ALTER TABLE fertilizer_library ADD COLUMN application_timing TEXT`);
+    console.log('✓ fertilizer_library 表添加 application_timing 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• application_timing 列已存在');
+    else console.log('• application_timing 列添加: ' + e.message);
+  }
+
   // 为 pesticide_specs 表添加作用机制字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN mechanism TEXT`);
