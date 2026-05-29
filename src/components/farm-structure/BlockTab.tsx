@@ -13,6 +13,21 @@ import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStor
 import type { Zone, Block } from '../../services/apiBasicDataService';
 import { showAlert } from '@/lib/dialogService';
 
+// 区块类型选项（来自系统字典）
+const ZONE_TYPES = [
+  { value: 'greenhouse', label: '温室大棚' },
+  { value: 'plastic_house', label: '塑料大棚' },
+  { value: 'glass_house', label: '玻璃温室' },
+  { value: 'solar_greenhouse', label: '日光温室' },
+  { value: 'open_field', label: '露天种植区' },
+  { value: 'other', label: '其他' },
+];
+
+const getZoneTypeName = (type: string) => {
+  const found = ZONE_TYPES.find(z => z.value === type);
+  return found ? found.label : type || '-';
+};
+
 const PAGE_SIZE = 10;
 
 export default function BlockTab() {
@@ -144,6 +159,7 @@ export default function BlockTab() {
                     <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区块编码</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区块名称</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属设施</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">区域类型</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属基地</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">面积(亩)</th>
                     <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">状态</th>
@@ -164,7 +180,7 @@ export default function BlockTab() {
               <tbody className="divide-y divide-gray-300 bg-white">
                 {activeLayer === 'zone' ? (
                   filteredZones.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">
+                    <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
                       <Layers className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无区块数据
                     </td></tr>
                   ) : (
@@ -173,6 +189,7 @@ export default function BlockTab() {
                         <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{z.zoneCode || '-'}</td>
                         <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{z.zoneName}</td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">{facilityOptions.find((g) => g.oid === z.greenhouseOid)?.name || '-'}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{getZoneTypeName(z.zoneType || '')}</td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">{z.baseName || '-'}</td>
                         <td className="px-4 py-3 text-sm text-right whitespace-nowrap">{z.area || 0}</td>
                         <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -266,8 +283,20 @@ export default function BlockTab() {
                         {facilityOptions.map((g) => <option key={g.oid} value={g.oid}>{g.name}</option>)}
                       </select>
                     </label>
+                    <label className="text-xs font-medium text-gray-600">区域类型
+                      <select value={formData.zoneType || ''} onChange={(e) => setFormData({ ...formData, zoneType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                        <option value="">请选择</option>
+                        {ZONE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </label>
                     <label className="text-xs font-medium text-gray-600">面积(亩)
                       <input type="number" value={formData.area || ''} onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+                    </label>
+                    <label className="text-xs font-medium text-gray-600">排序
+                      <input type="number" value={formData.sortOrder || 0} onChange={(e) => setFormData({ ...formData, sortOrder: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+                    </label>
+                    <label className="text-xs font-medium text-gray-600 col-span-2">备注
+                      <input value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
                     </label>
                   </>
                 ) : (

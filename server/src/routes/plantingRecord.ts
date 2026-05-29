@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { getDatabase } from '../db/index';
+import { getDatabase, saveDatabase } from '../db/index';
 
 const router = Router();
 
@@ -98,6 +98,7 @@ router.post('/', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record, message: '种植季创建成功' });
   } catch (error) {
     console.error('创建种植季记录失败:', error);
@@ -145,6 +146,7 @@ router.put('/:oid', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record, message: '种植季记录更新成功' });
   } catch (error) {
     console.error('更新种植季记录失败:', error);
@@ -177,6 +179,7 @@ router.put('/:oid/end', (req, res) => {
     const columns = result[0].columns;
     const record: any = {};
     columns.forEach((col, i) => { record[col] = result[0].values[0][i]; });
+    saveDatabase();
     res.json({ success: true, data: record, message: '种植季已结束' });
   } catch (error) {
     console.error('结束种植季失败:', error);
@@ -189,6 +192,7 @@ router.delete('/:oid', (req, res) => {
   try {
     const db = getDatabase();
     db.run('UPDATE planting_records SET deleted_at = ?, updated_at = ? WHERE oid = ?', [new Date().toISOString(), new Date().toISOString(), req.params.oid]);
+    saveDatabase();
     res.json({ success: true, message: '种植季记录已删除' });
   } catch (error) {
     console.error('删除种植季记录失败:', error);

@@ -1,48 +1,21 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { showAlert } from '@/lib/dialogService';
-
-// localStorage key - 与 BaseSettings 保持一致
-const COMPANY_GROUPS_KEY = 'yuanxingtu_company_groups';
-
-// 园区/地块数据 - 真实百度地图坐标
-const initialCompanyGroups = [
-  {
-    id: 1,
-    name: '宁波帮帮忙公司',
-    bases: [
-      { id: 2, name: '上海松江基地', area: 300, unit: '亩', crop: '水稻', growthDay: 30, status: 'planting', statusText: '种植中', manager: '郭靖', phone: '13800138002', soilType: '沙壤土', ph: 6.8, coords: '121.2234,31.0342', city: '上海', province: '上海', lng: 121.2234, lat: 31.0342, intro: '总种植面积300亩，包含玻璃温室2个，连栋薄膜温室5个，日光拱棚10个，大田200亩。', greenhouseCount: 17, fieldArea: 200 },
-      { id: 3, name: '上海崇明基地', area: 800, unit: '亩', crop: '小麦', growthDay: 0, status: 'fallow', statusText: '休耕中', manager: '萧峰', phone: '13800138003', soilType: '黏土', ph: 6.2, coords: '121.24416,31.73610', city: '上海', province: '上海', lng: 121.24416, lat: 31.73610, intro: '总种植面积800亩，包含玻璃温室3个，连栋薄膜温室8个，日光拱棚15个，大田650亩。', greenhouseCount: 26, fieldArea: 650 },
-      { id: 7, name: '上海嘉定基地', area: 350, unit: '亩', crop: '蔬菜', growthDay: 25, status: 'planting', statusText: '种植中', manager: '杨过', phone: '13800138007', soilType: '沙土', ph: 7.0, coords: '121.2654,31.3754', city: '上海', province: '上海', lng: 121.2654, lat: 31.3754, intro: '总种植面积350亩，包含玻璃温室4个，连栋薄膜温室6个，日光拱棚8个，大田200亩。', greenhouseCount: 18, fieldArea: 200 },
-      { id: 12, name: '上海奉贤基地', area: 550, unit: '亩', crop: '玉米', growthDay: 50, status: 'planting', statusText: '种植中', manager: '张无忌', phone: '13800138012', soilType: '黏土', ph: 6.8, coords: '121.4745,30.9123', city: '上海', province: '上海', lng: 121.4745, lat: 30.9123, intro: '总种植面积550亩，包含玻璃温室2个，连栋薄膜温室4个，日光拱棚12个，大田450亩。', greenhouseCount: 18, fieldArea: 450 },
-    ]
-  },
-  {
-    id: 2,
-    name: '成都帮帮您公司',
-    bases: [
-      { id: 1, name: '西安雁塔基地', area: 500, unit: '亩', crop: '番茄', growthDay: 45, status: 'planting', statusText: '种植中', manager: '令狐冲', phone: '13800138001', soilType: '壤土', ph: 6.5, coords: '108.9470,34.2194', city: '西安', province: '陕西', lng: 108.9470, lat: 34.2194, intro: '总种植面积500亩，包含玻璃温室3个，连栋薄膜温室7个，日光拱棚12个，大田380亩。', greenhouseCount: 22, fieldArea: 380 },
-      { id: 6, name: '西安高新基地', area: 200, unit: '亩', crop: '草莓', growthDay: 55, status: 'planting', statusText: '种植中', manager: '狄云', phone: '13800138006', soilType: '营养土', ph: 6.4, coords: '108.8789,34.2181', city: '西安', province: '陕西', lng: 108.8789, lat: 34.2181, intro: '总种植面积200亩，包含玻璃温室5个，连栋薄膜温室3个，日光拱棚5个，大田100亩。', greenhouseCount: 13, fieldArea: 100 },
-      { id: 4, name: '宁波北仑基地', area: 600, unit: '亩', crop: '茶叶', growthDay: 60, status: 'planting', statusText: '种植中', manager: '石破天', phone: '13800138004', soilType: '壤土', ph: 6.6, coords: '121.9701,29.8947', city: '宁波', province: '浙江', lng: 121.9701, lat: 29.8947, intro: '总种植面积600亩，包含玻璃温室1个，连栋薄膜温室4个，日光拱棚8个，大田550亩。', greenhouseCount: 13, fieldArea: 550 },
-      { id: 8, name: '宁波镇海基地', area: 280, unit: '亩', crop: '水稻', growthDay: 40, status: 'planting', statusText: '种植中', manager: '陈家洛', phone: '13800138008', soilType: '壤土', ph: 6.7, coords: '121.7532,29.9543', city: '宁波', province: '浙江', lng: 121.7532, lat: 29.9543, intro: '总种植面积280亩，包含玻璃温室2个，连栋薄膜温室3个，日光拱棚6个，大田220亩。', greenhouseCount: 11, fieldArea: 220 },
-      { id: 10, name: '宁波慈溪基地', area: 420, unit: '亩', crop: '葡萄', growthDay: 75, status: 'planting', statusText: '种植中', manager: '袁承志', phone: '13800138010', soilType: '壤土', ph: 6.5, coords: '121.2678,30.1543', city: '宁波', province: '浙江', lng: 121.2678, lat: 30.1543, intro: '总种植面积420亩，包含玻璃温室3个，连栋薄膜温室5个，日光拱棚10个，大田320亩。', greenhouseCount: 18, fieldArea: 320 },
-    ]
-  },
-];
+import { getBases } from '@/services/apiBasicDataService';
+import { getGreenhouses } from '@/services/apiBasicDataService';
 
 export interface BaseData {
   id: number;
+  oid: string;
   name: string;
   area: number;
   unit: string;
-  crop: string;
-  growthDay: number;
   status: string;
   statusText: string;
   manager: string;
@@ -57,12 +30,18 @@ export interface BaseData {
   intro: string;
   company?: string;
   companyId?: number;
+  companyOid?: string;
+  companyName?: string;
   greenhouseCount?: number;
   fieldArea?: number;
+  // 额外字段（来自关联查询）
+  crop?: string;
+  growthDay?: number;
 }
 
 export interface CompanyGroup {
   id: number;
+  oid: string;
   name: string;
   bases: BaseData[];
 }
@@ -74,21 +53,108 @@ declare global {
   }
 }
 
-// 从 localStorage 读取数据（与 BaseSettings 同步）
-const loadCompanyGroupsFromStorage = () => {
+// 从 API 加载基地数据（基地架构 V2.0 - 统一数据源）
+const loadCompanyGroupsFromAPI = async (): Promise<{ companyGroups: CompanyGroup[]; allBases: BaseData[] }> => {
   try {
-    const stored = localStorage.getItem(COMPANY_GROUPS_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    // 并行请求基地和温室数据
+    const [bases, greenhouses] = await Promise.all([
+      getBases(),
+      getGreenhouses(),
+    ]);
+
+    // 将温室的 crop, growthDay 映射到基地
+    const baseMap = new Map<string, { crop?: string; growthDay?: number }>();
+    greenhouses.forEach(gh => {
+      if (gh.baseOid) {
+        baseMap.set(gh.baseOid, { crop: gh.crop, growthDay: gh.growthDay });
+      }
+    });
+
+    // 按公司分组
+    const companyMap = new Map<string, CompanyGroup>();
+    bases.forEach((base: any) => {
+      const companyOid = base.companyOid;
+      const companyName = base.companyName || '未知公司';
+      const extra = baseMap.get(base.oid) || {};
+
+      const baseData: BaseData = {
+        id: base.id || parseInt(base.oid.replace(/\D/g, '').slice(-8)) || Date.now(),
+        oid: base.oid,
+        name: base.name,
+        area: base.area || 0,
+        unit: base.unit || '亩',
+        status: base.status || 'active',
+        statusText: base.status === 'active' ? '活跃' : base.status === 'inactive' ? '停用' : '活跃',
+        manager: base.manager || '',
+        phone: base.phone || '',
+        soilType: base.soilType || '',
+        ph: base.ph || 0,
+        coords: base.lng && base.lat ? `${base.lng},${base.lat}` : '',
+        city: base.city || '',
+        province: base.province || '',
+        lng: base.lng || 0,
+        lat: base.lat || 0,
+        intro: base.intro || '',
+        companyOid: base.companyOid,
+        companyName: base.companyName,
+        greenhouseCount: base.greenhouseCount || 0,
+        fieldArea: base.fieldArea || 0,
+        crop: extra.crop,
+        growthDay: extra.growthDay,
+      };
+
+      if (!companyMap.has(companyOid)) {
+        companyMap.set(companyOid, {
+          id: parseInt(companyOid.replace(/\D/g, '').slice(-8)) || Date.now(),
+          oid: companyOid,
+          name: companyName,
+          bases: [],
+        });
+      }
+      companyMap.get(companyOid)!.bases.push(baseData);
+    });
+
+    const companyGroups = Array.from(companyMap.values());
+    const allBases = bases.map((b: any) => {
+      const extra = baseMap.get(b.oid) || {};
+      return {
+        id: b.id || parseInt(b.oid.replace(/\D/g, '').slice(-8)) || Date.now(),
+        oid: b.oid,
+        name: b.name,
+        area: b.area || 0,
+        unit: b.unit || '亩',
+        status: b.status || 'active',
+        statusText: b.status === 'active' ? '活跃' : '停用',
+        manager: b.manager || '',
+        phone: b.phone || '',
+        soilType: b.soilType || '',
+        ph: b.ph || 0,
+        coords: b.lng && b.lat ? `${b.lng},${b.lat}` : '',
+        city: b.city || '',
+        province: b.province || '',
+        lng: b.lng || 0,
+        lat: b.lat || 0,
+        intro: b.intro || '',
+        companyOid: b.companyOid,
+        companyName: b.companyName,
+        greenhouseCount: b.greenhouseCount || 0,
+        fieldArea: b.fieldArea || 0,
+        crop: extra.crop,
+        growthDay: extra.growthDay,
+      };
+    });
+
+    return { companyGroups, allBases };
   } catch (e) {
-    console.error('读取基地数据失败:', e);
+    console.error('从 API 加载基地数据失败:', e);
+    return { companyGroups: [], allBases: [] };
   }
-  return initialCompanyGroups;
 };
 
 export function ParkArchivePage() {
-  const [companyGroups, setCompanyGroups] = useState(loadCompanyGroupsFromStorage);
+  const [companyGroups, setCompanyGroups] = useState<CompanyGroup[]>([]);
+  const [allBases, setAllBases] = useState<BaseData[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -102,15 +168,29 @@ export function ParkArchivePage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [pendingDetailBase, setPendingDetailBase] = useState<BaseData | null>(null);
 
-  const parkData = useMemo(() => companyGroups.flatMap(group => group.bases.map(base => ({ ...base, company: group.name, companyId: group.id }))), [companyGroups]);
+  const parkData = useMemo(() => allBases, [allBases]);
 
-  // 监听基地设置更新事件
+  // 从 API 加载数据
   useEffect(() => {
-    const handleUpdate = () => {
-      setCompanyGroups(loadCompanyGroupsFromStorage());
+    const loadData = async () => {
+      setLoading(true);
+      const result = await loadCompanyGroupsFromAPI();
+      setCompanyGroups(result.companyGroups);
+      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8)) || 0 })));
+      setLoading(false);
     };
-    window.addEventListener('companyGroupsUpdated', handleUpdate);
-    return () => window.removeEventListener('companyGroupsUpdated', handleUpdate);
+    loadData();
+  }, []);
+
+  // 监听基地架构更新事件（当用户在基地架构页面修改数据后触发）
+  useEffect(() => {
+    const handleUpdate = async () => {
+      const result = await loadCompanyGroupsFromAPI();
+      setCompanyGroups(result.companyGroups);
+      setAllBases(result.allBases.map(b => ({ ...b, company: b.companyName, companyId: parseInt(b.companyOid?.replace(/\D/g, '').slice(-8)) || 0 })));
+    };
+    window.addEventListener('farmStructureUpdated', handleUpdate);
+    return () => window.removeEventListener('farmStructureUpdated', handleUpdate);
   }, []);
 
   // 处理详情弹窗显示
@@ -132,7 +212,14 @@ export function ParkArchivePage() {
     }
   }, [pendingDetailBase, isFullscreen]);
 
-  const [expandedCompanies, setExpandedCompanies] = useState<number[]>(companyGroups.map(g => g.id));
+  const [expandedCompanies, setExpandedCompanies] = useState<number[]>([]);
+
+  // 当公司数据加载完成后，自动展开所有公司
+  useEffect(() => {
+    if (companyGroups.length > 0) {
+      setExpandedCompanies(companyGroups.map(g => g.id));
+    }
+  }, [companyGroups]);
 
   const toggleCompany = (companyId: number) => {
     if (expandedCompanies.includes(companyId)) {
@@ -164,19 +251,30 @@ export function ParkArchivePage() {
 
   const filteredData = parkData.filter(item => {
     if (searchName && !item.name.toLowerCase().includes(searchName.toLowerCase())) return false;
-    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+    // 状态过滤：planting/fallow 从作物状态获取，active/inactive 从基地状态获取
+    if (statusFilter !== 'all') {
+      if (item.status !== statusFilter && item.statusText !== statusFilter) return false;
+    }
     if (cropFilter !== 'all' && item.crop !== cropFilter) return false;
     return true;
   });
 
-  const crops = [...new Set(parkData.map(p => p.crop))];
+  // 动态计算状态选项（基于实际数据中的作物）
+  const statusOptions = ['all', 'planting', 'fallow', 'active', 'inactive'];
+  const crops = [...new Set(parkData.map(p => p.crop).filter(Boolean))];
 
-  // 初始化 Leaflet 地图
+  // 初始化 Leaflet 地图（依赖 parkData，支持数据加载后刷新标记）
   useEffect(() => {
     const initMap = () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
+      if (!mapRef.current) return;
 
       try {
+        // 如果地图已存在，先清除所有图层和标记
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+
         const map = window.L.map(mapRef.current, {
           center: [30.5, 113.5],
           zoom: 5,
@@ -287,7 +385,7 @@ export function ParkArchivePage() {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [parkData]);
 
   useEffect(() => {
     const handleShowBaseDetail = (e: CustomEvent) => {
@@ -325,7 +423,7 @@ export function ParkArchivePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-              <Map className="w-6 h-6 text-white" />
+              <MapIcon className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">园区导览</h1>
@@ -391,7 +489,7 @@ export function ParkArchivePage() {
             {!mapLoaded && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                  <Map className="w-12 h-12 mx-auto mb-2 text-emerald-500 animate-pulse" />
+                  <MapIcon className="w-12 h-12 mx-auto mb-2 text-emerald-500 animate-pulse" />
                   <p className="text-sm text-gray-600">正在加载地图...</p>
                   <p className="text-xs text-gray-400 mt-1">Leaflet + OpenStreetMap</p>
                 </div>
@@ -414,7 +512,7 @@ export function ParkArchivePage() {
                     className="w-full justify-start"
                     onClick={() => flyToBase(base)}
                   >
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${base.status === 'planting' ? 'bg-green-500' : base.status === 'warning' ? 'bg-red-500' : base.status === 'fallow' ? 'bg-yellow-500' : 'bg-gray-400'}`}></span>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${base.status === 'active' || base.status === 'planting' ? 'bg-green-500' : base.status === 'warning' ? 'bg-red-500' : base.status === 'fallow' || base.status === 'inactive' ? 'bg-yellow-500' : 'bg-gray-400'}`}></span>
                     <span className="truncate">{base.name}</span>
                   </Button>
                 ))}
@@ -455,7 +553,22 @@ export function ParkArchivePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {companyGroups.map((company) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500"></div>
+                        <span>正在加载基地数据...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : companyGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
+                      暂无基地数据
+                    </td>
+                  </tr>
+                ) : companyGroups.map((company) => (
                   <React.Fragment key={company.id}>
                     <tr className="bg-blue-50/50">
                       {exportMode && (
@@ -482,7 +595,9 @@ export function ParkArchivePage() {
                         {expandedCompanies.includes(company.id) && company.bases
                           .filter(item => {
                             if (searchName && !item.name.toLowerCase().includes(searchName.toLowerCase())) return false;
-                            if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+                            if (statusFilter !== 'all') {
+                              if (item.status !== statusFilter && item.statusText !== statusFilter) return false;
+                            }
                             if (cropFilter !== 'all' && item.crop !== cropFilter) return false;
                             return true;
                           })
@@ -496,7 +611,7 @@ export function ParkArchivePage() {
                               </Button>
                               <span className="text-xs text-gray-500 whitespace-nowrap">{item.area}{item.unit}</span>
                               <span className={`text-xs px-1 py-0.5 rounded-full whitespace-nowrap ${
-                                item.status === 'planting' ? 'bg-green-100 text-green-700' :
+                                item.status === 'planting' || item.status === 'active' ? 'bg-green-100 text-green-700' :
                                 item.status === 'fallow' ? 'bg-yellow-100 text-yellow-700' :
                                 'bg-gray-100 text-gray-600'
                               }`}>{item.statusText}</span>
@@ -577,7 +692,7 @@ export function ParkArchivePage() {
                   <Label className="text-xs text-gray-500">当前状态</Label>
                   <p className="font-semibold">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedField.status === 'planting' ? 'bg-green-100 text-green-700 border border-green-200' :
+                      selectedField.status === 'planting' || selectedField.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
                       selectedField.status === 'fallow' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
                       'bg-gray-100 text-gray-600 border border-gray-200'
                     }`}>{selectedField.statusText}</span>
