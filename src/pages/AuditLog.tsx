@@ -237,14 +237,13 @@ export default function AuditLog() {
       return;
     }
 
-    const headers = ['时间', '用户', '操作', '模块', '描述', 'IP', '级别'];
+    const headers = ['时间', '用户', '操作', '模块', '描述', '级别'];
     const rows = dataToExport.map((log: any) => [
       log.created_at,
       log.username || '系统',
       getActionLabel(log.action),
       getModuleDisplayName(log.module),
       log.description || '',
-      log.ip_address || '-',
       getLevelLabel(log.level || log.status),
     ]);
 
