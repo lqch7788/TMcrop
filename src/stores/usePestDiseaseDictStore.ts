@@ -73,6 +73,8 @@ export const usePestDiseaseDictStore = create<PestDiseaseDictState>()(
       set({ isLoading: true, error: null });
       try {
         const params = new URLSearchParams();
+        // 默认获取较多数据（病虫害词典总量约70条）
+        params.append('limit', '10000');
         Object.entries(filters).forEach(([k, v]) => { if (v) params.append(k, v); });
         const response = await enhancedApiClient.get<any>(`/pest-disease-dict?${params.toString()}`);
         const rawItems = Array.isArray(response) ? response : response?.data ?? [];

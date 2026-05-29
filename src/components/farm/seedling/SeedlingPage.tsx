@@ -84,10 +84,7 @@ export default function SeedlingPage() {
   }, [seedlings]);
 
   // 作物品种数据（从品种库服务获取，供弹窗使用）
-  const cropVarietyOptions = useMemo(() => {
-    cropVarietyService.initVarieties();
-    return cropVarietyService.getVarietyOptions();
-  }, []);
+  const cropVarietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
 
   // 字典数据转换（使用 Zustand store 获取）
   // 育苗方式选项

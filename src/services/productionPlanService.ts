@@ -4,11 +4,11 @@
  */
 
 import { StockType } from '../types/inventory';
-import * as inventoryService from './inventoryService';
-import * as seedSourceService from './seedSourceService';
-import * as seedlingService from './seedlingService';
-import * as plantingService from './plantingService';
-import * as harvestService from './harvestService';
+import * as inventoryService from './apiInventoryService';
+import * as seedSourceService from './apiSeedSourceService';
+import * as seedlingService from './apiSeedlingService';
+import * as plantingService from './apiPlantingService';
+import * as harvestService from './apiHarvestService';
 
 /**
  * 生产计划关联记录
@@ -74,7 +74,7 @@ export async function getRelatedSeedSources(productionPlanId: string): Promise<P
   }
 
   // 2. 备用：直接从种源服务查询（兼容未接入库存服务的记录）
-  const seedSources = seedSourceService.getSeedSources();
+  const seedSources = await seedSourceService.getSeedSources();
   for (const source of seedSources) {
     if (source.productionPlanId === productionPlanId) {
       // 检查是否已通过库存服务添加
@@ -121,7 +121,7 @@ export async function getRelatedSeedlings(productionPlanId: string): Promise<Pro
   }
 
   // 2. 备用：直接从育苗服务查询
-  const seedlings = seedlingService.getSeedlings();
+  const seedlings = await seedlingService.getSeedlings();
   for (const seedling of seedlings) {
     if (seedling.productionPlanId === productionPlanId) {
       if (!relations.some(r => r.businessId === seedling.id)) {
@@ -154,7 +154,7 @@ export async function getRelatedPlantings(productionPlanId: string): Promise<Pro
   });
 
   // 种植记录本身不入库，所以直接从种植服务查询
-  const plantings = plantingService.getPlantings();
+  const plantings = await plantingService.getPlantings();
   for (const planting of plantings) {
     if (planting.productionPlanId === productionPlanId) {
       const stock = stocks.find(s => s.businessId === planting.id);
@@ -202,7 +202,7 @@ export async function getRelatedHarvests(productionPlanId: string): Promise<Prod
   }
 
   // 2. 备用：直接从采收服务查询
-  const harvests = harvestService.getHarvestRecords();
+  const harvests = await harvestService.getHarvestRecords();
   for (const harvest of harvests) {
     if (harvest.productionPlanId === productionPlanId) {
       if (!relations.some(r => r.businessId === harvest.id)) {

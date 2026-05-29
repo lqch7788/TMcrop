@@ -1182,6 +1182,7 @@ export async function fixMissingSchema(): Promise<void> {
         leaf_fertilizer_name TEXT,
         leaf_fertilizer_dosage REAL,
         leaf_fertilizer_unit TEXT,
+        pesticide_list TEXT,
         description TEXT,
         photos TEXT,
         status TEXT DEFAULT 'completed',
@@ -1193,6 +1194,42 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('already exists')) console.log('• pesticide_records 已存在');
     else console.error('pesticide_records:', e.message);
+  }
+
+  // V12.0: 为 pesticide_records 表添加 pesticide_list 列（支持多药剂）
+  try {
+    db.run(`ALTER TABLE pesticide_records ADD COLUMN pesticide_list TEXT`);
+    console.log('✓ pesticide_records 表添加 pesticide_list 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• pesticide_records.pesticide_list 列已存在');
+    } else {
+      console.log('• pesticide_records.pesticide_list:', e.message);
+    }
+  }
+
+  // V12.0: 为 pesticide_records 表添加 bio_agent_list 列（支持多生物制剂）
+  try {
+    db.run(`ALTER TABLE pesticide_records ADD COLUMN bio_agent_list TEXT`);
+    console.log('✓ pesticide_records 表添加 bio_agent_list 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• pesticide_records.bio_agent_list 列已存在');
+    } else {
+      console.log('• pesticide_records.bio_agent_list:', e.message);
+    }
+  }
+
+  // V12.0: 为 pesticide_records 表添加 equipment_list 列（支持多设备/方式）
+  try {
+    db.run(`ALTER TABLE pesticide_records ADD COLUMN equipment_list TEXT`);
+    console.log('✓ pesticide_records 表添加 equipment_list 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• pesticide_records.equipment_list 列已存在');
+    } else {
+      console.log('• pesticide_records.equipment_list:', e.message);
+    }
   }
 
   // V12.0: 药剂-病虫害关联表

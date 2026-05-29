@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { exportTaskRecords } from '../../../services/apiFarmTaskService';
-import { getOperationLogs } from '../../../services/apiOperationLogService';
 import { X, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
@@ -26,6 +25,42 @@ const ACTION_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   verify: { label: '验收', color: 'bg-teal-100 text-teal-700' },
   report: { label: '上报', color: 'bg-yellow-100 text-yellow-700' },
   inspect: { label: '巡查', color: 'bg-indigo-100 text-indigo-700' },
+};
+
+// 操作类型中文映射（用于导出）
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  create: '创建',
+  assign: '分派',
+  accept: '接受',
+  reject: '拒绝',
+  progress: '进度更新',
+  submit: '提交',
+  verify: '验收',
+  report: '上报',
+  inspect: '巡查',
+  withdraw: '撤回',
+  overtime_continue: '超时继续',
+  overtime_abandon: '超时放弃',
+  extend_deadline: '延期',
+  reassign: '重新分派',
+  cancel: '取消',
+  abandon: '放弃',
+};
+
+// 状态中文映射（用于导出）
+const STATUS_LABELS: Record<string, string> = {
+  draft: '草稿',
+  pending: '待接受',
+  in_progress: '进行中',
+  waiting_acceptance: '待验收',
+  completed: '已完成',
+  cancelled: '已取消',
+  rejected: '已驳回',
+  pending_reassign: '待重新派发',
+  published: '已发布',
+  withdrawn: '已撤回',
+  accepted: '已接受',
+  overtime: '超时',
 };
 
 const ACTION_TYPE_OPTIONS = [
@@ -48,10 +83,10 @@ async function handleExportTaskRecords(format: 'xlsx' | 'csv' | 'xls') {
       '任务编号': record.task_code || '',
       '任务标题': record.task_title || '',
       '操作人': record.operator_name || '',
-      '操作类型': record.action || '',
+      '操作类型': ACTION_TYPE_LABELS[record.action] || record.action || '',
       '操作名称': record.action_name || '',
-      '原状态': record.from_status || '',
-      '新状态': record.to_status || '',
+      '原状态': STATUS_LABELS[record.from_status] || record.from_status || '',
+      '新状态': STATUS_LABELS[record.to_status] || record.to_status || '',
       '进度': record.progress !== null ? `${record.progress}%` : '',
       '备注': record.comment || '',
       '原因': record.reason || '',
@@ -92,75 +127,54 @@ async function handleExportTaskRecords(format: 'xlsx' | 'csv' | 'xls') {
   }
 }
 
-/**
- * 导出通用操作日志到文件
- */
-async function handleExportOperationLogs(format: 'xlsx' | 'csv' | 'xls') {
-  try {
-    const result = await getOperationLogs({ limit: 10000 });
-    const data = result?.data || [];
-
-    const headers = ['用户名', '操作类型', '模块', '资源类型', '资源ID', '描述', '状态', 'IP地址', 'UserAgent', '创建时间'];
-    const exportData = (data || []).map((log: any) => ({
-      '用户名': log.username || '',
-      '操作类型': log.action || '',
-      '模块': log.module || '',
-      '资源类型': log.resource_type || '',
-      '资源ID': log.resource_id || '',
-      '描述': log.description || '',
-      '状态': log.status || '',
-      'IP地址': log.ip_address || '',
-      'UserAgent': log.user_agent || '',
-      '创建时间': log.created_at || '',
-    }));
-
-    let content = '';
-    let mimeType = '';
-    let extension = format;
-
-    if (format === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h as keyof typeof row] || ''}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-    } else {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h as keyof typeof row] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    }
-
-    const fileName = `操作日志_${new Date().toISOString().slice(0, 10)}.${extension}`;
-    const blob = new Blob(['﻿' + content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    console.log('[导出] 操作日志导出成功，共', exportData.length, '条');
-  } catch (error) {
-    console.error('[导出] 操作日志导出失败:', error);
-  }
-}
-
 export function OperationRecordPanel({ records, onClose }: OperationRecordPanelProps) {
   const [filterType, setFilterType] = useState('all');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
+  // 筛选后的记录
   const filteredRecords = records.filter((record) => {
     if (filterType !== 'all' && record.actionType !== filterType) return false;
-    if (filterDate && !record.timestamp.startsWith(filterDate)) return false;
+    // 时间段筛选
+    if (filterStartDate && record.timestamp < filterStartDate) return false;
+    if (filterEndDate) {
+      const endDateWithTime = filterEndDate + 'T23:59:59';
+      if (record.timestamp > endDateWithTime) return false;
+    }
     return true;
   });
 
+  // 分页计算
+  const totalPages = Math.ceil(filteredRecords.length / pageSize);
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 重置页码当筛选变化时
+  const handleFilterChange = () => {
+    setCurrentPage(1);
+  };
+
+  // 筛选变化时重置页码
+  const handleFilterTypeChange = (val: string) => {
+    setFilterType(val);
+    setCurrentPage(1);
+  };
+
+  const handleFilterStartDateChange = (val: string) => {
+    setFilterStartDate(val);
+    setCurrentPage(1);
+  };
+
+  const handleFilterEndDateChange = (val: string) => {
+    setFilterEndDate(val);
+    setCurrentPage(1);
+  };
+
   const handleExport = (format: 'xlsx' | 'csv' | 'xls') => {
-    // 同时导出两种记录
+    // 只导出任务操作记录（操作日志在系统设置的操作日志页面导出）
     handleExportTaskRecords(format);
-    handleExportOperationLogs(format);
     setExportMenuOpen(false);
   };
 
@@ -213,7 +227,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
             <span className="text-sm text-gray-500">操作类型:</span>
             <Select
               value={filterType}
-              onValueChange={(val) => setFilterType(val)}
+              onValueChange={handleFilterTypeChange}
             >
               <SelectTrigger className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white w-auto">
                 <SelectValue placeholder="全部操作" />
@@ -226,19 +240,28 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">日期:</span>
+            <span className="text-sm text-gray-500">时间段:</span>
             <input
               type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
+              value={filterStartDate}
+              onChange={(e) => handleFilterStartDateChange(e.target.value)}
               className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="开始日期"
+            />
+            <span className="text-gray-400">至</span>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => handleFilterEndDateChange(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="结束日期"
             />
           </div>
-          {(filterType !== 'all' || filterDate) && (
+          {(filterType !== 'all' || filterStartDate || filterEndDate) && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setFilterType('all'); setFilterDate(''); }}
+              onClick={() => { setFilterType('all'); setFilterStartDate(''); setFilterEndDate(''); }}
             >
               重置
             </Button>
@@ -256,7 +279,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredRecords.map((record) => {
+              {paginatedRecords.map((record) => {
                 const actionConfig = ACTION_TYPE_CONFIG[record.actionType] || { label: record.actionType, color: 'bg-gray-100 text-gray-700' };
                 return (
                   <div
@@ -289,11 +312,11 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
         <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
           <p className="text-sm text-gray-500">共 {filteredRecords.length} 条记录</p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" disabled>
+            <Button variant="ghost" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
               上一页
             </Button>
-            <span className="px-3 py-1 text-sm">第 1/1 页</span>
-            <Button variant="ghost" size="sm" disabled>
+            <span className="px-3 py-1 text-sm">第 {currentPage}/{totalPages} 页</span>
+            <Button variant="ghost" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
               下一页
             </Button>
           </div>

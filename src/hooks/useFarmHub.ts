@@ -11,7 +11,6 @@ import { usePersistentWorkLogs, WorkLogRecord } from './usePersistentWorkLogs';
 import { STORAGE_KEYS } from './useLocalStorage';
 import { InspectionRecord } from '../types';
 import { useInspectionDataStore, useProblemStore } from '../stores';
-import { getOperationLogs, type OperationLog as ApiOperationLog } from '../services/apiOperationLogService';
 import { getTodayTaskRecords } from '../services/apiFarmTaskService';
 export interface InspectionSearchFilters {
   recordCode: string;
@@ -223,7 +222,6 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   const [problems, setProblems] = useState<ProblemEntry[]>([]);
   const [inspections, setInspections] = useState<InspectionRecord[]>(getInitialInspections());
   const [operationRecords, setOperationRecords] = useState<WorkLogRecord[]>([]);
-  const [apiOperationRecords, setApiOperationRecords] = useState<UnifiedOperationRecord[]>([]);
   // 今日任务操作记录（从API获取，不再从localStorage读取）
   const [todayTaskRecords, setTodayTaskRecords] = useState<UnifiedOperationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -415,24 +413,6 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         // API 不可用时静默降级
       });
 
-      // 从后端 API 拉取操作日志（数据库持久化数据）
-      getOperationLogs({ limit: 100 }).then(result => {
-        const records: UnifiedOperationRecord[] = (result.data || []).map((log: ApiOperationLog) => ({
-          id: log.id,
-          timestamp: log.createdAt || '',
-          operatorName: log.username || '系统',
-          operatorType: log.username ? 'user' : 'system',
-          actionType: mapApiActionToType(log.action),
-          targetType: log.resourceType || 'unknown',
-          targetCode: log.resourceId || '',
-          targetTitle: log.description || '',
-          content: log.description || `${log.username || '系统'} ${log.action}`,
-          extra: log,
-        }));
-        setApiOperationRecords(records);
-      }).catch(() => {
-        // API 不可用时静默降级
-      });
       setRefreshKey(k => k + 1);
     }
   }, []);
@@ -609,22 +589,20 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
       });
     });
 
-    // 合并 API 操作记录（后端数据库持久化数据）
-    records.push(...apiOperationRecords);
-
     // 按时间排序
     records.sort((a, b) =>
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
     // 去重（按 id）
+    // 注：不再限制数量，由使用方自行决定显示数量
     const seen = new Set<string>();
     return records.filter(r => {
       if (seen.has(r.id)) return false;
       seen.add(r.id);
       return true;
-    }).slice(0, 20);
-  }, [operationRecords, apiOperationRecords, todayTaskRecords]);
+    });
+  }, [operationRecords, todayTaskRecords]);
 
   // 过滤后的数据实例
   const filteredTasks = getFilteredTasks();
@@ -827,26 +805,6 @@ function getActionText(action: string): string {
     verify: '验收了',
   };
   return map[action] || action;
-}
-
-/**
- * 映射 API 操作日志动作到统一操作类型
- */
-function mapApiActionToType(action: string): UnifiedOperationRecord['actionType'] {
-  const map: Record<string, UnifiedOperationRecord['actionType']> = {
-    create: 'create',
-    update: 'progress',
-    delete: 'progress',
-    assign: 'assign',
-    accept: 'accept',
-    reject: 'reject',
-    submit: 'submit',
-    complete: 'verify',
-    verify: 'verify',
-    publish: 'create',
-    progress: 'progress',
-  };
-  return map[action] || 'progress';
 }
 
 export type { Task, ProblemEntry, InspectionRecord, WorkLogRecord };

@@ -93,6 +93,24 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
+// ========== 代码生成 API（必须在 /:id 路由之前）==========
+
+/**
+ * 生成种植批号
+ * GET /api/plantings/generate-code?sourceCode=xxx
+ */
+router.get('/generate-code', (req: Request, res: Response) => {
+  try {
+    const { sourceCode } = req.query;
+    const date = new Date();
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+    const code = sourceCode ? `${sourceCode}-${dateStr}` : `PL${dateStr}`;
+    res.json({ success: true, data: code });
+  } catch (error) {
+    res.status(500).json({ success: false, error: '生成种植批号失败' });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -415,24 +433,6 @@ router.get('/harvested', (req: Request, res: Response) => {
     res.json({ success: true, data: items });
   } catch (error) {
     res.status(500).json({ success: false, error: '获取已采收种植记录失败' });
-  }
-});
-
-// ========== 代码生成 API ==========
-
-/**
- * 生成种植批号
- * GET /api/plantings/generate-code?sourceCode=xxx
- */
-router.get('/generate-code', (req: Request, res: Response) => {
-  try {
-    const { sourceCode } = req.query;
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    const code = sourceCode ? `${sourceCode}-${dateStr}` : `PL${dateStr}`;
-    res.json({ success: true, data: code });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '生成种植批号失败' });
   }
 });
 

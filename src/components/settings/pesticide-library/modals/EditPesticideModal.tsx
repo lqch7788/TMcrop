@@ -65,6 +65,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
   });
 
   // 提交状态
+  const [submitting, setSubmitting] = useState(false);
 
   // 更新字段
   const updateField = useCallback((field: string, value: string) => {

@@ -212,9 +212,39 @@ export async function generateSeedlingCodeByDate(date: Date | string): Promise<s
 /**
  * 创建育苗记录
  * 降级策略：API → 离线队列
+ *
+ * 注意：前端使用 camelCase，后端期望 snake_case，需要转换
  */
 export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>): Promise<Seedling> {
-  const result = await enhancedApiClient.post<{ id: string }>('/seedlings', seedling);
+  // 转换为后端期望的 snake_case 格式
+  // 注意：source_id 对应 seed_source 的 id，source_name 对应 seed_source 的 source_code
+  const backendData: Record<string, unknown> = {
+    seedling_code: seedling.seedlingCode,
+    source_id: seedling.sourceId,       // seed_source 的 id (如 'SS001')
+    source_name: seedling.sourceCode,    // seed_source 的 source_code (如 'ZZ2026-001')
+    production_plan_code: seedling.productionPlanCode || '',
+    crop_code: seedling.cropCode,
+    crop_name: seedling.cropName,
+    crop_variety: seedling.cropVariety,
+    seedling_type: seedling.seedlingType,
+    greenhouse_name: seedling.greenhouseName || seedling.siteName,
+    area_name: seedling.areaName || seedling.siteName,
+    seedling_date: seedling.startDate || seedling.seedlingDate,
+    expected_finish_date: seedling.expectedEndDate || seedling.expectedFinishDate,
+    actual_finish_date: seedling.actualFinishDate,
+    seedling_quantity: seedling.initialCount || seedling.seedlingQuantity,
+    survival_quantity: seedling.survivalCount || 0,
+    survival_rate: seedling.survivalRate || 0,
+    planted_count: seedling.plantedCount || 0,
+    status: seedling.status,
+    seedling_status: seedling.seedlingStatus,
+    remarks: seedling.remarks,
+    create_by: seedling.createBy,
+    work_hours: seedling.workHours,
+    pictures: Array.isArray(seedling.pictures) ? JSON.stringify(seedling.pictures) : seedling.pictures,
+  };
+
+  const result = await enhancedApiClient.post<{ id: string }>('/seedlings', backendData);
   return { ...seedling, id: result.id } as Seedling;
 }
 

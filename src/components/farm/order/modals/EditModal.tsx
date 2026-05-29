@@ -81,9 +81,6 @@ export function EditModal({
     }
   }, [record, isOpen]);
 
-  // 初始化品种数据
-  cropVarietyService.initVarieties();
-
   // 所有品种选项
   const varietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
 

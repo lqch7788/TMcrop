@@ -13,7 +13,6 @@ import { TextArea } from '../../ui/TextArea';
 import { DictSelect } from '../../common/settings/DictSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, FertilizerData } from '@/stores';
-import * as cropVarietyService from '@/services/cropVarietyService';
 import type { CropVariety } from '@/types/cropVariety';
 
 interface FertilizerEditModalProps {
@@ -45,13 +44,6 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
   const [submitting, setSubmitting] = useState(false);
   const [cropCode, setCropCode] = useState('');
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
-
-  // 初始化品种库
-  useEffect(() => {
-    if (isOpen) {
-      cropVarietyService.initVarieties();
-    }
-  }, [isOpen]);
 
   // 作物选择处理
   const handleCropCodeChange = useCallback((code: string, varietyInfo: CropVariety | null) => {

@@ -19,12 +19,21 @@ router.get('/', (req: Request, res: Response) => {
     const db = getDatabase();
     const { module, level, start_date, end_date, user, search, page = '1', limit = '50' } = req.query;
 
+    // 农事管理模块映射
+    const farmModules = ['农事任务', '临时任务', '巡查', '问题'];
+
     let sql = 'SELECT * FROM operation_logs WHERE 1=1';
     const bindings: (string | number)[] = [];
 
     if (module && module !== 'all') {
-      sql += ' AND module = ?';
-      bindings.push(module as string);
+      if (module === 'farm') {
+        // 农事管理：匹配所有农事相关模块
+        sql += ` AND module IN (${farmModules.map(() => '?').join(',')})`;
+        bindings.push(...farmModules);
+      } else {
+        sql += ' AND module = ?';
+        bindings.push(module as string);
+      }
     }
 
     if (level && level !== 'all') {
@@ -55,16 +64,28 @@ router.get('/', (req: Request, res: Response) => {
     sql += ' ORDER BY created_at DESC';
 
     // 获取总数
-    const countSql = `SELECT COUNT(*) as total FROM operation_logs WHERE 1=1` +
-      (module && module !== 'all' ? ' AND module = ?' : '') +
-      (level && level !== 'all' ? ' AND level = ?' : '') +
+    let countSql = `SELECT COUNT(*) as total FROM operation_logs WHERE 1=1`;
+    if (module && module !== 'all') {
+      if (module === 'farm') {
+        countSql += ` AND module IN (${farmModules.map(() => '?').join(',')})`;
+      } else {
+        countSql += ' AND module = ?';
+      }
+    }
+    countSql += (level && level !== 'all' ? ' AND level = ?' : '') +
       (start_date ? ' AND created_at >= ?' : '') +
       (end_date ? ' AND created_at <= ?' : '') +
       (user ? ' AND username LIKE ?' : '') +
       (search ? ' AND (description LIKE ? OR action LIKE ?)' : '');
 
     const countBindings: (string | number)[] = [];
-    if (module && module !== 'all') countBindings.push(module as string);
+    if (module && module !== 'all') {
+      if (module === 'farm') {
+        countBindings.push(...farmModules);
+      } else {
+        countBindings.push(module as string);
+      }
+    }
     if (level && level !== 'all') countBindings.push(level as string);
     if (start_date) countBindings.push(start_date as string);
     if (end_date) countBindings.push(end_date as string);
@@ -99,8 +120,8 @@ router.get('/', (req: Request, res: Response) => {
     }
     stmt.free();
 
+    // 直接返回数据，不使用 success: true 包装，以便前端 enhancedApiClient 保留 meta 信息
     res.json({
-      success: true,
       data: logs,
       meta: {
         total,
@@ -146,6 +167,9 @@ router.get('/export/all', (req: Request, res: Response) => {
     const db = getDatabase();
     const { start_date, end_date, module, action, user } = req.query;
 
+    // 农事管理模块映射
+    const farmModules = ['农事任务', '临时任务', '巡查', '问题'];
+
     let sql = 'SELECT * FROM operation_logs WHERE 1=1';
     const bindings: (string | number)[] = [];
 
@@ -160,8 +184,13 @@ router.get('/export/all', (req: Request, res: Response) => {
     }
 
     if (module && module !== 'all') {
-      sql += ' AND module = ?';
-      bindings.push(module as string);
+      if (module === 'farm') {
+        sql += ` AND module IN (${farmModules.map(() => '?').join(',')})`;
+        bindings.push(...farmModules);
+      } else {
+        sql += ' AND module = ?';
+        bindings.push(module as string);
+      }
     }
 
     if (action && action !== 'all') {

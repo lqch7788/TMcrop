@@ -10,12 +10,12 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { getProductionPlans } from '@/services/apiProductionPlanLocalService';
+import { getProductionPlans } from '@/services/apiProductionPlanService';
 import { getSeedlings } from '@/services/apiSeedlingService';
 import { getPlantings } from '@/services/apiPlantingService';
 import { getHarvestRecords } from '@/services/apiHarvestService';
 import { getInventoryList } from '@/services/apiInventoryService';
-import { ProductionPlan } from '@/services/productionPlanLocalService';
+import { CropBatch } from '@/types';
 import { Seedling } from '@/types/crop';
 import { Planting } from '@/types/crop';
 import { HarvestRecord } from '@/types/index';
@@ -181,7 +181,7 @@ export function useProductionChainStats() {
 
 // 导出数据类型供组件使用
 export type ProductionChainData = {
-  productionPlans: ProductionPlan[];
+  productionPlans: CropBatch[];
   seedlings: Seedling[];
   plantings: Planting[];
   harvestRecords: HarvestRecord[];

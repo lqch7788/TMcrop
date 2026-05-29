@@ -102,7 +102,8 @@ export async function deleteHarvestRecords(ids: string[]): Promise<boolean> {
  */
 export async function generateHarvestCode(): Promise<string> {
   try {
-    return await enhancedApiClient.get<string>('/harvest/generate-code');
+    const result = await enhancedApiClient.get<{ code: string }>('/harvest/generate-code');
+    return result?.code || '';
   } catch {
     return '';
   }

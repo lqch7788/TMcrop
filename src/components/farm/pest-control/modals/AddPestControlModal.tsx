@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 import { DictSelect } from '@/components/common/settings/DictSelect';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
-import { usePestControlStore, useGreenhouseStore } from '@/stores';
-import * as cropVarietyService from '@/services/cropVarietyService';
+import { SearchableSelect } from '@/components/common/SearchableSelect';
+import { usePestControlStore, useGreenhouseStore, usePesticideLibraryStore, usePestDiseaseDictStore } from '@/stores';
 import type { CropVariety } from '@/types/cropVariety';
 
 // 防治类型选项
@@ -22,41 +23,59 @@ const CONTROL_TYPES = [
   { value: 'physical', label: '物理防治' },
 ];
 
-// 单位选项
-const DOSAGE_UNITS = [
-  { value: '克', label: '克 (g)' },
-  { value: '千克', label: '千克 (kg)' },
-  { value: '毫升', label: '毫升 (mL)' },
-  { value: '升', label: '升 (L)' },
-  { value: '袋', label: '袋' },
-  { value: '瓶', label: '瓶' },
-];
+// 叶面肥条目
+interface LeafFertilizerItem {
+  name: string;
+  dosage: number;
+  unit: string;
+  ratio: string;  // 稀释倍数
+}
+
+// 药剂条目（化学防治用）
+interface PesticideItem {
+  name: string;       // 药剂名称
+  type: string;       // 药剂类型
+  dosage: number;     // 用药量
+  unit: string;       // 单位
+  ratio: string;      // 稀释倍数
+  applicationMethod: string;  // 施用方法
+}
+
+// 生物防治条目
+interface BioAgentItem {
+  name: string;       // 生物制剂名称
+  type: string;       // 制剂类型
+  dosage: number;      // 用量
+  unit: string;        // 单位
+  ratio: string;       // 稀释倍数
+}
+
+// 物理防治条目
+interface EquipmentItem {
+  name: string;       // 设备/方式名称
+  count: string;       // 用量/次数
+}
 
 // 默认表单数据
 const defaultForm = {
   recordCode: '',
   sprayTime: '',
   cropName: '',
-  greenhouseName: '',
+  greenhouses: [] as string[],
+  operatorName: '',
   controlType: 'chemical' as 'chemical' | 'bio' | 'physical',
-  // 化学防治专用
-  pesticideName: '',
-  pesticideType: '',
-  dosage: 0,
-  dosageUnit: '克',
-  dilutionRatio: '',
-  applicationMethod: '',
-  // 生物防治专用
-  bioAgentName: '',
-  bioAgentType: '',
-  // 物理防治专用
-  equipmentName: '',
-  equipmentCount: '',
+  // 化学防治专用（支持多个药剂）
+  pesticides: [] as PesticideItem[],
+  // 生物防治专用（支持多个制剂）
+  bioAgents: [] as BioAgentItem[],
+  // 物理防治专用（支持多个设备/方式）
+  equipment: [] as EquipmentItem[],
   // 叶面肥联用
   useLeafFertilizer: 'no' as 'yes' | 'no',
-  leafFertilizerName: '',
-  leafFertilizerDosage: 0,
-  leafFertilizerUnit: '克',
+  leafFertilizers: [] as LeafFertilizerItem[],  // 叶面肥列表（支持多个）
+  // 记录级别字段
+  applicationMethod: '',  // 施用方法
+  targetPests: [] as string[],  // 目标病虫害（支持多个）
   // 备注
   description: '',
 };
@@ -71,6 +90,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
   const store = usePestControlStore();
   const greenhouses = useGreenhouseStore((s) => s.greenhouses);
   const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
+  const pesticideStore = usePesticideLibraryStore();
+  const pestDiseaseStore = usePestDiseaseDictStore();
 
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
@@ -83,17 +104,69 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
     [greenhouses]
   );
 
+  // 药剂选项（用于搜索选择 - 化学防治用）
+  const pesticideOptions = useMemo(() =>
+    pesticideStore.items
+      .filter(p => p.controlType === 'chemical')
+      .map(p => ({
+        value: p.pesticideName,
+        label: p.pesticideName,
+        searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+      })),
+    [pesticideStore.items]
+  );
+
+  // 生物制剂选项（用于搜索选择 - 生物防治用）
+  const bioAgentOptions = useMemo(() =>
+    pesticideStore.items
+      .filter(p => p.controlType === 'bio')
+      .map(p => ({
+        value: p.pesticideName,
+        label: p.pesticideName,
+        searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+      })),
+    [pesticideStore.items]
+  );
+
+  // 物理防治选项（用于搜索选择 - 物理防治用）
+  const equipmentOptions = useMemo(() =>
+    pesticideStore.items
+      .filter(p => p.controlType === 'physical')
+      .map(p => ({
+        value: p.pesticideName,
+        label: p.pesticideName,
+        searchText: `${p.pesticideCode} ${p.functionDesc || ''}`,
+      })),
+    [pesticideStore.items]
+  );
+
+  // 病虫害选项（用于搜索选择）
+  const pestDiseaseOptions = useMemo(() =>
+    pestDiseaseStore.items.map(p => ({
+      value: p.dictName,
+      label: p.dictName,
+      searchText: `${p.dictCode} ${p.targetCrops || ''}`,
+    })),
+    [pestDiseaseStore.items]
+  );
+
   // 初始化
   useEffect(() => {
     if (greenhouses.length === 0) loadGreenhouses();
+  }, [greenhouses.length, loadGreenhouses]);
+
+  // 弹窗打开时加载数据和生成编号
+  useEffect(() => {
     if (isOpen) {
-      cropVarietyService.initVarieties();
+      // 加载药剂库和病虫害字典数据
+      pesticideStore.fetchItems();
+      pestDiseaseStore.fetchItems();
       // 生成记录编号
       store.generateCode().then(code => {
         if (code) setForm(prev => ({ ...prev, recordCode: code }));
       });
     }
-  }, [isOpen, greenhouses.length, loadGreenhouses, store]);
+  }, [isOpen]);
 
   // 重置表单
   useEffect(() => {
@@ -134,36 +207,63 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
       recordCode: form.recordCode,
       sprayTime: form.sprayTime,
       cropName: form.cropName,
-      greenhouseName: form.greenhouseName,
+      greenhouseName: form.greenhouses.length > 0 ? JSON.stringify(form.greenhouses) : '',
+      operatorName: form.operatorName,
       controlType: form.controlType,
       useLeafFertilizer: form.useLeafFertilizer,
+      applicationMethod: form.applicationMethod,
+      targetPest: form.targetPests.length > 0 ? JSON.stringify(form.targetPests) : '',
       description: form.description,
     };
 
     // 根据防治类型添加专用字段
     if (form.controlType === 'chemical') {
-      payload.pesticideName = form.pesticideName;
-      payload.pesticideType = form.pesticideType;
-      payload.dosage = form.dosage;
-      payload.dosageUnit = form.dosageUnit;
-      payload.dilutionRatio = form.dilutionRatio;
-      payload.applicationMethod = form.applicationMethod;
+      // 化学防治支持多个药剂，取第一个填入主字段，其余存储为JSON
+      const validPesticides = form.pesticides.filter(p => p.name.trim());
+      if (validPesticides.length > 0) {
+        const first = validPesticides[0];
+        payload.pesticideName = first.name;
+        payload.pesticideType = first.type;
+        payload.dosage = first.dosage;
+        payload.dosageUnit = first.unit;
+        payload.dilutionRatio = first.ratio;
+        // 多个药剂存储为JSON
+        payload.pesticideList = JSON.stringify(validPesticides);
+      }
     } else if (form.controlType === 'bio') {
-      payload.bioAgentName = form.bioAgentName;
-      payload.bioAgentType = form.bioAgentType;
-      payload.dosage = form.dosage;
-      payload.dosageUnit = form.dosageUnit;
-      payload.dilutionRatio = form.dilutionRatio;
+      // 生物防治支持多个制剂，取第一个填入主字段，其余存储为JSON
+      const validBioAgents = form.bioAgents.filter(b => b.name.trim());
+      if (validBioAgents.length > 0) {
+        const first = validBioAgents[0];
+        payload.bioAgentName = first.name;
+        payload.bioAgentType = first.type;
+        payload.dosage = first.dosage;
+        payload.dosageUnit = first.unit;
+        payload.dilutionRatio = first.ratio;
+        // 多个制剂存储为JSON
+        payload.bioAgentList = JSON.stringify(validBioAgents);
+      }
     } else if (form.controlType === 'physical') {
-      payload.equipmentName = form.equipmentName;
-      payload.equipmentCount = form.equipmentCount;
+      // 物理防治支持多个设备/方式，取第一个填入主字段，其余存储为JSON
+      const validEquipment = form.equipment.filter(e => e.name.trim());
+      if (validEquipment.length > 0) {
+        const first = validEquipment[0];
+        payload.equipmentName = first.name;
+        payload.equipmentCount = first.count;
+        // 多个设备/方式存储为JSON
+        payload.equipmentList = JSON.stringify(validEquipment);
+      }
     }
 
     // 叶面肥联用
     if (form.useLeafFertilizer === 'yes') {
-      payload.leafFertilizerName = form.leafFertilizerName;
-      payload.leafFertilizerDosage = form.leafFertilizerDosage;
-      payload.leafFertilizerUnit = form.leafFertilizerUnit;
+      // 多个叶面肥存储为JSON字符串
+      if (form.leafFertilizers.length > 0) {
+        const validFertilizers = form.leafFertilizers.filter(f => f.name.trim());
+        if (validFertilizers.length > 0) {
+          payload.leafFertilizerName = JSON.stringify(validFertilizers);
+        }
+      }
     }
 
     await store.createItem(payload);
@@ -188,15 +288,20 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
         {/* 防治类型选择 */}
         <div>
           <SectionTitle title="防治类型" icon="🔍" />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {CONTROL_TYPES.map(ct => (
               <div
                 key={ct.value}
                 onClick={() => updateField('controlType', ct.value)}
-                className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center
-                  ${form.controlType === ct.value ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-300'}`}
+                className={`py-1.5 rounded-lg border-2 cursor-pointer transition-all text-center
+                  ${ct.value === 'chemical'
+                    ? form.controlType === ct.value ? 'border-red-500 bg-red-500' : 'border-red-200 bg-red-50 hover:border-red-400'
+                    : ct.value === 'bio'
+                    ? form.controlType === ct.value ? 'border-green-500 bg-green-500' : 'border-green-200 bg-green-50 hover:border-green-400'
+                    : form.controlType === ct.value ? 'border-blue-500 bg-blue-500' : 'border-blue-200 bg-blue-50 hover:border-blue-400'
+                  }`}
               >
-                <span className={`text-sm font-medium ${form.controlType === ct.value ? 'text-emerald-700' : 'text-gray-600'}`}>
+                <span className={`text-sm font-medium ${form.controlType === ct.value ? 'text-white' : 'text-gray-600'}`}>
                   {ct.label}
                 </span>
               </div>
@@ -205,7 +310,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
         </div>
 
         {/* 公共信息 */}
-        <div>
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
           <SectionTitle title="公共信息" icon="📋" />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
@@ -270,19 +375,104 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                 )}
               </div>
               <div>
-                <Label className="text-gray-900">温室位置</Label>
+                <Label className="text-gray-900">防治区域</Label>
                 <select
-                  value={form.greenhouseName}
-                  onChange={(e) => updateField('greenhouseName', e.target.value)}
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value && !form.greenhouses.includes(e.target.value)) {
+                      updateField('greenhouses', [...form.greenhouses, e.target.value]);
+                    }
+                  }}
                   className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                 >
-                  <option value="">选择温室位置</option>
+                  <option value="">选择防治区域</option>
                   {greenhouses
-                    .filter(g => g.status === 'active')
+                    .filter(g => g.status === 'active' && !form.greenhouses.includes(g.name))
                     .map(g => (
                       <option key={g.id} value={g.name}>{g.name}</option>
                     ))}
                 </select>
+                {form.greenhouses.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {form.greenhouses.map((gh, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200"
+                      >
+                        {gh}
+                        <button
+                          type="button"
+                          onClick={() => updateField('greenhouses', form.greenhouses.filter((_, i) => i !== idx))}
+                          className="ml-1.5 text-emerald-500 hover:text-emerald-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label className="text-gray-900">操作人</Label>
+                <Input
+                  type="text"
+                  value={form.operatorName}
+                  onChange={(e) => updateField('operatorName', e.target.value)}
+                  placeholder="输入操作人"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* 施用方法 & 目标病虫害 - 记录级别字段 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-900">施用方法</Label>
+                <DictSelect
+                  category="application_method"
+                  value={form.applicationMethod}
+                  onChange={(val) => updateField('applicationMethod', val)}
+                  placeholder="选择施用方法"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-900">目标病虫害</Label>
+                <div className="space-y-2">
+                  {/* 已选的目标病虫害标签 */}
+                  {form.targetPests.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {form.targetPests.map((pest, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200"
+                        >
+                          {pest}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newList = form.targetPests.filter((_, i) => i !== idx);
+                              updateField('targetPests', newList);
+                            }}
+                            className="ml-1.5 text-orange-500 hover:text-orange-700 font-bold"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* 搜索选择 */}
+                  <SearchableSelect
+                    value=""
+                    onChange={(val) => {
+                      if (val && !form.targetPests.includes(val)) {
+                        updateField('targetPests', [...form.targetPests, val]);
+                      }
+                    }}
+                    options={pestDiseaseOptions.filter(p => !form.targetPests.includes(p.value))}
+                    placeholder="搜索添加目标病虫害"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -290,181 +480,309 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
 
         {/* 化学防治专用 */}
         {form.controlType === 'chemical' && (
-          <div>
+          <div className="bg-red-50 rounded-lg p-4 border border-red-100">
             <SectionTitle title="化学防治" icon="🧪" />
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-900">农药名称</Label>
-                  <Input
-                    type="text"
-                    value={form.pesticideName}
-                    onChange={(e) => updateField('pesticideName', e.target.value)}
-                    placeholder="请输入农药名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">农药类型</Label>
-                  <DictSelect
-                    category="pesticide_type"
-                    value={form.pesticideType}
-                    onChange={(value) => updateField('pesticideType', value)}
-                    placeholder="选择农药类型"
-                  />
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-gray-900">药剂列表</Label>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    const newList = [...form.pesticides, { name: '', type: '', dosage: 0, unit: '克', ratio: '', applicationMethod: '' }];
+                    updateField('pesticides', newList);
+                  }}
+                >
+                  + 新增药剂
+                </Button>
               </div>
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-gray-900">用药量</Label>
-                  <Input
-                    type="number"
-                    value={form.dosage || ''}
-                    onChange={(e) => updateField('dosage', Number(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+              {form.pesticides.length === 0 ? (
+                <div className="text-center text-gray-400 py-4 text-sm border border-dashed border-gray-300 rounded-lg">
+                  点击上方"新增药剂"添加
                 </div>
-                <div>
-                  <Label className="text-gray-900">单位</Label>
-                  <Select value={form.dosageUnit} onValueChange={(val) => updateField('dosageUnit', val)}>
-                    <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <SelectValue placeholder="选择单位" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOSAGE_UNITS.map(u => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-gray-900">稀释比例</Label>
-                  <Input
-                    type="text"
-                    value={form.dilutionRatio}
-                    onChange={(e) => updateField('dilutionRatio', e.target.value)}
-                    placeholder="如 1:500"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">施用方法</Label>
-                  <DictSelect
-                    category="application_method"
-                    value={form.applicationMethod}
-                    onChange={(value) => updateField('applicationMethod', value)}
-                    placeholder="选择方法"
-                  />
-                </div>
-              </div>
+              ) : (
+                form.pesticides.map((item, index) => (
+                  <div key={index} className="grid grid-cols-6 gap-2 items-end">
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">药剂名称</Label>
+                      <SearchableSelect
+                        value={item.name}
+                        onChange={(val) => {
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, name: val };
+                          updateField('pesticides', newList);
+                        }}
+                        options={pesticideOptions}
+                        placeholder="选择药剂"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">药剂类型</Label>
+                      <DictSelect
+                        category="pesticide_type"
+                        value={item.type}
+                        onChange={(val) => {
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, type: val };
+                          updateField('pesticides', newList);
+                        }}
+                        placeholder="类型"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">用药量</Label>
+                      <Input
+                        type="number"
+                        value={item.dosage || ''}
+                        onChange={(e) => {
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, dosage: Number(e.target.value) };
+                          updateField('pesticides', newList);
+                        }}
+                        min="0"
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">单位</Label>
+                      <UnitDictSelect
+                        value={item.unit}
+                        onChange={(val) => {
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, unit: val };
+                          updateField('pesticides', newList);
+                        }}
+                        placeholder="单位"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">稀释倍数</Label>
+                      <Input
+                        type="text"
+                        value={item.ratio}
+                        onChange={(e) => {
+                          const newList = [...form.pesticides];
+                          newList[index] = { ...item, ratio: e.target.value };
+                          updateField('pesticides', newList);
+                        }}
+                        placeholder="如: 1000"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <Label className="text-gray-700 text-xs mb-1 block invisible">操作</Label>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const newList = form.pesticides.filter((_, i) => i !== index);
+                          updateField('pesticides', newList);
+                        }}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
         {/* 生物防治专用 */}
         {form.controlType === 'bio' && (
-          <div>
+          <div className="bg-green-50 rounded-lg p-4 border border-green-100">
             <SectionTitle title="生物防治" icon="🧫" />
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-900">生物制剂名称</Label>
-                  <Input
-                    type="text"
-                    value={form.bioAgentName}
-                    onChange={(e) => updateField('bioAgentName', e.target.value)}
-                    placeholder="请输入生物制剂名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">制剂类型</Label>
-                  <DictSelect
-                    category="bio_agent_type"
-                    value={form.bioAgentType}
-                    onChange={(value) => updateField('bioAgentType', value)}
-                    placeholder="选择制剂类型"
-                  />
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-gray-900">生物制剂列表</Label>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    const newList = [...form.bioAgents, { name: '', type: '', dosage: 0, unit: '克', ratio: '' }];
+                    updateField('bioAgents', newList);
+                  }}
+                >
+                  + 新增生物制剂
+                </Button>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-gray-900">用量</Label>
-                  <Input
-                    type="number"
-                    value={form.dosage || ''}
-                    onChange={(e) => updateField('dosage', Number(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+              {form.bioAgents.length === 0 ? (
+                <div className="text-center text-gray-400 py-4 text-sm border border-dashed border-gray-300 rounded-lg">
+                  点击上方"新增生物制剂"添加
                 </div>
-                <div>
-                  <Label className="text-gray-900">单位</Label>
-                  <Select value={form.dosageUnit} onValueChange={(val) => updateField('dosageUnit', val)}>
-                    <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <SelectValue placeholder="选择单位" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOSAGE_UNITS.map(u => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-gray-900">稀释比例</Label>
-                  <Input
-                    type="text"
-                    value={form.dilutionRatio}
-                    onChange={(e) => updateField('dilutionRatio', e.target.value)}
-                    placeholder="如 1:100"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
+              ) : (
+                form.bioAgents.map((item, index) => (
+                  <div key={index} className="grid grid-cols-6 gap-2 items-end">
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">制剂名称</Label>
+                      <SearchableSelect
+                        value={item.name}
+                        onChange={(val) => {
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, name: val };
+                          updateField('bioAgents', newList);
+                        }}
+                        options={bioAgentOptions}
+                        placeholder="选择制剂"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">制剂类型</Label>
+                      <DictSelect
+                        category="bio_agent_type"
+                        value={item.type}
+                        onChange={(val) => {
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, type: val };
+                          updateField('bioAgents', newList);
+                        }}
+                        placeholder="类型"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">用量</Label>
+                      <Input
+                        type="number"
+                        value={item.dosage || ''}
+                        onChange={(e) => {
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, dosage: Number(e.target.value) };
+                          updateField('bioAgents', newList);
+                        }}
+                        min="0"
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">单位</Label>
+                      <UnitDictSelect
+                        value={item.unit}
+                        onChange={(val) => {
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, unit: val };
+                          updateField('bioAgents', newList);
+                        }}
+                        placeholder="单位"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">稀释倍数</Label>
+                      <Input
+                        type="text"
+                        value={item.ratio}
+                        onChange={(e) => {
+                          const newList = [...form.bioAgents];
+                          newList[index] = { ...item, ratio: e.target.value };
+                          updateField('bioAgents', newList);
+                        }}
+                        placeholder="如: 1000"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <Label className="text-gray-700 text-xs mb-1 block invisible">操作</Label>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const newList = form.bioAgents.filter((_, i) => i !== index);
+                          updateField('bioAgents', newList);
+                        }}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
         {/* 物理防治专用 */}
         {form.controlType === 'physical' && (
-          <div>
+          <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
             <SectionTitle title="物理防治" icon="⚙️" />
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-900">防治设备/方式</Label>
-                  <Input
-                    type="text"
-                    value={form.equipmentName}
-                    onChange={(e) => updateField('equipmentName', e.target.value)}
-                    placeholder="请输入设备或方式名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">用量/次数</Label>
-                  <Input
-                    type="text"
-                    value={form.equipmentCount}
-                    onChange={(e) => updateField('equipmentCount', e.target.value)}
-                    placeholder="如 10台、3次"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-gray-900">设备/方式列表</Label>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    const newList = [...form.equipment, { name: '', count: '' }];
+                    updateField('equipment', newList);
+                  }}
+                >
+                  + 新增设备/方式
+                </Button>
               </div>
+              {form.equipment.length === 0 ? (
+                <div className="text-center text-gray-400 py-4 text-sm border border-dashed border-gray-300 rounded-lg">
+                  点击上方"新增设备/方式"添加
+                </div>
+              ) : (
+                form.equipment.map((item, index) => (
+                  <div key={index} className="grid grid-cols-3 gap-2 items-end">
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">设备/方式</Label>
+                      <SearchableSelect
+                        value={item.name}
+                        onChange={(val) => {
+                          const newList = [...form.equipment];
+                          newList[index] = { ...item, name: val };
+                          updateField('equipment', newList);
+                        }}
+                        options={equipmentOptions}
+                        placeholder="选择设备/方式"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-gray-700 text-xs mb-1 block">用量/次数</Label>
+                      <Input
+                        type="text"
+                        value={item.count}
+                        onChange={(e) => {
+                          const newList = [...form.equipment];
+                          newList[index] = { ...item, count: e.target.value };
+                          updateField('equipment', newList);
+                        }}
+                        placeholder="如: 10台、3次"
+                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <Label className="text-gray-700 text-xs mb-1 block invisible">操作</Label>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          const newList = form.equipment.filter((_, i) => i !== index);
+                          updateField('equipment', newList);
+                        }}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
         {/* 叶面肥联用 - 仅化学防治显示 */}
         {form.controlType === 'chemical' && (
-          <div>
+          <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
             <SectionTitle title="叶面肥联用" icon="🌿" />
           <div className="space-y-3">
             <div className="flex items-center gap-4">
@@ -487,50 +805,111 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
               </div>
             </div>
             {form.useLeafFertilizer === 'yes' && (
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-gray-900">叶面肥名称</Label>
-                  <Input
-                    type="text"
-                    value={form.leafFertilizerName}
-                    onChange={(e) => updateField('leafFertilizerName', e.target.value)}
-                    placeholder="请输入叶面肥名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+              <>
+                {/* 叶面肥列表 */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-gray-900">叶面肥列表</Label>
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        const newList = [...form.leafFertilizers, { name: '', dosage: 0, unit: '克', ratio: '' }];
+                        updateField('leafFertilizers', newList);
+                      }}
+                    >
+                      + 新增叶面肥
+                    </Button>
+                  </div>
+                  {form.leafFertilizers.length === 0 ? (
+                    <div className="text-center text-gray-400 py-4 text-sm border border-dashed border-gray-300 rounded-lg">
+                      点击上方"新增叶面肥"添加
+                    </div>
+                  ) : (
+                    form.leafFertilizers.map((item, index) => (
+                      <div key={index} className="grid grid-cols-5 gap-2 items-end">
+                        <div>
+                          <Label className="text-gray-700 text-xs mb-1 block">叶面肥名称</Label>
+                          <Input
+                            type="text"
+                            value={item.name}
+                            onChange={(e) => {
+                              const newList = [...form.leafFertilizers];
+                              newList[index] = { ...item, name: e.target.value };
+                              updateField('leafFertilizers', newList);
+                            }}
+                            placeholder="输入名称"
+                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-gray-700 text-xs mb-1 block">稀释倍数</Label>
+                          <Input
+                            type="text"
+                            value={item.ratio}
+                            onChange={(e) => {
+                              const newList = [...form.leafFertilizers];
+                              newList[index] = { ...item, ratio: e.target.value };
+                              updateField('leafFertilizers', newList);
+                            }}
+                            placeholder="如: 1000"
+                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-gray-700 text-xs mb-1 block">用量</Label>
+                          <Input
+                            type="number"
+                            value={item.dosage || ''}
+                            onChange={(e) => {
+                              const newList = [...form.leafFertilizers];
+                              newList[index] = { ...item, dosage: Number(e.target.value) };
+                              updateField('leafFertilizers', newList);
+                            }}
+                            min="0"
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-gray-700 text-xs mb-1 block">单位</Label>
+                          <UnitDictSelect
+                            value={item.unit}
+                            onChange={(val) => {
+                              const newList = [...form.leafFertilizers];
+                              newList[index] = { ...item, unit: val };
+                              updateField('leafFertilizers', newList);
+                            }}
+                            placeholder="选择单位"
+                          />
+                        </div>
+                        <div className="mb-1">
+                          <Label className="text-gray-700 text-xs mb-1 block invisible">操作</Label>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              const newList = form.leafFertilizers.filter((_, i) => i !== index);
+                              updateField('leafFertilizers', newList);
+                            }}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div>
-                  <Label className="text-gray-900">用量</Label>
-                  <Input
-                    type="number"
-                    value={form.leafFertilizerDosage || ''}
-                    onChange={(e) => updateField('leafFertilizerDosage', Number(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">单位</Label>
-                  <Select value={form.leafFertilizerUnit} onValueChange={(val) => updateField('leafFertilizerUnit', val)}>
-                    <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <SelectValue placeholder="选择单位" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DOSAGE_UNITS.map(u => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>
         )}
 
         {/* 备注 */}
-        <div>
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
           <SectionTitle title="备注" icon="📝" />
           <TextArea
             value={form.description}

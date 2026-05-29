@@ -39,6 +39,57 @@ router.get('/:id/check-deletable', (req, res) => {
   }
 });
 
+// 打印记录相关路由
+// 获取打印记录
+router.get('/:id/print-records', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const records = db.exec(`
+      SELECT * FROM seed_source_print_records
+      WHERE seed_source_id = ?
+      ORDER BY print_time DESC
+    `, [id]);
+    const data = records.length > 0 ? records[0].values.map(row => {
+      const obj: any = {};
+      records[0].columns.forEach((col, idx) => obj[col] = row[idx]);
+      if (obj.label_numbers) obj.label_numbers = JSON.parse(obj.label_numbers);
+      return obj;
+    }) : [];
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('获取打印记录失败:', error);
+    res.status(500).json({ success: false, error: '获取打印记录失败' });
+  }
+});
+
+// 创建打印记录
+router.post('/:id/print', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { printType, printCount, operator, labelNumbers } = req.body;
+    const db = getDatabase();
+
+    // 生成打印记录ID
+    const recordId = `SPR${Date.now()}`;
+    const now = new Date().toISOString();
+
+    // 插入打印记录
+    db.run(`
+      INSERT INTO seed_source_print_records (id, seed_source_id, print_type, print_count, operator, label_numbers, print_time, create_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [recordId, id, printType || 'new', printCount || 1, operator || '', JSON.stringify(labelNumbers || []), now, now]);
+
+    // 更新种源的打印次数
+    db.run(`UPDATE seed_sources SET print_count = print_count + ? WHERE id = ?`, [printCount || 1, id]);
+
+    res.json({ success: true, data: { id: recordId, printCount: printCount || 1 } });
+  } catch (error) {
+    console.error('创建打印记录失败:', error);
+    res.status(500).json({ success: false, error: '创建打印记录失败' });
+  }
+});
+
 // 将请求传递给 controller
 router.get('/', (req, res, next) => seedSourceController.getAll(req, res, next));
 router.get('/:id', (req, res, next) => seedSourceController.getById(req, res, next));

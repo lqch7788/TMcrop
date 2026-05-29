@@ -1,7 +1,7 @@
 /**
  * 病虫害防治记录筛选工具栏组件
  * V12.0 新增
- * 筛选字段：防治类型、作物名称、温室位置、目标害虫、日期范围
+ * 筛选字段：防治类型、作物名称、防治区域、目标病虫害、日期范围
  */
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
@@ -70,26 +70,26 @@ export function PestControlFilter({
           />
         </div>
 
-        {/* 温室位置 */}
+        {/* 防治区域 */}
         <div className="flex-1 min-w-[140px]">
-          <Label className="text-gray-700">温室位置</Label>
+          <Label className="text-gray-700">防治区域</Label>
           <Input
             type="text"
             value={filters.greenhouseName || ''}
             onChange={(e) => updateFilter('greenhouseName', e.target.value)}
-            placeholder="请输入温室位置"
+            placeholder="请输入防治区域"
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 
-        {/* 目标害虫 */}
+        {/* 目标病虫害 */}
         <div className="flex-1 min-w-[140px]">
-          <Label className="text-gray-700">目标害虫</Label>
+          <Label className="text-gray-700">目标病虫害</Label>
           <Input
             type="text"
             value={filters.targetPest || ''}
             onChange={(e) => updateFilter('targetPest', e.target.value)}
-            placeholder="请输入目标害虫"
+            placeholder="请输入目标病虫害"
             className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>

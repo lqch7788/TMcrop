@@ -8,6 +8,7 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
+import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 
 // 农药剂型选项（完整列表）
 const FORMULATION_OPTIONS = [
@@ -213,29 +214,12 @@ export function PesticideSpecEditor({ specs, onChange, disabled = false }: Pesti
               {/* 单位 */}
               <div>
                 <Label className="text-xs text-gray-500">单位</Label>
-                <Select
-                  value={spec.dosageUnit || 'g/L'}
-                  onValueChange={(value) => handleSpecChange(index, 'dosageUnit', value)}
+                <UnitDictSelect
+                  value={spec.dosageUnit}
+                  onChange={(value) => handleSpecChange(index, 'dosageUnit', value)}
                   disabled={disabled}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="选择单位" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="g/桶">g/桶</SelectItem>
-                    <SelectItem value="kg/桶">kg/桶</SelectItem>
-                    <SelectItem value="mL/桶">mL/桶</SelectItem>
-                    <SelectItem value="L/桶">L/桶</SelectItem>
-                    <SelectItem value="g/亩">g/亩</SelectItem>
-                    <SelectItem value="kg/亩">kg/亩</SelectItem>
-                    <SelectItem value="mL/亩">mL/亩</SelectItem>
-                    <SelectItem value="L/亩">L/亩</SelectItem>
-                    <SelectItem value="g/hm²">g/hm²</SelectItem>
-                    <SelectItem value="kg/hm²">kg/hm²</SelectItem>
-                    <SelectItem value="倍液">倍液</SelectItem>
-                    <SelectItem value="其他">其他</SelectItem>
-                  </SelectContent>
-                </Select>
+                  placeholder="选择单位"
+                />
               </div>
 
               {/* 建议稀释比例 */}

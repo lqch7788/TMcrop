@@ -37,11 +37,11 @@ export function TodayOperationRecords({ records, onShowAll }: TodayOperationReco
           variant="link"
           size="sm"
           onClick={onShowAll}
-          className="text-emerald-600 hover:text-emerald-700"
+          className="text-emerald-600 hover:text-emerald-700 font-bold text-base"
         >
           查看全部
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>
         </Button>
       </div>
