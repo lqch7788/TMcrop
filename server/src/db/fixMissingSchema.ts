@@ -526,6 +526,28 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• iot_devices:', e.message);
   }
 
+  // V10.1: IoT传感器表（iotMonitor.ts 路由使用）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS iot_sensors (
+        id TEXT PRIMARY KEY,
+        greenhouse_id TEXT,
+        sensor_id TEXT,
+        type TEXT,
+        type_name TEXT,
+        status TEXT DEFAULT 'online',
+        value TEXT,
+        unit TEXT,
+        last_update TEXT,
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime'))
+      )
+    `);
+    console.log('✓ iot_sensors 表创建成功');
+  } catch (e: any) {
+    console.log('• iot_sensors:', e.message);
+  }
+
   // 18.5 确保 material_code_categories 表存在
   try {
     db.run(`

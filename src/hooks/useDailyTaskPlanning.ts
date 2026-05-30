@@ -298,7 +298,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   // ============================================
   // 生成每日派工计划
   // ============================================
-  const generateDailyPlan = useCallback((targetDate: string): DailyPlan => {
+  const generateDailyPlan = useCallback(async (targetDate: string): Promise<DailyPlan> => {
     // 获取超期待处理任务
     const pendingTasks = getPendingDispatchTasks(targetDate);
 
@@ -415,13 +415,13 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
 
       // 如果有任何错误，返回 false
       if (errors.length > 0) {
-        console.error('部分任务派发失败:', errors);
+        // 部分任务派发失败
         return { success: false, dispatchedTasks: dispatchedCount };
       }
 
       return { success: true, dispatchedTasks: dispatchedCount };
     } catch (error) {
-      console.error('派发失败:', error);
+      // 派发失败
       return { success: false, dispatchedTasks: dispatchedCount };
     }
   }, [createTask, setLastTaskDates, dailyPlanStore]);
