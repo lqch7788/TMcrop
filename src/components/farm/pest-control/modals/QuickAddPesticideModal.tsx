@@ -10,6 +10,9 @@ import { Label } from '@/components/ui/label';
 import { usePesticideLibraryStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface QuickAddPesticideModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -90,7 +93,7 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
             value={form.pesticideName}
             onChange={(e) => updateField('pesticideName', e.target.value)}
             placeholder="请输入药剂名称"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -101,7 +104,7 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
             value={form.pesticideCode}
             onChange={(e) => updateField('pesticideCode', e.target.value)}
             placeholder="留空自动生成"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -137,7 +140,7 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
             value={form.functionDesc}
             onChange={(e) => updateField('functionDesc', e.target.value)}
             placeholder="请输入功能描述"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 

@@ -10,6 +10,9 @@ import { Label } from '../../../ui/label';
 import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 巡查记录类型（用于表单）
 interface InspectionRecordFormData {
   recordCode: string;
@@ -151,7 +154,7 @@ export function CreateInspectionModal({
                   value={newRecord.recordCode}
                   onChange={(e) => updateField('recordCode', e.target.value)}
                   placeholder="点击生成或手动输入"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  className={deepInputClass + " font-mono"}
                 />
                 <Button
                   type="button"
@@ -184,7 +187,7 @@ export function CreateInspectionModal({
             value={newRecord.inspectionType}
             onValueChange={(val) => updateField('inspectionType', val)}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="种植区域巡查" />
             </SelectTrigger>
             <SelectContent>
@@ -204,7 +207,7 @@ export function CreateInspectionModal({
                 value={newRecord.greenhouseId}
                 onValueChange={(val) => updateField('greenhouseId', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择区域" />
                 </SelectTrigger>
                 <SelectContent>                  {greenhouses.map(gh => (
@@ -218,7 +221,7 @@ export function CreateInspectionModal({
                 value={newRecord.cropName}
                 onValueChange={(val) => updateField('cropName', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择作物" />
                 </SelectTrigger>
                 <SelectContent>                  {cropTypes.map(crop => (
@@ -244,7 +247,7 @@ export function CreateInspectionModal({
                   }));
                 }}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择设备" />
                 </SelectTrigger>
                 <SelectContent>                  {equipmentRecords.map(eq => (
@@ -259,7 +262,7 @@ export function CreateInspectionModal({
                 value={newRecord.equipmentName}
                 readOnly
                 placeholder="自动填充"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50"
+                className={deepInputClass + " bg-gray-50"}
               />
             </FormField>
           </div>
@@ -280,7 +283,7 @@ export function CreateInspectionModal({
                   }));
                 }}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择基础设施" />
                 </SelectTrigger>
                 <SelectContent>                  {infrastructureRecords.map(inf => (
@@ -295,7 +298,7 @@ export function CreateInspectionModal({
                 value={newRecord.infrastructureName}
                 readOnly
                 placeholder="自动填充"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50"
+                className={deepInputClass + " bg-gray-50"}
               />
             </FormField>
           </div>
@@ -308,7 +311,7 @@ export function CreateInspectionModal({
               onChange={(e) => updateField('remarks', e.target.value)}
               placeholder="请输入其他巡查类型的具体说明"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className={`${deepInputClass} resize-none`}
             />
           </FormField>
         )}
@@ -320,7 +323,7 @@ export function CreateInspectionModal({
               type="text"
               value={users.find(u => u.id === newRecord.inspectorId)?.name || ''}
               readOnly
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg bg-gray-50 text-gray-700"
+              className={deepInputClass + " bg-gray-50 text-gray-700"}
             />
           </FormField>
           <FormField label="关联生产计划批次">
@@ -328,7 +331,7 @@ export function CreateInspectionModal({
               value={newRecord.batchId}
               onValueChange={(val) => updateField('batchId', val)}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="不关联批次" />
               </SelectTrigger>
               <SelectContent>
@@ -347,7 +350,7 @@ export function CreateInspectionModal({
             <DatePicker
               selected={newRecord.checkDate ? new Date(newRecord.checkDate) : undefined}
               onChange={(date) => updateField('checkDate', date.toISOString().split('T')[0])}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </FormField>
           <FormField label="巡查时间">
@@ -355,7 +358,7 @@ export function CreateInspectionModal({
               type="time"
               value={newRecord.checkTime}
               onChange={(e) => updateField('checkTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </FormField>
           <FormField label="巡查时长(分钟)">
@@ -375,7 +378,7 @@ export function CreateInspectionModal({
                 value={newRecord.cropStatus}
                 onValueChange={(val) => updateField('cropStatus', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择作物状态" />
                 </SelectTrigger>
                 <SelectContent>
@@ -585,7 +588,7 @@ export function CreateInspectionModal({
                 onChange={(e) => updateField('issueText', e.target.value)}
                 placeholder={newRecord.issueCategories?.length === 1 ? "请详细描述发现的问题" : "请详细描述各种问题现象"}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                className={`${deepInputClass} resize-none`}
               />
             </FormField>
 
@@ -727,7 +730,7 @@ export function CreateInspectionModal({
             onChange={(e) => updateField('remarks', e.target.value)}
             placeholder="请输入巡查备注"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className={`${deepInputClass} resize-none`}
           />
         </FormField>
       </div>

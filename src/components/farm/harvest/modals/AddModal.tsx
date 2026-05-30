@@ -23,6 +23,9 @@ import { GreenhouseSelect } from '../../../common/settings/GreenhouseSelect';
 import { WarehouseSelect } from '../../../common/settings/WarehouseSelect';
 import { useDictionaryStore, getDictItems } from '../../../../stores';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ProductDetail {
   cropCode: string;      // 作物编码（11位）
   cropName: string;      // 作物名称
@@ -159,7 +162,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={addForm.harvestCode}
               readOnly
               placeholder="点击生成获取单号"
-              className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50 font-mono"
+              className={deepInputClass + " bg-gray-50 font-mono"}
             />
             <Button
               variant="default"
@@ -180,7 +183,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             type="datetime-local"
             value={addForm.harvestDate}
             onChange={(e) => onFormChange('harvestDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
           {errors.harvestDate && <p className="text-red-500 text-xs mt-1">{errors.harvestDate}</p>}
         </div>
@@ -190,7 +193,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             type="text"
             value={currentOperator}
             readOnly
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 font-medium"
+            className={deepInputClass + " bg-gray-100 font-medium"}
           />
         </div>
         <div>
@@ -202,7 +205,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               onFormChange('batchCode', val);
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择批次" />
             </SelectTrigger>
             <SelectContent>
@@ -219,7 +222,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.greenhouseId}
             onValueChange={(val) => onFormChange('greenhouseId', val)}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择区域" />
             </SelectTrigger>
             <SelectContent>
@@ -237,7 +240,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.auditor}
             onChange={(e) => onFormChange('auditor', e.target.value)}
             placeholder="请输入审核人员"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
         {/* V3.2 单价和单位字段 */}
@@ -253,7 +256,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               placeholder="输入单价"
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div className="flex-1">
@@ -309,7 +312,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             onChange={(val) => onFormChange('warehouseId', val)}
             placeholder="请选择目标仓库"
             warehouseType={addForm.targetInventory === 'seed' ? 'seed_storage' : addForm.targetInventory === 'seedling' ? 'seedling' : 'cold_storage'}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
           <p className="mt-1 text-xs text-gray-400">
             {addForm.targetInventory === 'seed' && '（筛选：种子库）'}
@@ -375,7 +378,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={addForm.supplementaryReason}
               onChange={(e) => onFormChange('supplementaryReason', e.target.value)}
               placeholder="请输入补录原因"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </div>
         )}
@@ -429,7 +432,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.cropCode}
                           onChange={(e) => onProductChange(idx, 'cropCode', e.target.value.toUpperCase())}
                           placeholder="编码"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 品种（类型名，如"黄瓜"） */}
@@ -439,7 +442,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.cropName}
                           onChange={(e) => onProductChange(idx, 'cropName', e.target.value)}
                           placeholder="品种"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 作物品种（最细化名，如"水果黄瓜"） */}
@@ -449,7 +452,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.variety}
                           onChange={(e) => onProductChange(idx, 'variety', e.target.value)}
                           placeholder="作物品种"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 种植模式 */}
@@ -459,7 +462,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.plantingMode}
                           onChange={(e) => onProductChange(idx, 'plantingMode', e.target.value)}
                           placeholder="种植模式"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 品质等级 */}
@@ -468,7 +471,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.grade}
                           onValueChange={(val) => onProductChange(idx, 'grade', val)}
                         >
-                          <SelectTrigger className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                          <SelectTrigger className={deepInputClass}>
                             <SelectValue placeholder="等级" />
                           </SelectTrigger>
                           <SelectContent>
@@ -485,7 +488,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.harvestQuantity}
                           onChange={(e) => onProductChange(idx, 'harvestQuantity', Number(e.target.value))}
                           min="0"
-                          className="w-full px-1 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 单位 */}
@@ -504,7 +507,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.targetYield}
                           onChange={(e) => onProductChange(idx, 'targetYield', Number(e.target.value))}
                           min="0"
-                          className="w-full px-2 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 完成率 */}
@@ -518,7 +521,7 @@ export const AddModal: React.FC<AddModalProps> = ({
                           value={product.remarks}
                           onChange={(e) => onProductChange(idx, 'remarks', e.target.value)}
                           placeholder="备注"
-                          className="w-full px-1 py-1 border border-gray-400 rounded text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className={deepInputClass}
                         />
                       </td>
                       {/* 操作 */}
@@ -553,7 +556,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           onChange={(e) => onFormChange('remarks', e.target.value)}
           placeholder="请输入采收备注"
           rows={2}
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+          className={deepInputClass + " resize-none"}
         />
       </div>
 

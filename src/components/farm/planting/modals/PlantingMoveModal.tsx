@@ -26,6 +26,9 @@ export interface MoveFormData {
 }
 
 // ========== 组件属性 ==========
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 interface PlantingMoveModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -117,7 +120,7 @@ export default function PlantingMoveModal({
               onValueChange={(v) => handleChange('operationType', v as 'move_in' | 'move_out')}
               disabled={isHarvested}
             >
-              <SelectTrigger>
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -135,6 +138,7 @@ export default function PlantingMoveModal({
               onChange={(e) => handleChange('labelNumber', (e.target as HTMLInputElement).value)}
               placeholder="请输入或扫描标签二维码ID"
               disabled={isHarvested}
+              className={deepInputClass}
             />
           </div>
 
@@ -148,7 +152,7 @@ export default function PlantingMoveModal({
               onValueChange={(v) => handleChange('targetArea', v)}
               disabled={isHarvested}
             >
-              <SelectTrigger>
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="选择区域" />
               </SelectTrigger>
               <SelectContent>

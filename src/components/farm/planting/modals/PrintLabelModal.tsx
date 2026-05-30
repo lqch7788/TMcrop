@@ -20,6 +20,9 @@ interface PrintLabelModalProps {
   record: Planting;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProps) {
   const [template, setTemplate] = useState<'small' | 'large' | 'detail'>('detail');
   const [printMode, setPrintMode] = useState<'single' | 'multi' | 'batch'>('single');
@@ -256,7 +259,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               <div>
                 <Label className="text-gray-600 text-xs">选择标签编号</Label>
                 <Select value={previewLabel} onValueChange={(val) => setPreviewLabel(val)}>
-                  <SelectTrigger className="w-48 px-3 py-1 border border-gray-400 rounded text-sm">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="选择标签" />
                   </SelectTrigger>
                   <SelectContent>
@@ -303,7 +306,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
                 <Input type="number" min="1" max={remainingCount}
                   value={printCount}
                   onChange={(e) => setPrintCount(Math.max(1, Math.min(remainingCount, Number(e.target.value))))}
-                  className="w-24 px-3 py-1 border border-gray-400 rounded text-sm" />
+                  className={deepInputClass} />
               </div>
               <div className="text-xs text-gray-500">
                 将生成 {printCount} 个标签（可用库存：{remainingCount}，已生成：{allLabelNumbers.length}）
@@ -321,7 +324,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           <div>
             <Label className="text-gray-700">模板选择</Label>
             <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="详情标签" />
               </SelectTrigger>
               <SelectContent>

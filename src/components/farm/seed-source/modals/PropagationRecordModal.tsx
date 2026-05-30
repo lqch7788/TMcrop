@@ -40,6 +40,9 @@ interface PropagationRecordModalProps {
   onSuccess?: () => void;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function PropagationRecordModal({
   isOpen,
   onClose,
@@ -158,7 +161,7 @@ export function PropagationRecordModal({
                 type="datetime-local"
                 value={formData.recordDate || ''}
                 onChange={(e) => setFormData({ ...formData, recordDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -169,7 +172,7 @@ export function PropagationRecordModal({
                 value={formData.stage}
                 onValueChange={(val) => setFormData({ ...formData, stage: val as PropagationStatus })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="选择阶段" />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,7 +194,7 @@ export function PropagationRecordModal({
                 value={formData.temperature ?? ''}
                 onChange={(e) => setFormData({ ...formData, temperature: e.target.value ? Number(e.target.value) : undefined })}
                 placeholder="如 25.5"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -206,7 +209,7 @@ export function PropagationRecordModal({
                 value={formData.humidity ?? ''}
                 onChange={(e) => setFormData({ ...formData, humidity: e.target.value ? Number(e.target.value) : undefined })}
                 placeholder="如 65"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -218,7 +221,7 @@ export function PropagationRecordModal({
                 value={formData.operator || ''}
                 onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
                 placeholder="操作人姓名"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -231,7 +234,7 @@ export function PropagationRecordModal({
                     value={formData.pollinationType || '__none__'}
                     onValueChange={(val) => setFormData({ ...formData, pollinationType: val === '__none__' ? undefined : val as any })}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="未设置" />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,7 +252,7 @@ export function PropagationRecordModal({
                     value={formData.pollinatorCrop || ''}
                     onChange={(e) => setFormData({ ...formData, pollinatorCrop: e.target.value })}
                     placeholder="授粉作物名称"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -258,7 +261,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.flowerCount || ''}
                     onChange={(e) => setFormData({ ...formData, flowerCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -267,7 +270,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.fruitSetCount || ''}
                     onChange={(e) => setFormData({ ...formData, fruitSetCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               </>
@@ -282,7 +285,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.harvestSeedCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestSeedCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -292,7 +295,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.seedWeight || ''}
                     onChange={(e) => setFormData({ ...formData, seedWeight: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               </>
@@ -307,7 +310,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.harvestPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestPlantCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               </>
@@ -323,7 +326,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.germinationRate || ''}
                     onChange={(e) => setFormData({ ...formData, germinationRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -333,7 +336,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.purity || ''}
                     onChange={(e) => setFormData({ ...formData, purity: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -343,7 +346,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.moisture || ''}
                     onChange={(e) => setFormData({ ...formData, moisture: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               </>
@@ -356,7 +359,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.survivalRate || ''}
                     onChange={(e) => setFormData({ ...formData, survivalRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -366,7 +369,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.rootedRate || ''}
                     onChange={(e) => setFormData({ ...formData, rootedRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
                 <div>
@@ -376,7 +379,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.graftSuccessRate || ''}
                     onChange={(e) => setFormData({ ...formData, graftSuccessRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               </>
@@ -392,7 +395,7 @@ export function PropagationRecordModal({
                 value={formData.abnormality || ''}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
                 placeholder="记录异常情况（如有）"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -403,7 +406,7 @@ export function PropagationRecordModal({
                 value={formData.remarks || ''}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className={deepInputClass}
                 placeholder="补充说明"
               />
             </div>

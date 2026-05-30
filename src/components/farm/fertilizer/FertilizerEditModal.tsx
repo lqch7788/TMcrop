@@ -136,9 +136,12 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
     <h3 className="text-sm font-bold text-gray-900 mb-3">{icon} {title}</h3>
   );
 
+  // 深度输入框样式
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   const inputClass = isIot
     ? 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 cursor-not-allowed text-gray-500'
-    : 'w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500';
+    : deepInputClass;
 
   return (
     <UnifiedModal

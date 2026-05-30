@@ -18,6 +18,9 @@ import {
 } from '../../../../services/cropVarietyExtensionService';
 import { CropVariety } from '../../../../types/cropVariety';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -183,7 +186,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
               value={selectedCategory}
               onValueChange={(val) => setSelectedCategory(val)}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -264,7 +267,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                 value={alias}
                 onChange={(e) => setAlias(e.target.value)}
                 placeholder="如：西红柿、洋柿子（逗号分隔）"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
               <p className="mt-1 text-xs text-gray-400">支持多个别名，逗号分隔</p>
             </div>
@@ -277,7 +280,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                 value={growthCycle || ''}
                 onChange={(e) => setGrowthCycle(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="如：120"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -289,7 +292,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                 value={targetYield || ''}
                 onChange={(e) => setTargetYield(e.target.value ? Number(e.target.value) : undefined)}
                 placeholder="如：5000"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -301,7 +304,7 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="其他说明"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
           </div>

@@ -12,6 +12,9 @@ import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ReassignTaskModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -119,7 +122,7 @@ export function ReassignTaskModal({
               value={selectedAssignee}
               onValueChange={(val) => setSelectedAssignee(val)}
             >
-              <SelectTrigger className="w-full pl-10 pr-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择执行人" />
               </SelectTrigger>
               <SelectContent>                {availableAssignees.map(user => (

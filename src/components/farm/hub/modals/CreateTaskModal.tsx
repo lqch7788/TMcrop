@@ -19,6 +19,9 @@ import type { UseTasksReturn } from '../../../../hooks/useTasks';
 import { format, addHours } from 'date-fns';
 import { getDictionaries } from '../../../../services/dictionaryService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 辅助函数：自动生成任务编号 NS+年月日+3位流水号（如 NS20260416001）
 function autoGenerateTaskCode(tasks: Task[]): string {
   const today = new Date();
@@ -494,7 +497,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     type="text"
                     value={newTask.taskId || ''}
                     onChange={(e) => setNewTask({ ...newTask, taskId: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     placeholder="点击下方生成按钮"
                   />
                   <Button
@@ -518,7 +521,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                       setNewTask(prev => ({ ...prev, batchCode: val, batchId: val ? prev.batchId : '' }));
                     }}
                     onFocus={() => setShowBatchDropdown(true)}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     placeholder="搜索或选择生产批次..."
                   />
                   {showBatchDropdown && (
@@ -724,7 +727,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                       type="text"
                       value={newTask.cropRemarks || ''}
                       onChange={(e) => setNewTask({ ...newTask, cropRemarks: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={deepInputClass}
                       placeholder="请输入作物说明"
                     />
                   </div>
@@ -804,7 +807,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   type="text"
                   value={newTask.typeRemarks || ''}
                   onChange={(e) => setNewTask({ ...newTask, typeRemarks: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                   placeholder="请输入其他任务说明"
                 />
               </div>
@@ -822,7 +825,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 value={newTask.sopContent}
                 onChange={(e) => setNewTask({ ...newTask, sopContent: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
                 placeholder="请输入作业标准...（简单任务可在此直接输入，复杂任务可点击导入文件）"
               />
               <div className="mt-2 flex items-center gap-3">
@@ -1034,7 +1037,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 onChange={(e) => setNewTask({ ...newTask, toolsRemarks: e.target.value })}
                 placeholder="补充说明资源相关要求"
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 时间与要求 */}
@@ -1052,7 +1055,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="8小时/天" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1084,7 +1087,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     setNewTask({ ...newTask, planStart: datePart + ' ' + val });
                   }}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="08:00" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1106,7 +1109,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     setNewTask({ ...newTask, estimatedDays: isNaN(val) ? 0 : val });
                   }}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               {/* 小时 */}
@@ -1126,7 +1129,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     }
                   }}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </div>
@@ -1151,7 +1154,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 value={newTask.priority}
                 onValueChange={(val) => setNewTask({ ...newTask, priority: val })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="普通" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1200,7 +1203,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 value={newTask.assignee || ''}
                 onValueChange={(val) => setNewTask({ ...newTask, assignee: val })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择执行人" />
                 </SelectTrigger>
                 <SelectContent>                  {responsiblePersons.map(person => (

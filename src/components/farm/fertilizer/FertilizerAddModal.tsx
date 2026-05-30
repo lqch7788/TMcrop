@@ -5,6 +5,9 @@
  */
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '../../ui/UnifiedModal';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -280,7 +283,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                         onChange={(e) => { setPlanSearchKeyword(e.target.value); setShowPlanSearch(true); }}
                         onFocus={() => setShowPlanSearch(true)}
                         placeholder="搜索生产计划批次号..."
-                        className="flex-1 px-3 py-2 border border-gray-400 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={`flex-1 ${deepInputClass} rounded-l-lg`}
                       />
                       <Button
                         type="button"
@@ -394,7 +397,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                         onChange={(e) => { setPlantingSearchKeyword(e.target.value); setShowPlantingSearch(true); }}
                         onFocus={() => setShowPlantingSearch(true)}
                         placeholder="搜索种植记录批号..."
-                        className="flex-1 px-3 py-2 border border-gray-400 rounded-l-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={`flex-1 ${deepInputClass} rounded-l-lg`}
                       />
                       <Button
                         type="button"
@@ -480,7 +483,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   value={form.greenhouseName}
                   onChange={(e) => updateField('greenhouseName', e.target.value)}
                   placeholder="请输入温室位置"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -538,7 +541,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
               <div>
                 <Label className="text-gray-900">肥料类型</Label>
                 <select
-                  className="w-full h-10 border border-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full h-10 ${deepInputClass}`}
                   value={form.fertilizerType}
                   onChange={(e) => {
                     updateField('fertilizerType', e.target.value);
@@ -569,14 +572,14 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                     value={form.fertilizerName}
                     onChange={(e) => updateField('fertilizerName', e.target.value)}
                     placeholder="请输入肥料名称"
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                   />
                 </div>
               ) : (
                 <div>
                   <Label className="text-gray-900">选择肥料</Label>
                   <select
-                    className="w-full h-10 border border-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={`w-full h-10 ${deepInputClass}`}
                     value={form.selectedFertilizerId}
                     onChange={(e) => {
                       const selected = fertilizerLibraryStore.items.find(i => i.id === e.target.value);
@@ -622,7 +625,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   value={form.dilutionRatio}
                   onChange={(e) => updateField('dilutionRatio', e.target.value)}
                   placeholder="如 1:500"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -634,7 +637,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   min="0"
                   step="0.01"
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -655,7 +658,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   min="0"
                   step="0.01"
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </div>
@@ -681,7 +684,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 type="datetime-local"
                 value={form.fertilizeTime}
                 onChange={(e) => updateField('fertilizeTime', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
           </div>
@@ -698,7 +701,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 value={form.operatorName}
                 onChange={(e) => updateField('operatorName', e.target.value)}
                 placeholder="请输入操作员名称"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             <div>
@@ -708,7 +711,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                 onChange={(e) => updateField('description', e.target.value)}
                 placeholder="请输入备注信息"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className={`${deepInputClass} resize-none`}
               />
             </div>
           </div>

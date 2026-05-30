@@ -11,6 +11,9 @@ import { CheckCircle, XCircle, Clock, User, MessageSquare, Image, Mic, MapPin, P
 import { Task, TaskRecord, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { TaskProgressTimeline } from '../components/TaskProgressTimeline';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface VerifyTaskModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -150,7 +153,7 @@ export function VerifyTaskModal({
                 ? '请填写驳回原因，说明需要返工的内容...'
                 : '选填，可添加验收备注...'
             }
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             rows={3}
           />
         </div>

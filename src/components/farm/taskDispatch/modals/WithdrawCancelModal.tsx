@@ -11,6 +11,9 @@ import { Task } from '../../../../types/task';
 import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 type WithdrawCancelType = 'withdraw' | 'cancel';
 
 interface WithdrawCancelModalProps {
@@ -114,7 +117,7 @@ export function WithdrawCancelModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={`请输入${isWithdraw ? '撤回' : '取消'}原因...`}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             rows={3}
           />
         </div>

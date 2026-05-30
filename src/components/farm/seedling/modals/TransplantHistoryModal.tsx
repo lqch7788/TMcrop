@@ -16,6 +16,9 @@ interface TransplantHistoryModalProps {
   record: Seedling;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHistoryModalProps) {
   const [historyData, setHistoryData] = useState<TransplantHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +124,7 @@ export function TransplantHistoryModal({ isOpen, onClose, record }: TransplantHi
               value={selectedLabel}
               onValueChange={(val) => setSelectedLabel(val)}
             >
-              <SelectTrigger className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="选择标签" />
               </SelectTrigger>
               <SelectContent>

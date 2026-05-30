@@ -11,6 +11,9 @@ import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../
 import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface TaskAcceptanceModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -259,7 +262,7 @@ export function TaskAcceptanceModal({
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="请输入驳回原因，说明需要返工的具体问题..."
-                className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 mb-3"
+                className={deepInputClass}
                 rows={3}
               />
               <div className="flex gap-3 justify-end">

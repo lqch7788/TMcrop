@@ -16,6 +16,9 @@ import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { usePestControlStore, useGreenhouseStore, usePesticideLibraryStore, usePestDiseaseDictStore, PestControlData } from '@/stores';
 import type { CropVariety } from '@/types/cropVariety';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 防治类型选项
 const CONTROL_TYPES = [
   { value: 'chemical', label: '化学防治' },
@@ -430,7 +433,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                   type="datetime-local"
                   value={form.sprayTime}
                   onChange={(e) => updateField('sprayTime', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </div>
@@ -498,7 +501,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                   value={form.operatorName}
                   onChange={(e) => updateField('operatorName', e.target.value)}
                   placeholder="输入操作人"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </div>
@@ -621,7 +624,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                         }}
                         min="0"
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={deepInputClass}
                       />
                     </div>
                     <div>
@@ -647,7 +650,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                           updateField('pesticides', newList);
                         }}
                         placeholder="如: 1000"
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={deepInputClass}
                       />
                     </div>
                     <div className="mb-1">
@@ -735,7 +738,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                         }}
                         min="0"
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={deepInputClass}
                       />
                     </div>
                     <div>
@@ -761,7 +764,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                           updateField('bioAgents', newList);
                         }}
                         placeholder="如: 1000"
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={deepInputClass}
                       />
                     </div>
                     <div className="mb-1">
@@ -835,7 +838,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                           updateField('equipment', newList);
                         }}
                         placeholder="如: 10台、3次"
-                        className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className={deepInputClass}
                       />
                     </div>
                     <div className="mb-1">
@@ -918,7 +921,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                               updateField('leafFertilizers', newList);
                             }}
                             placeholder="输入名称"
-                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className={deepInputClass}
                           />
                         </div>
                         <div>
@@ -932,7 +935,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                               updateField('leafFertilizers', newList);
                             }}
                             placeholder="如: 1000"
-                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className={deepInputClass}
                           />
                         </div>
                         <div>
@@ -947,7 +950,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
                             }}
                             min="0"
                             placeholder="0"
-                            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className={deepInputClass}
                           />
                         </div>
                         <div>
@@ -993,7 +996,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
             onChange={(e) => updateField('description', e.target.value)}
             placeholder="请输入备注信息"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className={`${deepInputClass} resize-none`}
           />
         </div>
       </div>

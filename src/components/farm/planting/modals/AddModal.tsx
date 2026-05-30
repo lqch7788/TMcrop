@@ -30,6 +30,9 @@ interface AddModalProps {
   sourceTypeOptions: Array<{ value: string; label: string }>;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function AddModal({
   isOpen,
   onClose,
@@ -269,7 +272,7 @@ export function AddModal({
               }));
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="不关联" />
             </SelectTrigger>
             <SelectContent>
@@ -298,7 +301,7 @@ export function AddModal({
               }
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +329,7 @@ export function AddModal({
             type="text"
             value={formData.cropName}
             readOnly
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50"
+            className={`${deepInputClass} bg-gray-50`}
             placeholder="选择来源后自动填充"
           />
         </div>
@@ -338,7 +341,7 @@ export function AddModal({
             type="text"
             value={formData.cropVariety}
             readOnly
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50"
+            className={`${deepInputClass} bg-gray-50`}
             placeholder="选择来源后自动填充"
           />
         </div>
@@ -361,7 +364,7 @@ export function AddModal({
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -371,7 +374,7 @@ export function AddModal({
           <DatePicker
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
             onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -384,7 +387,7 @@ export function AddModal({
             value={formData.soilPH || ''}
             onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
             placeholder="如：6.5"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -397,7 +400,7 @@ export function AddModal({
             value={formData.soilEC || ''}
             onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
             placeholder="如：1.2"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
