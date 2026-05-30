@@ -222,7 +222,7 @@ export function AddModal({
       </div>
 
       {/* 订单名称 */}
-      <div className="col-span-2">
+      <div>
         <Label className="text-gray-700">
           订单名称 <span className="text-red-500">*</span>
         </Label>
@@ -345,20 +345,6 @@ export function AddModal({
           value={formData.actualQuantity || ''}
           onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
           placeholder="请输入实际数量"
-          className={inputDeepClass}
-        />
-      </div>
-
-      {/* 供应商 */}
-      <div>
-        <Label className="text-gray-700">
-          供应商
-        </Label>
-        <Input
-          type="text"
-          value={formData.supplierName}
-          onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-          placeholder="请输入供应商名称"
           className={inputDeepClass}
         />
       </div>
