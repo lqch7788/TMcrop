@@ -48,22 +48,22 @@ function buildTreeData(
   return bases
     .filter(base => !query || base.name.toLowerCase().includes(query) || base.code.toLowerCase().includes(query))
     .map(base => ({
-      key: `base-${base.oid}`,
+      key: `base_${base.oid}`,
       title: `${base.code} ${base.name}`,
       type: 'base' as const,
       oid: base.oid,
       children: greenhouses
         .filter(gh => gh.baseOid === base.oid && (!query || gh.name.toLowerCase().includes(query) || gh.code.toLowerCase().includes(query)))
         .map(gh => ({
-          key: `gh-${gh.oid}`,
-          title: `🌿 ${gh.code} ${gh.name}`,
+          key: `gh_${gh.oid}`,
+          title: `${gh.code} ${gh.name}`,
           type: 'greenhouse' as const,
           oid: gh.oid,
           children: zones
             .filter(z => z.greenhouseOid === gh.oid && (!query || z.zoneName.toLowerCase().includes(query) || z.zoneCode.toLowerCase().includes(query)))
             .map(z => ({
-              key: `zone-${z.oid}`,
-              title: `📍 ${z.zoneCode} ${z.zoneName}`,
+              key: `zone_${z.oid}`,
+              title: `${z.zoneCode} ${z.zoneName}`,
               type: 'zone' as const,
               oid: z.oid,
             })),
@@ -233,42 +233,15 @@ export default function BaseOperationsCenterV2() {
   }, [selectedNode.type]);
 
   // 处理节点选择
-  const handleNodeSelect = (keys: string[]) => {
-    if (keys.length === 0) {
-      return;
-    }
-
-    const key = keys[0];
-    const [typePrefix, ...oidParts] = key.split('_');
-    const oid = oidParts.join('_'); // 处理 oid 中可能包含下划线的情况
-
-    const typeMap: Record<string, 'base' | 'greenhouse' | 'zone' | 'block'> = {
+  const handleNodeSelect = (key: string) => {
+    // key 格式: "base_xxx" | "gh_xxx" | "zone_xxx"
+    const [type, oid] = key.split('_')
+    const typeMap: Record<string, 'base' | 'greenhouse' | 'zone'> = {
       base: 'base',
-      greenhouse: 'greenhouse',
+      gh: 'greenhouse',
       zone: 'zone',
-      block: 'block',
-    };
-
-    const nodeType = typeMap[typePrefix];
-    if (!nodeType) return;
-
-    // 查找节点名称
-    let nodeName = '';
-    const findNodeName = (nodes: TreeNode[], targetKey: string): boolean => {
-      for (const node of nodes) {
-        if (node.key === targetKey) {
-          nodeName = node.title;
-          return true;
-        }
-        if (node.children && findNodeName(node.children, targetKey)) {
-          return true;
-        }
-      }
-      return false;
-    };
-    findNodeName(treeData, key);
-
-    selectNode(nodeType, oid, nodeName);
+    }
+    selectNode(typeMap[type] || 'base', oid, null)
   };
 
   // 处理新增
@@ -363,11 +336,15 @@ export default function BaseOperationsCenterV2() {
               </div>
             ) : (
               <Tree
-                data={filteredData}
+                data={treeData}
                 selectable
-                selectedKeys={selectedNode.oid ? [`${selectedNode.type}_${selectedNode.oid}`] : []}
+                selectedKeys={selectedNode.oid ? [`${selectedNode.type === 'greenhouse' ? 'gh' : selectedNode.type === 'zone' ? 'zone' : 'base'}_${selectedNode.oid}`] : []}
                 expandedKeys={expandedKeys}
-                onSelect={handleNodeSelect}
+                onSelect={(keys) => {
+                  if (keys.length > 0) {
+                    handleNodeSelect(keys[0])
+                  }
+                }}
                 onExpand={setExpandedKeys}
               />
             )}
