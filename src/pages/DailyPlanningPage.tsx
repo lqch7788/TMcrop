@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { showAlert } from '@/lib/dialogService';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
+import { escapeHtml } from '@/utils/exportUtils';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 dayjs.locale('zh-cn');
@@ -86,7 +87,7 @@ function TaskProgressTable({ title, description, data }: TaskProgressTableProps)
                     ) : <span className="text-gray-400">-</span>}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">{item.actualAssignee}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{item.delayReason || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 truncate max-w-[150px]">{escapeHtml(item.delayReason) || '-'}</td>
                 </tr>
               );
             })}

@@ -32,7 +32,8 @@ function transformSingle(item: BackendMonthlyPlan): MonthlyPlanRecord {
   if (item.plan_data) {
     try {
       planData = JSON.parse(item.plan_data) as MonthlyPlan;
-    } catch {
+    } catch (e) {
+      console.warn(`[apiMonthlyPlanService] 解析 plan_data 失败:`, e);
       planData = null;
     }
   } else if (item.planData) {

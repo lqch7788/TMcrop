@@ -355,7 +355,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
     };
 
     // 保存计划到服务器
-    dailyPlanStore.savePlan(targetDate, plan);
+    await dailyPlanStore.savePlan(targetDate, plan);
 
     return plan;
   }, [getPendingDispatchTasks, getWorkerLoadAnalysis, getWeatherForecast, dailyPlanStore]);
@@ -367,6 +367,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
     plan: DailyPlan
   ): Promise<{ success: boolean; dispatchedTasks: number }> => {
     let dispatchedCount = 0;
+    const errors: string[] = [];
 
     try {
       for (const task of plan.tasks) {
@@ -374,39 +375,49 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
         const suggestion = plan.workerSuggestions?.find(s => s.taskId === task.id);
 
         if (suggestion) {
-          // 创建任务：正确映射 PredictedTask 字段到 createTask 需要的字段
-          await createTask({
-            title: `${task.greenhouseName}-${task.taskTypeName}`,
-            type: task.taskType,
-            typeName: task.taskTypeName,
-            assigneeId: suggestion.workerId,
-            assigneeName: suggestion.workerName,
-            dueDate: task.suggestedDate,
-            priority: task.priority,
-            estimatedHours: task.estimatedHours,
-            status: 'pending',
-            sourceType: 'dispatch',
-            dispatchMode: 'farm',
-            greenhouseId: task.greenhouseId,
-            greenhouseName: task.greenhouseName,
-            cropName: task.cropName,
-            batchId: task.batchId,
-            batchCode: task.batchCode,
-          });
+          try {
+            // 创建任务：正确映射 PredictedTask 字段到 createTask 需要的字段
+            await createTask({
+              title: `${task.greenhouseName}-${task.taskTypeName}`,
+              type: task.taskType,
+              typeName: task.taskTypeName,
+              assigneeId: suggestion.workerId,
+              assigneeName: suggestion.workerName,
+              dueDate: task.suggestedDate,
+              priority: task.priority,
+              estimatedHours: task.estimatedHours,
+              status: 'pending',
+              sourceType: 'dispatch',
+              dispatchMode: 'farm',
+              greenhouseId: task.greenhouseId,
+              greenhouseName: task.greenhouseName,
+              cropName: task.cropName,
+              batchId: task.batchId,
+              batchCode: task.batchCode,
+            });
 
-          dispatchedCount++;
+            dispatchedCount++;
 
-          // 更新最后任务执行日期
-          const key = `${task.batchId}_${task.taskType}`;
-          setLastTaskDates(prev => ({
-            ...prev,
-            [key]: task.suggestedDate,
-          }));
+            // 更新最后任务执行日期
+            const key = `${task.batchId}_${task.taskType}`;
+            setLastTaskDates(prev => ({
+              ...prev,
+              [key]: task.suggestedDate,
+            }));
+          } catch (taskError) {
+            errors.push(`任务 ${task.taskTypeName} 创建失败: ${(taskError as Error).message}`);
+          }
         }
       }
 
       // 更新计划状态为已派发（保存到服务器）
       await dailyPlanStore.savePlan(plan.date, plan);
+
+      // 如果有任何错误，返回 false
+      if (errors.length > 0) {
+        console.error('部分任务派发失败:', errors);
+        return { success: false, dispatchedTasks: dispatchedCount };
+      }
 
       return { success: true, dispatchedTasks: dispatchedCount };
     } catch (error) {
