@@ -2,11 +2,15 @@
  * 全局对话框服务 — 替代原生 alert/confirm
  *
  * 用法:
- *   import { showAlert, showConfirm } from '@/lib/dialogService';
+ *   import { showAlert, showConfirm, showToast } from '@/lib/dialogService';
  *   await showAlert('操作成功！');
  *   const ok = await showConfirm('确定删除？');
  *   if (ok) { ... }
+ *   showToast('保存成功', 'success');
  */
+
+import type { ToastType } from '../components/ui/Toast';
+import { useToastStore } from '../stores/useToastStore';
 
 type Resolver = (value: boolean) => void;
 
@@ -82,4 +86,9 @@ export function getDialogState(): DialogState {
     message: dialogType === 'alert' ? alertMessage : confirmMessage,
     resolve: confirmResolver,
   };
+}
+
+/** 显示 Toast 提示（替代小段提示信息） */
+export function showToast(message: string, type: ToastType = 'info', duration?: number): void {
+  useToastStore.getState().addToast(type, message, duration);
 }

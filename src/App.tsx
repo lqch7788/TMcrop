@@ -93,6 +93,7 @@ import MyApproval from './pages/MyApproval';
 import HrApproval from './pages/HrApproval';
 import FarmStructureManagement from './pages/farm/FarmStructureManagement';
 import BaseOperationsCenter from './pages/BaseOperationsCenter';
+import BaseOperationsCenterV2 from './pages/BaseOperationsCenterV2';
 
 import CropVarietyManagement from './components/farm/crop-variety/CropVarietyManagement';
 
@@ -269,6 +270,7 @@ function AppContent() {
             <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="base-operations" element={<BaseOperationsCenter />} />
+            <Route path="base-operations-v2" element={<BaseOperationsCenterV2 />} />
             <Route path="monitor" element={<SystemMonitorPage />} />
             <Route path="backup" element={<BackupRecovery />} />
             {/* iAGS 集成新增路由（Phase 0 占位） */}
