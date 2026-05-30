@@ -148,6 +148,7 @@ const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
 const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
+const Customer = lazy(() => import('./components/farm/customer/CustomerPage'));
 const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const Fertilizer = lazy(() => import('./pages/crop/Fertilizer'));
@@ -312,6 +313,7 @@ function AppContent() {
 <Route path="/crop/fertilizer" element={<Fertilizer />} />
           <Route path="/crop-inventory" element={<ProduceInventory />} />
           <Route path="/crop/order" element={<Order />} />
+          <Route path="/crop/customer" element={<Customer />} />
           <Route path="/crop/instance" element={<Instance />} />
           <Route path="/production" element={<Production />} />
           <Route path="/tech-solution" element={<TechSolution />} />

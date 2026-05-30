@@ -34,6 +34,7 @@ const menuItems = [
 
 const productionSubItems = [
   { icon: ClipboardList, label: '订单管理', path: '/crop/order' },
+  { icon: Users, label: '客户管理', path: '/crop/customer' },
   { icon: FileText, label: '生产计划', path: '/production' },
   { icon: FileCode, label: '技术方案', path: '/tech-solution' },
   { icon: ShoppingCart, label: '采购计划', path: '/purchase-plan' },
