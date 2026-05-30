@@ -1415,6 +1415,186 @@ export async function fixMissingSchema(): Promise<void> {
     console.log('• monthly_plans:', e.message);
   }
 
+  // ========== 订单管理扩展表 (Order Management V2) ==========
+
+  // 1. 客户档案表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id TEXT PRIMARY KEY,
+        customer_code TEXT NOT NULL,
+        customer_name TEXT NOT NULL,
+        contact_person TEXT,
+        contact_phone TEXT,
+        delivery_address TEXT,
+        remarks TEXT,
+        create_by TEXT,
+        create_time TEXT,
+        update_time TEXT
+      )
+    `);
+    console.log('✓ customers 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• customers:', e.message);
+    }
+  }
+
+  // 2. 库存冻结表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS inventory_freeze (
+        id TEXT PRIMARY KEY,
+        order_id TEXT,
+        order_code TEXT,
+        harvest_record_id TEXT,
+        harvest_code TEXT,
+        freeze_quantity INTEGER DEFAULT 0,
+        used_quantity INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'frozen',
+        remarks TEXT,
+        create_by TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ inventory_freeze 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• inventory_freeze:', e.message);
+    }
+  }
+
+  // 3. 交付记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS delivery_records (
+        id TEXT PRIMARY KEY,
+        order_id TEXT,
+        order_code TEXT,
+        delivery_batch INTEGER,
+        delivery_quantity INTEGER DEFAULT 0,
+        delivery_date TEXT,
+        quality_check_id TEXT,
+        acceptance_id TEXT,
+        inventory_freeze_id TEXT,
+        remarks TEXT,
+        create_by TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ delivery_records 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• delivery_records:', e.message);
+    }
+  }
+
+  // 4. 质检记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS quality_check_records (
+        id TEXT PRIMARY KEY,
+        delivery_record_id TEXT,
+        order_id TEXT,
+        check_date TEXT,
+        check_result TEXT,
+        check_person TEXT,
+        check_items TEXT,
+        remarks TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ quality_check_records 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• quality_check_records:', e.message);
+    }
+  }
+
+  // 5. 验收记录表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS acceptance_records (
+        id TEXT PRIMARY KEY,
+        delivery_record_id TEXT,
+        order_id TEXT,
+        acceptance_date TEXT,
+        acceptance_result TEXT,
+        acceptance_person TEXT,
+        remarks TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ acceptance_records 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• acceptance_records:', e.message);
+    }
+  }
+
+  // 6. 生产批次订单关联表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS production_batch_orders (
+        id TEXT PRIMARY KEY,
+        order_id TEXT,
+        order_code TEXT,
+        batch_type TEXT,
+        batch_id TEXT,
+        batch_code TEXT,
+        quantity INTEGER DEFAULT 0,
+        remarks TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ production_batch_orders 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• production_batch_orders:', e.message);
+    }
+  }
+
+  // 7. 订单变更日志表
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS order_change_logs (
+        id TEXT PRIMARY KEY,
+        order_id TEXT,
+        order_code TEXT,
+        change_type TEXT,
+        change_content TEXT,
+        change_reason TEXT,
+        operator TEXT,
+        create_time TEXT
+      )
+    `);
+    console.log('✓ order_change_logs 表创建成功');
+  } catch (e: any) {
+    if (!e.message.includes('already exists')) {
+      console.log('• order_change_logs:', e.message);
+    }
+  }
+
+  // 8. crop_orders 表新增字段迁移
+  const cropOrdersNewFields = [
+    `ALTER TABLE crop_orders ADD COLUMN customer_id TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN customer_phone TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN delivery_plan TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN total_delivered_quantity INTEGER DEFAULT 0`,
+  ];
+  for (const sql of cropOrdersNewFields) {
+    try {
+      db.run(sql);
+      const fieldName = sql.split('ADD COLUMN ')[1].split(' ')[0];
+      console.log(`✓ crop_orders 表添加 ${fieldName} 列`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        const fieldName = sql.split('ADD COLUMN ')[1].split(' ')[0];
+        console.log(`• crop_orders.${fieldName}: ${e.message}`);
+      }
+    }
+  }
+
   saveDatabase();
   console.log('\n数据库结构修复完成！');
 }

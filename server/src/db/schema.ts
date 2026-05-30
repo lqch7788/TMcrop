@@ -1680,6 +1680,22 @@ export function initializeDatabase() {
 
   // ========== V6.0 Phase 5: 订单与生产计划表 ==========
 
+  // 客户档案表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY,
+      customer_code TEXT NOT NULL,
+      customer_name TEXT NOT NULL,
+      contact_person TEXT,
+      contact_phone TEXT,
+      delivery_address TEXT,
+      remarks TEXT,
+      create_by TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `);
+
   // 订单表
   db.run(`
     CREATE TABLE IF NOT EXISTS crop_orders (
