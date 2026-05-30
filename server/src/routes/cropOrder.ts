@@ -158,6 +158,14 @@ router.post('/', (req: Request, res: Response) => {
       id = 'ORD' + Date.now();
     }
 
+    // 解构新增字段
+    const {
+      customer_id,
+      customer_phone,
+      delivery_plan,
+      total_delivered_quantity
+    } = req.body;
+
     const now = new Date().toISOString();
     const nowDate = new Date();
     let code = order_code;
@@ -206,12 +214,13 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO crop_orders (
         id, order_code, order_type, crop_name, crop_variety,
         quantity, unit, unit_price, total_amount,
-        customer_name, customer_contact, delivery_address,
+        customer_id, customer_name, customer_contact, customer_phone,
+        delivery_address, delivery_plan, total_delivered_quantity,
         order_date, expected_delivery_date, actual_delivery_date,
         status, remarks, create_by, create_time, update_time,
         order_name, crop_category, planned_quantity, actual_quantity, expected_harvest_date,
-      supplier_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        supplier_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -222,9 +231,13 @@ router.post('/', (req: Request, res: Response) => {
       unit || '',
       unit_price || 0,
       total_amount || 0,
+      customer_id || '',
       customer_name || '',
       customer_contact || '',
+      customer_phone || '',
       delivery_address || '',
+      delivery_plan || '',
+      total_delivered_quantity || 0,
       order_date || now.substring(0, 10),
       expected_delivery_date || '',
       actual_delivery_date || '',
@@ -291,8 +304,10 @@ router.put('/:id', (req: Request, res: Response) => {
       unit: 'unit',
       unitPrice: 'unit_price',
       totalAmount: 'total_amount',
+      customerId: 'customer_id',
       customerName: 'customer_name',
       customerContact: 'customer_contact',
+      customerPhone: 'customer_phone',
       deliveryAddress: 'delivery_address',
       orderDate: 'order_date',
       expectedDeliveryDate: 'expected_delivery_date',

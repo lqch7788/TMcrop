@@ -616,6 +616,8 @@ export interface CropOrder {
   supplierName?: string;
   customerId?: string;
   customerName?: string;
+  customerPhone?: string;
+  deliveryAddress?: string;
 
   // 时间
   orderDate: string;               // 订单日期
