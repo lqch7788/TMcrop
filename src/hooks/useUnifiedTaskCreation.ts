@@ -375,7 +375,7 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
   // 创建巡查反馈任务
   const createProblemDispatchTask = useCallback(async (input: UnifiedTaskInput): Promise<Task | null> => {
     if (!input.problemId) {
-      console.error('创建巡查反馈任务失败：缺少problemId');
+      // 创建巡查反馈任务失败：缺少problemId
       return null;
     }
 
@@ -415,7 +415,7 @@ export function useUnifiedTaskCreation(): UnifiedTaskCreationReturn {
         createdTask = await createProblemDispatchTask(input);
         break;
       default:
-        console.error('未知的任务来源类型:', input.sourceType);
+        // 未知的任务来源类型
         return null;
     }
 

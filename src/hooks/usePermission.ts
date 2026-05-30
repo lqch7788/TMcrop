@@ -278,21 +278,13 @@ export function useAuthPermission() {
     // 根据 actionCode 获取对应的 actionOid
     const actionOid = ACTION_CODE_TO_OID[actionCode];
     if (!actionOid) {
-      // 未知动作编码，记录警告
-      console.warn(
-        '[权限警告] useAuthPermission.can() - 未知动作编码: ' + actionCode + '，权限检查被绕过。' +
-        'processOid=' + processOid
-      );
+      // 未知动作编码，权限检查被绕过
       return true; // 未知动作时返回 true（临时方案，后续应配置完整的动作映射）
     }
 
-    // 如果 roleAuthorities 为空，说明后端 API 未实现，记录警告
+    // 如果 roleAuthorities 为空，说明后端 API 未实现
     if (!roleAuthorities || roleAuthorities.length === 0) {
-      console.warn(
-        '[权限警告] useAuthPermission.can() - 权限数据未加载，权限检查被绕过。' +
-        'processOid=' + processOid + ', actionCode=' + actionCode + '。' +
-        '提示：后端权限 API 可能未实现或未加载。'
-      );
+      // 权限数据未加载，权限检查被绕过
       return true; // 临时方案：后端 API 未实现时默认允许
     }
 

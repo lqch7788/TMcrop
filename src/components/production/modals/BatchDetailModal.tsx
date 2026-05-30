@@ -35,7 +35,7 @@ export function BatchDetailModal({
       const result = await getProductionPlanRelations(batch.id, batch.batchCode);
       setRelations(result.relations);
     } catch (error) {
-      console.error('加载关联记录失败:', error);
+      // logger.error('加载关联记录失败:', error);
       setRelations([]);
     } finally {
       setLoadingRelations(false);

@@ -5,6 +5,20 @@
  */
 
 /**
+ * HTML转义，防止XSS
+ */
+export function escapeHtml(str: string): string {
+  const entityMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return String(str).replace(/[&<>"']/g, (s) => entityMap[s]);
+}
+
+/**
  * 导出为 CSV 文件
  * @param headers 表头数组
  * @param data 数据行（key为表头名，value为单元格值）
@@ -80,7 +94,7 @@ export async function exportChartAsImage(chartRef: HTMLElement, filename: string
       link.click();
     }
   } catch (err) {
-    console.error('[exportUtils] 图表导出失败:', err);
+    // logger.error('[exportUtils] 图表导出失败:', err);
     throw err;
   }
 }

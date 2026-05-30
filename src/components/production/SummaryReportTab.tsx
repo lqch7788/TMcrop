@@ -189,7 +189,9 @@ export function SummaryReportTab() {
         <ProductionChainTable
           type={activeConfig.tableType}
           data={getTableData()}
-          onView={(record) => console.log('查看记录:', record)}
+          onView={(record) => {
+            // 查看记录详情
+          }}
         />
       </div>
     </div>
