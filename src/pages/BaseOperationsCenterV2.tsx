@@ -23,6 +23,7 @@ import { useBaseStore } from '@/stores/useBaseStore';
 import { useGreenhouseStore } from '@/stores/useGreenhouseStore';
 import { useZoneStore } from '@/stores/useZoneStore';
 import { useBlockStore } from '@/stores/useBlockStore';
+import { usePlantingRecordStore } from '@/stores/usePlantingRecordStore';
 import { showAlert } from '@/lib/dialogService';
 
 // ============================================
@@ -70,16 +71,6 @@ function buildTreeData(
         })),
     }));
 }
-
-// ============================================
-// 统计卡片配置
-// ============================================
-const STAT_CARDS = [
-  { key: 'totalBases', label: '基地总数', color: 'from-blue-50 to-blue-100', textColor: 'text-blue-600' },
-  { key: 'totalGreenhouses', label: '温室总数', color: 'from-emerald-50 to-emerald-100', textColor: 'text-emerald-600' },
-  { key: 'totalZones', label: '区域总数', color: 'from-amber-50 to-amber-100', textColor: 'text-amber-600' },
-  { key: 'totalBlocks', label: '地块总数', color: 'from-purple-50 to-purple-100', textColor: 'text-purple-600' },
-] as const;
 
 // ============================================
 // 表格列定义
@@ -135,7 +126,6 @@ export default function BaseOperationsCenterV2() {
     expandedKeys,
     selectedNode,
     searchTerm,
-    stats,
     loading,
     loadAllData,
     setExpandedKeys,
@@ -148,6 +138,7 @@ export default function BaseOperationsCenterV2() {
   const { greenhouses } = useGreenhouseStore();
   const { zones } = useZoneStore();
   const { blocks } = useBlockStore();
+  const { records } = usePlantingRecordStore();
 
   // 使用 buildTreeData 函数构建本地树形数据
   const treeData = useMemo(() => {
@@ -218,6 +209,52 @@ export default function BaseOperationsCenterV2() {
     }
   }, [selectedNode, bases, greenhouses, zones, blocks]);
 
+  // 根据选中节点计算统计数据
+  const stats = useMemo(() => {
+    if (!selectedNode.oid) {
+      return { totalArea: 0, zoneCount: 0, plantingCount: 0, currentCrop: '-' };
+    }
+
+    switch (selectedNode.type) {
+      case 'base': {
+        const baseGreenhouses = greenhouses.filter(gh => gh.baseOid === selectedNode.oid);
+        const baseZones = zones.filter(z => baseGreenhouses.some(gh => gh.oid === z.greenhouseOid));
+        const baseRecords = records.filter(r => baseZones.some(z => z.oid === r.zoneOid));
+        const plantingRecords = baseRecords.filter(r => r.status === 'planting');
+
+        return {
+          totalArea: baseGreenhouses.reduce((sum, gh) => sum + (gh.area || 0), 0),
+          zoneCount: baseZones.length,
+          plantingCount: plantingRecords.length,
+          currentCrop: plantingRecords[0]?.cropName || '-',
+        };
+      }
+      case 'greenhouse': {
+        const ghZones = zones.filter(z => z.greenhouseOid === selectedNode.oid);
+        const ghRecords = records.filter(r => ghZones.some(z => z.oid === r.zoneOid));
+        const plantingRecords = ghRecords.filter(r => r.status === 'planting');
+
+        return {
+          totalArea: greenhouses.find(gh => gh.oid === selectedNode.oid)?.area || 0,
+          zoneCount: ghZones.length,
+          plantingCount: plantingRecords.length,
+          currentCrop: plantingRecords[0]?.cropName || '-',
+        };
+      }
+      case 'zone': {
+        const zoneRecords = records.filter(r => r.zoneOid === selectedNode.oid);
+        const plantingRecords = zoneRecords.filter(r => r.status === 'planting');
+
+        return {
+          totalArea: zones.find(z => z.oid === selectedNode.oid)?.area || 0,
+          zoneCount: 1,
+          plantingCount: plantingRecords.length,
+          currentCrop: plantingRecords[0]?.cropName || '-',
+        };
+      }
+    }
+  }, [selectedNode, greenhouses, zones, records]);
+
   // 根据选中节点类型获取表格列
   const tableColumns = useMemo(() => {
     switch (selectedNode.type) {
@@ -241,7 +278,7 @@ export default function BaseOperationsCenterV2() {
       gh: 'greenhouse',
       zone: 'zone',
     }
-    selectNode(typeMap[type] || 'base', oid, null)
+    selectNode(typeMap[type] || 'base', oid, '')
   };
 
   // 处理新增
@@ -338,7 +375,7 @@ export default function BaseOperationsCenterV2() {
               <Tree
                 data={treeData}
                 selectable
-                selectedKeys={selectedNode.oid ? [`${selectedNode.type === 'greenhouse' ? 'gh' : selectedNode.type === 'zone' ? 'zone' : 'base'}_${selectedNode.oid}`] : []}
+                selectedKeys={selectedNode.oid ? [`${selectedNode.type === 'greenhouse' ? 'greenhouse' : selectedNode.type === 'zone' ? 'zone' : 'base'}_${selectedNode.oid}`] : []}
                 expandedKeys={expandedKeys}
                 onSelect={(keys) => {
                   if (keys.length > 0) {
@@ -354,17 +391,31 @@ export default function BaseOperationsCenterV2() {
         {/* 右侧内容区 */}
         <div className="flex-1 flex flex-col min-h-0 gap-4">
           {/* 统计卡片 */}
-          <div className="grid grid-cols-4 gap-4">
-            {STAT_CARDS.map((card) => (
-              <Card key={card.key} className={`bg-gradient-to-br ${card.color}`}>
-                <CardContent className="text-center py-4">
-                  <div className={`text-2xl font-bold ${card.textColor}`}>
-                    {stats[card.key]}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">{card.label}</div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+              <CardContent className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stats.totalArea}</div>
+                <div className="text-sm text-gray-600">总面积(㎡)</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-green-100">
+              <CardContent className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stats.zoneCount}</div>
+                <div className="text-sm text-gray-600">区块数</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
+              <CardContent className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{stats.plantingCount}</div>
+                <div className="text-sm text-gray-600">种植中</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
+              <CardContent className="text-center">
+                <div className="text-lg font-bold text-purple-600 truncate">{stats.currentCrop}</div>
+                <div className="text-sm text-gray-600">当前作物</div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* 数据表格 */}
@@ -373,7 +424,7 @@ export default function BaseOperationsCenterV2() {
               <TableHeader>
                 <TableRow>
                   {tableColumns.map((col) => (
-                    <TableHead key={col.key} className={col.width}>
+                    <TableHead key={col.key} className={`${col.width || ''} text-center`.trim()}>
                       {col.label}
                     </TableHead>
                   ))}
@@ -390,7 +441,7 @@ export default function BaseOperationsCenterV2() {
                   tableData.map((row) => (
                     <TableRow key={row.oid}>
                       {tableColumns.map((col) => (
-                        <TableCell key={col.key} className={col.width}>
+                        <TableCell key={col.key} className={`${col.width || ''} text-center`.trim()}>
                           {col.key === 'action' ? (
                             <div className="flex items-center gap-2">
                               <Button
