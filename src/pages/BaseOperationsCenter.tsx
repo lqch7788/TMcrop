@@ -161,7 +161,7 @@ export default function BaseOperationsCenter() {
 }
 
 /* ==================== 种植区管理子组件 ==================== */
-function FacilityTab({
+export function FacilityTab({
   greenhouses, bases, baseOid, baseName, loading, onAdd, onEdit, onRemove, searchTerm, setSearchTerm
 }: {
   greenhouses: Greenhouse[];
@@ -274,7 +274,7 @@ function FacilityTab({
                   <td className="px-2 py-3 text-sm text-center truncate">{gh.code || '-'}</td>
                   <td className="px-2 py-3 text-sm text-center truncate">{gh.name}</td>
                   <td className="px-2 py-3 text-sm text-center truncate">
-                    {greenhouseTypeMap[gh.greenhouseType || ''] || gh.greenhouseType || '-'}
+                    {facilityTypes.find(f => f.dictCode === gh.greenhouseType)?.dictLabel || gh.greenhouseType || '-'}
                   </td>
                   <td className="px-2 py-3 text-sm text-center">{gh.area || 0}</td>
                   <td className="px-2 py-3 text-sm text-center">{gh.unit || '亩'}</td>
@@ -409,7 +409,7 @@ function FacilityTab({
 }
 
 /* ==================== 区块划分子组件 ==================== */
-function ZoneTab({
+export function ZoneTab({
   zones, greenhouses, loading, onAdd, onEdit, onRemove, searchTerm, setSearchTerm
 }: {
   zones: Zone[];
@@ -609,7 +609,7 @@ function ZoneTab({
 }
 
 /* ==================== 种植记录子组件 ==================== */
-function PlantingTab({
+export function PlantingTab({
   records, greenhouses, zones, loading, onAdd, onEdit, onEnd, onRemove, searchTerm, setSearchTerm
 }: {
   records: PlantingRecord[];

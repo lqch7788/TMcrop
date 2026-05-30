@@ -208,12 +208,19 @@ export const useBaseOperationsStore = create<BaseOperationsStore>()((set, get) =
 
     try {
       // 并行加载所有数据
-      const [bases, greenhouses, zones, blocks] = await Promise.all([
+      // 注意：API 返回 {success, data} 格式，需要提取 data 数组
+      const [basesData, greenhousesData, zonesData, blocksData] = await Promise.all([
         getBases(),
         getGreenhouses(),
         getZones(),
         getBlocks(),
       ]);
+
+      // 安全提取数组数据
+      const bases = Array.isArray(basesData) ? basesData : (basesData?.data || []);
+      const greenhouses = Array.isArray(greenhousesData) ? greenhousesData : (greenhousesData?.data || []);
+      const zones = Array.isArray(zonesData) ? zonesData : (zonesData?.data || []);
+      const blocks = Array.isArray(blocksData) ? blocksData : (blocksData?.data || []);
 
       const treeData = buildTreeData(bases, greenhouses, zones, blocks);
       const stats = computeStats(bases, greenhouses, zones, blocks);
