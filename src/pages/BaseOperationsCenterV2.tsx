@@ -31,6 +31,41 @@ import { showAlert, showToast } from '@/lib/dialogService';
 // ============================================
 
 /**
+ * 转义正则表达式特殊字符，防止 XSS 攻击
+ * @param str 输入字符串
+ * @returns 转义后的字符串
+ */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * 高亮搜索关键词
+ * @param text 原始文本
+ * @param query 搜索关键词
+ * @returns React 节点，匹配文字用黄色背景高亮
+ */
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query || !text) return text;
+
+  // 转义特殊字符防止正则注入
+  const escapedQuery = escapeRegExp(query);
+  const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200">{part}</mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
+/**
  * 将基地、温室、区域数据构建为树形结构
  * @param bases 基地列表
  * @param greenhouses 温室列表
@@ -50,21 +85,21 @@ function buildTreeData(
     .filter(base => !query || base.name.toLowerCase().includes(query) || base.code.toLowerCase().includes(query))
     .map(base => ({
       key: `base_${base.oid}`,
-      title: `${base.code} ${base.name}`,
+      title: highlightText(`${base.code} ${base.name}`, searchQuery),
       type: 'base' as const,
       oid: base.oid,
       children: greenhouses
         .filter(gh => gh.baseOid === base.oid && (!query || gh.name.toLowerCase().includes(query) || gh.code.toLowerCase().includes(query)))
         .map(gh => ({
           key: `gh_${gh.oid}`,
-          title: `${gh.code} ${gh.name}`,
+          title: highlightText(`${gh.code} ${gh.name}`, searchQuery),
           type: 'greenhouse' as const,
           oid: gh.oid,
           children: zones
             .filter(z => z.greenhouseOid === gh.oid && (!query || z.zoneName.toLowerCase().includes(query) || z.zoneCode.toLowerCase().includes(query)))
             .map(z => ({
               key: `zone_${z.oid}`,
-              title: `${z.zoneCode} ${z.zoneName}`,
+              title: highlightText(`${z.zoneCode} ${z.zoneName}`, searchQuery),
               type: 'zone' as const,
               oid: z.oid,
             })),
@@ -142,7 +177,12 @@ export default function BaseOperationsCenterV2() {
 
   // 弹窗状态管理
   const [modalType, setModalType] = useState<'add' | 'edit' | null>(null);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  interface EditingItem {
+    type: 'greenhouse' | 'zone' | 'block' | null
+    oid: string | null
+    data: Record<string, any> | null
+  }
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
 
   // 表单数据状态
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -185,9 +225,14 @@ export default function BaseOperationsCenterV2() {
   // 提交表单（新增或编辑）
   const handleSubmit = async () => {
     try {
+      // 验证必填字段
+      if (!formData.code || !formData.name) {
+        showToast('请填写编码和名称', 'error');
+        return;
+      }
       if (modalType === 'add') {
         // 新增
-        if (selectedNode.type === 'greenhouse' || !selectedNode.oid) {
+        if (selectedNode.type === 'greenhouse') {
           // 新增温室
           await useGreenhouseStore.getState().addGreenhouse({
             ...formData,
@@ -573,6 +618,8 @@ export default function BaseOperationsCenterV2() {
                             >
                               {row.status === 'active' ? '启用' : '停用'}
                             </span>
+                          ) : col.key === 'code' || col.key === 'name' || col.key === 'zoneCode' || col.key === 'zoneName' || col.key === 'blockCode' || col.key === 'blockName' ? (
+                            highlightText((row as Record<string, unknown>)[col.key]?.toString() || '-', searchTerm)
                           ) : (
                             (row as Record<string, unknown>)[col.key]?.toString() || '-'
                           )}
