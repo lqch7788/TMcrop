@@ -269,8 +269,7 @@ function AppContent() {
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
-            <Route path="base-operations" element={<BaseOperationsCenter />} />
-            <Route path="base-operations-v2" element={<BaseOperationsCenterV2 />} />
+            <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
             <Route path="monitor" element={<SystemMonitorPage />} />
             <Route path="backup" element={<BackupRecovery />} />
             {/* iAGS 集成新增路由（Phase 0 占位） */}
