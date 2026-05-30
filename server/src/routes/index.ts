@@ -80,6 +80,11 @@ import userBasePermissionsRouter from './userBasePermissions';
 import codeGeneratorRouter from './codeGenerator';
 import dailyPlansRouter from './dailyPlans';
 import monthlyPlansRouter from './monthlyPlans';
+import customerRouter from './customer';
+import deliveryRouter from './delivery.routes';
+import qualityRouter from './quality.routes';
+import acceptanceRouter from './acceptance.routes';
+import inventoryRouterAlias from './inventory.routes';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -324,6 +329,21 @@ router.use('/daily-plans', requireAuth, dailyPlansRouter);
 
 // 月度计划路由
 router.use('/monthly-plans', requireAuth, monthlyPlansRouter);
+
+// 客户档案路由
+router.use('/customers', requireAuth, customerRouter);
+
+// 交付记录路由
+router.use('/delivery-records', requireAuth, deliveryRouter);
+
+// 质检记录路由
+router.use('/quality-checks', requireAuth, qualityRouter);
+
+// 验收记录路由
+router.use('/acceptances', requireAuth, acceptanceRouter);
+
+// 库存冻结路由
+router.use('/inventory-freeze', requireAuth, inventoryRouterAlias);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {
