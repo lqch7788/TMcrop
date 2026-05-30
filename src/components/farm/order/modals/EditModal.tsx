@@ -61,6 +61,9 @@ export function EditModal({
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // 输入框深度样式
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   // 当记录变化时更新表单
   useEffect(() => {
     if (record && isOpen) {
@@ -246,7 +249,7 @@ export function EditModal({
           value={formData.orderName}
           onChange={(e) => setFormData({ ...formData, orderName: e.target.value })}
           placeholder="请输入订单名称"
-          className={`${errors.orderName ? 'border-red-500' : 'border-gray-300'}`}
+          className={`${errors.orderName ? 'border-red-500' : deepInputClass}`}
         />
         {errors.orderName && <p className="text-xs text-red-500 mt-1">{errors.orderName}</p>}
       </div>
@@ -281,7 +284,7 @@ export function EditModal({
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
           onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -299,7 +302,7 @@ export function EditModal({
               onChange={handleSearchChange}
               onFocus={() => setShowDropdown(true)}
               placeholder="搜索作物品种..."
-              className={`pl-10 ${errors.cropVariety ? 'border-red-500' : 'border-gray-300'}`}
+              className={`pl-10 ${errors.cropVariety ? 'border-red-500' : deepInputClass}`}
             />
             {searchKeyword && (
               <Button
@@ -382,7 +385,7 @@ export function EditModal({
           value={formData.plannedQuantity || ''}
           onChange={(e) => setFormData({ ...formData, plannedQuantity: Number(e.target.value) })}
           placeholder="请输入计划数量"
-          className={`${errors.plannedQuantity ? 'border-red-500' : 'border-gray-300'}`}
+          className={`${errors.plannedQuantity ? 'border-red-500' : deepInputClass}`}
         />
         {errors.plannedQuantity && <p className="text-xs text-red-500 mt-1">{errors.plannedQuantity}</p>}
       </div>
@@ -397,7 +400,7 @@ export function EditModal({
           value={formData.actualQuantity || ''}
           onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
           placeholder="请输入实际数量"
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -411,7 +414,7 @@ export function EditModal({
           value={formData.supplierName}
           onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
           placeholder="请输入供应商名称"
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -455,7 +458,7 @@ export function EditModal({
           value={formData.customerPhone}
           onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
           placeholder="请输入客户电话"
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -469,7 +472,7 @@ export function EditModal({
           value={formData.deliveryAddress}
           onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
           placeholder="请输入收货地址"
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -481,7 +484,7 @@ export function EditModal({
         <DatePicker
           selected={formData.expectedCompletionDate ? new Date(formData.expectedCompletionDate) : undefined}
           onChange={(date) => setFormData({ ...formData, expectedCompletionDate: date.toISOString().split('T')[0] })}
-          className="border-gray-300"
+          className={deepInputClass}
         />
       </div>
 
@@ -517,7 +520,7 @@ export function EditModal({
           onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
           placeholder="请输入备注信息"
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+          className={`${deepInputClass} resize-none`}
         />
       </div>
     </div>

@@ -264,7 +264,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 value={form.code}
                 onChange={(e) => handleChange('code', e.target.value)}
                 placeholder="手动输入或使用编码生成器"
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm font-mono"
+                className={deepInputClass.replace('text-sm', 'text-sm font-mono')}
               />
             </div>
 
@@ -275,7 +275,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -286,7 +286,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 value={form.supplierType}
                 onValueChange={(val) => handleChange('supplierType', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
                   <SelectValue placeholder="请选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -305,7 +305,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 value={form.supplierAttribute}
                 onValueChange={(val) => handleChange('supplierAttribute', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
                   <SelectValue placeholder="请选择属性" />
                 </SelectTrigger>
                 <SelectContent>
@@ -324,7 +324,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 value={form.organization}
                 onValueChange={(val) => handleChange('organization', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
                   <SelectValue placeholder="请选择组织" />
                 </SelectTrigger>
                 <SelectContent>
@@ -342,7 +342,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.contact}
                 onChange={(e) => handleChange('contact', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -353,7 +353,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.mobilePhone}
                 onChange={(e) => handleChange('mobilePhone', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -364,7 +364,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 value={form.status}
                 onValueChange={(val) => handleChange('status', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm">
+                <SelectTrigger className={deepInputClass.replace('text-sm', 'text-sm')}>
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
@@ -387,7 +387,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -398,7 +398,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -409,7 +409,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -435,7 +435,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="date"
                 value={form.createDate}
                 onChange={(e) => handleChange('createDate', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -446,7 +446,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -457,7 +457,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.bankName}
                 onChange={(e) => handleChange('bankName', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 
@@ -468,7 +468,7 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
                 type="text"
                 value={form.bankCardNumber}
                 onChange={(e) => handleChange('bankCardNumber', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm"
+                className={deepInputClass.replace('text-sm', 'text-sm')}
               />
             </div>
 

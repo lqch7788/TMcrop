@@ -14,6 +14,9 @@ import { Label } from '../ui/label';
 import { TextArea } from '../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface OutboundModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -176,7 +179,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
           <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="其他" />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +201,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             value={businessCode}
             onChange={(e) => setBusinessCode(e.target.value)}
             placeholder="请输入业务单号（可选）"
-            className="w-full h-10 px-3 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -210,7 +213,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="请输入备注信息（可选）"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+            className={deepInputClass.replace('text-sm', 'text-sm resize-none')}
           />
         </div>
       </div>

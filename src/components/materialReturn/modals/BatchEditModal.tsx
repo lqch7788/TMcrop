@@ -3,6 +3,9 @@ import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface BatchEditModalProps {
   open: boolean;
   selectedRows: number[];
@@ -91,7 +94,7 @@ export function BatchEditModal({
             const idx = selectedRows.indexOf(Number(e.target.value));
             onIndexChange(idx >= 0 ? idx : 0);
           }}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${deepInputClass}`}
         >
           {selectedRecordsList.map((record, idx) => (
             <option key={record.id} value={record.id}>

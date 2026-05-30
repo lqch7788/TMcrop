@@ -7,6 +7,9 @@ import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface AddModalProps {
   open: boolean;
   form: AddFormData;
@@ -79,7 +82,7 @@ export function AddModal({
               type="date"
               value={form.date}
               onChange={(e) => onFormChange('date', e.target.value)}
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className={`flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -138,7 +141,7 @@ export function AddModal({
               value={form.remark}
               onChange={(e) => onFormChange('remark', e.target.value)}
               placeholder="请输入"
-              className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className={`flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
             />
           </div>
         </div>
@@ -214,7 +217,7 @@ export function AddModal({
                           min="0"
                           value={material.returnQuantity}
                           onChange={(e) => onMaterialChange(idx, 'returnQuantity', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className={`w-full px-2 py-1 border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
                           placeholder="0"
                         />
                       </td>
@@ -224,7 +227,7 @@ export function AddModal({
                         <select
                           value={material.reason}
                           onChange={(e) => onMaterialChange(idx, 'reason', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className={`w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${deepInputClass}`}
                         >
                           <option value="">请选择</option>
                           {RETURN_REASONS.map(reason => (

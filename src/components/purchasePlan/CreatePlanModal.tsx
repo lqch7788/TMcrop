@@ -60,6 +60,9 @@ export function CreatePlanModal({
   onItemsChange,
   onSubmit,
 }: CreatePlanModalProps) {
+  // 深度输入框样式
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 导入物料处理
@@ -215,7 +218,7 @@ export function CreatePlanModal({
                 }
               }}
             >
-              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="生产物资采购">生产物资采购</SelectItem>
                 <SelectItem value="紧急采购">紧急采购</SelectItem>
@@ -232,7 +235,7 @@ export function CreatePlanModal({
               value={createForm.relatedBatchCode || ''}
               onValueChange={(v) => onFormChange('relatedBatchCode', v || undefined)}
             >
-              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
                 <SelectItem value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</SelectItem>
@@ -251,6 +254,7 @@ export function CreatePlanModal({
                 value={createForm.otherBatchReason || ''}
                 onChange={(e) => onFormChange('otherBatchReason', e.target.value)}
                 placeholder="请说明采购原因，如：日常用具、劳保用品等"
+                className={deepInputClass}
               />
             </FormField>
           )}
@@ -277,6 +281,7 @@ export function CreatePlanModal({
               type="date"
               value={createForm.applyDate}
               onChange={(e) => onFormChange('applyDate', e.target.value)}
+              className={deepInputClass}
             />
           </FormField>
           <FormField label="需求日期">
@@ -284,6 +289,7 @@ export function CreatePlanModal({
               type="date"
               value={createForm.requiredDate}
               onChange={(e) => onFormChange('requiredDate', e.target.value)}
+              className={deepInputClass}
             />
           </FormField>
         </div>
@@ -293,7 +299,7 @@ export function CreatePlanModal({
               value={createForm.priority}
               onValueChange={(v) => onFormChange('priority', v)}
             >
-              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="紧急">紧急</SelectItem>
                 <SelectItem value="高">高</SelectItem>
@@ -309,7 +315,7 @@ export function CreatePlanModal({
               value={createForm.approvalPerson || ''}
               onValueChange={(v) => onFormChange('approvalPerson', v)}
             >
-              <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="陆启闯">陆启闯</SelectItem>
                 <SelectItem value="周总">周总</SelectItem>
@@ -322,6 +328,7 @@ export function CreatePlanModal({
               value={createForm.remark || ''}
               onChange={(e) => onFormChange('remark', e.target.value)}
               placeholder="请输入备注"
+              className={deepInputClass}
             />
           </FormField>
         </div>
@@ -395,7 +402,7 @@ export function CreatePlanModal({
                           value={item.materialCode}
                           onChange={(e) => handleUpdateItem(item.id, 'materialCode', e.target.value)}
                           placeholder="编码"
-                          className="h-6 w-20 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -403,7 +410,7 @@ export function CreatePlanModal({
                           value={item.materialName}
                           onChange={(e) => handleUpdateItem(item.id, 'materialName', e.target.value)}
                           placeholder="名称"
-                          className="h-6 w-20 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -411,7 +418,7 @@ export function CreatePlanModal({
                           value={item.category}
                           onChange={(e) => handleUpdateItem(item.id, 'category', e.target.value)}
                           placeholder="分类"
-                          className="h-6 w-24 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -419,7 +426,7 @@ export function CreatePlanModal({
                           value={item.specification}
                           onChange={(e) => handleUpdateItem(item.id, 'specification', e.target.value)}
                           placeholder="规格"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-center">
@@ -427,7 +434,7 @@ export function CreatePlanModal({
                           value={item.unit}
                           onChange={(e) => handleUpdateItem(item.id, 'unit', e.target.value)}
                           placeholder="单位"
-                          className="h-6 w-12 p-1 text-xs text-center rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -436,7 +443,7 @@ export function CreatePlanModal({
                           value={item.quantity || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'quantity', Number(e.target.value))}
                           placeholder="0"
-                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -445,7 +452,7 @@ export function CreatePlanModal({
                           value={item.estimatedPrice || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'estimatedPrice', Number(e.target.value))}
                           placeholder="0"
-                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -458,7 +465,7 @@ export function CreatePlanModal({
                           value={item.supplier}
                           onChange={(e) => handleUpdateItem(item.id, 'supplier', e.target.value)}
                           placeholder="供应商"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -466,7 +473,7 @@ export function CreatePlanModal({
                           value={item.purpose}
                           onChange={(e) => handleUpdateItem(item.id, 'purpose', e.target.value)}
                           placeholder="用途"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
+                          className={deepInputClass}
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">

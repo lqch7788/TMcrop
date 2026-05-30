@@ -86,7 +86,7 @@ export function OvertimeBatchEditModal({
           <select
             value={selectedRecordId || ''}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
           >
             <option value="">请选择记录</option>
             {selectedRecords.map(record => (
@@ -119,7 +119,7 @@ export function OvertimeBatchEditModal({
               <select
                 value={String(editedData.type ?? currentRecord.type)}
                 onChange={(e) => handleFieldChange('type', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-8 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               >
                 {overtimeTypes.map((type) => (
                   <option key={type} value={type}>{type}</option>
@@ -144,7 +144,7 @@ export function OvertimeBatchEditModal({
               <select
                 value={String(editedData.status ?? currentRecord.status)}
                 onChange={(e) => handleFieldChange('status', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-8 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               >
                 {overtimeStatuses.map((status) => (
                   <option key={status} value={status}>{status}</option>
@@ -167,7 +167,7 @@ export function OvertimeBatchEditModal({
                 type="text"
                 value={String(editedData.reason ?? currentRecord.reason)}
                 onChange={(e) => handleFieldChange('reason', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-8 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               />
             </div>
 
@@ -178,7 +178,7 @@ export function OvertimeBatchEditModal({
                 type="text"
                 value={String(editedData.remarks ?? currentRecord.remarks ?? '')}
                 onChange={(e) => handleFieldChange('remarks', e.target.value)}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                className="w-full h-8 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               />
             </div>
           </div>

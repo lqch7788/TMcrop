@@ -88,7 +88,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
           type="text"
           value={formData.name || ''}
           onChange={(e) => handleChange('name', e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
           placeholder="请输入职务名称"
         />
       </div>
@@ -101,7 +101,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
         <select
           value={formData.dept || ''}
           onChange={(e) => handleChange('dept', e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
         >
           {deptOptions.map(dept => (
             <option key={dept} value={dept}>{dept}</option>
@@ -117,7 +117,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
         <select
           value={formData.level || ''}
           onChange={(e) => handleChange('level', e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
         >
           {levelOptions.map(level => (
             <option key={level} value={level}>{level}</option>
@@ -144,7 +144,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
         <select
           value={formData.status || '启用'}
           onChange={(e) => handleChange('status', e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
         >
           {statusOptions.map(status => (
             <option key={status} value={status}>{status}</option>
@@ -159,7 +159,7 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
           value={formData.description || ''}
           onChange={(e) => handleChange('description', e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+          className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner resize-none"
           placeholder="请输入职责描述"
         />
       </div>

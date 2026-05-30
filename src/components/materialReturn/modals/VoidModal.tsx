@@ -1,6 +1,9 @@
 import { Trash2 } from 'lucide-react';
 import { ReturnRecord } from '../types';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface VoidModalProps {
   open: boolean;
   record: ReturnRecord | null;
@@ -73,7 +76,7 @@ export function VoidModal({
               onChange={(e) => onReasonChange(e.target.value)}
               placeholder="请输入作废原因"
               rows={4}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none ${deepInputClass}`}
             />
           </div>
           <div className="flex justify-end gap-3">

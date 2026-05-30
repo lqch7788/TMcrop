@@ -6,6 +6,9 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import type { WorkLogFormModalProps, WorkLog } from './types';
 import { Label } from '@/components/ui/label';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 /**
  * 工作日志表单弹窗组件（新建/编辑）
  */
@@ -70,7 +73,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             type="text"
             value={formData.code || ''}
             onChange={(e) => handleChange('code', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="自动生成"
           />
         </div>
@@ -92,7 +95,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             type="text"
             value={formData.worker || ''}
             onChange={(e) => handleChange('worker', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="请输入姓名"
           />
         </div>
@@ -103,7 +106,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
           <select
             value={formData.weather || ''}
             onChange={(e) => handleChange('weather', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             <option value="">请选择</option>
             <option value="晴">晴</option>
@@ -120,7 +123,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             type="text"
             value={formData.temperature || ''}
             onChange={(e) => handleChange('temperature', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="如：25°C"
           />
         </div>
@@ -132,7 +135,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             type="text"
             value={formData.crop || ''}
             onChange={(e) => handleChange('crop', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="请输入作物名称"
           />
         </div>
@@ -143,7 +146,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
           <select
             value={formData.greenhouse || ''}
             onChange={(e) => handleChange('greenhouse', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             <option value="">请选择</option>
             <option value="1号棚">1号棚</option>
@@ -159,7 +162,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
           <select
             value={formData.growthStatus || '良好'}
             onChange={(e) => handleChange('growthStatus', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             <option value="良好">良好</option>
             <option value="一般">一般</option>
@@ -173,7 +176,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             value={formData.tasks || ''}
             onChange={(e) => handleChange('tasks', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={`${deepInputClass} resize-none`}
             placeholder="请输入工作内容"
           />
         </div>
@@ -185,7 +188,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             value={formData.problems || ''}
             onChange={(e) => handleChange('problems', e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={`${deepInputClass} resize-none`}
             placeholder="请输入问题描述"
           />
         </div>
@@ -197,7 +200,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
             value={formData.solutions || ''}
             onChange={(e) => handleChange('solutions', e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={`${deepInputClass} resize-none`}
             placeholder="请输入处理措施"
           />
         </div>

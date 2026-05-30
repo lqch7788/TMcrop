@@ -13,6 +13,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Label } from '../../components/ui/label';
 import { useDictionaryStore, useSupplierCodeRuleStore } from '../../stores';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface SupplierBatchEditModalProps {
   isOpen: boolean;
   selectedSuppliers: Supplier[];
@@ -180,7 +183,7 @@ export default function SupplierBatchEditModal({
               if (idx >= 0) onSupplierSelect(idx);
             }}
           >
-            <SelectTrigger className="flex-1 h-9 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择供应商" />
             </SelectTrigger>
             <SelectContent>
@@ -253,7 +256,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('supplierType')}
                 onValueChange={(val) => handleFieldChange('supplierType', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,7 +273,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('supplierAttribute')}
                 onValueChange={(val) => handleFieldChange('supplierAttribute', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -287,7 +290,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('organization')}
                 onValueChange={(val) => handleFieldChange('organization', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,7 +306,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('status')}
                 onValueChange={(val) => handleFieldChange('status', val)}
               >
-                <SelectTrigger className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500">
+                <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
                   <SelectValue placeholder="不修改" />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,7 +329,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('contact')}
                 onChange={(e) => handleFieldChange('contact', e.target.value)}
                 placeholder={currentSupplier?.contact || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -336,7 +339,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('mobilePhone')}
                 onChange={(e) => handleFieldChange('mobilePhone', e.target.value)}
                 placeholder={currentSupplier?.mobilePhone || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -346,7 +349,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('workPhone')}
                 onChange={(e) => handleFieldChange('workPhone', e.target.value)}
                 placeholder={currentSupplier?.workPhone || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -356,7 +359,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('fax')}
                 onChange={(e) => handleFieldChange('fax', e.target.value)}
                 placeholder={currentSupplier?.fax || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
           </div>
@@ -371,7 +374,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('country')}
                 onChange={(e) => handleFieldChange('country', e.target.value)}
                 placeholder={currentSupplier?.country || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -381,7 +384,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('province')}
                 onChange={(e) => handleFieldChange('province', e.target.value)}
                 placeholder={currentSupplier?.province || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -391,7 +394,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('city')}
                 onChange={(e) => handleFieldChange('city', e.target.value)}
                 placeholder={currentSupplier?.city || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
           </div>
@@ -402,7 +405,7 @@ export default function SupplierBatchEditModal({
               value={getValue('address')}
               onChange={(e) => handleFieldChange('address', e.target.value)}
               placeholder={currentSupplier?.address || '未填写'}
-              className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
 
@@ -416,7 +419,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('bankName')}
                 onChange={(e) => handleFieldChange('bankName', e.target.value)}
                 placeholder={currentSupplier?.bankName || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass.replace('py-3', 'py-1.5')}
               />
             </div>
             <div>
@@ -426,7 +429,7 @@ export default function SupplierBatchEditModal({
                 value={getValue('bankCardNumber')}
                 onChange={(e) => handleFieldChange('bankCardNumber', e.target.value)}
                 placeholder={currentSupplier?.bankCardNumber || '未填写'}
-                className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm font-mono')}
               />
             </div>
           </div>
@@ -439,7 +442,7 @@ export default function SupplierBatchEditModal({
               onChange={(e) => handleFieldChange('remarks', e.target.value)}
               placeholder={currentSupplier?.remarks || '未填写'}
               rows={2}
-              className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass.replace('py-3', 'py-1').replace('text-sm', 'text-sm')}
             />
           </div>
         </div>

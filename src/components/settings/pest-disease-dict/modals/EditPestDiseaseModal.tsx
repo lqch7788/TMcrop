@@ -4,6 +4,9 @@
  * 使用 UnifiedModal 包装，提交时调用 store.updateItem()
  */
 import React, { useState, useCallback, useEffect } from 'react';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';

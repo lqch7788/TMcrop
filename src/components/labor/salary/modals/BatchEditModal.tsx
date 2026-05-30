@@ -80,7 +80,7 @@ export function BatchEditModal({
           <select
             value={selectedRecordId}
             onChange={(e) => onSelectedRecordIdChange(e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
           >
             <option value="">请选择...</option>
             {selectedRecords.map((record) => (
@@ -135,7 +135,7 @@ export function BatchEditModal({
               <select
                 value={localEditedRecords[selectedRecordId].status ?? ''}
                 onChange={(e) => handleFieldChange('status', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
               >
                 <option value="">请选择...</option>
                 <option value="待确认">待确认</option>

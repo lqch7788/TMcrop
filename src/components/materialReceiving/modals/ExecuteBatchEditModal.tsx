@@ -10,6 +10,9 @@ import { NumberInput } from '@/components/ui/NumberInput';
 import { DatePicker } from '@/components/ui/DatePicker';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ExecuteBatchEditModalProps {
   show: boolean;
   selectedRows: number[];
@@ -85,7 +88,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
               onRecordChange(idx >= 0 ? idx : 0);
             }}
           >
-            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择领料单" />
             </SelectTrigger>
             <SelectContent>
@@ -124,7 +127,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
               type="text"
               value={currentEditedData.applicant || ''}
               onChange={(e) => onFieldChange(currentRecordId, 'applicant', e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           {/* 仓库地点 */}
@@ -134,7 +137,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
               value={currentEditedData.warehouseLocation || 'none'}
               onValueChange={(val) => onFieldChange(currentRecordId, 'warehouseLocation', val === 'none' ? '' : val)}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -152,7 +155,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
               type="text"
               value={currentEditedData.productionBatchCode || ''}
               onChange={(e) => onFieldChange(currentRecordId, 'productionBatchCode', e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           {/* 执行状态 */}
@@ -162,7 +165,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
               value={currentEditedData.executeStatus || 'none'}
               onValueChange={(val) => onFieldChange(currentRecordId, 'executeStatus', val === 'none' ? '' : val)}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>

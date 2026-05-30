@@ -53,6 +53,9 @@ export function CreateBatchModal({
   // 作物品种选择（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
+  // 深度输入框样式
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   // 作物品种选择回调
   const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
     if (varietyInfo) {
@@ -121,7 +124,7 @@ export function CreateBatchModal({
                 value={formData.batchCode}
                 onChange={(e) => onFormChange('batchCode', e.target.value)}
                 placeholder="例如：FQ2024-001"
-                error={!!errors.batchCode}
+                className={deepInputClass}
               />
               <Button size="sm" onClick={onGenerateCode}>
                 生成
@@ -177,6 +180,7 @@ export function CreateBatchModal({
                   onFormChange('plantingArea', formatted);
                 }}
                 placeholder="例如：1000"
+                className={deepInputClass}
               />
             </FormField>
             <FormField label="单位">
@@ -202,6 +206,7 @@ export function CreateBatchModal({
               type="date"
               value={formData.startDate}
               onChange={(e) => onFormChange('startDate', e.target.value)}
+              className={deepInputClass}
             />
           </FormField>
 
@@ -210,6 +215,7 @@ export function CreateBatchModal({
               type="date"
               value={formData.expectedHarvestDate}
               onChange={(e) => onFormChange('expectedHarvestDate', e.target.value)}
+              className={deepInputClass}
             />
           </FormField>
 
@@ -218,6 +224,7 @@ export function CreateBatchModal({
               value={formData.targetYield}
               onChange={(e) => onFormChange('targetYield', e.target.value)}
               placeholder="例如：10000"
+              className={deepInputClass}
             />
           </FormField>
 
@@ -259,6 +266,7 @@ export function CreateBatchModal({
               value={formData.description}
               onChange={(e) => onFormChange('description', e.target.value)}
               placeholder="输入相关的备注信息..."
+              className={deepInputClass}
             />
           </FormField>
 

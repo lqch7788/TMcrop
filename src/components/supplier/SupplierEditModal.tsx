@@ -20,6 +20,9 @@ import {
 } from '../../lib/validators';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface SupplierEditModalProps {
   isOpen: boolean;
   supplier: Supplier | null;
@@ -197,7 +200,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -208,7 +211,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.supplierType}
                 onValueChange={(val) => handleChange('supplierType', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -227,7 +230,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.supplierAttribute}
                 onValueChange={(val) => handleChange('supplierAttribute', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择属性" />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +249,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.organization}
                 onValueChange={(val) => handleChange('organization', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择组织" />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,7 +267,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.status}
                 onValueChange={(val) => handleChange('status', val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="合作中" />
                 </SelectTrigger>
                 <SelectContent>
@@ -282,7 +285,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.contact}
                 onChange={(e) => handleChange('contact', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -293,7 +296,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.mobilePhone}
                 onChange={(e) => handleChange('mobilePhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -304,7 +307,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -315,7 +318,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.fax}
                 onChange={(e) => handleChange('fax', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -326,7 +329,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -352,7 +355,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.address}
                 onChange={(e) => handleChange('address', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -363,7 +366,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.bankName}
                 onChange={(e) => handleChange('bankName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -374,7 +377,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="text"
                 value={form.bankCardNumber}
                 onChange={(e) => handleChange('bankCardNumber', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -385,7 +388,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 type="date"
                 value={form.createDate}
                 onChange={(e) => handleChange('createDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -396,7 +399,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
                 value={form.remarks}
                 onChange={(e) => handleChange('remarks', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={deepInputClass}
               />
             </div>
         </div>

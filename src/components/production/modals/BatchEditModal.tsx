@@ -9,6 +9,9 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { getAllVarieties } from '../../../services/cropVarietyService';
 import { getDictItems } from '../../../stores/useDictionaryStore';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface BatchEditModalProps {
   isOpen: boolean;
   selectedRows: number[];
@@ -118,7 +121,7 @@ export function BatchEditModal({
             <div className="flex-1">
               <Label className="text-xs text-gray-600">选择生产计划批次号</Label>
               <Select value={selectedBatchCode} onValueChange={(v) => onSelectedBatchCodeChange(v)}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择批次号" />
                 </SelectTrigger>
                 <SelectContent>
@@ -153,7 +156,7 @@ export function BatchEditModal({
                     value={editedData.plantingMode ?? currentBatch.plantingMode}
                     onValueChange={(v) => handleFieldChange('plantingMode', v)}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>
@@ -171,7 +174,7 @@ export function BatchEditModal({
                     value={editedData.cropName ?? currentBatch.cropName}
                     onValueChange={(v) => handleCropChange(v)}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>
@@ -189,7 +192,7 @@ export function BatchEditModal({
                     value={editedData.variety ?? currentBatch.variety}
                     onValueChange={(v) => handleFieldChange('variety', v)}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>
@@ -207,7 +210,7 @@ export function BatchEditModal({
                     value={editedData.greenhouseId ?? currentBatch.greenhouseId}
                     onValueChange={(v) => handleGreenhouseChange(v)}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>
@@ -225,7 +228,7 @@ export function BatchEditModal({
                     type="text"
                     value={editedData.plantingArea ?? currentBatch.plantingArea}
                     onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
-                    className="h-8 px-2 text-sm"
+                    className={deepInputClass}
                   />
                 </div>
 
@@ -256,7 +259,7 @@ export function BatchEditModal({
                     value={editedData.responsiblePerson ?? currentBatch.responsiblePerson}
                     onValueChange={(v) => handleFieldChange('responsiblePerson', v)}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>
@@ -274,7 +277,7 @@ export function BatchEditModal({
                     type="text"
                     value={editedData.targetYield ?? currentBatch.targetYield}
                     onChange={(e) => handleFieldChange('targetYield', e.target.value)}
-                    className="h-8 px-2 text-sm"
+                    className={deepInputClass}
                   />
                 </div>
 
@@ -311,7 +314,7 @@ export function BatchEditModal({
                     value={editedData.isCompleted === undefined ? 'no' : editedData.isCompleted ? 'yes' : 'no'}
                     onValueChange={(v) => handleFieldChange('isCompleted', v === 'yes')}
                   >
-                    <SelectTrigger className="h-8 px-2 text-sm">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择" />
                     </SelectTrigger>
                     <SelectContent>

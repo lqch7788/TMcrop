@@ -3,6 +3,9 @@ import { X } from 'lucide-react';
 import { Button, DatePicker, NumberInput, Label } from '@/components/ui';
 import type { ContractFormData, ContractType } from './types';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ContractFormModalProps {
   formData: ContractFormData;
   onChange: (field: keyof ContractFormData, value: string | number) => void;
@@ -34,8 +37,8 @@ export function ContractFormModal({
             type="text"
             value={formData.staffName}
             onChange={(e) => onChange('staffName', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.staffName ? 'border-red-500' : 'border-gray-400'
+            className={`${deepInputClass} ${
+              errors.staffName ? 'border-red-500' : ''
             }`}
             placeholder="请输入员工姓名"
           />
@@ -51,8 +54,8 @@ export function ContractFormModal({
             type="text"
             value={formData.idCard}
             onChange={(e) => onChange('idCard', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-              errors.idCard ? 'border-red-500' : 'border-gray-400'
+            className={`${deepInputClass} ${
+              errors.idCard ? 'border-red-500' : ''
             }`}
             placeholder="请输入身份证号"
           />
@@ -163,7 +166,7 @@ export function ContractFormModal({
         <textarea
           value={formData.remarks || ''}
           onChange={(e) => onChange('remarks', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className={deepInputClass}
           rows={3}
           placeholder="请输入备注"
         />

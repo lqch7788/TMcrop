@@ -67,7 +67,7 @@ export function ScheduleBatchEditModal({
         <select
           value={selectedRecordId || ''}
           onChange={(e) => onSelectedRecordIdChange(e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
         >
           <option value="">请选择记录</option>
           {selectedRecords.map(record => (
@@ -102,7 +102,7 @@ export function ScheduleBatchEditModal({
             <select
               value={editedData.shift ?? currentRecord.shift}
               onChange={(e) => handleFieldChange('shift', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
             >
               {shiftConfigs.map(config => (
                 <option key={config.name} value={config.name}>
@@ -124,7 +124,7 @@ export function ScheduleBatchEditModal({
             <select
               value={editedData.status ?? currentRecord.status}
               onChange={(e) => handleFieldChange('status', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
             >
               <option value="已排班">已排班</option>
               <option value="已执行">已执行</option>
@@ -139,7 +139,7 @@ export function ScheduleBatchEditModal({
               type="time"
               value={editedData.checkIn ?? currentRecord.checkIn ?? ''}
               onChange={(e) => handleFieldChange('checkIn', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
             />
           </div>
 
@@ -150,7 +150,7 @@ export function ScheduleBatchEditModal({
               type="time"
               value={editedData.checkOut ?? currentRecord.checkOut ?? ''}
               onChange={(e) => handleFieldChange('checkOut', e.target.value)}
-              className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
             />
           </div>
         </div>

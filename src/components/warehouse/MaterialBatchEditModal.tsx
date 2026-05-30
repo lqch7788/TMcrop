@@ -7,6 +7,9 @@ import { DatePicker } from '../ui/DatePicker';
 import { Label } from '../ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface MaterialBatchEditModalProps {
   isOpen: boolean;
   selectedRows: number[];
@@ -58,7 +61,7 @@ export function MaterialBatchEditModal({
             const idx = selectedRows.indexOf(Number(val));
             onMaterialSelect(idx >= 0 ? idx : 0);
           }}>
-          <SelectTrigger className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+          <SelectTrigger className={deepInputClass}>
             <SelectValue placeholder="请选择物料" />
           </SelectTrigger>
           <SelectContent>
@@ -87,7 +90,7 @@ export function MaterialBatchEditModal({
               value={currentEditedData.dataStatus || '启用'}
               onValueChange={(val) => onFieldChange(currentMaterialId, 'dataStatus', val)}
             >
-              <SelectTrigger className="w-full h-8 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500">
+              <SelectTrigger className={deepInputClass.replace('py-3', 'py-1.5')}>
                 <SelectValue placeholder="启用" />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +138,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={(currentEditedData.price || '').toString().replace('元', '')}
               onChange={(e) => onFieldChange(currentMaterialId, 'price', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
           <div>
@@ -144,7 +147,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.unit || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'unit', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
           <div>
@@ -153,7 +156,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.location || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'location', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
         </div>
@@ -164,7 +167,7 @@ export function MaterialBatchEditModal({
             type="text"
             value={currentEditedData.supplier || ''}
             onChange={(e) => onFieldChange(currentMaterialId, 'supplier', e.target.value)}
-            className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5')}
           />
         </div>
 
@@ -175,7 +178,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.specification || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'specification', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
           <div>
@@ -184,7 +187,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.barcode || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'barcode', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
           <div>
@@ -193,7 +196,7 @@ export function MaterialBatchEditModal({
               type="text"
               value={currentEditedData.batchNo || ''}
               onChange={(e) => onFieldChange(currentMaterialId, 'batchNo', e.target.value)}
-              className="w-full h-8 px-3 border border-gray-400 rounded text-sm focus:outline-none focus:border-blue-500"
+              className={deepInputClass.replace('py-3', 'py-1.5')}
             />
           </div>
         </div>
