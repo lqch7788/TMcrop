@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import dayjs from 'dayjs';
 import { Modal } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
@@ -173,7 +174,8 @@ export function PurchasePlanPage() {
   // 过滤和排序后的数据
   const filteredAndSortedData = purchasePlansData
     .filter(plan => {
-      if (relatedBatchCode && !plan.relatedBatchCode.toLowerCase().includes(relatedBatchCode.toLowerCase())) return false;
+      // 添加空值保护，防止 relatedBatchCode 为 null/undefined 时崩溃
+      if (relatedBatchCode && !(plan.relatedBatchCode || '').toLowerCase().includes(relatedBatchCode.toLowerCase())) return false;
       if (purchaseType !== '全部' && plan.purchaseTypeName !== purchaseType) return false;
       if (status !== '全部' && plan.statusText !== status) return false;
       if (applicant && !plan.applicant.toLowerCase().includes(applicant.toLowerCase())) return false;
@@ -284,7 +286,15 @@ export function PurchasePlanPage() {
         console.log('【创建采购计划】审批提交结果:', approvalResult);
 
         if (!approvalResult.success) {
-          await showAlert('审批提交失败: ' + approvalResult.message);
+          // 审批提交失败，回滚：删除已创建的采购计划
+          console.log('【创建采购计划】审批提交失败，执行回滚删除计划:', result.id);
+          try {
+            await deletePlan(result.id);
+            console.log('【创建采购计划】回滚删除成功');
+          } catch (deleteError) {
+            console.error('【创建采购计划】回滚删除失败:', deleteError);
+          }
+          await showAlert('审批提交失败: ' + approvalResult.message + '（采购计划已自动删除）');
           return;
         }
 
@@ -354,10 +364,24 @@ export function PurchasePlanPage() {
     setShowExportModal(true);
   };
 
-  // 执行导出
+  // 执行导出（修复 XSS 漏洞，使用文本转义）
   const handleDoExport = async () => {
-    const selectedData = purchasePlansData.filter(p => selectedRows.includes(p.id));
+    // 统一使用 purchaseApplicationCode 作为选择键
+    const selectedData = purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode));
     const headers = ['计划编号', '计划名称', '类型', '申请人', '申请日期', '总金额', '供应商', '交货日期', '优先级', '状态'];
+
+    // HTML 转义函数，防止 XSS 攻击
+    const escapeHtml = (str: string | number | undefined | null): string => {
+      if (str === undefined || str === null) return '';
+      const text = String(str);
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+    };
+
     const exportData = selectedData.map(row => ({
       '计划编号': row.purchaseApplicationCode,
       '计划名称': row.planTitle,
@@ -377,21 +401,22 @@ export function PurchasePlanPage() {
 
     if (exportFormat === 'csv') {
       content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${row[h] || ''}"`).join(',')
+        headers.map(h => `"${escapeHtml(row[h]).replace(/"/g, '""')}"`).join(',')
       ).join('\n');
       mimeType = 'text/csv;charset=utf-8';
       extension = 'csv';
     } else if (exportFormat === 'excel') {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-excel;charset=utf-8';
       extension = 'xls';
     } else if (exportFormat === 'word') {
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       mimeType = 'application/vnd.ms-word;charset=utf-8';
       extension = 'doc';
     }
 
-    const fileName = `采购计划_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    // 使用 dayjs 格式化日期
+    const fileName = `采购计划_${dayjs().format('YYYY-MM-DD')}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
@@ -582,7 +607,10 @@ export function PurchasePlanPage() {
       return;
     }
     try {
-      // 根据 applicantId 获取申请人姓名
+      let savedCount = 0;
+      const errors: string[] = [];
+
+      // 1. 保存当前正在编辑的计划
       const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
       const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
 
@@ -599,6 +627,7 @@ export function PurchasePlanPage() {
         applicantDepartment: currentEditingPlan.applicantDepartment,
         items: batchEditItems,
       });
+
       await updatePlan(currentEditingPlan.id, {
         relatedBatchCode: currentEditingPlan.relatedBatchCode,
         purchaseType: batchEditData.purchaseType,
@@ -610,11 +639,51 @@ export function PurchasePlanPage() {
         applicantDepartment: currentEditingPlan.applicantDepartment,
         items: batchEditItems,
       });
+      savedCount++;
+
+      // 2. 保存 editedPlans 中累积的其他修改
+      const editedPlanCodes = Object.keys(editedPlans);
+      for (const planCode of editedPlanCodes) {
+        // 跳过当前正在编辑的计划（已在上方保存）
+        if (planCode === currentEditingPlan.purchaseApplicationCode) {
+          continue;
+        }
+
+        const editData = editedPlans[planCode];
+        // 找到对应的原始计划
+        const originalPlan = purchasePlansData.find(p => p.purchaseApplicationCode === planCode);
+        if (!originalPlan) {
+          continue;
+        }
+
+        try {
+          const userForEdit = users.find(u => u.id === (editData.applicantId || originalPlan.applicantId));
+          const editApplicantName = userForEdit?.realName || userForEdit?.name || editData.applicant || originalPlan.applicant || '';
+
+          await updatePlan(originalPlan.id, {
+            ...editData,
+            applicantName: editApplicantName,
+            applicantId: editData.applicantId || originalPlan.applicantId,
+            applicantDepartment: editData.applicantDepartment || originalPlan.applicantDepartment,
+          });
+          savedCount++;
+        } catch (editError) {
+          console.error(`[保存采购计划] 保存 ${planCode} 失败:`, editError);
+          errors.push(`${planCode}: ${editError instanceof Error ? editError.message : '未知错误'}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await showAlert(`部分计划保存失败: ${errors.join(', ')}`);
+      } else {
+        await showAlert(`成功保存 ${savedCount} 个采购计划`);
+      }
+
       setShowBatchEditModal(false);
       setBatchEditMode(false);
       setSelectedRows([]);
+      setEditedPlans({});
       setBatchEditItems([]);
-      await showAlert('保存成功');
     } catch (error) {
       console.error('保存失败:', error);
       await showAlert(`保存失败: ${error instanceof Error ? error.message : '请重试'}`);

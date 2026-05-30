@@ -244,15 +244,17 @@ export default function DailyPlanningPage() {
     setReport(dailyReport);
   };
 
-  const statsData = report
-    ? [
-        { label: '总任务数', value: report.totalTasks, icon: FileText, bgColor: 'bg-blue-50 border border-blue-200', iconColor: 'text-blue-500' },
-        { label: '待处理', value: report.pendingTasks, icon: Clock, bgColor: 'bg-orange-50 border border-orange-200', iconColor: 'text-orange-500' },
-        { label: '进行中', value: report.inProgressTasks, icon: AlertCircle, bgColor: 'bg-indigo-50 border border-indigo-200', iconColor: 'text-indigo-500' },
-        { label: '已完成', value: report.completedTasks, icon: CircleCheck, bgColor: 'bg-green-50 border border-green-200', iconColor: 'text-green-500' },
-        { label: '已超期', value: report.overdueTasks, icon: TriangleAlert, bgColor: 'bg-red-50 border border-red-200', iconColor: 'text-red-500' },
-      ]
-    : [];
+  // 统计卡片数据，使用 useMemo 避免每次渲染重新创建
+  const statsData = useMemo(() => {
+    if (!report) return [];
+    return [
+      { label: '总任务数', value: report.totalTasks, icon: FileText, bgColor: 'bg-blue-50 border border-blue-200', iconColor: 'text-blue-500' },
+      { label: '待处理', value: report.pendingTasks, icon: Clock, bgColor: 'bg-orange-50 border border-orange-200', iconColor: 'text-orange-500' },
+      { label: '进行中', value: report.inProgressTasks, icon: AlertCircle, bgColor: 'bg-indigo-50 border border-indigo-200', iconColor: 'text-indigo-500' },
+      { label: '已完成', value: report.completedTasks, icon: CircleCheck, bgColor: 'bg-green-50 border border-green-200', iconColor: 'text-green-500' },
+      { label: '已超期', value: report.overdueTasks, icon: TriangleAlert, bgColor: 'bg-red-50 border border-red-200', iconColor: 'text-red-500' },
+    ];
+  }, [report]);
 
   return (
     <div className="space-y-4">

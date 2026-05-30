@@ -606,6 +606,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'current_crop', sql: 'ALTER TABLE greenhouses ADD COLUMN current_crop TEXT' },
     { name: 'current_variety', sql: 'ALTER TABLE greenhouses ADD COLUMN current_variety TEXT' },
     { name: 'current_season_code', sql: 'ALTER TABLE greenhouses ADD COLUMN current_season_code TEXT' },
+    { name: 'unit', sql: "ALTER TABLE greenhouses ADD COLUMN unit TEXT DEFAULT '亩'" },
+    { name: 'description', sql: "ALTER TABLE greenhouses ADD COLUMN description TEXT" },
   ];
   for (const col of ghColumnsToAdd) {
     try {
@@ -1355,6 +1357,40 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('duplicate column')) console.log('• seedlings.print_count 列已存在');
     else console.log('• seedlings.print_count:', e.message);
+  }
+
+  // 创建 daily_plans 表（每日计划持久化）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS daily_plans (
+        id TEXT PRIMARY KEY,
+        plan_date TEXT NOT NULL,
+        plan_data TEXT NOT NULL,
+        created_by TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    console.log('✓ daily_plans 表创建成功');
+  } catch (e: any) {
+    console.log('• daily_plans:', e.message);
+  }
+
+  // 创建 monthly_plans 表（月度计划持久化）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS monthly_plans (
+        id TEXT PRIMARY KEY,
+        plan_month TEXT NOT NULL,
+        plan_data TEXT NOT NULL,
+        created_by TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    `);
+    console.log('✓ monthly_plans 表创建成功');
+  } catch (e: any) {
+    console.log('• monthly_plans:', e.message);
   }
 
   saveDatabase();

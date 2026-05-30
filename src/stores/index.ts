@@ -81,6 +81,9 @@ export type { TechSolution } from '../services/techSolutionService';
 export { usePurchasePlanStore } from './usePurchasePlanStore';
 export type { PurchasePlanStatusUpdate } from './usePurchasePlanStore';
 
+export { useDailyPlanStore } from './useDailyPlanStore';
+export { useMonthlyPlanStore } from './useMonthlyPlanStore';
+
 export { useSeedSourceStore } from './useSeedSourceStore';
 
 export { useSeedlingStore } from './useSeedlingStore';
@@ -147,6 +150,9 @@ export type { Team } from '../services/apiBasicDataService';
 
 export { useBlockStore, getBlockByOid, getBlocksByZone, getActiveBlocks } from './useBlockStore';
 export type { Block } from '../services/apiBasicDataService';
+
+export { useBaseOperationsStore } from './useBaseOperationsStore';
+export type { BaseStats, SelectedNodeInfo } from './useBaseOperationsStore';
 
 export { useUserStore, getUserByOid, getUsersByDepartment, getActiveUsers } from './useUserStore';
 export type { User } from '../services/authorityService';

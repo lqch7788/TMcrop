@@ -275,9 +275,9 @@ router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
+      SELECT id, oid, code, name, greenhouse_type, area, unit, location, base_oid, base_name,
              company_id, company_name, lng, lat, crop, growth_day, manager, phone,
-             soil_type, ph, intro, greenhouse_count, field_area, status, created_at
+             soil_type, ph, intro, description, greenhouse_count, field_area, status, created_at
       FROM greenhouses
       WHERE status = 'active'
       ORDER BY company_name, code
@@ -1107,9 +1107,9 @@ router.get('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
     const result = db.exec(`
-      SELECT id, oid, code, name, greenhouse_type, area, location, base_oid, base_name,
+      SELECT id, oid, code, name, greenhouse_type, area, unit, location, base_oid, base_name,
              company_id, company_name, lng, lat, crop, growth_day, manager, phone,
-             soil_type, ph, intro, greenhouse_count, field_area, status, created_at
+             soil_type, ph, intro, description, greenhouse_count, field_area, status, created_at
       FROM greenhouses
       WHERE status = 'active'
       ORDER BY company_name, code
@@ -1144,7 +1144,7 @@ router.post('/greenhouses', (req, res) => {
   try {
     const db = getDatabase();
     const {
-      name, code, greenhouseType, area, location,
+      name, code, greenhouseType, area, unit, location, description,
       baseOid, baseName, companyId, companyName,
       lng, lat, crop, growthDay, manager, phone,
       soilType, ph, intro, greenhouseCount, fieldArea
@@ -1159,13 +1159,13 @@ router.post('/greenhouses', (req, res) => {
     const now = new Date().toISOString();
 
     db.run(`
-      INSERT INTO greenhouses (id, oid, code, name, greenhouse_type, area, location,
+      INSERT INTO greenhouses (id, oid, code, name, greenhouse_type, area, unit, location, description,
              base_oid, base_name, company_id, company_name, lng, lat, crop, growth_day,
              manager, phone, soil_type, ph, intro, greenhouse_count, field_area,
              status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
     `, [
-      id, oid, code, name, greenhouseType || '', area || 0, location || '',
+      id, oid, code, name, greenhouseType || '', area || 0, unit || '亩', location || '', description || '',
       baseOid || '', baseName || '', companyId || '', companyName || '',
       lng || 0, lat || 0, crop || '', growthDay || 0,
       manager || '', phone || '', soilType || '', ph || 0, intro || '',
@@ -1175,15 +1175,36 @@ router.post('/greenhouses', (req, res) => {
 
     saveDatabase();
 
-    // 查询刚创建的完整记录并返回
-    const newRecord = db.exec(`SELECT * FROM greenhouses WHERE oid = '${oid}'`);
-    const columns = newRecord[0]?.columns || [];
-    const values = newRecord[0]?.values?.[0] || [];
-    const greenhouse: Record<string, any> = {};
-    columns.forEach((col: string, i: number) => {
-      const camelCol = col.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase());
-      greenhouse[camelCol] = values[i];
-    });
+    // 直接构造返回对象（避免 SELECT * 查询可能的数据问题）
+    const greenhouse: Record<string, any> = {
+      id,
+      oid,
+      code,
+      name,
+      greenhouseType: greenhouseType || '',
+      area: area || 0,
+      unit: unit || '亩',
+      location: location || '',
+      description: description || '',
+      baseOid: baseOid || '',
+      baseName: baseName || '',
+      companyId: companyId || '',
+      companyName: companyName || '',
+      lng: lng || 0,
+      lat: lat || 0,
+      crop: crop || '',
+      growthDay: growthDay || 0,
+      manager: manager || '',
+      phone: phone || '',
+      soilType: soilType || '',
+      ph: ph || 0,
+      intro: intro || '',
+      greenhouseCount: greenhouseCount || 0,
+      fieldArea: fieldArea || 0,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    };
 
     res.json({ success: true, message: '温室创建成功', data: greenhouse });
   } catch (error) {
@@ -1201,7 +1222,7 @@ router.put('/greenhouses/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
     const {
-      name, code, greenhouseType, area, location,
+      name, code, greenhouseType, area, unit, location, description,
       baseOid, baseName, companyId, companyName,
       lng, lat, crop, growthDay, manager, phone,
       soilType, ph, intro, greenhouseCount, fieldArea, status
@@ -1215,7 +1236,9 @@ router.put('/greenhouses/:id', (req, res) => {
           code = COALESCE(?, code),
           greenhouse_type = COALESCE(?, greenhouse_type),
           area = COALESCE(?, area),
+          unit = COALESCE(?, unit),
           location = COALESCE(?, location),
+          description = COALESCE(?, description),
           base_oid = COALESCE(?, base_oid),
           base_name = COALESCE(?, base_name),
           company_id = COALESCE(?, company_id),
@@ -1235,7 +1258,7 @@ router.put('/greenhouses/:id', (req, res) => {
           updated_at = ?
       WHERE id = ?
     `, [
-      name, code, greenhouseType, area, location,
+      name, code, greenhouseType, area, unit, location, description,
       baseOid, baseName, companyId, companyName,
       lng, lat, crop, growthDay, manager, phone,
       soilType, ph, intro, greenhouseCount, fieldArea, status,

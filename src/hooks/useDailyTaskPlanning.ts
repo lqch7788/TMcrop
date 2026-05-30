@@ -4,7 +4,7 @@
  * 提供每日派工计划生成、确认与派发功能
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useTasks, Task } from './useTasks';
 import { useTempTasks, TempTask } from './useTempTasks';
 import { usePersistentAttendance } from './usePersistentAttendance';
@@ -16,7 +16,7 @@ import {
   WeatherData,
 } from '../types/planning';
 import { useLocalStorage } from './useLocalStorage';
-import { useProductionPlanStore } from '../stores';
+import { useProductionPlanStore, useDailyPlanStore } from '../stores';
 import { useComprehensiveDispatch } from './useComprehensiveDispatch';
 import type { WorkerRecommendation } from './useComprehensiveDispatch';
 
@@ -117,17 +117,23 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   // 获取工人匹配功能
   const { getRecommendations } = useComprehensiveDispatch();
 
-  // 存储每日派工计划
-  const [dailyPlans, setDailyPlans] = useLocalStorage<Record<string, DailyPlan>>(
-    'yuanxingtu_daily_plans',
-    {}
-  );
+  // 响应式订阅生产计划 Store 数据
+  const storeBatches = useProductionPlanStore((state) => state.plans);
+  const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
-  // 存储上次任务执行日期记录
+  // 每日计划 Store（持久化到服务器）
+  const dailyPlanStore = useDailyPlanStore();
+
+  // 存储上次任务执行日期记录（仍使用 localStorage）
   const [lastTaskDates, setLastTaskDates] = useLocalStorage<Record<string, string>>(
     'yuanxingtu_daily_planning_last_tasks',
     {}
   );
+
+  // 初始化时从服务器获取每日计划
+  useEffect(() => {
+    dailyPlanStore.fetchPlans();
+  }, []);
 
   // ============================================
   // 获取人员负荷分析
@@ -240,12 +246,8 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const getPendingDispatchTasks = useCallback((targetDate: string): PredictedTask[] => {
     const pendingTasks: PredictedTask[] = [];
 
-    // 从 Zustand Store 获取执行中的批次
-    const allBatches: CropBatch[] = useProductionPlanStore.getState().plans || [];
-    if (allBatches.length === 0) {
-      useProductionPlanStore.getState().fetchPlans();
-    }
-    const batches: CropBatch[] = allBatches;
+    // 使用响应式订阅的批次数据
+    const batches: CropBatch[] = storeBatches || [];
 
     // 过滤执行中批次
     const activeBatches = batches.filter(
@@ -291,7 +293,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
     }
 
     return pendingTasks;
-  }, [tasks]);
+  }, [tasks, storeBatches]);
 
   // ============================================
   // 生成每日派工计划
@@ -352,14 +354,11 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       workerSuggestions,
     };
 
-    // 保存计划
-    setDailyPlans(prev => ({
-      ...prev,
-      [targetDate]: plan,
-    }));
+    // 保存计划到服务器
+    dailyPlanStore.savePlan(targetDate, plan);
 
     return plan;
-  }, [getPendingDispatchTasks, getWorkerLoadAnalysis, getWeatherForecast, setDailyPlans]);
+  }, [getPendingDispatchTasks, getWorkerLoadAnalysis, getWeatherForecast, dailyPlanStore]);
 
   // ============================================
   // 确认并派发计划
@@ -375,21 +374,25 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
         const suggestion = plan.workerSuggestions?.find(s => s.taskId === task.id);
 
         if (suggestion) {
-          // 创建任务
-          // 注意：createTask 参数类型与 PredictedTask 不完全匹配，这里使用 as any 进行类型断言
-          // 因为 createTask 来自外部 hook，可能接受不同的参数结构
+          // 创建任务：正确映射 PredictedTask 字段到 createTask 需要的字段
           await createTask({
             title: `${task.greenhouseName}-${task.taskTypeName}`,
-            taskType: task.taskType,
-            taskTypeName: task.taskTypeName,
+            type: task.taskType,
+            typeName: task.taskTypeName,
             assigneeId: suggestion.workerId,
             assigneeName: suggestion.workerName,
             dueDate: task.suggestedDate,
             priority: task.priority,
             estimatedHours: task.estimatedHours,
             status: 'pending',
-            // 其他必要字段...
-          } as any);
+            sourceType: 'dispatch',
+            dispatchMode: 'farm',
+            greenhouseId: task.greenhouseId,
+            greenhouseName: task.greenhouseName,
+            cropName: task.cropName,
+            batchId: task.batchId,
+            batchCode: task.batchCode,
+          });
 
           dispatchedCount++;
 
@@ -402,23 +405,15 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
         }
       }
 
-      // 更新计划状态为已派发
-      setDailyPlans(prev => ({
-        ...prev,
-        [plan.date]: {
-          ...plan,
-          tasks: plan.tasks.map(t => ({
-            ...t,
-          })),
-        },
-      }));
+      // 更新计划状态为已派发（保存到服务器）
+      await dailyPlanStore.savePlan(plan.date, plan);
 
       return { success: true, dispatchedTasks: dispatchedCount };
     } catch (error) {
       console.error('派发失败:', error);
       return { success: false, dispatchedTasks: dispatchedCount };
     }
-  }, [createTask, setLastTaskDates, setDailyPlans]);
+  }, [createTask, setLastTaskDates, dailyPlanStore]);
 
   // ============================================
   // 获取今日计划
@@ -426,14 +421,15 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const getTodayPlan = useCallback((): DailyPlan => {
     const today = new Date().toISOString().split('T')[0];
 
-    // 如果已有计划，直接返回
-    if (dailyPlans[today]) {
-      return dailyPlans[today];
+    // 从 Store 获取计划
+    const storedPlan = dailyPlanStore.getPlan(today);
+    if (storedPlan) {
+      return storedPlan;
     }
 
     // 否则生成新计划
     return generateDailyPlan(today);
-  }, [dailyPlans, generateDailyPlan]);
+  }, [dailyPlanStore, generateDailyPlan]);
 
   return {
     generateDailyPlan,
