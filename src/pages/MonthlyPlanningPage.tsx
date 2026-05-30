@@ -553,7 +553,7 @@ export default function MonthlyPlanningPage() {
                         {batch.greenhouseName || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500 text-center whitespace-nowrap">
-                        {batch.plantingArea || '-'}
+                        {batch.plantingArea ? `${batch.plantingArea} 亩` : '-'}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
