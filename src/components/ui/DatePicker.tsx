@@ -135,7 +135,7 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={cn(
-            "inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-gray-400 bg-white text-sm transition-colors shadow-inner",
+            "inline-flex items-center gap-2 h-9 px-3 py-2 rounded-lg border border-gray-400 bg-white text-sm transition-colors shadow-inner",
             disabled && "opacity-50 cursor-not-allowed",
             !disabled && "hover:bg-gray-50",
             isOpen && "ring-2 ring-emerald-500 ring-offset-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
