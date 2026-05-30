@@ -62,6 +62,7 @@ export function AddModal({
     remarks: '',
     // 客户相关字段
     customerId: '',
+    customerName: '',
     customerPhone: '',
     deliveryAddress: '',
   });
@@ -77,6 +78,7 @@ export function AddModal({
         ...prev,
         orderCode: generateOrderCode(),
         customerId: '',
+        customerName: '',
         customerPhone: '',
         deliveryAddress: '',
       }));
@@ -149,6 +151,9 @@ export function AddModal({
       createBy: localStorage.getItem('username') || '',
       // 客户相关字段
       customerId: formData.customerId || undefined,
+      customerName: formData.customerName || '',
+      customerPhone: formData.customerPhone,
+      deliveryAddress: formData.deliveryAddress,
     };
 
     // logger.info('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
@@ -181,6 +186,7 @@ export function AddModal({
       expectedCompletionDate: '',
       remarks: '',
       customerId: '',
+      customerName: '',
       customerPhone: '',
       deliveryAddress: '',
     });
@@ -266,12 +272,12 @@ export function AddModal({
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
           onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
-          className={inputDeepClass}
+          className="border-gray-400"
         />
       </div>
 
       {/* 作物品种 - 使用统一的 CropCodeSelector（与种源管理一致） */}
-      <div className="col-span-2">
+      <div>
         <Label className="text-gray-700">
           <span className="text-red-500">*</span> 作物选择
         </Label>
@@ -362,6 +368,7 @@ export function AddModal({
               setFormData(prev => ({
                 ...prev,
                 customerId: customer.id,
+                customerName: customer.customerName || '',
                 customerPhone: customer.contactPhone || '',
                 deliveryAddress: customer.deliveryAddress || '',
               }));

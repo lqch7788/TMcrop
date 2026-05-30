@@ -41,9 +41,17 @@ const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           disabled={disabled}
           placeholder={placeholder}
           className={cn(
-            "flex h-9 w-full rounded-lg border border-gray-400 bg-white pl-10 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 shadow-inner",
+            "flex h-9 w-full rounded-lg border border-gray-400 bg-white pl-10 pr-3 text-sm placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 shadow-inner",
             className
           )}
+          style={{
+            height: '36px',
+            lineHeight: '36px',
+            boxSizing: 'border-box',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            appearance: 'none'
+          }}
         />
       </div>
     )

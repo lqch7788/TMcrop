@@ -115,7 +115,9 @@ export function OrderTable({
               <th className="px-4 py-3 text-left text-sm font-semibold">订单名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">订单类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">作物信息</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">计划数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">实际数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">客户</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">订单日期</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">预计完成</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
@@ -125,7 +127,7 @@ export function OrderTable({
           <tbody className="divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={(exportMode || batchEditMode) ? 10 : 9} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={(exportMode || batchEditMode) ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -163,6 +165,12 @@ export function OrderTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {record.plannedQuantity} {record.unit}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {record.actualQuantity || 0} {record.unit}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {record.customerName || '-'}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {record.orderDate}

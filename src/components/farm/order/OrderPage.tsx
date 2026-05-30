@@ -135,12 +135,16 @@ export default function OrderPage() {
 
   // 处理操作
   const handleDetail = (record: CropOrder) => {
-    setCurrentRecord(record);
+    // 从 store 中获取最新数据，确保显示最新的客户和预计完成日期
+    const latestRecord = orders.find(o => o.id === record.id) || record;
+    setCurrentRecord(latestRecord);
     setDetailModalOpen(true);
   };
 
   const handleEdit = (record: CropOrder) => {
-    setCurrentRecord(record);
+    // 从 store 中获取最新数据
+    const latestRecord = orders.find(o => o.id === record.id) || record;
+    setCurrentRecord(latestRecord);
     setEditModalOpen(true);
   };
 

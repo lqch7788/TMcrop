@@ -121,6 +121,7 @@ export function CropCodeSelector({
         className={`
           w-full ${sizeClasses[size]} px-3
           text-left flex items-center justify-between gap-2
+          border border-gray-400 shadow-inner
           focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
           disabled:bg-gray-100 disabled:cursor-not-allowed
           ${isOpen ? 'border-emerald-500 ring-1 ring-emerald-500' : ''}

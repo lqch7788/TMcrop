@@ -87,6 +87,13 @@ export function OrderDetailModal({ isOpen, onClose, record }: OrderDetailModalPr
       { label: '实际数量', value: record.actualQuantity || 0 },
     ],
     [
+      { label: '客户名称', value: record.customerName || '-' },
+      { label: '客户电话', value: record.customerPhone || '-' },
+    ],
+    [
+      { label: '收货地址', value: record.deliveryAddress || '-', fullWidth: true },
+    ],
+    [
       { label: '创建人', value: record.createBy || '-' },
       { label: '创建时间', value: record.createTime || '-' },
     ],
