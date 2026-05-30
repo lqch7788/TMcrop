@@ -2,11 +2,7 @@
  * 生产计划数据 API 服务
  * 对接后端 /api/production-plans
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
- *
- * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 数据流：API → enhancedApiClient → SQLite DB
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -96,7 +92,7 @@ function transformSingle(item: BackendProductionPlan): ProductionPlan {
 
 /**
  * 获取所有生产计划
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getProductionPlans(): Promise<ProductionPlan[]> {
   const data = await enhancedApiClient.get<BackendProductionPlan[]>('/production-plans');
@@ -105,7 +101,7 @@ export async function getProductionPlans(): Promise<ProductionPlan[]> {
 
 /**
  * 根据ID获取单个生产计划
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getProductionPlanById(id: string): Promise<ProductionPlan | undefined> {
   const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/${id}`);
@@ -114,7 +110,7 @@ export async function getProductionPlanById(id: string): Promise<ProductionPlan 
 
 /**
  * 根据批次编号获取生产计划
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getProductionPlanByCode(batchCode: string): Promise<ProductionPlan | undefined> {
   const data = await enhancedApiClient.get<BackendProductionPlan>(`/production-plans/code/${batchCode}`);
@@ -123,7 +119,7 @@ export async function getProductionPlanByCode(batchCode: string): Promise<Produc
 
 /**
  * 创建生产计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promise<ProductionPlan> {
   const result = await enhancedApiClient.post<ProductionPlan>('/production-plans', plan);
@@ -133,7 +129,7 @@ export async function addProductionPlan(plan: Omit<ProductionPlan, 'id'>): Promi
 
 /**
  * 更新生产计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function updateProductionPlan(id: string, updates: Partial<ProductionPlan>): Promise<ProductionPlan | null> {
   const result = await enhancedApiClient.put<{ data: ProductionPlan }>(`/production-plans/${id}`, updates);
@@ -143,7 +139,7 @@ export async function updateProductionPlan(id: string, updates: Partial<Producti
 
 /**
  * 删除生产计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deleteProductionPlan(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/production-plans/${id}`);
@@ -152,7 +148,7 @@ export async function deleteProductionPlan(id: string): Promise<boolean> {
 
 /**
  * 批量删除生产计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deleteProductionPlans(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`);
@@ -160,7 +156,7 @@ export async function deleteProductionPlans(ids: string[]): Promise<boolean> {
 }
 
 /**
- * 重置生产计划（仅调用后端，不做降级）
+ * 重置生产计划
  */
 export async function resetProductionPlans(): Promise<void> {
   await enhancedApiClient.post('/production-plans/reset');

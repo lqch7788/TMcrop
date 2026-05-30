@@ -292,13 +292,35 @@ export default function BaseManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   基地编码 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={editingBase.baseCode || ''}
-                  onChange={(e) => setEditingBase({ ...editingBase, baseCode: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="例如：BASE001"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editingBase.baseCode || ''}
+                    onChange={(e) => setEditingBase({ ...editingBase, baseCode: e.target.value })}
+                    disabled={!!editingBase.oid}
+                    className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="例如：B001"
+                  />
+                  {!editingBase.oid && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/code-generator/next-base-code');
+                          const json = await res.json();
+                          if (json.success) {
+                            setEditingBase({ ...editingBase, baseCode: json.data.code });
+                          } else {
+                            setError(json.error || '生成编码失败');
+                          }
+                        } catch { setError('生成编码失败，请检查网络'); }
+                      }}
+                      className="px-3 h-10 text-sm bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 whitespace-nowrap"
+                    >
+                      生成
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>

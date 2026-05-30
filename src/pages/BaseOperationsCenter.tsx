@@ -16,6 +16,7 @@ import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore';
 import type { PlantingRecord } from '@/services/apiPlantingRecordService';
 import type { Greenhouse, Zone } from '@/services/apiBasicDataService';
 import { showAlert } from '@/lib/dialogService';
+import { Modal } from '@/components/ui/Modal';
 
 const PAGE_SIZE = 10;
 
@@ -182,10 +183,38 @@ function FacilityTab({
   const { loadDictionaries } = useDictionaryStore();
   const facilityTypes = getDictItems('greenhouse_type');
 
+  // 面积单位选项
+  const areaUnits = [
+    { value: '亩', label: '亩' },
+    { value: '平方米', label: '平方米' },
+    { value: '公顷', label: '公顷' },
+    { value: '个', label: '个' },
+    { value: '栋', label: '栋' },
+    { value: '座', label: '座' },
+  ];
+
+  // 温室类型映射
+  const greenhouseTypeMap: Record<string, string> = {
+    'glass': '玻璃温室',
+    'solar': '日光温室',
+    'plastic': '塑料大棚',
+    'open': '露天种植区',
+    'film_greenhouse': '联动薄膜温室',
+    'solar_tunnel': '日光拱棚',
+    'tissue_culture': '组培室',
+    'breeding_greenhouse': '育种温室',
+    'nursery_greenhouse': '驯化育苗温室',
+    'other_facility': '其他设施',
+    'greenhouse': '温室',
+    'tent': '拱棚',
+    '普通大棚': '普通大棚',
+    '智能大棚': '智能大棚',
+  };
+
   const filtered = greenhouses.filter(gh =>
     (gh.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (gh.code || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).sort((a, b) => (a.code || '').localeCompare(b.code || ''));
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
@@ -193,7 +222,7 @@ function FacilityTab({
     // 自动设置当前基地
     const currentBase = bases.find(b => b.oid === baseOid);
     setEditing(null);
-    setFormData({ status: 'active', baseOid: baseOid, baseName: currentBase?.name || baseName });
+    setFormData({ status: 'active', baseOid: baseOid, baseName: currentBase?.name || baseName, unit: '亩' });
     setShowModal(true);
   };
   const handleEdit = (gh: Greenhouse) => { setEditing(gh); setFormData({ ...gh }); setShowModal(true); };
@@ -223,39 +252,47 @@ function FacilityTab({
 
       {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div> : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">类型</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold">面积(亩)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">种植类型</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">状态</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">操作</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">编码</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">名称</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">类型</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">面积</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">单位</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">种植类型</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">状态</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">备注</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/9">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {paginated.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400"><MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无种植区</td></tr>
+                <tr><td colSpan={9} className="px-3 py-12 text-center text-gray-400"><MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无种植区</td></tr>
               ) : paginated.map(gh => (
                 <tr key={gh.oid} className="hover:bg-green-50">
-                  <td className="px-4 py-3 text-sm font-mono">{gh.code || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{gh.name}</td>
-                  <td className="px-4 py-3 text-sm">{gh.greenhouseType || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-right">{gh.area || 0}</td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-2 py-3 text-sm text-center truncate">{gh.code || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{gh.name}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">
+                    {greenhouseTypeMap[gh.greenhouseType || ''] || gh.greenhouseType || '-'}
+                  </td>
+                  <td className="px-2 py-3 text-sm text-center">{gh.area || 0}</td>
+                  <td className="px-2 py-3 text-sm text-center">{gh.unit || '亩'}</td>
+                  <td className="px-2 py-3 text-sm text-center">
                     {gh.crop === 'vegetable' ? '蔬菜' :
                      gh.crop === 'grain' ? '粮食' :
                      gh.crop === 'fruit' ? '水果' :
                      gh.crop === 'other' ? '其他' : '-'}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span className={`px-2 py-0.5 text-xs rounded-full ${gh.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {gh.status === 'active' ? '活跃' : '停用'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center truncate" title={gh.description || '-'}>
+                    {gh.description || '-'}
+                  </td>
+                  <td className="px-2 py-3 text-center">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => handleEdit(gh)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded"><Edit2 className="w-4 h-4" /></button>
                       <button onClick={() => setDeleteConfirm(gh)} className="p-1.5 hover:bg-red-50 text-red-500 rounded"><Trash2 className="w-4 h-4" /></button>
@@ -275,70 +312,98 @@ function FacilityTab({
       </div>}
 
       {/* 新增/编辑弹窗 */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-3 flex justify-between">
-              <h3 className="text-white font-semibold">{editing ? '编辑种植区' : '新增种植区'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-white/80"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
-                  <input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">编码<span className="text-red-500">*</span>
-                  <input value={formData.code || ''} onChange={e => setFormData({ ...formData, code: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">类型
-                  <select value={formData.greenhouseType || ''} onChange={e => setFormData({ ...formData, greenhouseType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                    <option value="">请选择</option>
-                    {facilityTypes.map(o => <option key={o.dictCode} value={o.dictCode}>{o.dictLabel}</option>)}
-                  </select>
-                </label>
-                <label className="text-xs font-medium text-gray-600">面积(亩)
-                  <input type="number" value={formData.area || ''} onChange={e => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">种植类型
-                  <select value={formData.crop || ''} onChange={e => setFormData({ ...formData, crop: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                    <option value="">请选择</option>
-                    <option value="vegetable">蔬菜</option>
-                    <option value="grain">粮食</option>
-                    <option value="fruit">水果</option>
-                    <option value="other">其他</option>
-                  </select>
-                </label>
-              </div>
-              <label className="text-xs font-medium text-gray-600">位置
-                <input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">状态
-                <select value={formData.status || 'active'} onChange={e => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                  <option value="active">活跃</option><option value="inactive">停用</option>
-                </select>
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSave}>保存</Button>
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? '编辑种植区' : '新增种植区'}
+        size="xxl"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+            <Button size="sm" onClick={handleSave}>保存</Button>
           </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">编码<span className="text-red-500">*</span>
+              <div className="flex gap-1 mt-1">
+                <input value={formData.code || ''} onChange={e => setFormData({ ...formData, code: e.target.value })} disabled={!!editing} className="flex-1 px-3 py-1.5 text-sm border border-gray-400 rounded disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                {!editing && (
+                  <button type="button" onClick={async () => {
+                    if (!baseOid) { await showAlert('请先选择基地'); return; }
+                    try {
+                      const res = await fetch(`/api/code-generator/next-greenhouse-code?baseOid=${baseOid}`);
+                      const json = await res.json();
+                      if (json.success) setFormData({ ...formData, code: json.data.code });
+                      else await showAlert(json.error || '生成编码失败');
+                    } catch { await showAlert('生成编码失败，请检查网络'); }
+                  }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200">生成</button>
+                )}
+              </div>
+            </label>
+            <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
+              <input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">类型
+              <select value={formData.greenhouseType || ''} onChange={e => setFormData({ ...formData, greenhouseType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                {facilityTypes.map(o => <option key={o.dictCode} value={o.dictCode}>{o.dictLabel}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">面积
+              <input type="number" value={formData.area || ''} onChange={e => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">单位
+              <select value={formData.unit || '亩'} onChange={e => setFormData({ ...formData, unit: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                {areaUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">种植类型
+              <select value={formData.crop || ''} onChange={e => setFormData({ ...formData, crop: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                <option value="vegetable">蔬菜</option>
+                <option value="grain">粮食</option>
+                <option value="fruit">水果</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">位置
+            <input value={formData.location || ''} onChange={e => setFormData({ ...formData, location: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+          </label>
+          <label className="text-xs font-medium text-gray-600">状态
+            <select value={formData.status || 'active'} onChange={e => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+              <option value="active">活跃</option><option value="inactive">停用</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
+          </label>
         </div>
-      )}
+      </Modal>
 
       {/* 删除确认 */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-lg p-6 w-96" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-2">确认删除</h3>
-            <p className="text-sm text-gray-600 mb-4">确定删除「{deleteConfirm.name}」？</p>
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
-              <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
-            </div>
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="确认删除"
+        size="sm"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
+            <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="text-sm text-gray-600">确定删除「{deleteConfirm?.name}」？</p>
+      </Modal>
     </div>
   );
 }
@@ -378,7 +443,7 @@ function ZoneTab({
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const handleAdd = () => { setEditing(null); setFormData({ status: 'active' }); setShowModal(true); };
+  const handleAdd = () => { setEditing(null); setFormData({ status: 'active', greenhouseOid: greenhouses[0]?.oid || '' }); setShowModal(true); };
   const handleEdit = (z: Zone) => { setEditing(z); setFormData({ ...z }); setShowModal(true); };
   const handleSave = async () => {
     if (!formData.zoneName) { await showAlert('请填写名称'); return; }
@@ -406,34 +471,38 @@ function ZoneTab({
 
       {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div> : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">所属温室</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">区域类型</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold">面积(亩)</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">状态</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">操作</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">编码</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">名称</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">所属温室</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">区域类型</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">面积(亩)</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">状态</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">备注</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/8">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {paginated.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400"><Layers className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无区块</td></tr>
+                <tr><td colSpan={8} className="px-3 py-12 text-center text-gray-400"><Layers className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无区块</td></tr>
               ) : paginated.map(z => (
                 <tr key={z.oid} className="hover:bg-green-50">
-                  <td className="px-4 py-3 text-sm font-mono">{z.zoneCode || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{z.zoneName}</td>
-                  <td className="px-4 py-3 text-sm">{greenhouses.find(g => g.oid === z.greenhouseOid)?.name || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{z.zoneType ? zoneTypes.find(t => t.value === z.zoneType)?.label : '-'}</td>
-                  <td className="px-4 py-3 text-sm text-right">{z.area || 0}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-sm text-center truncate">{z.zoneCode || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{z.zoneName}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{greenhouses.find(g => g.oid === z.greenhouseOid)?.name || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{z.zoneType ? zoneTypes.find(t => t.value === z.zoneType)?.label : '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center">{z.area || 0}</td>
+                  <td className="px-2 py-3 text-center">
                     <span className={`px-2 py-0.5 text-xs rounded-full ${z.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {z.status === 'active' ? '活跃' : '停用'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-sm text-center truncate" title={z.description || '-'}>
+                    {z.description || '-'}
+                  </td>
+                  <td className="px-2 py-3 text-center">
                     <div className="flex justify-center gap-1">
                       <button onClick={() => handleEdit(z)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded"><Edit2 className="w-4 h-4" /></button>
                       <button onClick={() => setDeleteConfirm(z)} className="p-1.5 hover:bg-red-50 text-red-500 rounded"><Trash2 className="w-4 h-4" /></button>
@@ -453,68 +522,87 @@ function ZoneTab({
       </div>}
 
       {/* 弹窗 */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-3 flex justify-between">
-              <h3 className="text-white font-semibold">{editing ? '编辑区块' : '新增区块'}</h3>
-              <button onClick={() => setShowModal(false)} className="text-white/80"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
-                  <input value={formData.zoneName || ''} onChange={e => setFormData({ ...formData, zoneName: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">编码
-                  <input value={formData.zoneCode || ''} onChange={e => setFormData({ ...formData, zoneCode: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">所属温室
-                  <select value={formData.greenhouseOid || ''} onChange={e => setFormData({ ...formData, greenhouseOid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                    <option value="">请选择</option>
-                    {greenhouses.map(g => <option key={g.oid} value={g.oid}>{g.name}</option>)}
-                  </select>
-                </label>
-                <label className="text-xs font-medium text-gray-600">区域类型
-                  <select value={formData.zoneType || ''} onChange={e => setFormData({ ...formData, zoneType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                    <option value="">请选择</option>
-                    {zoneTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                </label>
-                <label className="text-xs font-medium text-gray-600">面积(亩)
-                  <input type="number" value={formData.area || ''} onChange={e => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">排序
-                  <input type="number" value={formData.sortOrder || 0} onChange={e => setFormData({ ...formData, sortOrder: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-              </div>
-              <label className="text-xs font-medium text-gray-600">备注
-                <input value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">状态
-                <select value={formData.status || 'active'} onChange={e => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                  <option value="active">活跃</option><option value="inactive">停用</option>
-                </select>
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSave}>保存</Button>
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? '编辑区块' : '新增区块'}
+        size="xxl"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
+            <Button size="sm" onClick={handleSave}>保存</Button>
           </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">编码
+              <div className="flex gap-1 mt-1">
+                <input value={formData.zoneCode || ''} onChange={e => setFormData({ ...formData, zoneCode: e.target.value })} disabled={!!editing} className="flex-1 px-3 py-1.5 text-sm border border-gray-400 rounded disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                {!editing && (
+                  <button type="button" disabled={!formData.greenhouseOid} onClick={async () => {
+                    if (!formData.greenhouseOid) { await showAlert('请先选择所属温室'); return; }
+                    try {
+                      const res = await fetch(`/api/code-generator/next-zone-code?greenhouseOid=${formData.greenhouseOid}`);
+                      const json = await res.json();
+                      if (json.success) setFormData({ ...formData, zoneCode: json.data.code });
+                      else await showAlert(json.error || '生成编码失败');
+                    } catch { await showAlert('生成编码失败，请检查网络'); }
+                  }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">生成</button>
+                )}
+              </div>
+            </label>
+            <label className="text-xs font-medium text-gray-600">名称<span className="text-red-500">*</span>
+              <input value={formData.zoneName || ''} onChange={e => setFormData({ ...formData, zoneName: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">所属温室
+              <select value={formData.greenhouseOid || ''} onChange={e => setFormData({ ...formData, greenhouseOid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                {greenhouses.map(g => <option key={g.oid} value={g.oid}>{g.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域类型
+              <select value={formData.zoneType || ''} onChange={e => setFormData({ ...formData, zoneType: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                {zoneTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">面积(亩)
+              <input type="number" value={formData.area || ''} onChange={e => setFormData({ ...formData, area: Number(e.target.value) })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">状态
+              <select value={formData.status || 'active'} onChange={e => setFormData({ ...formData, status: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="active">活跃</option><option value="inactive">停用</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <input value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+          </label>
         </div>
-      )}
+      </Modal>
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-lg p-6 w-96" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-2">确认删除</h3>
-            <p className="text-sm text-gray-600 mb-4">确定删除「{deleteConfirm.zoneName}」？</p>
+        <Modal
+          isOpen={!!deleteConfirm}
+          onClose={() => setDeleteConfirm(null)}
+          title="确认删除"
+          size="sm"
+          enableDrag
+          enableResize
+          showFooter
+          footer={
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
               <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <p className="text-sm text-gray-600">确定删除「{deleteConfirm?.zoneName}」？</p>
+        </Modal>
       )}
     </div>
   );
@@ -619,38 +707,42 @@ function PlantingTab({
 
       {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div> : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">编码</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">种植区</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">区域</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">作物</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">开始</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">结束</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">状态</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold">产量</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">操作</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">编码</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">种植区</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">区域</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">作物</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">开始</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">结束</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">状态</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">产量</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">备注</th>
+                <th className="px-2 py-3 text-center text-sm font-semibold w-1/10">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300">
               {paginated.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400"><Leaf className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无种植记录</td></tr>
+                <tr><td colSpan={10} className="px-3 py-12 text-center text-gray-400"><Leaf className="w-8 h-8 mx-auto mb-2 text-gray-300" />暂无种植记录</td></tr>
               ) : paginated.map(r => (
                 <tr key={r.oid} className="hover:bg-green-50">
-                  <td className="px-4 py-3 text-sm font-mono font-semibold text-green-600">{r.seasonCode}</td>
-                  <td className="px-4 py-3 text-sm">{greenhouses.find(g => g.oid === r.facilityOid)?.name || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{zones.find(z => z.oid === r.zoneOid)?.zoneName || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{r.cropName}{r.varietyName ? ` · ${r.varietyName}` : ''}</td>
-                  <td className="px-4 py-3 text-sm">{r.startDate?.slice(0, 10) || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{r.endDate?.slice(0, 10) || '-'}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-sm text-center font-mono font-semibold text-green-600 truncate">{r.seasonCode}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{greenhouses.find(g => g.oid === r.facilityOid)?.name || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{zones.find(z => z.oid === r.zoneOid)?.zoneName || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate">{r.cropName}{r.varietyName ? ` · ${r.varietyName}` : ''}</td>
+                  <td className="px-2 py-3 text-sm text-center">{r.startDate?.slice(0, 10) || '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center">{r.endDate?.slice(0, 10) || '-'}</td>
+                  <td className="px-2 py-3 text-center">
                     <span className={`px-2 py-0.5 text-xs rounded-full ${r.status === 'planting' ? 'bg-blue-100 text-blue-700' : r.status === 'harvested' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {statusOptions.find(s => s.dictCode === r.status)?.dictLabel || r.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-right">{r.yieldAmount ?? '-'}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-sm text-center">{r.yieldAmount ?? '-'}</td>
+                  <td className="px-2 py-3 text-sm text-center truncate" title={r.notes || '-'}>
+                    {r.notes || '-'}
+                  </td>
+                  <td className="px-2 py-3 text-center">
                     <div className="flex justify-center gap-1">
                       {r.status === 'planting' && <button onClick={() => handleEnd(r)} className="p-1.5 hover:bg-green-50 text-green-500 rounded" title="结束"><CalendarCheck className="w-4 h-4" /></button>}
                       <button onClick={() => handleEdit(r)} className="p-1.5 hover:bg-blue-50 text-blue-500 rounded"><Edit2 className="w-4 h-4" /></button>
@@ -671,138 +763,167 @@ function PlantingTab({
       </div>}
 
       {/* 创建弹窗 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-3 flex justify-between">
-              <h3 className="text-white font-semibold">新增种植季</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-white/80"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <label className="text-xs font-medium text-gray-600">种植区<span className="text-red-500">*</span>
-                <select value={formData.facility_oid || ''} onChange={e => setFormData({ ...formData, facility_oid: e.target.value, zone_oid: '' })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                  <option value="">请选择</option>
-                  {greenhouses.map(g => <option key={g.oid} value={g.oid}>{g.name}</option>)}
-                </select>
-              </label>
-              <label className="text-xs font-medium text-gray-600">区域<span className="text-red-500">*</span>
-                <select value={formData.zone_oid || ''} onChange={e => setFormData({ ...formData, zone_oid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                  <option value="">请选择</option>
-                  {selectedFacilityZones.map(z => <option key={z.oid} value={z.oid}>{z.zoneName}</option>)}
-                </select>
-              </label>
-              <label className="text-xs font-medium text-gray-600">作物名称<span className="text-red-500">*</span>
-                <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">品种
-                <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">开始日期
-                <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">备注
-                <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSaveAdd}>创建</Button>
-            </div>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="新增种植季"
+        size="xxl"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>取消</Button>
+            <Button size="sm" onClick={handleSaveAdd}>创建</Button>
           </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">种植区<span className="text-red-500">*</span>
+              <select value={formData.facility_oid || ''} onChange={e => setFormData({ ...formData, facility_oid: e.target.value, zone_oid: '' })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                {greenhouses.map(g => <option key={g.oid} value={g.oid}>{g.name}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域<span className="text-red-500">*</span>
+              <select value={formData.zone_oid || ''} onChange={e => setFormData({ ...formData, zone_oid: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="">请选择</option>
+                {selectedFacilityZones.map(z => <option key={z.oid} value={z.oid}>{z.zoneName}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">作物名称<span className="text-red-500">*</span>
+              <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">品种
+              <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">开始日期
+              <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">编码预览
+              <div className="flex gap-1 mt-1">
+                <input value={formData.season_code || ''} readOnly className="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" placeholder="选择种植区后点击生成" />
+                <button type="button" disabled={!formData.facility_oid} onClick={async () => {
+                  if (!formData.facility_oid) { await showAlert('请先选择种植区'); return; }
+                  try {
+                    const year = formData.start_date ? formData.start_date.slice(0, 4) : new Date().getFullYear();
+                    const res = await fetch(`/api/code-generator/next-season-code?facilityOid=${formData.facility_oid}&year=${year}`);
+                    const json = await res.json();
+                    if (json.success) setFormData({ ...formData, season_code: json.data.code });
+                    else await showAlert(json.error || '生成编码失败');
+                  } catch { await showAlert('生成编码失败'); }
+                }} className="px-2 py-1.5 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed">生成</button>
+              </div>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
+          </label>
         </div>
-      )}
+      </Modal>
 
       {/* 编辑弹窗 */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40" onClick={() => setShowEditModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-3 flex justify-between">
-              <h3 className="text-white font-semibold">编辑种植记录</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-white/80"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-xs font-medium text-gray-600">种植区
-                  <input value={greenhouses.find(g => g.oid === formData.facility_oid)?.name || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">区域
-                  <input value={zones.find(z => z.oid === formData.zone_oid)?.zoneName || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
-                </label>
-              </div>
-              <label className="text-xs font-medium text-gray-600">作物名称
-                <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">品种
-                <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">开始日期
-                <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <label className="text-xs font-medium text-gray-600">备注
-                <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSaveEdit}>保存</Button>
-            </div>
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="编辑种植记录"
+        size="xxl"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
+            <Button size="sm" onClick={handleSaveEdit}>保存</Button>
           </div>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">种植区
+              <input value={greenhouses.find(g => g.oid === formData.facility_oid)?.name || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">区域
+              <input value={zones.find(z => z.oid === formData.zone_oid)?.zoneName || '-'} readOnly className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded bg-gray-50" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">作物名称
+              <input value={formData.crop_name || ''} onChange={e => setFormData({ ...formData, crop_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">品种
+              <input value={formData.variety_name || ''} onChange={e => setFormData({ ...formData, variety_name: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">开始日期
+              <input type="date" value={formData.start_date || ''} onChange={e => setFormData({ ...formData, start_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
+          </label>
         </div>
-      )}
+      </Modal>
 
       {/* 结束弹窗 */}
-      {showEndModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40" onClick={() => setShowEndModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-3 flex justify-between">
-              <h3 className="text-white font-semibold">结束种植季</h3>
-              <button onClick={() => setShowEndModal(false)} className="text-white/80"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="p-5 space-y-3">
-              <p className="text-sm text-gray-600">结束「<span className="font-semibold text-green-600">{currentRecord?.seasonCode}</span>」</p>
-              <label className="text-xs font-medium text-gray-600">结束日期<span className="text-red-500">*</span>
-                <input type="date" value={formData.end_date || ''} onChange={e => setFormData({ ...formData, end_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-xs font-medium text-gray-600">产量
-                  <input type="number" value={formData.yield_amount || ''} onChange={e => setFormData({ ...formData, yield_amount: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
-                </label>
-                <label className="text-xs font-medium text-gray-600">单位
-                  <select value={formData.yield_unit || 'kg'} onChange={e => setFormData({ ...formData, yield_unit: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                    <option value="kg">千克</option><option value="ton">吨</option><option value="jin">斤</option>
-                  </select>
-                </label>
-              </div>
-              <label className="text-xs font-medium text-gray-600">品质
-                <select value={formData.quality_grade || ''} onChange={e => setFormData({ ...formData, quality_grade: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
-                  <option value="">请选择</option>
-                  <option value="A">A级</option><option value="B">B级</option><option value="C">C级</option>
-                </select>
-              </label>
-              <label className="text-xs font-medium text-gray-600">备注
-                <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSaveEnd}>确认结束</Button>
-            </div>
+      <Modal
+        isOpen={showEndModal}
+        onClose={() => setShowEndModal(false)}
+        title="结束种植季"
+        size="xxl"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}>取消</Button>
+            <Button size="sm" onClick={handleSaveEnd}>确认结束</Button>
           </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">结束「<span className="font-semibold text-green-600">{currentRecord?.seasonCode}</span>」</p>
+          <label className="text-xs font-medium text-gray-600">结束日期<span className="text-red-500">*</span>
+            <input type="date" value={formData.end_date || ''} onChange={e => setFormData({ ...formData, end_date: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs font-medium text-gray-600">产量
+              <input type="number" value={formData.yield_amount || ''} onChange={e => setFormData({ ...formData, yield_amount: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded" />
+            </label>
+            <label className="text-xs font-medium text-gray-600">单位
+              <select value={formData.yield_unit || 'kg'} onChange={e => setFormData({ ...formData, yield_unit: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+                <option value="kg">千克</option><option value="ton">吨</option><option value="jin">斤</option>
+              </select>
+            </label>
+          </div>
+          <label className="text-xs font-medium text-gray-600">品质
+            <select value={formData.quality_grade || ''} onChange={e => setFormData({ ...formData, quality_grade: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded">
+              <option value="">请选择</option>
+              <option value="A">A级</option><option value="B">B级</option><option value="C">C级</option>
+            </select>
+          </label>
+          <label className="text-xs font-medium text-gray-600">备注
+            <textarea value={formData.notes || ''} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={2} className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-400 rounded resize-none" />
+          </label>
         </div>
-      )}
+      </Modal>
 
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-lg p-6 w-96" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-2">确认删除</h3>
-            <p className="text-sm text-gray-600 mb-4">确定删除「{deleteConfirm.seasonCode}」？</p>
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
-              <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
-            </div>
+      {/* 删除确认 */}
+      <Modal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="确认删除"
+        size="sm"
+        enableDrag
+        enableResize
+        showFooter
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
+            <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="text-sm text-gray-600">确定删除「{deleteConfirm?.seasonCode}」？</p>
+      </Modal>
     </div>
   );
 }

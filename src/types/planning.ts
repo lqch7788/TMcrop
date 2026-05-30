@@ -51,6 +51,16 @@ export interface DailyPlan {
   }[];
 }
 
+/** API存储用的日计划类型（包含元数据） */
+export interface DailyPlanRecord {
+  id?: string;
+  planDate: string;
+  planData: DailyPlan | null;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // ============================================
 // 周汇总类型
 // ============================================
@@ -136,6 +146,16 @@ export interface MonthlyPlan {
   generatedAt: string;
   generatedBy: string;
   planningHorizon: 'monthly';
+}
+
+/** API存储用的月度计划类型（包含元数据） */
+export interface MonthlyPlanRecord {
+  id?: string;
+  planMonth: string;
+  planData: MonthlyPlan | null;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ============================================

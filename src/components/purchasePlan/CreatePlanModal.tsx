@@ -39,10 +39,12 @@ interface CreatePlanModalProps {
 }
 
 /**
- * 生成采购申请批次号
+ * 生成采购申请批次号（使用 crypto.randomUUID 替代 Math.random）
  */
 const generateCode = () => {
-  return `PA${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomPart = crypto.randomUUID().split('-')[0].toUpperCase();
+  return `PA${timestamp}${randomPart}`;
 };
 
 /**

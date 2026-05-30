@@ -2,11 +2,7 @@
  * 种植数据 API 服务
  * 对接后端 /api/plantings
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
- *
- * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 数据流：API → enhancedApiClient → SQLite DB
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -131,7 +127,7 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
 
 /**
  * 获取所有种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPlantings(): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings');
@@ -140,7 +136,7 @@ export async function getPlantings(): Promise<Planting[]> {
 
 /**
  * 根据ID获取单个种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPlantingById(id: string): Promise<Planting | undefined> {
   const data = await enhancedApiClient.get<BackendPlanting>(`/plantings/${id}`);
@@ -149,7 +145,7 @@ export async function getPlantingById(id: string): Promise<Planting | undefined>
 
 /**
  * 根据ID数组获取多个种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPlantingsByIds(ids: string[]): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/batch?ids=${ids.join(',')}`);
@@ -158,7 +154,7 @@ export async function getPlantingsByIds(ids: string[]): Promise<Planting[]> {
 
 /**
  * 根据来源获取种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPlantingsBySourceId(sourceId: string): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>(`/plantings/source/${sourceId}`);
@@ -167,7 +163,7 @@ export async function getPlantingsBySourceId(sourceId: string): Promise<Planting
 
 /**
  * 创建种植记录
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' | 'updateTime'>): Promise<Planting> {
   const result = await enhancedApiClient.post<{ id: string }>('/plantings', planting);
@@ -176,7 +172,7 @@ export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' |
 
 /**
  * 更新种植记录
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function updatePlanting(id: string, updates: Partial<Planting>): Promise<Planting | null> {
   const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates);
@@ -185,7 +181,7 @@ export async function updatePlanting(id: string, updates: Partial<Planting>): Pr
 
 /**
  * 删除种植记录
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deletePlanting(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/plantings/${id}`);
@@ -194,7 +190,7 @@ export async function deletePlanting(id: string): Promise<boolean> {
 
 /**
  * 批量删除种植记录
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deletePlantings(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/plantings/batch?ids=${ids.join(',')}`);
@@ -203,7 +199,7 @@ export async function deletePlantings(ids: string[]): Promise<boolean> {
 
 /**
  * 采收种植记录
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function harvestPlanting(id: string, harvestDate: string, harvestCount?: number): Promise<boolean> {
   await enhancedApiClient.post(`/plantings/${id}/harvest`, { harvestDate, harvestCount });
@@ -212,7 +208,7 @@ export async function harvestPlanting(id: string, harvestDate: string, harvestCo
 
 /**
  * 获取未采收的种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getUnharvestedPlantings(): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/unharvested');
@@ -221,7 +217,7 @@ export async function getUnharvestedPlantings(): Promise<Planting[]> {
 
 /**
  * 获取已采收的种植记录
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getHarvestedPlantings(): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/harvested');
@@ -230,7 +226,7 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
 
 /**
  * 生成种植单号
- * 降级策略：API 失败返回空字符串
+ * 数据流：API → SQLite DB
  */
 export async function generatePlantCode(sourceCode: string): Promise<string> {
   try {

@@ -11,10 +11,10 @@
  * 6. estimateCost - 成本预估
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { CropBatch } from '../types';
 import { useLocalStorage } from './useLocalStorage';
-import { useProductionPlanStore } from '../stores';
+import { useProductionPlanStore, useMonthlyPlanStore } from '../stores';
 import { COST_CONFIG } from '../data/costConfig';
 import { CROP_STAGE_TASK_CONFIG, DEFAULT_TASK_CONFIG } from '../data/cropStageTaskConfig';
 
@@ -322,11 +322,22 @@ export interface UseMonthlyTaskPlanningReturn {
 // useMonthlyTaskPlanning Hook
 // ============================================
 export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
+  // 响应式订阅生产计划 Store 数据
+  const storeBatches = useProductionPlanStore((state) => state.plans);
+
+  // 月度计划 Store（持久化到服务器）
+  const monthlyPlanStore = useMonthlyPlanStore();
+
   // 使用localStorage存储上次任务执行日期
   const [lastTaskDates, setLastTaskDates] = useLocalStorage<Record<string, string>>(
     'yuanxingtu_monthly_planning_last_tasks',
     {}
   );
+
+  // 初始化时从服务器获取月度计划
+  useEffect(() => {
+    monthlyPlanStore.fetchPlans();
+  }, []);
 
   // ============================================
   // 预测任务
@@ -370,12 +381,8 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
     const startDate = `${month}-01`;
     const endDate = getMonthEndDate(month);
 
-    // 从 Zustand Store 获取批次数据
-    const batches: CropBatch[] = useProductionPlanStore.getState().plans || [];
-    if (batches.length === 0) {
-      // Store 可能尚未加载，尝试 fetch
-      useProductionPlanStore.getState().fetchPlans();
-    }
+    // 使用响应式订阅的批次数据
+    const batches: CropBatch[] = storeBatches || [];
 
     // 过滤指定批次的执行中/已发布批次
     const targetBatches = batchIds.length > 0
@@ -427,7 +434,7 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
       taskTypeBreakdown[task.taskType] = (taskTypeBreakdown[task.taskType] || 0) + 1;
     }
 
-    return {
+    const plan: MonthlyPlan = {
       month,
       batches: batchIds,
       totalTasks: allTasks.length,
@@ -444,7 +451,12 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
       generatedBy: 'AI Planning Engine',
       planningHorizon: 'monthly',
     };
-  }, [predictTasks, lastTaskDates]);
+
+    // 保存到服务器
+    monthlyPlanStore.savePlan(month, plan);
+
+    return plan;
+  }, [predictTasks, lastTaskDates, storeBatches, monthlyPlanStore]);
 
   // ============================================
   // 按周汇总

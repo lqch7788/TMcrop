@@ -60,6 +60,7 @@ export interface Greenhouse {
   name: string;
   greenhouseType?: string;
   area?: number;
+  unit?: string;
   location?: string;
   baseOid?: string;
   baseName?: string;

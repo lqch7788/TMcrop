@@ -77,6 +77,9 @@ import pesticideLibraryRouter from './pesticideLibrary';
 import fertilizerLibraryRouter from './fertilizerLibrary';
 import pestDiseaseDictRouter from './pestDiseaseDict';
 import userBasePermissionsRouter from './userBasePermissions';
+import codeGeneratorRouter from './codeGenerator';
+import dailyPlansRouter from './dailyPlans';
+import monthlyPlansRouter from './monthlyPlans';
 import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { apiLimiter, loginLimiter } from '../middleware/rateLimit';
 
@@ -153,6 +156,9 @@ router.use('/material-requests', requireAuth, materialRequestRouter);
 
 // 基础数据路由（部门/仓库/温室/职位/区域/地块/编码规则/通知渠道/通知规则等）- 可选认证（公开数据）
 router.use('/basic-data', optionalAuth, basicDataRouter);
+
+// 编码生成器路由
+router.use('/code-generator', codeGeneratorRouter);
 
 // 数据字典路由 - 需要认证
 router.use('/dictionary', requireAuth, dictionaryRouter);
@@ -312,6 +318,12 @@ router.use('/pest-disease-dict', requireAuth, pestDiseaseDictRouter);
 
 // 用户基地权限管理路由
 router.use('/user-base-permissions', requireAuth, userBasePermissionsRouter);
+
+// 每日计划路由
+router.use('/daily-plans', requireAuth, dailyPlansRouter);
+
+// 月度计划路由
+router.use('/monthly-plans', requireAuth, monthlyPlansRouter);
 
 // 健康检查 - 增强版
 router.get('/health', (req, res) => {

@@ -2,11 +2,7 @@
  * 采购计划数据 API 服务
  * 对接后端 /api/purchase-plans
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
- *
- * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 数据流：API → enhancedApiClient → SQLite DB
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -143,7 +139,7 @@ function transformSingle(item: BackendPurchasePlan): PurchasePlan {
 
 /**
  * 获取所有采购计划
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPurchasePlans(): Promise<PurchasePlan[]> {
   const data = await enhancedApiClient.get<BackendPurchasePlan[]>('/purchase-plans');
@@ -152,7 +148,7 @@ export async function getPurchasePlans(): Promise<PurchasePlan[]> {
 
 /**
  * 根据ID获取单个采购计划
- * 降级策略：API → IndexedDB 缓存
+ * 数据流：API → SQLite DB
  */
 export async function getPurchasePlanById(id: string): Promise<PurchasePlan | undefined> {
   const data = await enhancedApiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`);
@@ -161,7 +157,7 @@ export async function getPurchasePlanById(id: string): Promise<PurchasePlan | un
 
 /**
  * 创建采购计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<PurchasePlan> {
   const result = await enhancedApiClient.post<PurchasePlan>('/purchase-plans', plan);
@@ -171,7 +167,7 @@ export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<P
 
 /**
  * 更新采购计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
   const result = await enhancedApiClient.put<{ data: PurchasePlan }>(`/purchase-plans/${id}`, updates);
@@ -181,7 +177,7 @@ export async function updatePurchasePlan(id: string, updates: Partial<PurchasePl
 
 /**
  * 删除采购计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deletePurchasePlan(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/purchase-plans/${id}`);
@@ -190,7 +186,7 @@ export async function deletePurchasePlan(id: string): Promise<boolean> {
 
 /**
  * 批量删除采购计划
- * 降级策略：API → 离线队列
+ * 数据流：API → SQLite DB
  */
 export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
   await enhancedApiClient.post('/purchase-plans/batch-delete', { ids });
@@ -198,7 +194,7 @@ export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
 }
 
 /**
- * 重置采购计划（仅调用后端，不做降级）
+ * 重置采购计划
  */
 export async function resetPurchasePlans(): Promise<void> {
   await enhancedApiClient.post('/purchase-plans/reset');

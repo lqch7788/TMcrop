@@ -313,10 +313,16 @@ export default function MonthlyPlanningPage() {
     return map[status] || status;
   };
 
-  // 生成月度计划
+  // 生成月度计划（带错误边界）
   useEffect(() => {
-    const plan = generateMonthlyPlan(selectedMonth, selectedBatches);
-    setMonthlyPlan(plan);
+    try {
+      const plan = generateMonthlyPlan(selectedMonth, selectedBatches);
+      setMonthlyPlan(plan);
+    } catch (error) {
+      console.error('生成月度计划失败:', error);
+      showAlert('生成月度计划失败，请重试');
+      setMonthlyPlan(null);
+    }
   }, [selectedMonth, selectedBatches, generateMonthlyPlan]);
 
   const handleMonthChange = (date: dayjs.Dayjs | null) => {
@@ -325,7 +331,7 @@ export default function MonthlyPlanningPage() {
     }
   };
 
-  const handleBatchChange = (values: string[]) => {
+  const handleBatchChange = (values: string[]): void => {
     setSelectedBatches(values);
   };
 
