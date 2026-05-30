@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVariety } from '@/types/cropVariety';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
+import { useCustomerStore } from '@/stores';
 import { Modal } from '@/components/ui/Modal';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert } from '@/lib/dialogService';
@@ -42,6 +43,9 @@ export function AddModal({
   onSuccess,
   orderTypeOptions,
 }: AddModalProps) {
+  // 客户数据
+  const { customers, fetchCustomers } = useCustomerStore();
+
   // 表单状态
   const [formData, setFormData] = useState({
     orderCode: '',
@@ -54,23 +58,31 @@ export function AddModal({
     unit: '株',
     supplierName: '',
     orderDate: new Date().toISOString().split('T')[0],
-    expectedHarvestDate: '',
+    expectedCompletionDate: '',
     remarks: '',
+    // 客户相关字段
+    customerId: '',
+    customerPhone: '',
+    deliveryAddress: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cropCode, setCropCode] = useState('');           // CropCodeSelector 选中值
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null); // 选中的作物品种详情
 
-  // 弹窗打开时自动生成订单编号
+  // 弹窗打开时自动生成订单编号并加载客户列表
   useEffect(() => {
     if (isOpen) {
       setFormData(prev => ({
         ...prev,
-        orderCode: generateOrderCode()
+        orderCode: generateOrderCode(),
+        customerId: '',
+        customerPhone: '',
+        deliveryAddress: '',
       }));
       setCropCode('');
       setSelectedCrop(null);
+      fetchCustomers();
     }
   }, [isOpen]);
 
@@ -123,7 +135,7 @@ export function AddModal({
       orderName: formData.orderName,
       orderType: formData.orderType,
       orderDate: formData.orderDate,
-      expectedHarvestDate: formData.expectedHarvestDate || undefined,
+      expectedCompletionDate: formData.expectedCompletionDate || undefined,
       cropCategory: formData.cropCategory,  // 品种路径（完整路径）
       cropName: '',                          // 作物名称（已取消字段）
       cropVariety: formData.cropVariety,     // 作物品种
@@ -135,17 +147,19 @@ export function AddModal({
       remarks: formData.remarks,
       instanceIds: [],
       createBy: localStorage.getItem('username') || '',
+      // 客户相关字段
+      customerId: formData.customerId || undefined,
     };
 
-    console.log('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
+    // logger.info('[AddModal] 准备创建的订单数据:', JSON.stringify(newOrder, null, 2));
 
     try {
       // 通过 Zustand Store 创建订单（同时更新后端和本地状态）
       const store = useOrderDataStore.getState();
       const result = await store.addOrder(newOrder);
-      console.log('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
+      // logger.info('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
     } catch (error) {
-      console.error('创建订单失败:', error);
+      // logger.error('创建订单失败:', error);
       await showAlert('创建订单失败，请重试');
       return;
     }
@@ -164,8 +178,11 @@ export function AddModal({
       unit: '株',
       supplierName: '',
       orderDate: new Date().toISOString().split('T')[0],
-      expectedHarvestDate: '',
+      expectedCompletionDate: '',
       remarks: '',
+      customerId: '',
+      customerPhone: '',
+      deliveryAddress: '',
     });
     setCropCode('');
     setSelectedCrop(null);
@@ -186,7 +203,7 @@ export function AddModal({
             value={formData.orderCode}
             onChange={(e) => setFormData({ ...formData, orderCode: e.target.value })}
             placeholder="点击生成获取编号"
-            className={`flex-1 ${errors.orderCode ? 'border-red-500' : 'border-gray-200'}`}
+            className={`flex-1 ${errors.orderCode ? 'border-red-500' : 'border-gray-300'}`}
           />
           <Button
             type="button"
@@ -211,7 +228,7 @@ export function AddModal({
           value={formData.orderName}
           onChange={(e) => setFormData({ ...formData, orderName: e.target.value })}
           placeholder="请输入订单名称"
-          className={`${errors.orderName ? 'border-red-500' : 'border-gray-200'}`}
+          className={`${errors.orderName ? 'border-red-500' : 'border-gray-300'}`}
         />
         {errors.orderName && <p className="text-xs text-red-500 mt-1">{errors.orderName}</p>}
       </div>
@@ -225,7 +242,7 @@ export function AddModal({
           value={formData.orderType}
           onValueChange={(v) => setFormData({ ...formData, orderType: v as any })}
         >
-          <SelectTrigger className="border-gray-200">
+          <SelectTrigger className="border-gray-300">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -246,7 +263,7 @@ export function AddModal({
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
           onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
-          className="border-gray-200"
+          className="border-gray-300"
         />
       </div>
 
@@ -287,7 +304,7 @@ export function AddModal({
           value={formData.unit}
           onValueChange={(v) => setFormData({ ...formData, unit: v })}
         >
-          <SelectTrigger className="border-gray-200">
+          <SelectTrigger className="border-gray-300">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -310,7 +327,7 @@ export function AddModal({
           value={formData.plannedQuantity || ''}
           onChange={(e) => setFormData({ ...formData, plannedQuantity: Number(e.target.value) })}
           placeholder="请输入计划数量"
-          className={`${errors.plannedQuantity ? 'border-red-500' : 'border-gray-200'}`}
+          className={`${errors.plannedQuantity ? 'border-red-500' : 'border-gray-300'}`}
         />
         {errors.plannedQuantity && <p className="text-xs text-red-500 mt-1">{errors.plannedQuantity}</p>}
       </div>
@@ -325,7 +342,7 @@ export function AddModal({
           value={formData.actualQuantity || ''}
           onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
           placeholder="请输入实际数量"
-          className="border-gray-200"
+          className="border-gray-300"
         />
       </div>
 
@@ -339,19 +356,77 @@ export function AddModal({
           value={formData.supplierName}
           onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
           placeholder="请输入供应商名称"
-          className="border-gray-200"
+          className="border-gray-300"
         />
       </div>
 
-      {/* 预计采收日期 */}
+      {/* 客户选择 */}
       <div>
         <Label className="text-gray-700">
-          预计采收日期
+          客户
+        </Label>
+        <Select
+          value={formData.customerId || ''}
+          onValueChange={(val) => {
+            const customer = customers.find(c => c.id === val);
+            if (customer) {
+              setFormData(prev => ({
+                ...prev,
+                customerId: customer.id,
+                customerPhone: customer.contactPhone || '',
+                deliveryAddress: customer.deliveryAddress || '',
+              }));
+            }
+          }}
+        >
+          <SelectTrigger className="border-gray-300">
+            <SelectValue placeholder="请选择客户" />
+          </SelectTrigger>
+          <SelectContent>
+            {customers.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.customerName}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* 客户电话 */}
+      <div>
+        <Label className="text-gray-700">
+          客户电话
+        </Label>
+        <Input
+          type="text"
+          value={formData.customerPhone}
+          onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
+          placeholder="请输入客户电话"
+          className="border-gray-300"
+        />
+      </div>
+
+      {/* 收货地址 */}
+      <div className="col-span-2">
+        <Label className="text-gray-700">
+          收货地址
+        </Label>
+        <Input
+          type="text"
+          value={formData.deliveryAddress}
+          onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+          placeholder="请输入收货地址"
+          className="border-gray-300"
+        />
+      </div>
+
+      {/* 预计完成日期 */}
+      <div>
+        <Label className="text-gray-700">
+          预计完成日期
         </Label>
         <DatePicker
-          selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-          className="border-gray-200"
+          selected={formData.expectedCompletionDate ? new Date(formData.expectedCompletionDate) : undefined}
+          onChange={(date) => setFormData({ ...formData, expectedCompletionDate: date.toISOString().split('T')[0] })}
+          className="border-gray-300"
         />
       </div>
 
@@ -365,7 +440,7 @@ export function AddModal({
           onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
           placeholder="请输入备注信息"
           rows={3}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
         />
       </div>
     </div>
