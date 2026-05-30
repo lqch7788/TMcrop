@@ -20,6 +20,9 @@ import {
   SelectValue,
 } from '../../../ui/select';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface SelectExecutorModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -295,7 +298,7 @@ export function SelectExecutorModal({
               value={selectedAssignee || ''}
               onValueChange={(value) => setSelectedAssignee(value)}
             >
-              <SelectTrigger className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg text-base focus:border-blue-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择执行人..." />
               </SelectTrigger>
               <SelectContent>

@@ -22,6 +22,9 @@ interface HarvestModalProps {
   record: Planting;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModalProps) {
   const [isHarvest, setIsHarvest] = useState<'yes' | 'no'>('yes');
   const [formData, setFormData] = useState({
@@ -125,7 +128,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 value={isHarvest}
                 onValueChange={(val) => handleIsHarvestChange(val as 'yes' | 'no')}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,7 +146,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 selected={formData.harvestDate ? new Date(formData.harvestDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, harvestDate: date.toISOString().split('T')[0] })}
                 disabled={isHarvest === 'no'}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className={`${deepInputClass} disabled:bg-gray-100 disabled:cursor-not-allowed`}
               />
               {isHarvest === 'no' && (
                 <p className="mt-1 text-xs text-gray-400">选择"是"后将自动填充当天日期</p>
@@ -156,7 +159,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
                 value={formData.harvestYield || ''}
                 onChange={(e) => setFormData({ ...formData, harvestYield: Number(e.target.value) })}
                 placeholder="请输入采收产量"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             <div className="col-span-2">

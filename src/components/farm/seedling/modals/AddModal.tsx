@@ -37,6 +37,9 @@ interface AddModalProps {
   sites: Array<{ value: string; label: string }>;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function AddModal({
   isOpen,
   onClose,
@@ -564,7 +567,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 value={formData.productionPlanId || '__none__'}
                 onValueChange={(val) => setFormData({ ...formData, productionPlanId: val === '__none__' ? '' : val })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="不关联（独立批次）" />
                 </SelectTrigger>
                 <SelectContent>
@@ -604,7 +607,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     setSourceSearch(e.target.value);
                     setSourcePopoverOpen(true);
                   }}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
                 {/* 清除按钮 */}
                 {formData.sourceId && (
@@ -675,7 +678,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.sourceType || '请先选择种源'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className={`${deepInputClass} bg-gray-100 text-gray-600`}
               />
             </div>
 
@@ -686,7 +689,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.supplierName || '请先选择种源'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className={`${deepInputClass} bg-gray-100 text-gray-600`}
               />
             </div>
 
@@ -710,7 +713,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={formData.cropName ? `${formData.cropName} - ${formData.cropVariety}` : '请选择作物品种'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className={`${deepInputClass} bg-gray-100 text-gray-600`}
               />
             </div>
           </div>
@@ -732,7 +735,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 value={formData.siteId}
                 onValueChange={(val) => handleSiteChange(val)}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
                 <SelectContent>
@@ -766,7 +769,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="text"
                   value={formData.seedlingTypeOther}
                   onChange={(e) => setFormData({ ...formData, seedlingTypeOther: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                   placeholder="请输入具体的育苗方式"
                 />
               </div>
@@ -781,7 +784,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 value={formData.planType}
                 onValueChange={(val) => setFormData({ ...formData, planType: val as SeedlingPlanType })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择计划类型" />
                 </SelectTrigger>
                 <SelectContent>
@@ -800,7 +803,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <DatePicker
                 selected={formData.startDate ? new Date(formData.startDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -810,7 +813,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <DatePicker
                 selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
 
@@ -821,7 +824,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="text"
                 value={seedlingCycle > 0 ? `${seedlingCycle}天` : '请选择日期'}
                 readOnly
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600"
+                className={`${deepInputClass} bg-gray-100 text-gray-600`}
               />
             </div>
 
@@ -832,7 +835,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 type="number"
                 value={formData.workHours || ''}
                 onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
                 placeholder="请输入育苗工时"
                 min="0"
                 step="0.5"
@@ -873,7 +876,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="number"
                   value={formData.initialCount || ''}
                   onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                   placeholder="请输入播种数量"
                 />
               </div>
@@ -895,7 +898,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                       setFormData({ ...formData, targetSurvivalRate: Math.round(val * 100) / 100 });
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                   placeholder="0-100%"
                   step="0.01"
                 />
@@ -908,7 +911,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
                 />
               </div>
             </div>
@@ -927,7 +930,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     type="number"
                     value={formData.motherPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     placeholder="投入的基础种苗数量"
                   />
                 </div>
@@ -941,7 +944,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     value={String(formData.propagationMultiple)}
                     onValueChange={(val) => handlePropagationMultipleChange(Number(val))}
                   >
-                    <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择扩繁倍数" />
                     </SelectTrigger>
                     <SelectContent>
@@ -963,7 +966,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     type="number"
                     value={formData.customMultiple || ''}
                     onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     placeholder="请输入扩繁倍数"
                   />
                 </div>
@@ -977,7 +980,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     type="text"
                     value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
                   />
                   <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
                 </div>
@@ -993,7 +996,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     max="100"
                     value={formData.targetSurvivalRate || ''}
                     onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     placeholder="0-100%"
                   step="0.01"
                   />
@@ -1007,7 +1010,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="text"
                   value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-100 text-gray-600 font-mono"
+                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
                 />
                 <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
               </div>
@@ -1023,7 +1026,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 value={formData.chargePerson}
                 onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择" />
                 </SelectTrigger>
                 <SelectContent>

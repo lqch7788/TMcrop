@@ -11,6 +11,9 @@ import { Button, Label } from '@/components/ui';
 import { Input } from '../../ui/input';
 import { TextArea } from '../../ui/TextArea';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface TaskRecord {
   id: string;
   taskId?: string;
@@ -201,7 +204,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder={verifyResult === 'pass' ? '选填：可添加验收备注' : '请输入驳回原因...'}
                 rows={4}
-                className="w-full px-3 py-2 text-sm border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className={`${deepInputClass} resize-none`}
               />
             </div>
           )}

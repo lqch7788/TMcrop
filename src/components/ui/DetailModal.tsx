@@ -4,6 +4,9 @@
  */
 
 import React from 'react';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { Modal } from './Modal';
 import { Button } from './button';
 import { Label } from './label';
@@ -75,7 +78,7 @@ export function DetailModal({
             type="text"
             value={String(field.value)}
             readOnly
-            className={`border-gray-300 bg-gray-50 text-gray-600 ${field.className || ''}`}
+            className={`${deepInputClass} bg-gray-50 text-gray-600 ${field.className || ''}`}
           />
         ) : (
           <div className={`h-10 px-3 border border-gray-300 bg-gray-50 rounded-lg flex items-center ${field.className || ''}`}>

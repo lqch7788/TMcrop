@@ -24,6 +24,9 @@ interface DailyRecordModalProps {
   record: Seedling;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
@@ -285,7 +288,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 type="number"
                 value={formData.temperature || ''}
                 onChange={(e) => setFormData({ ...formData, temperature: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第一行：湿度 */}
@@ -295,7 +298,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 type="number"
                 value={formData.humidity || ''}
                 onChange={(e) => setFormData({ ...formData, humidity: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第二行：pH值 */}
@@ -310,7 +313,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   phValue: e.target.value ? Number(e.target.value) : undefined
                 })}
                 placeholder="如：6.5"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第二行：EC值 */}
@@ -325,7 +328,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   ecValue: e.target.value ? Number(e.target.value) : undefined
                 })}
                 placeholder="如：2.0"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第二行：是否浇水 */}
@@ -352,7 +355,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   survivalCountChange: e.target.value ? Number(e.target.value) : undefined
                 })}
                 placeholder="正数增加，负数减少"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第三行：定植变化 */}
@@ -366,7 +369,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   plantedCountChange: e.target.value ? Number(e.target.value) : undefined
                 })}
                 placeholder="正数增加，负数减少"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第三行：损耗数量 */}
@@ -380,7 +383,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   lossCountChange: e.target.value ? Number(e.target.value) : undefined
                 })}
                 placeholder="正数增加"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 第四行：操作人员（占2列） */}
@@ -390,7 +393,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 value={formData.operator}
                 onValueChange={(val) => setFormData({ ...formData, operator: val })}
               >
-                <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择操作人员" />
                 </SelectTrigger>
                 <SelectContent>
@@ -408,7 +411,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 value={formData.abnormality}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
                 placeholder="无异常请留空"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
             </div>
             {/* 备注（单独一行，占3列） */}
@@ -418,7 +421,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className={deepInputClass}
                 placeholder="请输入备注信息"
               />
             </div>

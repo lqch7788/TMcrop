@@ -11,6 +11,9 @@ import { TextArea } from '@/components/ui/TextArea';
 import { usePestDiseaseDictStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface QuickAddPestDiseaseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -86,7 +89,7 @@ export function QuickAddPestDiseaseModal({ isOpen, onClose, defaultType = 'pest'
             value={form.dictName}
             onChange={(e) => updateField('dictName', e.target.value)}
             placeholder="请输入病虫害名称"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -123,7 +126,7 @@ export function QuickAddPestDiseaseModal({ isOpen, onClose, defaultType = 'pest'
             value={form.targetCrops}
             onChange={(e) => updateField('targetCrops', e.target.value)}
             placeholder="多个用逗号分隔，如：番茄,黄瓜"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -134,7 +137,7 @@ export function QuickAddPestDiseaseModal({ isOpen, onClose, defaultType = 'pest'
             onChange={(e) => updateField('description', e.target.value)}
             placeholder="请输入病虫害描述"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            className={`${deepInputClass} resize-none`}
           />
         </div>
 

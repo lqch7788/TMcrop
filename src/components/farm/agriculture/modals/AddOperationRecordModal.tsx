@@ -15,6 +15,9 @@ import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 物料选项（静态配置，非动态数据）
 const materialOptions = [
   '番茄苗', '黄瓜苗', '草莓苗', '生根剂',
@@ -184,7 +187,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.operationType}
               onValueChange={(val) => setFormData({ ...formData, operationType: val })}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -202,7 +205,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.greenhouseId}
               onValueChange={(val) => setFormData({ ...formData, greenhouseId: val })}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -220,7 +223,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.operatorId}
               onValueChange={(val) => setFormData({ ...formData, operatorId: val })}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择" />
               </SelectTrigger>
               <SelectContent>
@@ -241,7 +244,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.cropName}
               onChange={(e) => setFormData({ ...formData, cropName: e.target.value })}
               placeholder="请输入作物名称"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -251,7 +254,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.variety}
               onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
               placeholder="请输入品种"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -274,7 +277,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               type="time"
               value={formData.startTime}
               onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -283,7 +286,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               type="time"
               value={formData.endTime}
               onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -293,7 +296,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.workload}
               onChange={(e) => setFormData({ ...formData, workload: e.target.value })}
               placeholder="数量"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -302,7 +305,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               value={formData.unit}
               onValueChange={(val) => setFormData({ ...formData, unit: val })}
             >
-              <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="选择单位" />
               </SelectTrigger>
               <SelectContent>
@@ -361,7 +364,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             placeholder="请输入备注信息"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+            className={deepInputClass + " resize-none"}
           />
         </div>
       </div>

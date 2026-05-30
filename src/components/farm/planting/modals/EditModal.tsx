@@ -22,6 +22,9 @@ interface EditModalProps {
   areas: Array<{ value: string; label: string; parent?: string }>;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function EditModal({
   isOpen,
   onClose,
@@ -115,7 +118,7 @@ export function EditModal({
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -125,7 +128,7 @@ export function EditModal({
           <DatePicker
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
             onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -139,7 +142,7 @@ export function EditModal({
             max="100"
             value={formData.attritionRate ?? ''}
             onChange={(e) => setFormData({ ...formData, attritionRate: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -151,7 +154,7 @@ export function EditModal({
             step="0.1"
             value={formData.soilPH || ''}
             onChange={(e) => setFormData({ ...formData, soilPH: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -163,7 +166,7 @@ export function EditModal({
             step="0.1"
             value={formData.soilEC || ''}
             onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 

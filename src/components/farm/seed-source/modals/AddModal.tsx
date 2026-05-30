@@ -52,6 +52,9 @@ interface AddModalProps {
   seedSavingInit?: { linkedPlantingId?: string; linkedPlantingCode?: string; cropName?: string; } | null;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function AddModal({
   isOpen,
   onClose,
@@ -553,7 +556,7 @@ export function AddModal({
               type="text"
               value={formData.propagationType === PropagationType.EXTERNAL ? '外部采购' : '自主产出'}
               readOnly
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
+              className={`${deepInputClass} bg-gray-50 text-gray-700`}
             />
           </div>
 
@@ -566,7 +569,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="选择育种方法" />
                   </SelectTrigger>
                   <SelectContent>
@@ -587,7 +590,7 @@ export function AddModal({
                   value={formData.parentMaleCode}
                   onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
                   placeholder="♂ 父本种源批号"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -597,7 +600,7 @@ export function AddModal({
                   value={formData.parentFemaleCode}
                   onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
                   placeholder="♀ 母本种源批号"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -606,7 +609,7 @@ export function AddModal({
                   value={formData.generation}
                   onValueChange={(val) => setFormData({ ...formData, generation: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="选择世代" />
                   </SelectTrigger>
                   <SelectContent>
@@ -625,7 +628,7 @@ export function AddModal({
                   value={formData.breedingLocation}
                   onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
                   placeholder="育种基地/温室"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -635,7 +638,7 @@ export function AddModal({
                   value={formData.targetTraits}
                   onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
                   placeholder="如：抗病、高产、早熟"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -643,7 +646,7 @@ export function AddModal({
                 <DatePicker
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </>
@@ -659,7 +662,7 @@ export function AddModal({
                   value={formData.linkedPlantingCode}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingCode: e.target.value })}
                   placeholder="种植批次号"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -669,7 +672,7 @@ export function AddModal({
                   value={formData.linkedPlantingId}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingId: e.target.value })}
                   placeholder="留种株编号"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -677,7 +680,7 @@ export function AddModal({
                 <DatePicker
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </>
@@ -692,7 +695,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectTrigger className={deepInputClass}>
                     <SelectValue placeholder="选择繁殖方式" />
                   </SelectTrigger>
                   <SelectContent>
@@ -712,7 +715,7 @@ export function AddModal({
                   value={formData.motherPlantCode}
                   onChange={(e) => setFormData({ ...formData, motherPlantCode: e.target.value })}
                   placeholder="母株种源批号"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -722,7 +725,7 @@ export function AddModal({
                   value={formData.motherPlantId}
                   onChange={(e) => setFormData({ ...formData, motherPlantId: e.target.value })}
                   placeholder="母株记录ID"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -731,7 +734,7 @@ export function AddModal({
                   type="number"
                   value={formData.quantity || ''}
                   onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={deepInputClass}
                 />
               </div>
             </>
@@ -775,7 +778,7 @@ export function AddModal({
                       onChange={(e) => setSupplierSearchKeyword(e.target.value)}
                       onFocus={() => setShowSupplierSearch(true)}
                       placeholder="搜索供应商名称、编码或联系人..."
-                      className="flex-1 px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={deepInputClass}
                     />
                     <Button
                       variant="secondary"
@@ -852,7 +855,7 @@ export function AddModal({
                 }));
               }}
             >
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="不关联" />
               </SelectTrigger>
               <SelectContent>
@@ -878,7 +881,7 @@ export function AddModal({
             <DatePicker
               selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
               onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </div>
 
@@ -890,7 +893,7 @@ export function AddModal({
                 type="number"
                 value={formData.quantity || ''}
                 onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
               <DictSelect
                 category="unit"
@@ -908,7 +911,7 @@ export function AddModal({
               type="number"
               value={formData.unitPrice || ''}
               onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </div>
 
@@ -977,7 +980,7 @@ export function AddModal({
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              className={deepInputClass}
               placeholder="请输入备注信息"
             />
           </div>
@@ -1004,7 +1007,7 @@ export function AddModal({
                 value={formData.supplementaryReason}
                 onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                className={deepInputClass}
                 placeholder="请输入补录原因，说明为什么需要补录此入库记录"
               />
             </div>

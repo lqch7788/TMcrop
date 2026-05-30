@@ -38,6 +38,9 @@ interface EditModalProps {
   suppliers: Array<{ value: string; label: string }>;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function EditModal({
   isOpen,
   onClose,
@@ -310,7 +313,7 @@ export function EditModal({
               setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder={
                 formData.sourceOrigin === 'external_purchase' ? '请选择' : '内部自留/无需填写'
               } />
@@ -337,7 +340,7 @@ export function EditModal({
           <DatePicker
             selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
             onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -349,7 +352,7 @@ export function EditModal({
               type="number"
               value={formData.quantity || ''}
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
             <DictSelect
               category="unit"
@@ -367,7 +370,7 @@ export function EditModal({
             type="number"
             value={formData.unitPrice || ''}
             onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 

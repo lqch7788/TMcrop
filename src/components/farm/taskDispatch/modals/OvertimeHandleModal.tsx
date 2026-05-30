@@ -14,6 +14,9 @@ import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { DatePicker } from '../../../ui/DatePicker';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface OvertimeHandleModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -182,7 +185,7 @@ export function OvertimeHandleModal({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="请说明超时原因..."
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
                 rows={2}
               />
             </div>
@@ -195,7 +198,7 @@ export function OvertimeHandleModal({
                 selected={newDeadline ? new Date(newDeadline) : undefined}
                 onChange={(date) => setNewDeadline(date.toISOString().split('T')[0])}
                 minDate={new Date()}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={deepInputClass}
               />
               <p className="text-xs text-gray-500 mt-1">
                 每次最多延期 {DEADLINE_CONFIG.maxExtensionHours} 小时
@@ -220,7 +223,7 @@ export function OvertimeHandleModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="请说明放弃执行的原因..."
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              className={deepInputClass}
               rows={3}
             />
             <p className="text-xs text-gray-500 mt-1">

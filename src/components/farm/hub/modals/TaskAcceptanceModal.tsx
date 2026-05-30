@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Clock, User, Camera, MapPin, Mic, FileText } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface TaskAcceptanceModalProps {
   isOpen: boolean;
   task: Task | null;
@@ -323,7 +326,7 @@ export function TaskAcceptanceModal({
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                     placeholder="请输入验收备注..."
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={deepInputClass}
                     rows={3}
                   />
                 </div>
@@ -339,7 +342,7 @@ export function TaskAcceptanceModal({
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="请输入驳回原因..."
-                    className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className={deepInputClass}
                     rows={3}
                   />
                 </div>

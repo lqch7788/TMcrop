@@ -28,6 +28,9 @@ interface EditModalProps {
   sites: Array<{ value: string; label: string }>;
 }
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export function EditModal({
   isOpen,
   onClose,
@@ -228,7 +231,7 @@ export function EditModal({
                 setSourceSearch(e.target.value);
                 setSourcePopoverOpen(true);
               }}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
             {formData.sourceId && (
               <Button
@@ -305,7 +308,7 @@ export function EditModal({
             value={formData.seedlingType}
             onValueChange={(val) => setFormData({ ...formData, seedlingType: val })}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +329,7 @@ export function EditModal({
               setFormData({ ...formData, siteId: val, siteName: site?.label || '' });
             }}
           >
-            <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -343,7 +346,7 @@ export function EditModal({
           <DatePicker
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
             onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -353,7 +356,7 @@ export function EditModal({
           <DatePicker
             selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
             onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -364,7 +367,7 @@ export function EditModal({
             type="number"
             value={formData.initialCount || ''}
             onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -375,7 +378,7 @@ export function EditModal({
             type="number"
             value={formData.survivalCount || ''}
             onChange={(e) => setFormData({ ...formData, survivalCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -386,7 +389,7 @@ export function EditModal({
             type="number"
             value={formData.plantedCount || ''}
             onChange={(e) => setFormData({ ...formData, plantedCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -409,7 +412,7 @@ export function EditModal({
             type="text"
             value={formData.chargePerson}
             onChange={(e) => setFormData({ ...formData, chargePerson: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             placeholder="请输入负责人"
           />
         </div>
@@ -421,7 +424,7 @@ export function EditModal({
             type="number"
             value={formData.targetSurvivalCount || ''}
             onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             placeholder="请输入目标成活数量"
           />
         </div>
@@ -433,7 +436,7 @@ export function EditModal({
             type="number"
             value={formData.workHours || ''}
             onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             placeholder="请输入育苗工时"
             min="0"
             step="0.5"
@@ -447,7 +450,7 @@ export function EditModal({
             type="text"
             value={formData.qualityGrade}
             onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={deepInputClass}
             placeholder="请输入品质等级"
           />
         </div>
