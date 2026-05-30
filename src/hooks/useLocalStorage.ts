@@ -31,7 +31,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
           return parsed.data;
         } else {
           // 版本不匹配，使用新初始值并清除旧数据
-          console.log(`[localStorage] ${key} 数据版本过旧，已清除并使用新数据`);
+          // 数据版本过旧，使用新数据
           return initialValue;
         }
       } catch {
@@ -39,7 +39,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         return JSON.parse(item);
       }
     } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
+      // localStorage 读取错误
       return initialValue;
     }
   });
@@ -54,7 +54,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       const storedData: StoredData<T> = { version: DATA_VERSION, data: valueToStore };
       window.localStorage.setItem(key, JSON.stringify(storedData));
     } catch (error) {
-      console.warn(`Error setting localStorage key "${key}":`, error);
+      // localStorage 设置错误
     }
   }, [key, storedValue]);
 
@@ -64,7 +64,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       window.localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.warn(`Error removing localStorage key "${key}":`, error);
+      // localStorage 删除错误
     }
   }, [key, initialValue]);
 
@@ -74,7 +74,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       window.localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.warn(`Error clearing ${key}:`, error);
+      // localStorage 清除错误
     }
   }, [key, initialValue]);
 
@@ -85,7 +85,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         try {
           const parsed = JSON.parse(e.newValue) as StoredData<T>;
           if (parsed.version == DATA_VERSION) {
-            console.log(`[useLocalStorage] 检测到 ${key} 在其他位置更新，重新加载数据`);
+            // 检测到数据更新
             setStoredValue(parsed.data);
           }
         } catch {
@@ -139,7 +139,7 @@ export function clearAllPersistedData(): void {
     try {
       window.localStorage.removeItem(key);
     } catch (error) {
-      console.warn(`Error clearing ${key}:`, error);
+      // localStorage 清除错误
     }
   });
 }

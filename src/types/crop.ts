@@ -619,7 +619,7 @@ export interface CropOrder {
 
   // 时间
   orderDate: string;               // 订单日期
-  expectedHarvestDate?: string;    // 预计采收日期
+  expectedCompletionDate?: string;    // 预计完成日期
   actualHarvestDate?: string;      // 实际完成日期
 
   // 状态

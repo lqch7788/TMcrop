@@ -999,7 +999,7 @@ export const TempTaskTab: React.FC = () => {
         remarks: remarks || '任务已完成，提交验收',
       });
     } catch (error) {
-      console.error('[TempTaskTab] 提交完成失败:', error);
+      // 提交完成失败
     }
 
     closeDetailModal();
@@ -1056,7 +1056,7 @@ export const TempTaskTab: React.FC = () => {
         remarks: remarks || '临时任务验收通过',
       });
     } catch (error) {
-      console.error('[TempTaskTab] 验收确认失败:', error);
+      // 验收确认失败
     }
 
     setShowVerifyModal(false);
@@ -1110,7 +1110,7 @@ export const TempTaskTab: React.FC = () => {
         remarks: reason || '任务被驳回',
       });
     } catch (error) {
-      console.error('[TempTaskTab] 验收驳回失败:', error);
+      // 验收驳回失败
     }
 
     setShowVerifyModal(false);
@@ -1252,7 +1252,7 @@ export const TempTaskTab: React.FC = () => {
           operator_id: newAssigneeId,
           operator_name: newAssigneeName,
         }),
-      }).catch(err => console.error('[handleReassignConfirm] accept failed:', err));
+      }).catch(() => { /* accept failed */ });
 
       // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
       updateTempTask(reassignTask.id, {
@@ -1273,7 +1273,7 @@ export const TempTaskTab: React.FC = () => {
             operator_name: newAssigneeName,
             comment: '开始执行任务',
           }),
-        }).catch(err => console.error('[handleReassignConfirm] submit-progress failed:', err));
+        }).catch(() => { /* submit-progress failed */ });
       }, 100);
 
       addTempTaskRecord({

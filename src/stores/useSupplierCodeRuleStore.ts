@@ -205,9 +205,9 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
               const defaultStr = JSON.stringify(defaultCategories.map(c => ({ code: c.code, name: c.name, midCount: c.midCategories.length })));
               if (localStr !== defaultStr) {
                 // 本地有修改，异步同步到 API
-                console.log('[SupplierCodeRuleStore] 检测到本地修改，正在同步到后端...');
+                // logger.info('[SupplierCodeRuleStore] 检测到本地修改，正在同步到后端...');
                 get().syncLocalToApi().then(() => {
-                  console.log('[SupplierCodeRuleStore] 本地修改已同步到后端');
+                  // logger.info('[SupplierCodeRuleStore] 本地修改已同步到后端');
                 });
               } else {
                 set({ migratedToApi: true });
@@ -227,7 +227,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[SupplierCodeRuleStore] API 获取失败，使用本地缓存:', error);
           // zustand persist 自动从 localStorage 恢复
           set({ error: (error as Error).message, isLoading: false });
         }
@@ -295,7 +295,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             name: newName,
           });
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 更新大类名称失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 更新大类名称失败:', error);
         }
       },
 
@@ -319,7 +319,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             name: newName,
           });
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 更新中类名称失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 更新中类名称失败:', error);
         }
       },
 
@@ -342,7 +342,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             ruleType: 'supplier',
           });
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 添加大类失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 添加大类失败:', error);
         }
       },
 
@@ -369,7 +369,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             ruleType: 'supplier',
           });
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 添加中类失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 添加中类失败:', error);
         }
       },
 
@@ -382,7 +382,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
         try {
           await enhancedApiClient.delete(`/api/material-code-categories/${bigCode}`);
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 删除大类失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 删除大类失败:', error);
         }
       },
 
@@ -402,7 +402,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
         try {
           await enhancedApiClient.delete(`/api/material-code-categories/${midCode}`);
         } catch (error) {
-          console.warn('[SupplierCodeRuleStore] 删除中类失败:', error);
+          // logger.warn('[SupplierCodeRuleStore] 删除中类失败:', error);
         }
       },
 

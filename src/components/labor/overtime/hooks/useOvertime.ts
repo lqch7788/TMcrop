@@ -190,7 +190,7 @@ export function useOvertime(): UseOvertimeReturn {
       setIsFormOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('保存加班记录失败:', error);
+      // logger.error('保存加班记录失败:', error);
       throw error;
     }
   }, [selectedRecord, createItem, updateItem, fetchItems]);
@@ -202,7 +202,7 @@ export function useOvertime(): UseOvertimeReturn {
       setIsDetailOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       throw error;
     }
   }, [approveOvertime, fetchItems]);
@@ -214,7 +214,7 @@ export function useOvertime(): UseOvertimeReturn {
       setIsDetailOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('驳回失败:', error);
+      // logger.error('驳回失败:', error);
       throw error;
     }
   }, [rejectOvertime, fetchItems]);
@@ -225,7 +225,7 @@ export function useOvertime(): UseOvertimeReturn {
       await cancelOvertime(record.id);
       fetchItems();
     } catch (error) {
-      console.error('取消申请失败:', error);
+      // logger.error('取消申请失败:', error);
       throw error;
     }
   }, [cancelOvertime, fetchItems]);

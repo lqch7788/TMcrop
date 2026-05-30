@@ -187,7 +187,7 @@ export function useIndicators() {
       }
       handleCloseModal();
     } catch (error) {
-      console.error('保存指标失败:', error);
+      // logger.error('保存指标失败:', error);
       toast.error((error as Error)?.message || '保存失败');
     }
   }, [modalType, selectedIndicator, handleCloseModal, toast, createIndicator, updateIndicator]);
@@ -204,7 +204,7 @@ export function useIndicators() {
       await deleteIndicator(deleteItem.id);
       toast.success('删除成功');
     } catch (error) {
-      console.error('删除指标失败:', error);
+      // logger.error('删除指标失败:', error);
       toast.error('删除失败');
     } finally {
       setShowDeleteModal(false);
@@ -283,7 +283,7 @@ export function useIndicators() {
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        console.error('Export failed:', err);
+        // logger.error('Export failed:', err);
       }
     }
 

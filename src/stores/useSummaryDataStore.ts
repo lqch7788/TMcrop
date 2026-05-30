@@ -416,7 +416,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, overview: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取概览失败:', error);
+          // logger.warn('[SummaryDataStore] 获取概览失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -445,7 +445,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, yieldStats: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取产量统计失败:', error);
+          // logger.warn('[SummaryDataStore] 获取产量统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -497,7 +497,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, costStats: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取成本统计失败:', error);
+          // logger.warn('[SummaryDataStore] 获取成本统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -531,7 +531,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, laborStats: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取人工统计失败:', error);
+          // logger.warn('[SummaryDataStore] 获取人工统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -560,7 +560,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, batchStats: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取批次统计失败:', error);
+          // logger.warn('[SummaryDataStore] 获取批次统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -580,7 +580,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, chainOverview: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取全链条概览失败:', error);
+          // logger.warn('[SummaryDataStore] 获取全链条概览失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -609,7 +609,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, problems: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取问题统计失败:', error);
+          // logger.warn('[SummaryDataStore] 获取问题统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -638,7 +638,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
             lastFetchTimestamps: { ...get().lastFetchTimestamps, indicators: Date.now() },
           });
         } catch (error) {
-          console.warn('[SummaryDataStore] 获取生产指标失败:', error);
+          // logger.warn('[SummaryDataStore] 获取生产指标失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -661,7 +661,7 @@ export const useSummaryDataStore = create<SummaryDataState>()(
           ]);
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[SummaryDataStore] fetchAll 部分请求失败:', error);
+          // logger.warn('[SummaryDataStore] fetchAll 部分请求失败:', error);
           set({ isLoading: false });
         }
       },

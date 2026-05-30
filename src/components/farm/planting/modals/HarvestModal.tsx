@@ -61,7 +61,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
       // 调用采收服务
       await usePlantingStore.getState().harvestPlanting(String(record.id), formData.harvestDate, harvestCount);
     } catch (error) {
-      console.error('采收登记失败:', error);
+      // logger.error('采收登记失败:', error);
       showAlert('采收登记失败，请重试');
       return;
     }

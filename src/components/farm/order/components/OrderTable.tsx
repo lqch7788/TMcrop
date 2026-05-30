@@ -117,7 +117,7 @@ export function OrderTable({
               <th className="px-4 py-3 text-left text-sm font-semibold">作物信息</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">订单日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">预计采收</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">预计完成</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
             </tr>
@@ -168,7 +168,7 @@ export function OrderTable({
                     {record.orderDate}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {record.expectedHarvestDate || '-'}
+                    {record.expectedCompletionDate || '-'}
                   </td>
                   <td className="px-4 py-3">
                     {getStatusBadge(record.status)}

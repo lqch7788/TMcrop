@@ -55,4 +55,4 @@ export const CostCategoryBar: React.FC<CostCategoryBarProps> = ({ data }) => {
 };
 
 export default CostCategoryBar;
-console.log('组件创建成功: CostCategoryBar');
+// logger.info('组件创建成功: CostCategoryBar');

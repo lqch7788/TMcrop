@@ -302,7 +302,7 @@ export default function WarehouseMaterialsPage() {
           setInboundRecords(initialInboundRecords);
         }
       } catch (error) {
-        console.error('加载物料数据失败，使用 mock 数据:', error);
+        // logger.error('加载物料数据失败，使用 mock 数据:', error);
         setWarehouseData(warehouseMaterials);
         setInboundRecords(initialInboundRecords);
       } finally {
@@ -521,7 +521,7 @@ export default function WarehouseMaterialsPage() {
       setInboundRecords(prev => [newRecord, ...prev]);
       setShowInboundAddModal(false);
     } catch (error) {
-      console.error('保存入库记录失败:', error);
+      // logger.error('保存入库记录失败:', error);
       await showAlert('保存入库记录失败，请重试');
     }
   };

@@ -110,7 +110,7 @@ export const usePieceworkStore = create<PieceworkState>()(
           }
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[PieceworkStore] 获取计件工资数据失败:', error);
+          // logger.warn('[PieceworkStore] 获取计件工资数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

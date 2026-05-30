@@ -64,7 +64,7 @@ export const TraceChain: React.FC<TraceChainProps> = ({ type, businessId, onNavi
       setUpstream(result.upstream || []);
       setDownstream(result.downstream || []);
     } catch (error) {
-      console.error('加载追溯链失败:', error);
+      // logger.error('加载追溯链失败:', error);
     } finally {
       setLoading(false);
     }

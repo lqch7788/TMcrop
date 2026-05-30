@@ -81,7 +81,7 @@ export function useCostCategories() {
           : defaultCategories
       );
     } catch (err) {
-      console.error('加载成本类别失败:', err);
+      // 加载成本类别失败
       setError('加载成本类别失败');
       // 使用默认类别
       setCategories([
@@ -143,7 +143,7 @@ export function useCostBudgets(categoryId?: string) {
         setBudgets([...materialBudgets, ...energyBudgets]);
       }
     } catch (err) {
-      console.error('加载成本预算失败:', err);
+      // 加载成本预算失败
       setError('加载成本预算失败');
       // 使用默认预算
       setBudgets([
@@ -190,7 +190,7 @@ export function useCostStats(params?: {
       setStats(result.data);
       setSummary(result.summary);
     } catch (err) {
-      console.error('加载成本统计失败:', err);
+      // 加载成本统计失败
       setError('加载成本统计失败');
     } finally {
       setLoading(false);
@@ -230,7 +230,7 @@ export function useMaterialCosts(params?: {
       setCosts(result.data);
       setTotal(result.meta.total);
     } catch (err) {
-      console.error('加载物料成本失败:', err);
+      // 加载物料成本失败
       setError('加载物料成本失败');
     } finally {
       setLoading(false);
@@ -269,7 +269,7 @@ export function useEnergyCosts(params?: {
       setCosts(result.data);
       setTotal(result.meta.total);
     } catch (err) {
-      console.error('加载能源成本失败:', err);
+      // 加载能源成本失败
       setError('加载能源成本失败');
     } finally {
       setLoading(false);

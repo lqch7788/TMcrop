@@ -183,7 +183,7 @@ export const useCompensationStore = create<CompensationState>()(
           // API无数据时保留本地数据
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[CompensationStore] API获取失败:', error);
+          // logger.warn('[CompensationStore] API获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -249,7 +249,7 @@ export const useCompensationStore = create<CompensationState>()(
           const body = denormalize(record);
           await enhancedApiClient.post('/compensation', body);
         } catch (error) {
-          console.warn('[CompensationStore] 创建薪酬记录API失败:', error);
+          // logger.warn('[CompensationStore] 创建薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
         }
 
@@ -267,7 +267,7 @@ export const useCompensationStore = create<CompensationState>()(
           const body = denormalize(updates);
           await enhancedApiClient.put(`/compensation/${id}`, body);
         } catch (error) {
-          console.warn('[CompensationStore] 更新薪酬记录API失败:', error);
+          // logger.warn('[CompensationStore] 更新薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
         }
       },
@@ -280,7 +280,7 @@ export const useCompensationStore = create<CompensationState>()(
         try {
           await enhancedApiClient.delete(`/compensation/${id}`);
         } catch (error) {
-          console.warn('[CompensationStore] 删除薪酬记录API失败:', error);
+          // logger.warn('[CompensationStore] 删除薪酬记录API失败:', error);
           set(state => ({ pendingSyncCount: state.pendingSyncCount + 1 }));
         }
       },
@@ -298,7 +298,7 @@ export const useCompensationStore = create<CompensationState>()(
         try {
           await enhancedApiClient.put(`/compensation/${id}`, { status: 'approved', approved_at: now });
         } catch (error) {
-          console.warn('[CompensationStore] 审批薪酬API失败:', error);
+          // logger.warn('[CompensationStore] 审批薪酬API失败:', error);
         }
       },
 
@@ -313,7 +313,7 @@ export const useCompensationStore = create<CompensationState>()(
         try {
           await enhancedApiClient.put(`/compensation/${id}`, { status: 'paid', paid_at: now });
         } catch (error) {
-          console.warn('[CompensationStore] 更新薪酬状态API失败:', error);
+          // logger.warn('[CompensationStore] 更新薪酬状态API失败:', error);
         }
       },
 

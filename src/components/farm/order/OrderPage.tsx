@@ -8,7 +8,7 @@ import { OrderStats } from './components/OrderStats';
 import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
 import { AddModal } from './modals/AddModal';
-import { DetailModal } from './modals/DetailModal';
+import { OrderDetailModal } from './modals/DetailModal';
 import { EditModal } from './modals/EditModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
@@ -69,7 +69,7 @@ export default function OrderPage() {
     // 同步待处理订单 + 加载数据
     syncPending().then(result => {
       if (result.success > 0 || result.failed > 0) {
-        console.log(`[OrderPage] 同步结果: 成功 ${result.success}, 失败 ${result.failed}`);
+        // logger.info(`[OrderPage] 同步结果: 成功 ${result.success}, 失败 ${result.failed}`);
       }
     });
     fetchOrders();
@@ -146,7 +146,7 @@ export default function OrderPage() {
         await deleteOrders(ids);
         setSelectedRows([]);
       } catch (error) {
-        console.error('删除订单失败:', error);
+        // logger.error('删除订单失败:', error);
         showAlert('删除失败，请稍后重试');
       }
     }
@@ -201,7 +201,7 @@ export default function OrderPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计采收日期', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计完成日期', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -214,7 +214,7 @@ export default function OrderPage() {
       '实际数量': record.actualQuantity,
       '单位': record.unit,
       '订单日期': record.orderDate,
-      '预计采收日期': record.expectedHarvestDate || '',
+      '预计完成日期': record.expectedCompletionDate || '',
       '状态': record.status === CropOrderStatus.PLANNED ? '已计划' : record.status === CropOrderStatus.IN_PROGRESS ? '进行中' : record.status === CropOrderStatus.COMPLETED ? '已完成' : '已取消',
       '创建人': record.createBy,
       '创建时间': record.createTime,
@@ -277,7 +277,7 @@ export default function OrderPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // logger.error('Export failed:', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -406,7 +406,7 @@ export default function OrderPage() {
       />
 
       {currentRecord && (
-        <DetailModal
+        <OrderDetailModal
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           record={currentRecord}

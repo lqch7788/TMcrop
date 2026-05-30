@@ -62,7 +62,7 @@ const SystemMonitor: React.FC = () => {
       const res = await enhancedApiClient.get('/monitoring/system');
       setSystemInfo(res.data);
     } catch (err) {
-      console.error('获取系统信息失败:', err);
+      // logger.error('获取系统信息失败:', err);
     } finally {
       setLoading(false);
     }

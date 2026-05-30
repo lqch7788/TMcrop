@@ -188,11 +188,11 @@ export function RiskPage() {
 
   // 新增/编辑
   const handleAdd = (data: Omit<RiskAlert, 'id' | 'createTime'>) => {
-    console.log('新增风险预警:', data);
+    // logger.info('新增风险预警:', data);
   };
 
   const handleUpdate = (data: Omit<RiskAlert, 'id' | 'createTime'>) => {
-    console.log('更新风险预警:', data);
+    // logger.info('更新风险预警:', data);
   };
 
   // 判断是否显示复选框

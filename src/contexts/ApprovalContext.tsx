@@ -191,7 +191,7 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
       });
       await store.fetchApprovals();
     } catch (error) {
-      console.error('Failed to partially approve:', error);
+      // logger.error('Failed to partially approve:', error);
     }
   }, [store.approvals, store.fetchApprovals]);
 

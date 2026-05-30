@@ -228,7 +228,7 @@ export function useScheduledTasks(
         )
       );
     } catch (error) {
-      console.error(`定时任务执行失败 [${taskId}]:`, error);
+      // 定时任务执行失败
 
       // 更新失败计数
       setTaskConfigs(prev =>
@@ -346,7 +346,7 @@ export function useScheduledTasks(
       await executeTask(taskId);
       return true;
     } catch (error) {
-      console.error(`手动触发任务失败 [${taskId}]:`, error);
+      // 手动触发任务失败
       return false;
     }
   }, [taskConfigs, executeTask]);

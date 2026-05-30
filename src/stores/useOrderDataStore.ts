@@ -44,7 +44,7 @@ export const useOrderDataStore = create<OrderDataState>()(
           const data = await orderService.getOrders();
           set({ orders: data || [], isLoading: false });
         } catch (error) {
-          console.error('[useOrderDataStore] 获取订单失败:', error);
+          // logger.error('[useOrderDataStore] 获取订单失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -56,7 +56,7 @@ export const useOrderDataStore = create<OrderDataState>()(
             set({ stats });
           }
         } catch (error) {
-          console.warn('[useOrderDataStore] 获取统计失败:', error);
+          // logger.warn('[useOrderDataStore] 获取统计失败:', error);
         }
       },
 

@@ -100,7 +100,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ items: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[DeviceSystemStore] API 获取失败:', error);
+          // logger.warn('[DeviceSystemStore] API 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -116,7 +116,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[DeviceSystemStore] 创建失败:', error);
+          // logger.warn('[DeviceSystemStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -130,7 +130,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
         try {
           await enhancedApiClient.put(`/api/device-systems/${oid}`, body);
         } catch (error) {
-          console.warn('[DeviceSystemStore] 更新失败:', error);
+          // logger.warn('[DeviceSystemStore] 更新失败:', error);
         }
       },
 
@@ -140,7 +140,7 @@ export const useDeviceSystemStore = create<DeviceSystemState>()(
           await enhancedApiClient.delete(`/api/device-systems/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[DeviceSystemStore] 删除失败:', error);
+          // logger.warn('[DeviceSystemStore] 删除失败:', error);
           return false;
         }
       },

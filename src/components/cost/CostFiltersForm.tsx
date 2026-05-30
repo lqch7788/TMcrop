@@ -253,4 +253,4 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
 };
 
 export default CostFiltersForm;
-console.log('组件创建成功: CostFiltersForm');
+// logger.info('组件创建成功: CostFiltersForm');

@@ -71,7 +71,7 @@ export default function ApprovalWorkflowConfig() {
       setEditingWorkflow(null);
       setNewWorkflow({ status: 'active', nodes: [] });
     } catch (err) {
-      console.error('保存审批工作流失败:', err);
+      // logger.error('保存审批工作流失败:', err);
       await showAlert('保存审批工作流失败');
     }
   };
@@ -81,7 +81,7 @@ export default function ApprovalWorkflowConfig() {
     try {
       await removeWorkflow(id);
     } catch (err) {
-      console.error('删除审批工作流失败:', err);
+      // logger.error('删除审批工作流失败:', err);
       await showAlert('删除失败');
     }
   };
@@ -127,7 +127,7 @@ export default function ApprovalWorkflowConfig() {
     try {
       await toggleWorkflowStatus(id);
     } catch (err) {
-      console.error('切换审批工作流状态失败:', err);
+      // logger.error('切换审批工作流状态失败:', err);
       await showAlert('切换状态失败');
     }
   };

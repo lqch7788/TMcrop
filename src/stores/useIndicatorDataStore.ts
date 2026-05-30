@@ -217,7 +217,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
             isLoading: false,
           });
         } catch (error) {
-          console.warn('[IndicatorDataStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[IndicatorDataStore] API获取失败，使用本地缓存:', error);
           // persist 中间件自动从 localStorage 恢复 indicators
           const fallback = get().indicators;
           set({
@@ -283,7 +283,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
           return { ...optimisticItem, id: savedItem.id || localId, code: savedItem.code || optimisticItem.code };
         } catch (error) {
           const errMsg = (error as Error)?.message || '创建指标失败';
-          console.warn('[IndicatorDataStore] 创建指标API失败:', errMsg);
+          // logger.warn('[IndicatorDataStore] 创建指标API失败:', errMsg);
           // API失败：移除乐观更新项
           set((state) => {
             const rolledBack = state.indicators.filter((t) => t.id !== localId);
@@ -317,7 +317,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
           await enhancedApiClient.put(`/indicators/${id}`, body);
         } catch (error) {
           const errMsg = (error as Error)?.message || '更新指标失败';
-          console.warn('[IndicatorDataStore] 更新指标API失败:', errMsg);
+          // logger.warn('[IndicatorDataStore] 更新指标API失败:', errMsg);
           // API失败：回滚
           if (prev) {
             set((state) => {
@@ -349,7 +349,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
           await enhancedApiClient.delete(`/indicators/${id}`);
           return true;
         } catch (error) {
-          console.warn('[IndicatorDataStore] 删除指标API失败:', error);
+          // logger.warn('[IndicatorDataStore] 删除指标API失败:', error);
           // API失败：回滚
           if (prev) {
             set((state) => {
@@ -409,7 +409,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
             set({ evaluationData: normalized });
           }
         } catch (error) {
-          console.warn('[IndicatorDataStore] 评估数据API获取失败:', error);
+          // logger.warn('[IndicatorDataStore] 评估数据API获取失败:', error);
         }
       },
 

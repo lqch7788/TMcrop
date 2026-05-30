@@ -117,7 +117,7 @@ export default function FarmActivityManagement() {
       }
       handleCloseModal();
     } catch (err) {
-      console.error('保存农事活动失败:', err);
+      // logger.error('保存农事活动失败:', err);
       await showAlert('保存农事活动失败');
     }
   };

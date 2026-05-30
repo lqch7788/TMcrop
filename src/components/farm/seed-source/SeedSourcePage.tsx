@@ -462,7 +462,7 @@ export default function SeedSourcePage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // logger.error('Export failed:', err);
       // 降级：xls格式
       const content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });

@@ -41,7 +41,7 @@ export function OrderFilter({
             value={filters.orderCode}
             onChange={(e) => onChange({ ...filters, orderCode: e.target.value })}
             placeholder="请输入订单编号"
-            className="border-gray-200"
+            className="border-gray-300"
           />
         </div>
 
@@ -55,7 +55,7 @@ export function OrderFilter({
             value={filters.orderName}
             onChange={(e) => onChange({ ...filters, orderName: e.target.value })}
             placeholder="请输入订单名称"
-            className="border-gray-200"
+            className="border-gray-300"
           />
         </div>
 
@@ -68,7 +68,7 @@ export function OrderFilter({
             value={filters.cropName}
             onValueChange={(v) => onChange({ ...filters, cropName: v })}
           >
-            <SelectTrigger className="border-gray-200">
+            <SelectTrigger className="border-gray-300">
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -90,7 +90,7 @@ export function OrderFilter({
             value={filters.status}
             onValueChange={(v) => onChange({ ...filters, status: v })}
           >
-            <SelectTrigger className="border-gray-200">
+            <SelectTrigger className="border-gray-300">
               <SelectValue placeholder="请选择" />
             </SelectTrigger>
             <SelectContent>
@@ -111,7 +111,7 @@ export function OrderFilter({
           <DatePicker
             selected={filters.orderDate ? new Date(filters.orderDate) : undefined}
             onChange={(date) => onChange({ ...filters, orderDate: date.toISOString().split('T')[0] })}
-            className="border-gray-200"
+            className="border-gray-300"
           />
         </div>
 

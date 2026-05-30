@@ -92,7 +92,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
       // 更新育苗的已定植数量（通过 Store）
       await useSeedlingStore.getState().increasePlantedCount(String(record.id), formData.transplantCount);
     } catch (error) {
-      console.error('定植操作失败:', error);
+      // logger.error('定植操作失败:', error);
       await showAlert('定植操作失败，请重试');
       return;
     }

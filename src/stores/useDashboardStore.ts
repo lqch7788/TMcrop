@@ -168,7 +168,7 @@ export const useDashboardStore = create<DashboardState>()(
           ) as unknown as BatchStatItem[];
           set({ batchStats: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[DashboardStore] 获取批次统计失败:', error);
+          // logger.warn('[DashboardStore] 获取批次统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -205,7 +205,7 @@ export const useDashboardStore = create<DashboardState>()(
 
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[DashboardStore] 获取概览统计失败:', error);
+          // logger.warn('[DashboardStore] 获取概览统计失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

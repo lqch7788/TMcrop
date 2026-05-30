@@ -365,7 +365,7 @@ function MaterialInput({ value, onChange }: { value: string; onChange: (v: strin
       // 开始连续扫描
       scanFrame();
     } catch (err: any) {
-      console.error('扫码初始化失败:', err);
+      // logger.error('扫码初始化失败:', err);
       setError('无法访问相机，请检查权限设置');
       setScanning(false);
     }
@@ -525,7 +525,7 @@ function VoiceInput({ value, onChange }: { value: string; onChange: (v: string) 
       setMediaRecorder(recorder);
       setRecording(true);
     } catch (err) {
-      console.error('Failed to start recording:', err);
+      // logger.error('Failed to start recording:', err);
       await showAlert('无法访问麦克风，请检查权限设置');
     }
   };

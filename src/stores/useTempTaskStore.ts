@@ -198,12 +198,12 @@ export const useTempTaskStore = create<TempTaskState>()(
           const response = await enhancedApiClient.get<{ success: boolean; data: TempTaskData[]; meta?: { total: number } }>(url);
           // enhancedApiClient 已提取 .data，response 即为实际数据数组
           const data = Array.isArray(response) ? response : [];
-          console.warn('[TempTaskStore] fetchTasks 成功, 数据条数:', data.length, '示例requiredFeedback:', data.slice(0, 2).map((t: Record<string, unknown>) => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback })));
+          // logger.warn('[TempTaskStore] fetchTasks 成功, 数据条数:', data.length, '示例requiredFeedback:', data.slice(0, 2).map((t: Record<string, unknown>) => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback })));
           const normalized = data.map(normalizeTask);
-          console.warn('[TempTaskStore] normalizeTask后, 示例requiredFeedback:', normalized.slice(0, 2).map(t => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback, isArr: Array.isArray(t.requiredFeedback) })));
+          // logger.warn('[TempTaskStore] normalizeTask后, 示例requiredFeedback:', normalized.slice(0, 2).map(t => ({ id: t.id || t.taskCode, rf: t.requiredFeedback, rfType: typeof t.requiredFeedback, isArr: Array.isArray(t.requiredFeedback) })));
           set({ tasks: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[TempTaskStore] API获取失败，使用本地数据:', error);
+          // logger.warn('[TempTaskStore] API获取失败，使用本地数据:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -242,7 +242,7 @@ export const useTempTaskStore = create<TempTaskState>()(
           }
           return optimisticTask;
         } catch (error) {
-          console.warn('[TempTaskStore] 创建任务API失败，保留本地乐观数据:', error);
+          // logger.warn('[TempTaskStore] 创建任务API失败，保留本地乐观数据:', error);
           return optimisticTask;
         }
       },
@@ -259,7 +259,7 @@ export const useTempTaskStore = create<TempTaskState>()(
         try {
           await enhancedApiClient.put(`/temp-tasks/${realId}`, body);
         } catch (error) {
-          console.warn('[TempTaskStore] 更新任务API失败，已加入离线队列:', error);
+          // logger.warn('[TempTaskStore] 更新任务API失败，已加入离线队列:', error);
         }
       },
 
@@ -272,7 +272,7 @@ export const useTempTaskStore = create<TempTaskState>()(
           await enhancedApiClient.delete(`/temp-tasks/${realId}`);
           return true;
         } catch (error) {
-          console.warn('[TempTaskStore] 删除任务API失败，已加入离线队列:', error);
+          // logger.warn('[TempTaskStore] 删除任务API失败，已加入离线队列:', error);
           return false;
         }
       },

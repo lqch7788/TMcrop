@@ -59,7 +59,7 @@ export function EditModal({
       onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('更新失败:', error);
+      // logger.error('更新失败:', error);
       showAlert('更新失败，请重试');
     }
   };

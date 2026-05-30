@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, X, ZoomIn, ZoomOut, Maximize2, Minimize2, Settings } from 'lucide-react';
+import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, Maximize2, Minimize2, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
+import { Modal } from '../ui/Modal';
 import { showAlert } from '@/lib/dialogService';
 import { getBases } from '@/services/apiBasicDataService';
 import { getGreenhouses } from '@/services/apiBasicDataService';
@@ -146,7 +147,7 @@ const loadCompanyGroupsFromAPI = async (): Promise<{ companyGroups: CompanyGroup
 
     return { companyGroups, allBases };
   } catch (e) {
-    console.error('从 API 加载基地数据失败:', e);
+    // logger.error('从 API 加载基地数据失败:', e);
     return { companyGroups: [], allBases: [] };
   }
 };
@@ -300,7 +301,7 @@ export function ParkArchivePage() {
             tileLayer.addTo(map);
             break;
           } catch (e) {
-            console.warn(`加载 ${layer.name} 失败，尝试下一个...`);
+            // logger.warn(`加载 ${layer.name} 失败，尝试下一个...`);
           }
         }
 
@@ -366,7 +367,7 @@ export function ParkArchivePage() {
         mapInstanceRef.current = map;
         setMapLoaded(true);
       } catch (error) {
-        console.error('地图初始化失败:', error);
+        // logger.error('地图初始化失败:', error);
       }
     };
 
@@ -542,7 +543,7 @@ export function ParkArchivePage() {
                       placeholder="搜索基地..."
                       value={searchName}
                       onChange={(e) => setSearchName(e.target.value)}
-                      className="pl-9 py-1.5 bg-gray-50 border-gray-200 text-gray-800"
+                      className="pl-9 py-1.5 bg-gray-50 border border-gray-300 text-gray-800"
                     />
                   </div>
                 </div>
@@ -656,67 +657,68 @@ export function ParkArchivePage() {
       </div>
 
       {/* 地块详情弹窗 */}
-      {showDetailModal && selectedField && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">{selectedField.name} - 地块档案</h3>
-              <div className="flex items-center gap-3">
-                <Button variant="secondary" size="sm" onClick={() => navigate('/dashboard', { state: { baseId: selectedField.id, baseName: selectedField.name } })}>进入{'>>>'}</Button>
-                <Button variant="ghost" size="icon" onClick={() => setShowDetailModal(false)}><X className="w-5 h-5 text-white" /></Button>
-              </div>
+      <Modal
+        isOpen={showDetailModal && !!selectedField}
+        onClose={() => setShowDetailModal(false)}
+        title={`${selectedField?.name || ''} - 地块档案`}
+        size="lg"
+        showFooter={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" size="sm" onClick={() => setShowDetailModal(false)}>关闭</Button>
+            <Button size="sm" onClick={() => navigate('/dashboard', { state: { baseId: selectedField?.id, baseName: selectedField?.name } })}>进入{'>>>'}</Button>
+          </div>
+        }
+        showMaximize={true}
+        enableDrag={true}
+        enableResize={true}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-xs text-gray-500">基地/区域名称</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.name}</p>
             </div>
-            <div className="p-6 bg-gray-100">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">基地/区域名称</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.name}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">面积</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.area} {selectedField.unit}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">温室大棚数量</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.greenhouseCount || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">大田面积</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.fieldArea ? `${selectedField.fieldArea}亩` : '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">地理坐标</Label>
-                  <p className="font-semibold text-gray-900 text-sm">{selectedField.coords}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">负责人</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.manager}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">联系电话</Label>
-                  <p className="font-semibold text-gray-900">{selectedField.phone}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">当前状态</Label>
-                  <p className="font-semibold">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      selectedField.status === 'planting' || selectedField.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
-                      selectedField.status === 'fallow' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                      'bg-gray-100 text-gray-600 border border-gray-200'
-                    }`}>{selectedField.statusText}</span>
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-200 mt-4">
-                <p className="text-sm text-gray-600">{selectedField.intro || '-'}</p>
-              </div>
+            <div>
+              <Label className="text-xs text-gray-500">面积</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.area} {selectedField?.unit}</p>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-              <Button variant="secondary" size="sm" onClick={() => setShowDetailModal(false)}>关闭</Button>
+            <div>
+              <Label className="text-xs text-gray-500">温室大棚数量</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.greenhouseCount || '-'}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">大田面积</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.fieldArea ? `${selectedField.fieldArea}亩` : '-'}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">地理坐标</Label>
+              <p className="font-semibold text-gray-900 text-sm">{selectedField?.coords}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">负责人</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.manager}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">联系电话</Label>
+              <p className="font-semibold text-gray-900">{selectedField?.phone}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">当前状态</Label>
+              <p className="font-semibold">
+                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                  selectedField?.status === 'planting' || selectedField?.status === 'active' ? 'bg-green-100 text-green-700 border border-green-200' :
+                  selectedField?.status === 'fallow' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                  'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}>{selectedField?.statusText}</span>
+              </p>
             </div>
           </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="text-sm text-gray-600">{selectedField?.intro || '-'}</p>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

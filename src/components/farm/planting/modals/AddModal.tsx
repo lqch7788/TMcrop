@@ -93,7 +93,7 @@ export function AddModal({
           s.status === 'transplant_ready' || s.status === 'in_progress'
         ));
       }).catch(error => {
-        console.error('加载数据失败:', error);
+        // logger.error('加载数据失败:', error);
       });
     }
   }, [isOpen]);
@@ -172,7 +172,7 @@ export function AddModal({
         await cropInstanceService.updateQuantity(instanceId, 'plant', formData.plantingCount);
       }
     } catch (error) {
-      console.error('添加种植记录失败:', error);
+      // logger.error('添加种植记录失败:', error);
       showAlert('添加失败，请重试');
       return;
     }

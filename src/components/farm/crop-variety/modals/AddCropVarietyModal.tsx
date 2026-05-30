@@ -377,7 +377,7 @@ export function AddCropVarietyModal({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('保存品种失败:', error);
+      // logger.error('保存品种失败:', error);
       await showAlert('保存失败，请重试');
     } finally {
       // 重置表单

@@ -1,0 +1,149 @@
+<h2>分包加载示意图</h2>
+<p class="subtitle">微信小程序包大小限制 2MB，按模块拆分降低主包体积</p>
+
+<div class="section">
+  <h3>主包（独立加载）</h3>
+  <div style="background: #f0f0f0; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #fff; border: 2px solid #07c160; border-radius: 6px; padding: 10px 14px; min-width: 80px; text-align: center;">
+        <div style="font-weight: bold;">TabBar</div>
+        <div style="font-size: 11px; color: #666;">4个页面</div>
+      </div>
+      <div style="background: #fff; border: 2px solid #07c160; border-radius: 6px; padding: 10px 14px; min-width: 80px; text-align: center;">
+        <div style="font-weight: bold;">Dashboard</div>
+        <div style="font-size: 11px; color: #666;">3-5页面</div>
+      </div>
+      <div style="background: #fff; border: 2px solid #07c160; border-radius: 6px; padding: 10px 14px; min-width: 80px; text-align: center;">
+        <div style="font-weight: bold;">登录/认证</div>
+        <div style="font-size: 11px; color: #666;">2-3页面</div>
+      </div>
+      <div style="background: #07c160; color: #fff; border-radius: 6px; padding: 10px 14px; min-width: 80px; text-align: center;">
+        <div style="font-weight: bold;">≈ 500KB</div>
+        <div style="font-size: 11px;">预估大小</div>
+      </div>
+    </div>
+    <div style="margin-top: 10px; font-size: 12px; color: #07c160; font-weight: bold;">
+      ✓ 启动时立即加载，用户首次访问无延迟
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>分包 A：人员管理（用户触发加载）</h3>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">人员列表</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">员工详情</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">考勤记录</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">请假申请</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">加班记录</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">排班管理</div>
+      </div>
+      <div style="background: #1890ff; color: #fff; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px; font-weight: bold;">≈ 350KB</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>分包 B：物资管理（用户触发加载）</h3>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">物料列表</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">仓库管理</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">采购申请</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">入库记录</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">出库记录</div>
+      </div>
+      <div style="background: #1890ff; color: #fff; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px; font-weight: bold;">≈ 300KB</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>分包 C：审批 + 工作记录（用户触发加载）</h3>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">审批申请</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">审批列表</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">审批详情</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">日报/周报</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">工作日志</div>
+      </div>
+      <div style="background: #1890ff; color: #fff; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px; font-weight: bold;">≈ 280KB</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>分包 D：设备监控 + 公告（用户触发加载）</h3>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">IoT监控</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">环境监测</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">告警记录</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">公告列表</div>
+      </div>
+      <div style="background: #f9f9f9; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px;">公告详情</div>
+      </div>
+      <div style="background: #1890ff; color: #fff; border-radius: 6px; padding: 8px 12px;">
+        <div style="font-size: 12px; font-weight: bold;">≈ 250KB</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div style="background: #fffbea; border: 1px solid #ffd700; border-radius: 8px; padding: 16px; margin-top: 12px;">
+    <div style="font-weight: bold; color: #d48806;">总包大小估算</div>
+    <div style="margin-top: 8px; font-size: 14px;">
+      主包 500KB + 分包A 350KB + 分包B 300KB + 分包C 280KB + 分包D 250KB
+      <span style="font-weight: bold; color: #07c160;">= < 2MB ✓</span>
+    </div>
+    <div style="margin-top: 6px; font-size: 12px; color: #666;">
+      微信小程序单个包/主包限制 2MB，总包限制 20MB
+    </div>
+  </div>
+</div>

@@ -101,7 +101,7 @@ export default function AuditLog() {
           setTotalRecords(0);
         }
       } else {
-        console.error('获取日志失败:', logsResult.reason);
+        // logger.error('获取日志失败:', logsResult.reason);
         setLogs([]);
       }
 
@@ -118,10 +118,10 @@ export default function AuditLog() {
           });
         }
       } else {
-        console.error('获取统计失败:', statsResult.reason);
+        // logger.error('获取统计失败:', statsResult.reason);
       }
     } catch (err) {
-      console.error('AuditLog fetch error:', err);
+      // logger.error('AuditLog fetch error:', err);
     } finally {
       setLoading(false);
     }

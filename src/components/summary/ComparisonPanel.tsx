@@ -81,7 +81,7 @@ export default function ComparisonPanel() {
         link.click();
       }
     } catch (err) {
-      console.error('导出失败:', err);
+      // logger.error('导出失败:', err);
     }
     setShowExportMenu(null);
   }, []);
@@ -115,7 +115,7 @@ export default function ComparisonPanel() {
         }
       }
     } catch (err) {
-      console.error('导出全部失败:', err);
+      // logger.error('导出全部失败:', err);
     }
     setShowExportMenu(null);
   }, [compareParam1, compareParam2]);

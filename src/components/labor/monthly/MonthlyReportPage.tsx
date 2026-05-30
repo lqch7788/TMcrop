@@ -113,11 +113,11 @@ export function MonthlyReportPage() {
 
   // 新增/编辑
   const handleAdd = (data: Omit<MonthlyReport, 'id'>) => {
-    console.log('新增月报:', data);
+    // logger.info('新增月报:', data);
   };
 
   const handleUpdate = (data: Omit<MonthlyReport, 'id'>) => {
-    console.log('更新月报:', data);
+    // logger.info('更新月报:', data);
   };
 
   // 确认导出

@@ -198,7 +198,7 @@ export const useProblemStore = create<ProblemState>()(
           const data = Array.isArray(response) ? response : [];
           set({ problems: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[ProblemStore] API获取失败:', error);
+          // logger.warn('[ProblemStore] API获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -213,7 +213,7 @@ export const useProblemStore = create<ProblemState>()(
           set((state) => ({ problems: [newProblem, ...state.problems] }));
           return newProblem;
         } catch (error) {
-          console.warn('[ProblemStore] 创建失败:', error);
+          // logger.warn('[ProblemStore] 创建失败:', error);
           return null;
         }
       },
@@ -225,7 +225,7 @@ export const useProblemStore = create<ProblemState>()(
         try {
           await enhancedApiClient.put(`/problems/${id}`, updates);
         } catch (error) {
-          console.warn('[ProblemStore] 更新失败:', error);
+          // logger.warn('[ProblemStore] 更新失败:', error);
         }
       },
 
@@ -235,7 +235,7 @@ export const useProblemStore = create<ProblemState>()(
           await enhancedApiClient.delete(`/problems/${id}`);
           return true;
         } catch (error) {
-          console.warn('[ProblemStore] 删除失败:', error);
+          // logger.warn('[ProblemStore] 删除失败:', error);
           return false;
         }
       },

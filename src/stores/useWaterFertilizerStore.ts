@@ -127,7 +127,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ items: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[WaterFertilizerStore] 获取失败:', error);
+          // logger.warn('[WaterFertilizerStore] 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -143,7 +143,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[WaterFertilizerStore] 创建失败:', error);
+          // logger.warn('[WaterFertilizerStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -157,7 +157,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
         try {
           await enhancedApiClient.put(`/api/water-fertilizer/${oid}`, body);
         } catch (error) {
-          console.warn('[WaterFertilizerStore] 更新失败:', error);
+          // logger.warn('[WaterFertilizerStore] 更新失败:', error);
         }
       },
 
@@ -167,7 +167,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
           await enhancedApiClient.delete(`/api/water-fertilizer/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[WaterFertilizerStore] 删除失败:', error);
+          // logger.warn('[WaterFertilizerStore] 删除失败:', error);
           return false;
         }
       },
@@ -177,7 +177,7 @@ export const useWaterFertilizerStore = create<WaterFertilizerState>()(
           await enhancedApiClient.post(`/api/water-fertilizer/${oid}/dispatch`, {});
           return true;
         } catch (error) {
-          console.warn('[WaterFertilizerStore] 下发失败:', error);
+          // logger.warn('[WaterFertilizerStore] 下发失败:', error);
           return false;
         }
       },

@@ -174,7 +174,7 @@ export function useLeave(): UseLeaveReturn {
       setIsFormOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('保存请假记录失败:', error);
+      // logger.error('保存请假记录失败:', error);
       throw error;
     }
   }, [selectedRecord, createItem, updateItem, fetchItems]);
@@ -187,7 +187,7 @@ export function useLeave(): UseLeaveReturn {
       setIsDetailOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       throw error;
     }
   }, [fetchItems]);
@@ -200,7 +200,7 @@ export function useLeave(): UseLeaveReturn {
       setIsDetailOpen(false);
       fetchItems();
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      // logger.error('审批驳回失败:', error);
       throw error;
     }
   }, [fetchItems]);
@@ -213,7 +213,7 @@ export function useLeave(): UseLeaveReturn {
       });
       fetchItems();
     } catch (error) {
-      console.error('取消申请失败:', error);
+      // logger.error('取消申请失败:', error);
       throw error;
     }
   }, [updateItem, fetchItems]);

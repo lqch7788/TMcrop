@@ -60,7 +60,7 @@ export function TaskAcceptanceAdapter({
         setRecords(mergedRecords);
       })
       .catch((err) => {
-        console.error('[TaskAcceptanceAdapter] 加载任务记录失败:', err);
+        // logger.error('[TaskAcceptanceAdapter] 加载任务记录失败:', err);
         // 降级到本地记录
         setRecords(getTaskRecordsByTaskId(taskId));
       })

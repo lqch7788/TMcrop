@@ -57,7 +57,7 @@ export default function ProductionApproval() {
           return;
         }
       } catch (error) {
-        console.error('加载采购计划详情失败:', error);
+        // logger.error('加载采购计划详情失败:', error);
       }
     }
     setDetailModal({ show: true, approval, purchasePlanDetail: null });

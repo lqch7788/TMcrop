@@ -107,7 +107,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[ExecuteStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[ExecuteStore] API获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -128,7 +128,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[ExecuteStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[ExecuteStore] 创建失败，已加入离线队列:', error);
           // 即使 API 失败也乐观更新本地
           const newItem = normalize({ ...data, id: data.id || `CK${Date.now()}` } as Record<string, unknown>);
           set((state) => ({ items: [newItem, ...state.items] }));
@@ -149,7 +149,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         try {
           await enhancedApiClient.put(`/material-executes/${id}`, body);
         } catch (error) {
-          console.warn('[ExecuteStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[ExecuteStore] 更新失败，已加入离线队列:', error);
         }
       },
 
@@ -163,7 +163,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           await enhancedApiClient.delete(`/material-executes/${id}`);
           return true;
         } catch (error) {
-          console.warn('[ExecuteStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[ExecuteStore] 删除失败，已加入离线队列:', error);
           return false;
         }
       },

@@ -283,7 +283,7 @@ export const useStatisticsStore = create<StatisticsState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          console.warn('[StatisticsStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[StatisticsStore] API获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

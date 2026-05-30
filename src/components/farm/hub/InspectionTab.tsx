@@ -692,11 +692,11 @@ export function InspectionTab({
     // 持久化到后端（通过 Zustand Store），等待完成
     createStoreRecord(record)
       .then(() => {
-        console.log('[InspectionTab] 巡查记录创建成功，重新加载数据');
+        // 巡查记录创建成功
         fetchRecords();
       })
       .catch((error) => {
-        console.error('[InspectionTab] 巡查记录创建失败:', error);
+        // 巡查记录创建失败
       });
   };
 

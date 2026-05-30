@@ -47,7 +47,7 @@ export function ExportButton({
       toast.success('导出成功');
     } catch (error) {
       // 导出失败时显示错误提示（如果 onExport 内部没有处理错误）
-      console.error('导出失败:', error);
+      // logger.error('导出失败:', error);
     }
   };
 

@@ -191,7 +191,7 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          console.warn('[AuthStore] 加载权限失败:', error);
+          // logger.warn('[AuthStore] 加载权限失败:', error);
           set({ isLoading: false, error: (error as Error).message });
         }
       },

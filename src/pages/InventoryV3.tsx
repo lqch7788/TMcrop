@@ -94,7 +94,7 @@ export default function InventoryV3Page() {
       setStocks(stockList);
       setStats(statsData);
     } catch (error) {
-      console.error('加载库存数据失败:', error);
+      // logger.error('加载库存数据失败:', error);
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function InventoryV3Page() {
       ]);
       setTraceData({ upstream, downstream });
     } catch (error) {
-      console.error('加载追溯链失败:', error);
+      // logger.error('加载追溯链失败:', error);
       setTraceData({ upstream: [], downstream: [] });
     }
   };

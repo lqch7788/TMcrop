@@ -80,7 +80,7 @@ import userBasePermissionsRouter from './userBasePermissions';
 import codeGeneratorRouter from './codeGenerator';
 import dailyPlansRouter from './dailyPlans';
 import monthlyPlansRouter from './monthlyPlans';
-import customerRouter from './customer';
+import customerRouter from './customer.routes';
 import deliveryRouter from './delivery.routes';
 import qualityRouter from './quality.routes';
 import acceptanceRouter from './acceptance.routes';

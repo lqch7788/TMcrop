@@ -309,7 +309,7 @@ export function AddModal({
 
       newSeedSource = await useSeedSourceStore.getState().addItem(baseData);
     } catch (error) {
-      console.error('创建种源失败:', error);
+      // logger.error('创建种源失败:', error);
       await showAlert('创建失败，请重试');
       return;
     }
@@ -330,7 +330,7 @@ export function AddModal({
       );
       useSeedSourceStore.getState().updateItem(String(newSeedSource.id), { instanceId: instance.id });
     } catch (error) {
-      console.error('创建作物实例失败:', error);
+      // logger.error('创建作物实例失败:', error);
     }
 
     // V3.1 补录申请：如果勾选了补录，创建审批记录

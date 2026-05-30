@@ -319,7 +319,7 @@ export default function MonthlyPlanningPage() {
       const plan = generateMonthlyPlan(selectedMonth, selectedBatches);
       setMonthlyPlan(plan);
     } catch (error) {
-      console.error('生成月度计划失败:', error);
+      // logger.error('生成月度计划失败:', error);
       showAlert('生成月度计划失败，请重试');
       setMonthlyPlan(null);
     }

@@ -213,7 +213,7 @@ export default function AuthorityConfiguration() {
       setAuthorityChanges(new Map());
       setHasChanges(false);
     } catch (err) {
-      console.error('保存角色权限失败:', err);
+      // logger.error('保存角色权限失败:', err);
     }
   };
 
@@ -491,7 +491,7 @@ export default function AuthorityConfiguration() {
                                 selectedRoleOid, [org.oid], !isAuth
                               );
                             } catch (err) {
-                              console.error('保存数据权限失败:', err);
+                              // logger.error('保存数据权限失败:', err);
                             }
                           }}
                           className="rounded"

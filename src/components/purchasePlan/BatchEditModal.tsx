@@ -91,7 +91,7 @@ function BatchSelectDropdown({
   return (
     <div className="relative" ref={batchSelectRef}>
       <div
-        className="w-full h-10 px-3 border border-gray-200 rounded-lg bg-white flex items-center justify-between cursor-pointer hover:border-blue-400"
+        className="w-full h-10 px-3 border border-gray-300 rounded-lg bg-white flex items-center justify-between cursor-pointer hover:border-blue-400"
         onClick={() => onSelectOpenChange(!batchSelectOpen)}
       >
         <span className={selectedPlanCode ? "text-sm text-gray-900" : "text-sm text-gray-400"}>
@@ -100,7 +100,7 @@ function BatchSelectDropdown({
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${batchSelectOpen ? 'rotate-180' : ''}`} />
       </div>
       {batchSelectOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {selectedRows.length > 0 ? (
             purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode)).map((plan) => {
               const isEdited = editedPlans[plan.purchaseApplicationCode] !== undefined;
@@ -141,7 +141,7 @@ function MaterialItemsEditTable({
   onItemsChange: (items: PurchasePlanItem[]) => void;
 }) {
   return (
-    <div className="overflow-auto rounded-lg border border-gray-200 bg-white">
+    <div className="overflow-auto rounded-lg border border-gray-300 bg-white">
       <table className="w-full text-xs">
         <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
           <tr>
@@ -183,7 +183,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], materialCode: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
               {/* 物料名称 */}
@@ -195,7 +195,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], materialName: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
               {/* 分类 */}
@@ -207,7 +207,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], category: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
               {/* 规格型号 */}
@@ -219,7 +219,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], specification: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
               {/* 单位 */}
@@ -231,7 +231,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], unit: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs text-center rounded border-gray-200"
+                  className="h-7 p-1 text-xs text-center rounded border-gray-300"
                 />
               </td>
               {/* 数量 */}
@@ -244,7 +244,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], quantity: Number(e.target.value) };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs text-right rounded border-gray-200"
+                  className="h-7 p-1 text-xs text-right rounded border-gray-300"
                 />
               </td>
               {/* 预估单价 */}
@@ -258,7 +258,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], estimatedPrice: Number(e.target.value) };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs text-right rounded border-gray-200"
+                  className="h-7 p-1 text-xs text-right rounded border-gray-300"
                 />
               </td>
               {/* 供应商 */}
@@ -270,7 +270,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], supplier: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
               {/* 用途说明 */}
@@ -282,7 +282,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], purpose: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-200"
+                  className="h-7 p-1 text-xs rounded border-gray-300"
                 />
               </td>
             </tr>
@@ -525,7 +525,7 @@ export function BatchEditModal({
             </div>
 
             {/* 第4行：物料明细（展开显示） */}
-            <div className="md:col-span-3 border-t border-gray-200 pt-3 mt-2">
+            <div className="md:col-span-3 border-t border-gray-300 pt-3 mt-2">
               <div className="flex items-center justify-between">
                 <Button
                   type="button"

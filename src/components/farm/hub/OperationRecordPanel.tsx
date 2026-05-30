@@ -121,9 +121,9 @@ async function handleExportTaskRecords(format: 'xlsx' | 'csv' | 'xls') {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    console.log('[导出] 任务操作记录导出成功，共', exportData.length, '条');
+    // logger.info('[导出] 任务操作记录导出成功，共', exportData.length, '条');
   } catch (error) {
-    console.error('[导出] 任务操作记录导出失败:', error);
+    // logger.error('[导出] 任务操作记录导出失败:', error);
   }
 }
 

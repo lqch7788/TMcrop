@@ -29,7 +29,7 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
     orderDate: 'order_date',
     expectedDeliveryDate: 'expected_delivery_date',
     actualDeliveryDate: 'actual_delivery_date',
-    expectedHarvestDate: 'expected_harvest_date',
+    expectedCompletionDate: 'expected_completion_date',
     supplierName: 'supplier_name',
     unit: 'unit',
     remarks: 'remarks',
@@ -144,28 +144,12 @@ export interface OrderStats {
 
 /**
  * 从后端获取订单统计数据
+ * 注意：后端API使用pending/confirmed/processing/shipped/delivered状态，
+ * 与前端CropOrderStatus的planned/in_progress/completed/cancelled不匹配，
+ * 因此直接返回null，使用前端本地数据计算
  */
-export async function getOrderStats(): Promise<OrderStats | null> {
-  try {
-    const backendStats = await enhancedApiClient.get<{
-      total: number;
-      pending: number;
-      confirmed: number;
-      processing: number;
-      shipped: number;
-      delivered: number;
-      cancelled: number;
-      total_amount: number;
-    }>('/crop-orders/stats/summary');
-
-    return {
-      total: backendStats.total,
-      inProgress: backendStats.confirmed + backendStats.processing,
-      completed: backendStats.delivered + backendStats.shipped,
-      thisMonth: 0,
-    };
-  } catch (error) {
-    console.error('[apiCropOrderService] 获取订单统计失败:', error);
-    return null;
-  }
+export async function getOrderStats(): Promise<null> {
+  // 后端状态与前端 CropOrderStatus 枚举不匹配，无法正确映射
+  // 前端已有 fallback 逻辑基于 orders 本地计算统计
+  return null;
 }

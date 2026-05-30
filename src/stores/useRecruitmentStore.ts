@@ -138,7 +138,7 @@ export const useRecruitmentStore = create<RecruitmentState>()(
         const normalized = data.map(normalize);
         set({ items: normalized, isLoading: false });
       } catch (error) {
-        console.warn('[RecruitmentStore] API获取失败:', error);
+        // logger.warn('[RecruitmentStore] API获取失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -156,7 +156,7 @@ export const useRecruitmentStore = create<RecruitmentState>()(
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
       } catch (error) {
-        console.warn('[RecruitmentStore] 创建失败:', error);
+        // logger.warn('[RecruitmentStore] 创建失败:', error);
         return null;
       }
     },
@@ -172,7 +172,7 @@ export const useRecruitmentStore = create<RecruitmentState>()(
       try {
         await enhancedApiClient.put(`/recruitment/${id}`, body);
       } catch (error) {
-        console.warn('[RecruitmentStore] 更新失败:', error);
+        // logger.warn('[RecruitmentStore] 更新失败:', error);
       }
     },
 
@@ -185,7 +185,7 @@ export const useRecruitmentStore = create<RecruitmentState>()(
         await enhancedApiClient.delete(`/recruitment/${id}`);
         return true;
       } catch (error) {
-        console.warn('[RecruitmentStore] 删除失败:', error);
+        // logger.warn('[RecruitmentStore] 删除失败:', error);
         return false;
       }
     },

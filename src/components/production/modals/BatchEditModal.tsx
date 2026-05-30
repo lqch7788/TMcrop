@@ -92,7 +92,7 @@ export function BatchEditModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-600 flex-shrink-0">
+        <div className="p-4 border-b border-gray-300 flex items-center justify-between bg-blue-600 flex-shrink-0">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-white">批量编辑生产计划</h3>
             <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded">
@@ -105,7 +105,7 @@ export function BatchEditModal({
         </div>
 
         {/* Info Banner */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+        <div className="p-4 bg-gray-50 border-b border-gray-300 flex-shrink-0">
           <div className="bg-blue-50 rounded-lg p-3 mb-3">
             <p className="text-sm text-blue-800">
               已选择 <strong>{selectedRows.length}</strong> 个生产计划进行批量编辑，
@@ -396,7 +396,7 @@ export function BatchEditModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
+        <div className="p-4 border-t border-gray-300 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
             <Button onClick={onConfirmNext}>
               确认（下一个）

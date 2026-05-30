@@ -155,7 +155,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          console.warn('[AttendanceRepairStore] API获取失败，使用本地数据:', error);
+          // logger.warn('[AttendanceRepairStore] API获取失败，使用本地数据:', error);
 
           const localItems = get().items;
           if (localItems.length === 0) {
@@ -202,7 +202,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
             return saved;
           }
         } catch (error) {
-          console.warn('[AttendanceRepairStore] API创建失败，已保存到本地:', error);
+          // logger.warn('[AttendanceRepairStore] API创建失败，已保存到本地:', error);
         }
 
         return newItem;
@@ -234,7 +234,7 @@ export const useAttendanceRepairStore = create<AttendanceRepairState>()(
           await enhancedApiClient.put(`/attendance-repair/${id}`, updates);
           return true;
         } catch (error) {
-          console.warn('[AttendanceRepairStore] API更新失败:', error);
+          // logger.warn('[AttendanceRepairStore] API更新失败:', error);
           return false;
         }
       },

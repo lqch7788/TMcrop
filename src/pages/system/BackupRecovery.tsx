@@ -73,7 +73,7 @@ const BackupRecovery: React.FC = () => {
       setRecords(recRes.data || []);
       setStrategies(strRes.data || []);
     } catch (err) {
-      console.error('获取备份数据失败:', err);
+      // logger.error('获取备份数据失败:', err);
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ const BackupRecovery: React.FC = () => {
       await enhancedApiClient.post('/backup/create', { remark: '手动备份' });
       await fetchData();
     } catch (err) {
-      console.error('备份失败:', err);
+      // logger.error('备份失败:', err);
       await showAlert('备份失败，请检查服务器');
     } finally {
       setBackingUp(false);
@@ -107,7 +107,7 @@ const BackupRecovery: React.FC = () => {
         await fetchData();
       }
     } catch (err) {
-      console.error('删除备份失败:', err);
+      // logger.error('删除备份失败:', err);
       await showAlert('删除失败');
     }
   };
@@ -124,7 +124,7 @@ const BackupRecovery: React.FC = () => {
         await showAlert('数据恢复成功！服务器将自动重启以加载恢复的数据。');
       }
     } catch (err) {
-      console.error('恢复失败:', err);
+      // logger.error('恢复失败:', err);
       await showAlert('数据恢复失败');
     }
   };
@@ -141,7 +141,7 @@ const BackupRecovery: React.FC = () => {
       setStrategyForm({ name: '', type: 'full', schedule: '', retention: 7, target: '全部数据库' });
       await fetchData();
     } catch (err) {
-      console.error('创建策略失败:', err);
+      // logger.error('创建策略失败:', err);
       await showAlert('创建策略失败');
     }
   };
@@ -152,7 +152,7 @@ const BackupRecovery: React.FC = () => {
       await enhancedApiClient.put(`/backup/strategies/${strategy.id}/toggle`);
       await fetchData();
     } catch (err) {
-      console.error('切换策略状态失败:', err);
+      // logger.error('切换策略状态失败:', err);
     }
   };
 
@@ -163,7 +163,7 @@ const BackupRecovery: React.FC = () => {
       await enhancedApiClient.delete(`/backup/strategies/${strategy.id}`);
       await fetchData();
     } catch (err) {
-      console.error('删除策略失败:', err);
+      // logger.error('删除策略失败:', err);
       await showAlert('删除失败');
     }
   };

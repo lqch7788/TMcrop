@@ -143,7 +143,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[SalaryBudgetStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[SalaryBudgetStore] API获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -173,7 +173,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[SalaryBudgetStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[SalaryBudgetStore] 创建失败，已加入离线队列:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -192,7 +192,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
         try {
           await enhancedApiClient.put(`/salary-budget/${id}`, body);
         } catch (error) {
-          console.warn('[SalaryBudgetStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[SalaryBudgetStore] 更新失败，已加入离线队列:', error);
         }
       },
 
@@ -206,7 +206,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
           await enhancedApiClient.delete(`/salary-budget/${id}`);
           return true;
         } catch (error) {
-          console.warn('[SalaryBudgetStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[SalaryBudgetStore] 删除失败，已加入离线队列:', error);
           return false;
         }
       },
@@ -246,7 +246,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
             {}
           );
         } catch (error) {
-          console.warn('[SalaryBudgetStore] 审批失败:', error);
+          // logger.warn('[SalaryBudgetStore] 审批失败:', error);
         }
       },
 
@@ -265,7 +265,7 @@ export const useSalaryBudgetStore = create<SalaryBudgetState>()(
             {}
           );
         } catch (error) {
-          console.warn('[SalaryBudgetStore] 驳回失败:', error);
+          // logger.warn('[SalaryBudgetStore] 驳回失败:', error);
         }
       },
     }

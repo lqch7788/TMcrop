@@ -88,7 +88,7 @@ export const useSupplierStore = create<SupplierState>()(
         const mapped = list.map(fromBackendFields);
         set({ items: mapped, isLoading: false });
       } catch (error) {
-        console.error('[useSupplierStore] 获取供应商失败:', error);
+        // logger.error('[useSupplierStore] 获取供应商失败:', error);
         set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
       }
     },
@@ -105,7 +105,7 @@ export const useSupplierStore = create<SupplierState>()(
         set((s) => ({ items: [newItem, ...s.items] }));
         return newItem;
       } catch (error) {
-        console.error('[useSupplierStore] 添加供应商失败:', error);
+        // logger.error('[useSupplierStore] 添加供应商失败:', error);
         return null;
       }
     },
@@ -122,7 +122,7 @@ export const useSupplierStore = create<SupplierState>()(
         });
         return found;
       } catch (error) {
-        console.error('[useSupplierStore] 更新供应商失败:', error);
+        // logger.error('[useSupplierStore] 更新供应商失败:', error);
         return null;
       }
     },
@@ -133,7 +133,7 @@ export const useSupplierStore = create<SupplierState>()(
         set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return true;
       } catch (error) {
-        console.error('[useSupplierStore] 删除供应商失败:', error);
+        // logger.error('[useSupplierStore] 删除供应商失败:', error);
         return false;
       }
     },
@@ -149,7 +149,7 @@ export const useSupplierStore = create<SupplierState>()(
         if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return allSuccess;
       } catch (error) {
-        console.error('[useSupplierStore] 批量删除供应商失败:', error);
+        // logger.error('[useSupplierStore] 批量删除供应商失败:', error);
         return false;
       }
     },

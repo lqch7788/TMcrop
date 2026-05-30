@@ -39,7 +39,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         const data = await apiService.getProductionPlans(filters);
         set({ plans: data, isLoading: false });
       } catch (error) {
-        console.error('[useProductionPlanStore] 获取生产计划失败:', error);
+        // logger.error('[useProductionPlanStore] 获取生产计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },

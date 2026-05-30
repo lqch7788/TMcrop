@@ -30,7 +30,7 @@ export const useHarvestStore = create<HarvestState>()(
         const data = await harvestService.getHarvestRecords();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[useHarvestStore] 获取采收数据失败:', error);
+        // logger.error('[useHarvestStore] 获取采收数据失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -41,7 +41,7 @@ export const useHarvestStore = create<HarvestState>()(
         if (result) set((s) => ({ items: [result, ...s.items] }));
         return result;
       } catch (error) {
-        console.error('[useHarvestStore] 添加采收失败:', error);
+        // logger.error('[useHarvestStore] 添加采收失败:', error);
         return null;
       }
     },
@@ -52,7 +52,7 @@ export const useHarvestStore = create<HarvestState>()(
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
         return result;
       } catch (error) {
-        console.error('[useHarvestStore] 更新采收失败:', error);
+        // logger.error('[useHarvestStore] 更新采收失败:', error);
         return null;
       }
     },
@@ -63,7 +63,7 @@ export const useHarvestStore = create<HarvestState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        console.error('[useHarvestStore] 删除采收失败:', error);
+        // logger.error('[useHarvestStore] 删除采收失败:', error);
         return false;
       }
     },
@@ -74,7 +74,7 @@ export const useHarvestStore = create<HarvestState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return result;
       } catch (error) {
-        console.error('[useHarvestStore] 批量删除采收失败:', error);
+        // logger.error('[useHarvestStore] 批量删除采收失败:', error);
         return false;
       }
     },

@@ -147,7 +147,7 @@ export default function UserAuthorityConfig() {
       const data = await authorityService.getUserAuthority?.(selectedUserOid) || [];
       setUserAuthorities(data);
     } catch (err) {
-      console.error('保存失败:', err);
+      // logger.error('保存失败:', err);
     }
   };
 

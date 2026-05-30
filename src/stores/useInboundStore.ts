@@ -31,7 +31,7 @@ export const useInboundStore = create<InboundState>()(
         const data = await warehouseService.getInboundRecords();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[useInboundStore] 获取入库记录失败:', error);
+        // logger.error('[useInboundStore] 获取入库记录失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -42,7 +42,7 @@ export const useInboundStore = create<InboundState>()(
         if (result) set((s) => ({ items: [result, ...s.items] }));
         return result;
       } catch (error) {
-        console.error('[useInboundStore] 添加入库记录失败:', error);
+        // logger.error('[useInboundStore] 添加入库记录失败:', error);
         return null;
       }
     },
@@ -53,7 +53,7 @@ export const useInboundStore = create<InboundState>()(
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...result } : i) }));
         return result;
       } catch (error) {
-        console.error('[useInboundStore] 更新入库记录失败:', error);
+        // logger.error('[useInboundStore] 更新入库记录失败:', error);
         return null;
       }
     },
@@ -64,7 +64,7 @@ export const useInboundStore = create<InboundState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        console.error('[useInboundStore] 删除入库记录失败:', error);
+        // logger.error('[useInboundStore] 删除入库记录失败:', error);
         return false;
       }
     },
@@ -76,7 +76,7 @@ export const useInboundStore = create<InboundState>()(
         if (allSuccess) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return allSuccess;
       } catch (error) {
-        console.error('[useInboundStore] 批量删除入库记录失败:', error);
+        // logger.error('[useInboundStore] 批量删除入库记录失败:', error);
         return false;
       }
     },

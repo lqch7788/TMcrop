@@ -80,4 +80,4 @@ export const CostKPICards: React.FC<CostKPICardsProps> = ({
 };
 
 export default CostKPICards;
-console.log('组件创建成功: CostKPICards');
+// logger.info('组件创建成功: CostKPICards');

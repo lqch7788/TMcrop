@@ -137,7 +137,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           const normalized = rawData.map(normalize);
           set({ configs: normalized, loading: false, lastFetch: now, isReady: true });
         } catch (error) {
-          console.warn('[SystemConfigStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[SystemConfigStore] API 获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, loading: false });
         }
       },
@@ -167,7 +167,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
           return newItem;
         } catch (error) {
-          console.warn('[SystemConfigStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 创建失败，已加入离线队列:', error);
           set({ error: (error as Error).message, loading: false });
           return null;
         }
@@ -188,7 +188,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           );
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
         } catch (error) {
-          console.warn('[SystemConfigStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 更新失败，已加入离线队列:', error);
         }
       },
 
@@ -203,7 +203,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
           return true;
         } catch (error) {
-          console.warn('[SystemConfigStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 删除失败，已加入离线队列:', error);
           return false;
         }
       },

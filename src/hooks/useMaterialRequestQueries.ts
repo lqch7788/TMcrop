@@ -32,7 +32,7 @@ export function useMaterialRequests(params?: {
         const result = await getMaterialRequests(params);
         return result.data;
       } catch (error) {
-        console.warn('[物料申请] API获取失败，降级到Mock数据:', error);
+        // logger.warn('[物料申请] API获取失败，降级到Mock数据:', error);
         // 降级到 Mock 数据
         return materialReceivingDetails as unknown as MaterialRequestRecord[];
       }
@@ -55,7 +55,7 @@ export function useMaterialRequest(id: string | null) {
       try {
         return await getMaterialRequestById(id);
       } catch (error) {
-        console.warn('[物料申请] API获取详情失败，降级到Mock数据:', error);
+        // logger.warn('[物料申请] API获取详情失败，降级到Mock数据:', error);
         // 降级到 Mock 数据
         return materialReceivingDetails.find(item =>
           item.code === id || item.id.toString() === id
@@ -78,12 +78,12 @@ export function useCreateMaterialRequest() {
   return useMutation({
     mutationFn: createMaterialRequest,
     onSuccess: (data) => {
-      console.log('[物料申请] 创建成功:', data);
+      // logger.info('[物料申请] 创建成功:', data);
       // 创建成功后刷新列表
       queryClient.invalidateQueries({ queryKey: ['materialRequests', 'list'] });
     },
     onError: (error) => {
-      console.error('[物料申请] 创建失败:', error);
+      // logger.error('[物料申请] 创建失败:', error);
     },
   });
 }
@@ -98,13 +98,13 @@ export function useUpdateMaterialRequest() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<MaterialRequestRecord> }) =>
       updateMaterialRequest(id, updates),
     onSuccess: (data, variables) => {
-      console.log('[物料申请] 更新成功:', variables.id);
+      // logger.info('[物料申请] 更新成功:', variables.id);
       // 更新成功后刷新列表和详情
       queryClient.invalidateQueries({ queryKey: ['materialRequests', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['materialRequests', 'detail', variables.id] });
     },
     onError: (error) => {
-      console.error('[物料申请] 更新失败:', error);
+      // logger.error('[物料申请] 更新失败:', error);
     },
   });
 }
@@ -118,12 +118,12 @@ export function useDeleteMaterialRequest() {
   return useMutation({
     mutationFn: deleteMaterialRequest,
     onSuccess: (data, id) => {
-      console.log('[物料申请] 删除成功:', id);
+      // logger.info('[物料申请] 删除成功:', id);
       // 删除成功后刷新列表
       queryClient.invalidateQueries({ queryKey: ['materialRequests', 'list'] });
     },
     onError: (error) => {
-      console.error('[物料申请] 删除失败:', error);
+      // logger.error('[物料申请] 删除失败:', error);
     },
   });
 }
@@ -184,6 +184,6 @@ export function useRefreshMaterialRequests() {
 
   return useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['materialRequests'] });
-    console.log('[物料申请] 已触发刷新');
+    // logger.info('[物料申请] 已触发刷新');
   }, [queryClient]);
 }

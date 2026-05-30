@@ -84,7 +84,7 @@ export function useFarmTaskSchedule(filters?: {
       }
     } catch (err) {
       setError('网络错误');
-      console.error('获取排班失败:', err);
+      // logger.error('获取排班失败:', err);
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export function useFarmTaskSchedule(filters?: {
         setUnscheduledTasks(result.data || []);
       }
     } catch (err) {
-      console.error('获取待排班任务失败:', err);
+      // logger.error('获取待排班任务失败:', err);
     }
   }, []);
 

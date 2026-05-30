@@ -111,7 +111,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
       const tree = flatToTree(rows);
       set({ categories: tree, isLoading: false, isLoaded: true });
     } catch (err: unknown) {
-      console.error('加载物料编码分类失败:', err);
+      // logger.error('加载物料编码分类失败:', err);
       set({ isLoading: false, error: err instanceof Error ? err.message : '加载失败' });
     }
   },
@@ -126,7 +126,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         ),
       }));
     } catch (err: unknown) {
-      console.error('更新大类名称失败:', err);
+      // logger.error('更新大类名称失败:', err);
       throw err;
     }
   },
@@ -147,7 +147,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('更新中类名称失败:', err);
+      // logger.error('更新中类名称失败:', err);
       throw err;
     }
   },
@@ -174,7 +174,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('更新小类名称失败:', err);
+      // logger.error('更新小类名称失败:', err);
       throw err;
     }
   },
@@ -188,7 +188,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         categories: [...state.categories, { code, name, nameEn: nameEn || '', midCategories: [] }],
       }));
     } catch (err: unknown) {
-      console.error('新增大类失败:', err);
+      // logger.error('新增大类失败:', err);
       throw err;
     }
   },
@@ -208,7 +208,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('新增中类失败:', err);
+      // logger.error('新增中类失败:', err);
       throw err;
     }
   },
@@ -235,7 +235,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('新增小类失败:', err);
+      // logger.error('新增小类失败:', err);
       throw err;
     }
   },
@@ -248,7 +248,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         categories: state.categories.filter(b => b.code !== bigCode),
       }));
     } catch (err: unknown) {
-      console.error('删除大类失败:', err);
+      // logger.error('删除大类失败:', err);
       throw err;
     }
   },
@@ -267,7 +267,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('删除中类失败:', err);
+      // logger.error('删除中类失败:', err);
       throw err;
     }
   },
@@ -292,7 +292,7 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
         }),
       }));
     } catch (err: unknown) {
-      console.error('删除小类失败:', err);
+      // logger.error('删除小类失败:', err);
       throw err;
     }
   },

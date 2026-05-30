@@ -187,17 +187,17 @@ export const usePestControlStore = create<PestControlState>()(
 
     deleteItems: async (ids) => {
       try {
-        console.log('[PestControlStore] deleteItems called with:', ids);
+        // logger.info('[PestControlStore] deleteItems called with:', ids);
         const response = await enhancedApiClient.post('/pest-records/batch-delete', { ids }) as { deleted?: number };
-        console.log('[PestControlStore] deleteItems response:', response);
+        // logger.info('[PestControlStore] deleteItems response:', response);
         const deleted = response?.deleted ?? 0;
         if (deleted > 0) {
-          console.log('[PestControlStore] Updating state, removing IDs:', ids);
+          // logger.info('[PestControlStore] Updating state, removing IDs:', ids);
           set((state) => ({ items: state.items.filter((i) => !ids.includes(i.id)) }));
         }
         return { deleted };
       } catch (err) {
-        console.error('[PestControlStore] deleteItems error:', err);
+        // logger.error('[PestControlStore] deleteItems error:', err);
         set({ error: (err as Error).message });
         return { deleted: 0 };
       }

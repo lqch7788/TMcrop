@@ -43,7 +43,7 @@ export function UserSelect({
         const data = await getUsers();
         setUsers(data || []);
       } catch (error) {
-        console.error('加载用户失败:', error);
+        // logger.error('加载用户失败:', error);
         setUsers([]);
       } finally {
         setLoading(false);
@@ -109,7 +109,7 @@ export function UserMultiSelect({
         const data = await getUsers();
         setUsers(data || []);
       } catch (error) {
-        console.error('加载用户失败:', error);
+        // logger.error('加载用户失败:', error);
         setUsers([]);
       } finally {
         setLoading(false);

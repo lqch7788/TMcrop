@@ -66,7 +66,7 @@ export default function WarehouseManagement() {
       setShowModal(false);
       setNewWarehouse({ status: 'active' });
     } catch (err) {
-      console.error('创建仓库失败:', err);
+      // logger.error('创建仓库失败:', err);
       await showAlert('创建仓库失败');
     }
   };
@@ -89,7 +89,7 @@ export default function WarehouseManagement() {
       setEditingWarehouse(null);
       setNewWarehouse({ status: 'active' });
     } catch (err) {
-      console.error('更新仓库失败:', err);
+      // logger.error('更新仓库失败:', err);
       await showAlert('更新仓库失败');
     }
   };
@@ -101,7 +101,7 @@ export default function WarehouseManagement() {
       await removeWarehouse(id);
       await refreshWarehouses();
     } catch (err) {
-      console.error('删除仓库失败:', err);
+      // logger.error('删除仓库失败:', err);
       await showAlert('删除仓库失败');
     }
   };

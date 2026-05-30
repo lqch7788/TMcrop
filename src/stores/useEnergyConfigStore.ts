@@ -117,7 +117,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ items: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[EnergyConfigStore] API 获取失败:', error);
+          // logger.warn('[EnergyConfigStore] API 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -133,7 +133,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[EnergyConfigStore] 创建失败:', error);
+          // logger.warn('[EnergyConfigStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -147,7 +147,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
         try {
           await enhancedApiClient.put(`/api/energy-configs/${oid}`, body);
         } catch (error) {
-          console.warn('[EnergyConfigStore] 更新失败:', error);
+          // logger.warn('[EnergyConfigStore] 更新失败:', error);
         }
       },
 
@@ -157,7 +157,7 @@ export const useEnergyConfigStore = create<EnergyConfigState>()(
           await enhancedApiClient.delete(`/api/energy-configs/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[EnergyConfigStore] 删除失败:', error);
+          // logger.warn('[EnergyConfigStore] 删除失败:', error);
           return false;
         }
       },

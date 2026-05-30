@@ -121,4 +121,4 @@ export const CostPieChart: React.FC<CostPieChartProps> = ({ data }) => {
 };
 
 export default CostPieChart;
-console.log('组件创建成功: CostPieChart');
+// logger.info('组件创建成功: CostPieChart');

@@ -39,7 +39,7 @@ export const useDailyPlanStore = create<DailyPlanState>()(
         });
         set({ plans: plansMap, isLoading: false });
       } catch (error) {
-        console.error('[useDailyPlanStore] 获取每日计划失败:', error);
+        // logger.error('[useDailyPlanStore] 获取每日计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -55,7 +55,7 @@ export const useDailyPlanStore = create<DailyPlanState>()(
         }
         return null;
       } catch (error) {
-        console.error('[useDailyPlanStore] 获取每日计划详情失败:', error);
+        // logger.error('[useDailyPlanStore] 获取每日计划详情失败:', error);
         return null;
       }
     },
@@ -72,7 +72,7 @@ export const useDailyPlanStore = create<DailyPlanState>()(
         }));
         return true;
       } catch (error) {
-        console.error('[useDailyPlanStore] 保存每日计划失败:', error);
+        // logger.error('[useDailyPlanStore] 保存每日计划失败:', error);
         return false;
       }
     },
@@ -89,7 +89,7 @@ export const useDailyPlanStore = create<DailyPlanState>()(
         }
         return success;
       } catch (error) {
-        console.error('[useDailyPlanStore] 删除每日计划失败:', error);
+        // logger.error('[useDailyPlanStore] 删除每日计划失败:', error);
         return false;
       }
     },

@@ -33,7 +33,7 @@ function transformSingle(item: BackendMonthlyPlan): MonthlyPlanRecord {
     try {
       planData = JSON.parse(item.plan_data) as MonthlyPlan;
     } catch (e) {
-      console.warn(`[apiMonthlyPlanService] 解析 plan_data 失败:`, e);
+      // logger.warn(`[apiMonthlyPlanService] 解析 plan_data 失败:`, e);
       planData = null;
     }
   } else if (item.planData) {

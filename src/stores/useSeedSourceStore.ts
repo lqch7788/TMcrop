@@ -35,7 +35,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         const data = await seedSourceService.getSeedSources();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[useSeedSourceStore] 获取种源失败:', error);
+        // logger.error('[useSeedSourceStore] 获取种源失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -48,7 +48,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedSourceStore] 添加种源失败:', error);
+        // logger.error('[useSeedSourceStore] 添加种源失败:', error);
         return null;
       }
     },
@@ -65,7 +65,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedSourceStore] 更新种源失败:', error);
+        // logger.error('[useSeedSourceStore] 更新种源失败:', error);
         return null;
       }
     },
@@ -78,7 +78,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedSourceStore] 删除种源失败:', error);
+        // logger.error('[useSeedSourceStore] 删除种源失败:', error);
         return false;
       }
     },
@@ -91,7 +91,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedSourceStore] 批量删除种源失败:', error);
+        // logger.error('[useSeedSourceStore] 批量删除种源失败:', error);
         return false;
       }
     },
@@ -101,7 +101,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         const result = await seedSourceService.addPropagationRecord(seedSourceId, data);
         return result;
       } catch (error) {
-        console.error('[useSeedSourceStore] 添加繁殖过程记录失败:', error);
+        // logger.error('[useSeedSourceStore] 添加繁殖过程记录失败:', error);
         return null;
       }
     },
@@ -110,7 +110,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
       try {
         return await seedSourceService.getPropagationRecords(seedSourceId);
       } catch (error) {
-        console.error('[useSeedSourceStore] 获取繁殖过程记录失败:', error);
+        // logger.error('[useSeedSourceStore] 获取繁殖过程记录失败:', error);
         return [];
       }
     },
@@ -125,7 +125,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }));
         return true;
       } catch (error) {
-        console.error('[useSeedSourceStore] 推进繁殖阶段失败:', error);
+        // logger.error('[useSeedSourceStore] 推进繁殖阶段失败:', error);
         return false;
       }
     },
@@ -147,7 +147,7 @@ export const useSeedSourceStore = create<SeedSourceState>()(
         }));
         return true;
       } catch (error) {
-        console.error('[useSeedSourceStore] 完成繁殖入库失败:', error);
+        // logger.error('[useSeedSourceStore] 完成繁殖入库失败:', error);
         return false;
       }
     },

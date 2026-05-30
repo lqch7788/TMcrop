@@ -62,14 +62,14 @@ export interface CropBatch {
   expectedHarvestDate: string;
   targetYield: number;
   actualYield: number;
-  status: 'planned' | 'in_progress' | 'suspended' | 'completed';
+  // 统一使用 batchStatus，删除原有的 status 字段（2026-06-05）
+  batchStatus: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
   plantingMode: string;
   responsiblePerson: string;
   // 新增字段
   publisher?: string; // 发布人
   publishDate?: string; // 初次发布时间
   lastModifyDate?: string; // 最后修改时间
-  batchStatus?: 'draft' | 'pending' | 'published' | 'in_progress' | 'completed' | 'cancelled'; // 当前状态
   planDetailFileName?: string; // 计划详情文件名
   planDetail?: string; // 计划详情内容
   // 计划类型（用于区分育种/育苗/种植）
@@ -370,6 +370,7 @@ export interface HarvestRecord {
   // V3.0 扩展字段
   productionPlanId?: string;   // 关联生产计划ID
   productionPlanCode?: string; // 关联生产计划批次号
+  sourceId?: string;          // 来源ID（关联种植记录 plantings.id，用于追溯）
   // 采收类型（V3.0 用于区分种子/种苗/成品采收）
   harvestType?: 'seed' | 'seedling' | 'product'; // 采收类型
   // 目标库存（V3.0 循环闭环用）

@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // 记录错误日志
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    // logger.error('ErrorBoundary caught:', error, errorInfo);
     // 调用可选的错误回调
     this.props.onError?.(error, errorInfo);
   }

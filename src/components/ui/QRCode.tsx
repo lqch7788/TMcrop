@@ -110,7 +110,7 @@ const QRCode: React.FC<QRCodeProps> = ({
         new ClipboardItem({ 'image/png': blob })
       ])
     } catch (err) {
-      console.error('复制失败:', err)
+      // logger.error('复制失败:', err);
     }
   }
 

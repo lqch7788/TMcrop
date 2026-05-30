@@ -207,7 +207,7 @@ export function useOnboardingPage() {
       setIsFormModalOpen(false);
       await showAlert('提交成功！');
     } catch (error) {
-      console.error('提交入职申请失败:', error);
+      // logger.error('提交入职申请失败:', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, storeCreateItem]);
@@ -217,7 +217,7 @@ export function useOnboardingPage() {
     try {
       await storeUpdateStatus(record.id, 'onboarded');
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [storeUpdateStatus]);
@@ -227,7 +227,7 @@ export function useOnboardingPage() {
     try {
       await storeUpdateItem(record.id, { status: '已取消' });
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      // logger.error('审批驳回失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [storeUpdateItem]);

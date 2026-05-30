@@ -103,7 +103,7 @@ export default function OrganizationManagement() {
       setShowModal(false);
       setEditingOrg(null);
     } catch (err) {
-      console.error('保存失败:', err);
+      // logger.error('保存失败:', err);
     }
   };
 
@@ -113,7 +113,7 @@ export default function OrganizationManagement() {
     try {
       await deleteOrganization(oid);
     } catch (err) {
-      console.error('删除失败:', err);
+      // logger.error('删除失败:', err);
     }
   };
 

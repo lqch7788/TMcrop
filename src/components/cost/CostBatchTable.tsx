@@ -108,4 +108,4 @@ export const CostBatchTable: React.FC<CostBatchTableProps> = ({ data }) => {
 };
 
 export default CostBatchTable;
-console.log('组件创建成功: CostBatchTable');
+// logger.info('组件创建成功: CostBatchTable');

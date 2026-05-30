@@ -32,7 +32,7 @@ export default function Login() {
         setError(result.error || '登录失败');
       }
     } catch (e) {
-      console.error('登录请求失败:', e);
+      // logger.error('登录请求失败:', e);
       setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);

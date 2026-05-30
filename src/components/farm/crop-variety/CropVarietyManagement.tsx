@@ -244,9 +244,9 @@ export default function CropVarietyManagement() {
       // 如果后端数据少于预期（默认206条），执行 localStorage → 后端迁移
       // 迁移通过 crop_code 去重，不会覆盖已有数据
       if (!migrationDone && store.items.length < 100) {
-        console.log(`[品种迁移] 后端数据仅 ${store.items.length} 条，开始从 localStorage 迁移...`);
+        // logger.info(`[品种迁移] 后端数据仅 ${store.items.length} 条，开始从 localStorage 迁移...`);
         const result = await store.migrateFromLocalStorage();
-        console.log(`[品种迁移] 完成: 新增 ${result.inserted}, 跳过 ${result.skipped}`);
+        // logger.info(`[品种迁移] 完成: 新增 ${result.inserted}, 跳过 ${result.skipped}`);
         setMigrationDone(true);
       }
     };
@@ -363,7 +363,7 @@ export default function CropVarietyManagement() {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
       } catch (error) {
-        console.error('复制编码失败:', error);
+        // logger.error('复制编码失败:', error);
       }
     }
   }, [generatedCode]);

@@ -318,7 +318,7 @@ export function WorkLogPage() {
 
   const handleBatchEditConfirm = (edited: Record<string, Partial<WorkLog>>) => {
     // 应用编辑到数据
-    console.log('批量编辑的数据:', edited);
+    // logger.info('批量编辑的数据:', edited);
     setShowBatchEditModal(false);
     setEditedLogs({});
     setBatchEditMode(false);

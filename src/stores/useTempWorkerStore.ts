@@ -125,7 +125,7 @@ export const useTempWorkerStore = create<TempWorkerState>()(
           }
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[TempWorkerStore] 获取临时工数据失败:', error);
+          // logger.warn('[TempWorkerStore] 获取临时工数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

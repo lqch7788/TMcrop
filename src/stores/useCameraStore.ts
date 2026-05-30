@@ -115,7 +115,7 @@ export const useCameraStore = create<CameraState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ items: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[CameraStore] API 获取失败:', error);
+          // logger.warn('[CameraStore] API 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -131,7 +131,7 @@ export const useCameraStore = create<CameraState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[CameraStore] 创建失败:', error);
+          // logger.warn('[CameraStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -145,7 +145,7 @@ export const useCameraStore = create<CameraState>()(
         try {
           await enhancedApiClient.put(`/api/cameras/${oid}`, body);
         } catch (error) {
-          console.warn('[CameraStore] 更新失败:', error);
+          // logger.warn('[CameraStore] 更新失败:', error);
         }
       },
 
@@ -155,7 +155,7 @@ export const useCameraStore = create<CameraState>()(
           await enhancedApiClient.delete(`/api/cameras/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[CameraStore] 删除失败:', error);
+          // logger.warn('[CameraStore] 删除失败:', error);
           return false;
         }
       },

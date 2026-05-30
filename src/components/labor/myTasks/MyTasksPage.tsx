@@ -433,7 +433,7 @@ export function MyTasksPage() {
 
   // 打开反馈弹窗
   const openFeedbackModal = (task: FarmTask | Task) => {
-    console.warn('[MyTasksPage] openFeedbackModal requiredFeedback:', { id: task.id, taskCode: (task as any).taskCode, rf: (task as any).requiredFeedback, rfLen: Array.isArray((task as any).requiredFeedback) ? (task as any).requiredFeedback?.length : 'NOT_ARRAY', rfVal: (task as any).requiredFeedback });
+    // 打开反馈弹窗
     setFeedbackModal({ isOpen: true, task });
     setFeedbackForm({
       resultText: '',
@@ -487,7 +487,7 @@ export function MyTasksPage() {
   const handleSubmitFeedback = () => {
     try {
       if (!feedbackModal.task) {
-        console.error('[提交反馈] 错误：feedbackModal.task 为空');
+        // 反馈提交错误
         return;
       }
       const task = feedbackModal.task;
@@ -622,13 +622,13 @@ export function MyTasksPage() {
           materialCode: feedbackForm.materialCode || undefined,
         });
       } else {
-        console.error('[提交反馈] 错误：在 unifiedTasks 中找不到对应任务', { taskId: task.id, taskCode: task.taskCode });
+        // 任务未找到
       }
 
       setFeedbackModal({ isOpen: false, task: null });
       showAlert('提交成功！');
     } catch (error) {
-      console.error('[提交反馈] 提交失败', error);
+      // 反馈提交失败
       showAlert('提交失败：' + (error instanceof Error ? error.message : String(error)));
     }
   };

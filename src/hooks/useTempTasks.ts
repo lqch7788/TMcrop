@@ -497,7 +497,7 @@ export function useTempTasks(): UseTempTasksReturn {
   const submitCompletion = useCallback((id: string, hours: number, remarks: string) => {
     const task = tempTasks.find(t => t.id === id);
     if (!task) {
-      console.warn('[useTempTasks] submitCompletion: 未找到任务', id);
+      // submitCompletion: 未找到任务
       return;
     }
 
@@ -536,7 +536,7 @@ export function useTempTasks(): UseTempTasksReturn {
   const acceptCompletion = useCallback((id: string, acceptanceRemarks?: string) => {
     const task = tempTasks.find(t => t.id === id || t.taskCode === id);
     if (!task) {
-      console.warn('[useTempTasks] acceptCompletion: 未找到任务', id, '当前任务IDs:', tempTasks.map(t => t.id));
+      // acceptCompletion: 未找到任务
       return;
     }
 
@@ -574,7 +574,7 @@ export function useTempTasks(): UseTempTasksReturn {
   const rejectCompletion = useCallback((id: string, reason: string) => {
     const task = tempTasks.find(t => t.id === id || t.taskCode === id);
     if (!task) {
-      console.warn('[useTempTasks] rejectCompletion: 未找到任务', id);
+      // rejectCompletion: 未找到任务
       return;
     }
 

@@ -137,7 +137,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         const mapped = list.map((r: Record<string, unknown>) => normalize(r));
         set({ items: mapped, isLoading: false });
       } catch (error) {
-        console.error('[MaterialRequestStore] 获取物料申请失败:', error);
+        // logger.error('[MaterialRequestStore] 获取物料申请失败:', error);
         set({ error: error instanceof Error ? error.message : '获取物料申请失败', isLoading: false });
       }
     },
@@ -175,7 +175,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         set((s) => ({ items: [newItem, ...s.items] }));
         return newItem;
       } catch (error) {
-        console.error('[MaterialRequestStore] 添加物料申请失败:', error);
+        // logger.error('[MaterialRequestStore] 添加物料申请失败:', error);
         return null;
       }
     },
@@ -194,7 +194,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         await enhancedApiClient.put(`/material-requests/${id}`, body);
         return true;
       } catch (error) {
-        console.error('[MaterialRequestStore] 更新物料申请失败:', error);
+        // logger.error('[MaterialRequestStore] 更新物料申请失败:', error);
         return false;
       }
     },
@@ -209,7 +209,7 @@ export const useMaterialRequestDataStore = create<MaterialRequestDataState>()(
         await enhancedApiClient.delete(`/material-requests/${id}`);
         return true;
       } catch (error) {
-        console.error('[MaterialRequestStore] 删除物料申请失败:', error);
+        // logger.error('[MaterialRequestStore] 删除物料申请失败:', error);
         return false;
       }
     },

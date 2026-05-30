@@ -17,11 +17,11 @@ interface DeleteWarningAdapterProps {
 
 export function DeleteWarningAdapter({ taskIds, onClose, onConfirmed, tasksHook }: DeleteWarningAdapterProps) {
   const handleConfirm = async () => {
-    console.log('[DeleteWarningAdapter] 开始删除任务:', taskIds);
+    // logger.info('[DeleteWarningAdapter] 开始删除任务:', taskIds);
     // 等待所有删除操作完成
     for (const id of taskIds) {
       await tasksHook.deleteTask(id);
-      console.log('[DeleteWarningAdapter] 删除任务完成:', id);
+      // logger.info('[DeleteWarningAdapter] 删除任务完成:', id);
     }
     onConfirmed();
   };

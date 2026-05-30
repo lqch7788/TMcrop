@@ -240,3 +240,44 @@ import { Plus, Edit, Trash2 } from 'lucide-react'
 
 下列能力只走 gstack：
 - 浏览器、QA、ship、deploy、canary、retro、护栏
+
+
+ule 1: Think Before Coding
+State your assumptions explicitly; ask questions instead of guessing when uncertain; surface tradeoffs by listing pros and cons of multiple approaches; push back if a simpler method exists.
+
+Rule 2: Simplicity First
+Write only the minimum code needed to solve the problem; no speculative features; no abstractions for single-use logic; if a senior engineer would call it over-engineered—simplify it.
+
+Rule 3: Surgical Changes
+Only touch what must be changed; don't "improve" unrelated code, comments, or formatting on the side; don't refactor what isn't broken; match the existing style.
+
+Rule 4: Goal-Driven Execution
+Define success criteria and loop until they are verified; don't tell Claude what steps to take—define what success looks like and let it iterate; if the goal can be reached in fewer steps, use fewer steps.
+
+II. 8 Advanced Rules (for AI Agent Collaboration)
+Rule 5: No Non-Language Work for the Model
+Deterministic decisions—retry policies, routing logic, threshold checks, escalation rules—must be explicit code (conditionals, config values, lookup tables); if the answer is the same every time, it's not a language task; the model handles only classification, summarization, drafting, and ambiguity resolution.
+
+Rule 6: Hard Token Budgets, No Exceptions
+Every iteration loop (debugging, refactoring, generation) must have a defined budget (max iterations, max tokens, or max time), with specific values set per project. Stop immediately and present current results when the budget is exhausted; do not re-suggest a fix that has already been rejected.
+
+Rule 7: Surface Conflicts, Don't Blend
+When the codebase has two contradictory patterns, call out the conflict explicitly ("Module A uses pattern X, Module B uses pattern Y. Which should the new code follow?") and wait for a human decision; never blend the two patterns, and never choose on your own.
+
+Rule 8: Read Before You Write
+Before adding code, read the current file and its import graph; check whether an identical function, utility, or constant already exists; if a duplicate implementation exists, use it—don't create a second version.
+
+Rule 9: Tests Are Required, but Not the Goal
+Tests must verify meaningful properties of correct behavior (values, structure, side effects, error types), not merely that "the function returns something" or "doesn't throw"; "all tests pass" is necessary but not sufficient; flag it explicitly when tests are too weak.
+
+Rule 10: Checkpoints for Long Tasks
+Any task spanning more than 3 steps or touching more than 3 files requires a checkpoint after each step (what was done + what changed + current state); roll back to the last checkpoint if a step fails—don't build on a broken state; if you lose track of the overall logic, stop immediately and restate.
+
+Rule 11: Convention Beats Novelty
+Even if you think your approach is better, follow the codebase's existing naming and architectural conventions (e.g., snake_case vs camelCase); introducing a second pattern is worse than either pattern alone; if you believe a convention should change, propose it explicitly and wait for approval before acting.
+
+Rule 12: Fail Loud
+Errors must be thrown, returned, or reported—never swallowed or hidden behind default values; when migrations, batch jobs, or loops skip records, the skip count and reasons must appear in the output, not buried in logs; if you cannot confirm 100% success, say so explicitly—silent "default success" is forbidden.
+
+
+
