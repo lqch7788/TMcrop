@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { EfficiencyMetrics } from './types';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface EfficiencyFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -87,7 +90,7 @@ export function EfficiencyFormModal({
               type="month"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
 
@@ -97,7 +100,7 @@ export function EfficiencyFormModal({
             <select
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             >
               <option value="生产部">生产部</option>
               <option value="技术部">技术部</option>

@@ -12,6 +12,9 @@ import {
 } from './types';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 /**
  * 技能标签分组
  */
@@ -149,7 +152,7 @@ export function TempWorkerFormModal({
             type="text"
             value={formData.name || ''}
             onChange={(e) => handleChange('name', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="请输入员工姓名"
           />
         </div>
@@ -163,7 +166,7 @@ export function TempWorkerFormModal({
             type="tel"
             value={formData.phone || ''}
             onChange={(e) => handleChange('phone', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="请输入手机号"
           />
         </div>
@@ -177,7 +180,7 @@ export function TempWorkerFormModal({
             type="text"
             value={formData.idCard || ''}
             onChange={(e) => handleChange('idCard', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
             placeholder="请输入18位身份证号"
             maxLength={18}
           />
@@ -191,7 +194,7 @@ export function TempWorkerFormModal({
           <select
             value={formData.workerType || ''}
             onChange={(e) => handleChange('workerType', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             {workerTypes.map((type) => (
               <option key={type} value={type}>{type}</option>
@@ -207,7 +210,7 @@ export function TempWorkerFormModal({
           <select
             value={formData.contractType || ''}
             onChange={(e) => handleChange('contractType', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             {contractTypes.map((type) => (
               <option key={type} value={type}>{type}</option>
@@ -253,7 +256,7 @@ export function TempWorkerFormModal({
           <select
             value={formData.insuranceType || ''}
             onChange={(e) => handleChange('insuranceType', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             <option value="">请选择</option>
             {insuranceOptions.map((opt) => (
@@ -270,7 +273,7 @@ export function TempWorkerFormModal({
           <select
             value={formData.source || ''}
             onChange={(e) => handleChange('source', e.target.value)}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            className={deepInputClass}
           >
             <option value="">请选择</option>
             {sourceOptions.map((opt) => (
@@ -304,7 +307,7 @@ export function TempWorkerFormModal({
             <select
               value={formData.status || ''}
               onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             >
               <option value="在职">在职</option>
               <option value="离职">离职</option>

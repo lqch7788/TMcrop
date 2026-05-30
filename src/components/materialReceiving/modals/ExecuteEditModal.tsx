@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ExecuteEditModalProps {
   isOpen: boolean;
   record: MaterialExecuteRecord | null;
@@ -63,6 +66,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="date"
             value={editForm.date}
             onChange={(e) => onEditFormChange('date', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -71,6 +75,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="text"
             value={editForm.applicant}
             onChange={(e) => onEditFormChange('applicant', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -79,7 +84,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             value={editForm.warehouseLocation}
             onValueChange={(v) => onEditFormChange('warehouseLocation', v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -97,6 +102,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="text"
             value={editForm.reviewer}
             onChange={(e) => onEditFormChange('reviewer', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -105,6 +111,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="text"
             value={editForm.operator}
             onChange={(e) => onEditFormChange('operator', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -113,6 +120,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             type="text"
             value={editForm.productionBatchCode}
             onChange={(e) => onEditFormChange('productionBatchCode', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -121,7 +129,7 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
             value={editForm.executeStatus}
             onValueChange={(v) => onEditFormChange('executeStatus', v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

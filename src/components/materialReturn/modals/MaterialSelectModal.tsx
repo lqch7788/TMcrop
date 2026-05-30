@@ -4,6 +4,9 @@ import { MaterialItem } from '../types';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useWarehouseMaterialStore } from '../../../stores/useWarehouseMaterialStore';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface MaterialSelectModalProps {
   open: boolean;
   sourceAppCode: string;
@@ -115,7 +118,7 @@ export function MaterialSelectModal({
             placeholder="搜索物料编码或名称..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={`w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${deepInputClass}`}
           />
         </div>
       </div>

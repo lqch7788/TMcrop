@@ -3,7 +3,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ClipboardList, Users } from 'lucide-react';
 import { OrderStats } from './components/OrderStats';
 import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
@@ -12,6 +13,7 @@ import { OrderDetailModal } from './modals/DetailModal';
 import { EditModal } from './modals/EditModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
+import { Button } from '@/components/ui/button';
 import {
   cropCategories,
 } from '@/data/cropData';
@@ -21,6 +23,8 @@ import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 export default function OrderPage() {
+  const navigate = useNavigate();
+
   // 权限检查 - 已取消，所有人可使用所有功能
   const canCreate = true;
   const canDelete = true;
@@ -321,6 +325,17 @@ export default function OrderPage() {
               <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
               <p className="text-gray-500">管理作物订单、跟踪订单执行状态和交付进度</p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/crop/customer')}
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              客户管理
+            </Button>
           </div>
         </div>
       </div>

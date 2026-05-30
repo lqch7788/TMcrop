@@ -11,6 +11,9 @@ import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '..
 import { UserSelect } from '../../common/settings/UserSelect';
 import { useUserStore } from '../../../stores/useUserStore';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 生产计划批次号选项
 const PRODUCTION_BATCH_CODES = [
   'FQ2024-001', 'FQ2024-002', 'FQ2024-003', 'FQ2024-004',
@@ -116,6 +119,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             type="date"
             value={addForm.date}
             onChange={(e) => onChange('date', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -141,7 +145,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.department || 'none'}
             onValueChange={(v) => onChange('department', v === 'none' ? '' : v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择部门" />
             </SelectTrigger>
             <SelectContent>
@@ -160,7 +164,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.warehouseLocation}
             onValueChange={(v) => onChange('warehouseLocation', v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -179,6 +183,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.plantArea}
             onChange={(e) => onChange('plantArea', e.target.value)}
             placeholder="如：1号棚-叶菜区"
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -195,7 +200,7 @@ export const AddModal: React.FC<AddModalProps> = ({
             value={addForm.productionBatchCode || 'none'}
             onValueChange={(v) => onChange('productionBatchCode', v === 'none' ? '' : v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择生产批次" />
             </SelectTrigger>
             <SelectContent>
@@ -215,6 +220,7 @@ export const AddModal: React.FC<AddModalProps> = ({
               value={addForm.batchRemark || ''}
               onChange={(e) => onChange('batchRemark', e.target.value)}
               placeholder="请输入其他批次的具体说明"
+              className={deepInputClass}
             />
           </div>
         )}

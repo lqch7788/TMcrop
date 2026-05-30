@@ -34,6 +34,8 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
     onSave({ deliveryBatch, deliveryQuantity, deliveryDate });
   };
 
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
@@ -54,7 +56,7 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
             type="number"
             value={deliveryBatch}
             onChange={(e) => setDeliveryBatch(parseInt(e.target.value) || 1)}
-            className="border-gray-300"
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -63,7 +65,7 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
             type="number"
             value={deliveryQuantity}
             onChange={(e) => setDeliveryQuantity(parseInt(e.target.value) || 0)}
-            className="border-gray-300"
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -71,7 +73,7 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
           <DatePicker
             selected={new Date(deliveryDate)}
             onChange={(date) => setDeliveryDate(date.toISOString().split('T')[0])}
-            className="border-gray-300"
+            className={deepInputClass}
           />
         </div>
       </div>

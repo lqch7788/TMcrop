@@ -183,7 +183,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], materialCode: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
               {/* 物料名称 */}
@@ -195,7 +195,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], materialName: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
               {/* 分类 */}
@@ -207,7 +207,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], category: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
               {/* 规格型号 */}
@@ -219,7 +219,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], specification: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
               {/* 单位 */}
@@ -270,7 +270,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], supplier: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
               {/* 用途说明 */}
@@ -282,7 +282,7 @@ function MaterialItemsEditTable({
                     newItems[idx] = { ...newItems[idx], purpose: e.target.value };
                     onItemsChange(newItems);
                   }}
-                  className="h-7 p-1 text-xs rounded border-gray-300"
+                  className={deepInputClass}
                 />
               </td>
             </tr>
@@ -318,6 +318,9 @@ export function BatchEditModal({
   onSubmit,
   onNext,
 }: BatchEditModalProps) {
+  // 深度输入框样式
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   // 用户列表（用于获取申请人姓名）
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
@@ -398,7 +401,7 @@ export function BatchEditModal({
                 value={batchEditData.purchaseType}
                 onValueChange={(v) => onBatchEditDataChange('purchaseType', v)}
               >
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="production">生产物资采购</SelectItem>
                   <SelectItem value="urgent">紧急采购</SelectItem>
@@ -420,7 +423,7 @@ export function BatchEditModal({
                   }
                 }}
               >
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="不关联批次" /></SelectTrigger>
+                <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="不关联批次" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">不关联批次</SelectItem>
                   <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
@@ -464,7 +467,7 @@ export function BatchEditModal({
                   }
                 }}
               >
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="生产部">生产部</SelectItem>
                   <SelectItem value="技术部">技术部</SelectItem>
@@ -483,6 +486,7 @@ export function BatchEditModal({
                 type="date"
                 value={batchEditData.requiredDate}
                 onChange={(e) => onBatchEditDataChange('requiredDate', e.target.value)}
+                className={deepInputClass}
               />
             </div>
 
@@ -493,7 +497,7 @@ export function BatchEditModal({
                 value={batchEditData.priority}
                 onValueChange={(v) => onBatchEditDataChange('priority', v)}
               >
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="urgent">紧急</SelectItem>
                   <SelectItem value="high">高</SelectItem>
@@ -521,6 +525,7 @@ export function BatchEditModal({
                 value={batchEditData.remark}
                 onChange={(e) => onBatchEditDataChange('remark', e.target.value)}
                 placeholder="输入备注"
+                className={deepInputClass}
               />
             </div>
 

@@ -9,6 +9,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import type { MaterialReceivingRecord, MaterialItem, MaterialRequestFormState } from '../../../types/materialReceiving';
 import { UserSelect } from '../../common/settings/UserSelect';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface EditModalProps {
   isOpen: boolean;
   record: MaterialReceivingRecord;
@@ -52,6 +55,7 @@ export const EditModal: React.FC<EditModalProps> = ({
             type="date"
             value={editForm.date}
             onChange={(e) => onChange('date', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -68,7 +72,7 @@ export const EditModal: React.FC<EditModalProps> = ({
             value={editForm.department || 'none'}
             onValueChange={(v) => onChange('department', v === 'none' ? '' : v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择部门" />
             </SelectTrigger>
             <SelectContent>
@@ -87,7 +91,7 @@ export const EditModal: React.FC<EditModalProps> = ({
             value={editForm.warehouseLocation}
             onValueChange={(v) => onChange('warehouseLocation', v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -106,6 +110,7 @@ export const EditModal: React.FC<EditModalProps> = ({
             value={editForm.plantArea}
             onChange={(e) => onChange('plantArea', e.target.value)}
             placeholder="如：1号棚-叶菜区"
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -122,6 +127,7 @@ export const EditModal: React.FC<EditModalProps> = ({
             type="text"
             value={editForm.productionBatchCode}
             onChange={(e) => onChange('productionBatchCode', e.target.value)}
+            className={deepInputClass}
           />
         </div>
       </div>

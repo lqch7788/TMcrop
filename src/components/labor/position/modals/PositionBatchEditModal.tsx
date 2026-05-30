@@ -79,7 +79,7 @@ export function PositionBatchEditModal({
             <select
               value={selectedRecordId || ''}
               onChange={(e) => onSelectedRecordIdChange(e.target.value)}
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+              className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
             >
               <option value="">请选择记录</option>
               {selectedRecords.map(record => (
@@ -111,7 +111,7 @@ export function PositionBatchEditModal({
                   type="text"
                   value={editedData.name ?? currentRecord.name}
                   onChange={(e) => handleFieldChange('name', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
                 />
               </div>
 
@@ -121,7 +121,7 @@ export function PositionBatchEditModal({
                 <select
                   value={editedData.dept ?? currentRecord.dept}
                   onChange={(e) => handleFieldChange('dept', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
                 >
                   {getDeptOptions().map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
@@ -135,7 +135,7 @@ export function PositionBatchEditModal({
                 <select
                   value={editedData.level ?? currentRecord.level}
                   onChange={(e) => handleFieldChange('level', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
                 >
                   {levelOptions.map(level => (
                     <option key={level} value={level}>{level}</option>
@@ -159,7 +159,7 @@ export function PositionBatchEditModal({
                 <select
                   value={editedData.status ?? currentRecord.status}
                   onChange={(e) => handleFieldChange('status', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
                 >
                   {statusOptions.map(status => (
                     <option key={status} value={status}>{status}</option>
@@ -174,7 +174,7 @@ export function PositionBatchEditModal({
                   type="text"
                   value={editedData.description ?? currentRecord.description}
                   onChange={(e) => handleFieldChange('description', e.target.value)}
-                  className="w-full h-7 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full h-7 px-2 border border-gray-400 rounded text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner"
                 />
               </div>
             </div>

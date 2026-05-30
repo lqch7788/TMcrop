@@ -3,6 +3,9 @@
  * 包含规格编辑器，支持编辑药剂及其规格信息
  */
 import React, { useState, useCallback, useEffect } from 'react';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -279,7 +282,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                   value={form.pesticideCode}
                   onChange={(e) => updateField('pesticideCode', e.target.value)}
                   placeholder="药剂编码"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={deepInputClass}
                 />
               </div>
               <div>
@@ -291,7 +294,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                   value={form.pesticideName}
                   onChange={(e) => updateField('pesticideName', e.target.value)}
                   placeholder="请输入药剂名称"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className={deepInputClass}
                 />
               </div>
             </div>
@@ -303,7 +306,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 value={form.ingredient}
                 onChange={(e) => updateField('ingredient', e.target.value)}
                 placeholder="如 啶虫脒、高效氯氟氰菊酯"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                className={deepInputClass}
               />
             </div>
             {/* 作用机制 */}
@@ -314,7 +317,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 value={form.mechanism}
                 onChange={(e) => updateField('mechanism', e.target.value)}
                 placeholder="如 触杀、胃毒、熏蒸"
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                className={deepInputClass}
               />
             </div>
           </div>
@@ -336,7 +339,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 onChange={(e) => updateField('functionDesc', e.target.value)}
                 placeholder="请输入功能说明"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                className={`${deepInputClass} resize-none`}
               />
             </div>
             <div>
@@ -346,7 +349,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
                 onChange={(e) => updateField('tabooDesc', e.target.value)}
                 placeholder="请输入使用禁忌"
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                className={`${deepInputClass} resize-none`}
               />
             </div>
           </div>

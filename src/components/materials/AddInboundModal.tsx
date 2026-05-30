@@ -2,6 +2,10 @@
 import { RefreshCw } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { NewInboundForm } from './types';
+
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 旧版组件，已不再使用，保留占位数据避免编译错误
 const categoryConfig: Record<string, any> = {};
 const warehouseMaterials: any[] = [];
@@ -142,7 +146,7 @@ export default function AddInboundModal({
                 value={newInbound.orderCode}
                 onChange={(e) => onNewInboundChange('orderCode', e.target.value)}
                 placeholder="点击自动生成"
-                className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 bg-gray-50"
+                className={`${deepInputClass} bg-gray-50`}
                 readOnly
               />
               <button
@@ -170,7 +174,7 @@ export default function AddInboundModal({
                   onCheckCodeDuplicate(e.target.value);
                 }}
                 placeholder="请输入物料编码（可从上方编码生成器复制）"
-                className="flex-1 h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               />
               <button
                 type="button"
@@ -197,7 +201,7 @@ export default function AddInboundModal({
                 onCheckNameDuplicate(e.target.value);
               }}
               placeholder="请输入物料名称"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
             {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
           </div>
@@ -209,7 +213,7 @@ export default function AddInboundModal({
               <select
                 value={newInbound.bigCategory}
                 onChange={(e) => handleCategoryChange('bigCategory', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               >
                 <option value="">请选择大类</option>
                 {Object.keys(categoryConfig).map((key) => (
@@ -225,7 +229,7 @@ export default function AddInboundModal({
                 value={newInbound.midCategory}
                 onChange={(e) => handleCategoryChange('midCategory', e.target.value)}
                 disabled={!newInbound.bigCategory}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
+                className={`${deepInputClass} disabled:bg-gray-100`}
               >
                 <option value="">请选择中类</option>
                 {getMidCategories().map((cat) => (
@@ -241,7 +245,7 @@ export default function AddInboundModal({
                 value={newInbound.subCategory}
                 onChange={(e) => handleCategoryChange('subCategory', e.target.value)}
                 disabled={!newInbound.midCategory}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 disabled:bg-gray-100"
+                className={`${deepInputClass} disabled:bg-gray-100`}
               >
                 <option value="">请选择小类</option>
                 {getSubCategories().map((cat) => (
@@ -264,7 +268,7 @@ export default function AddInboundModal({
                 value={newInbound.quantity}
                 onChange={(e) => onNewInboundChange('quantity', e.target.value)}
                 placeholder="请输入数量"
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               />
             </div>
             <div>
@@ -272,7 +276,7 @@ export default function AddInboundModal({
               <select
                 value={newInbound.unit}
                 onChange={(e) => onNewInboundChange('unit', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               >
                 {unitOptions.map((unit) => (
                   <option key={unit} value={unit}>
@@ -291,7 +295,7 @@ export default function AddInboundModal({
               value={newInbound.supplier}
               onChange={(e) => onNewInboundChange('supplier', e.target.value)}
               placeholder="请输入供应商"
-              className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+              className={deepInputClass}
             />
           </div>
 
@@ -303,7 +307,7 @@ export default function AddInboundModal({
                 type="date"
                 value={newInbound.inboundDate}
                 onChange={(e) => onNewInboundChange('inboundDate', e.target.value)}
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               />
             </div>
             <div>
@@ -313,7 +317,7 @@ export default function AddInboundModal({
                 value={newInbound.operator}
                 onChange={(e) => onNewInboundChange('operator', e.target.value)}
                 placeholder="请输入操作员"
-                className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                className={deepInputClass}
               />
             </div>
           </div>
@@ -326,7 +330,7 @@ export default function AddInboundModal({
               onChange={(e) => onNewInboundChange('remarks', e.target.value)}
               placeholder="请输入备注"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 resize-none"
+              className={`${deepInputClass} resize-none`}
             />
           </div>
     </Modal>

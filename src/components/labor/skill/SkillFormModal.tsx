@@ -4,6 +4,9 @@ import { StaffSkill, SkillFormData } from './types';
 import { SkillTagSelector } from './SkillTagSelector';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface SkillFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -98,7 +101,7 @@ export function SkillFormModal({ isOpen, onClose, onSubmit, title, editingSkill 
               value={formData.staffId}
               onChange={(e) => handleFieldChange('staffId', e.target.value)}
               placeholder="请输入员工工号"
-              className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </FormField>
 
@@ -109,7 +112,7 @@ export function SkillFormModal({ isOpen, onClose, onSubmit, title, editingSkill 
               value={formData.staffName}
               onChange={(e) => handleFieldChange('staffName', e.target.value)}
               placeholder="请输入员工姓名"
-              className="w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className={deepInputClass}
             />
           </FormField>
         </div>

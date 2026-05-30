@@ -15,6 +15,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { DictSelect } from '../common/settings/DictSelect';
 import { showAlert } from '@/lib/dialogService';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ProduceInventoryAddModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -234,7 +237,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={cropName}
               onChange={(e) => setCropName(e.target.value)}
               placeholder="如：草莓、番茄、黄瓜"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -246,7 +249,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={variety}
               onChange={(e) => setVariety(e.target.value)}
               placeholder="如：红颜、千禧果"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
         </div>
@@ -260,7 +263,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={productCode}
               onChange={(e) => setProductCode(e.target.value)}
               placeholder="自动生成或手动输入"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -270,7 +273,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={batchCode}
               onChange={(e) => setBatchCode(e.target.value)}
               placeholder="系统自动生成"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm bg-gray-50"
+              className={`${deepInputClass} bg-gray-50`}
             />
           </div>
         </div>
@@ -286,7 +289,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
               min="0"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -327,7 +330,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
           <div>
             <Label className="text-gray-700">品质评定</Label>
             <Select value={quality} onValueChange={(val) => setQuality(val as typeof quality)}>
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="优秀" />
               </SelectTrigger>
               <SelectContent>
@@ -347,7 +350,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               仓库 <span className="text-red-500">*</span>
             </Label>
             <Select value={warehouseId} onValueChange={(val) => handleWarehouseChange(val)}>
-              <SelectTrigger className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <SelectTrigger className={deepInputClass}>
                 <SelectValue placeholder="请选择仓库" />
               </SelectTrigger>
               <SelectContent>
@@ -373,7 +376,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={storageLocation}
               onChange={(e) => setStorageLocation(e.target.value)}
               placeholder="如：A区-01-01"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
         </div>
@@ -386,7 +389,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               type="date"
               value={storageDate}
               onChange={(e) => setStorageDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -396,7 +399,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={expirationDays}
               onChange={(e) => setExpirationDays(Number(e.target.value))}
               min="1"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
         </div>
@@ -409,7 +412,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               type="date"
               value={harvestDate}
               onChange={(e) => setHarvestDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -418,7 +421,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               type="date"
               value={expirationDate}
               readOnly
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
+              className={`${deepInputClass} bg-gray-50 text-gray-500`}
             />
           </div>
         </div>
@@ -431,7 +434,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             value={operator}
             onChange={(e) => setOperator(e.target.value)}
             placeholder="默认为系统管理员"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={deepInputClass}
           />
         </div>
 
@@ -444,7 +447,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
               value={greenhouseName}
               onChange={(e) => setGreenhouseName(e.target.value)}
               placeholder="如：日光温室1号"
-              className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -466,7 +469,7 @@ export const ProduceInventoryAddModal: React.FC<ProduceInventoryAddModalProps> =
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}
             placeholder="可选填写备注信息"
-            className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={deepInputClass}
           />
         </div>
       </div>

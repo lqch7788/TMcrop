@@ -7,6 +7,9 @@ import type { LeaveFormModalProps, LeaveRecord, LeaveType } from './types';
 import { getWorkerSelectList } from '../../../services/apiWorkerService';
 import { Label } from '@/components/ui/label';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 // 员工选择列表状态
 interface StaffOption {
   id: string;
@@ -110,7 +113,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         <select
           value={formData.staffId || ''}
           onChange={(e) => handleStaffChange(e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className={deepInputClass}
         >
           <option value="">请选择员工</option>
           {staffList.map((staff) => (
@@ -127,7 +130,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         <select
           value={formData.leaveType || ''}
           onChange={(e) => handleChange('leaveType', e.target.value)}
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+          className={deepInputClass}
         >
           {leaveTypes.map((type) => (
             <option key={type} value={type}>{type}</option>
@@ -166,7 +169,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
           type="text"
           value={formData.days ? `${formData.days} 天` : ''}
           readOnly
-          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50"
+          className={`${deepInputClass} bg-gray-50`}
           placeholder="自动计算"
         />
       </div>

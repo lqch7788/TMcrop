@@ -9,6 +9,9 @@ import { DatePicker } from '../ui/DatePicker';
 import { Label } from '../ui/label';
 import { X } from 'lucide-react';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface MaterialEditModalProps {
   material: Material | null;
   isOpen: boolean;
@@ -98,7 +101,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.unit}
             onChange={(e) => handleChange('unit', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 
@@ -109,7 +112,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.specification}
             onChange={(e) => handleChange('specification', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 
@@ -142,7 +145,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.price}
             onChange={(e) => handleChange('price', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 
@@ -153,7 +156,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.supplier}
             onChange={(e) => handleChange('supplier', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 
@@ -164,7 +167,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.location}
             onChange={(e) => handleChange('location', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 
@@ -175,7 +178,7 @@ export function MaterialEditModal({ material, isOpen, onClose, onSave }: Materia
             type="text"
             value={form.batchNo}
             onChange={(e) => handleChange('batchNo', e.target.value)}
-            className="w-full h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-blue-500"
+            className={deepInputClass.replace('py-3', 'py-1.5').replace('text-sm', 'text-sm')}
           />
         </div>
 

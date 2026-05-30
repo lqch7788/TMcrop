@@ -30,6 +30,8 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
     onSave({ checkDate, checkResult, checkPerson, checkItems });
   };
 
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
@@ -46,7 +48,7 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
             <DatePicker
               selected={new Date(checkDate)}
               onChange={(date) => setCheckDate(date.toISOString().split('T')[0])}
-              className="border-gray-300"
+              className={deepInputClass}
             />
           </div>
           <div>
@@ -66,7 +68,7 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
           <Input
             value={checkPerson}
             onChange={(e) => setCheckPerson(e.target.value)}
-            className="border-gray-300"
+            className={deepInputClass}
           />
         </div>
         <div>

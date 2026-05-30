@@ -8,6 +8,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
+// 深度输入框样式
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 interface ExecuteAddModalProps {
   isOpen: boolean;
   addForm: {
@@ -82,7 +85,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
               onMaterialActualQuantitiesChange({});
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="请选择领料单" />
             </SelectTrigger>
             <SelectContent>
@@ -104,6 +107,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
             type="date"
             value={addForm.date}
             onChange={(e) => onAddFormChange('date', e.target.value)}
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -112,7 +116,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
             value={addForm.warehouseLocation}
             onValueChange={(v) => onAddFormChange('warehouseLocation', v)}
           >
-            <SelectTrigger>
+            <SelectTrigger className={deepInputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -131,6 +135,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
             value={addForm.reviewer}
             onChange={(e) => onAddFormChange('reviewer', e.target.value)}
             placeholder="请输入审核人"
+            className={deepInputClass}
           />
         </div>
         <div>
@@ -140,6 +145,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
             value={addForm.operator}
             onChange={(e) => onAddFormChange('operator', e.target.value)}
             placeholder="请输入操作人"
+            className={deepInputClass}
           />
         </div>
       </div>
