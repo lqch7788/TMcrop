@@ -110,7 +110,7 @@ export const SmartDispatchTab: React.FC = () => {
         setViewingTaskRecords(formattedRecords);
       }
     } catch (error) {
-      console.warn('[SmartDispatchTab] 获取流转记录失败:', error);
+      // logger.warn('[SmartDispatchTab] 获取流转记录失败:', error);
       // 回退到本地记录
       const records = getTaskRecordsByTaskId(task.id);
       setViewingTaskRecords(records);

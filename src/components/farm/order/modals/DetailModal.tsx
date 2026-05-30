@@ -1,21 +1,22 @@
 /**
  * 订单详情弹窗
+ * 使用通用DetailModal组件统一样式
  */
 
 import React from 'react';
-import { X, Package, Calendar, User, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
+import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 
-interface DetailModalProps {
+interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: CropOrder | null;
 }
 
-export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
-  if (!isOpen || !record) return null;
+export function OrderDetailModal({ isOpen, onClose, record }: OrderDetailModalProps) {
+  if (!record) return null;
 
+  // 订单状态标签
   const getStatusBadge = (status: CropOrderStatus) => {
     switch (status) {
       case CropOrderStatus.PLANNED:
@@ -31,6 +32,7 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     }
   };
 
+  // 订单类型标签
   const getOrderTypeBadge = (type: string) => {
     switch (type) {
       case 'breeding':
@@ -48,166 +50,57 @@ export function DetailModal({ isOpen, onClose, record }: DetailModalProps) {
     }
   };
 
+  // 完成率
+  const completionRate = record.plannedQuantity > 0
+    ? `${Math.round((record.actualQuantity / record.plannedQuantity) * 100)}%`
+    : '0%';
+
+  // 字段配置
+  const fields: DetailField[][] = [
+    [
+      { label: '订单编号', value: record.orderCode },
+      { label: '订单类型', value: getOrderTypeBadge(record.orderType) },
+    ],
+    [
+      { label: '订单名称', value: record.orderName, fullWidth: true },
+    ],
+    [
+      { label: '订单状态', value: getStatusBadge(record.status) },
+      { label: '订单日期', value: record.orderDate },
+    ],
+    [
+      { label: '预计完成日期', value: record.expectedCompletionDate || '-' },
+      { label: '完成率', value: completionRate },
+    ],
+    [
+      { label: '品种路径', value: record.cropCategory || '-', fullWidth: true },
+    ],
+    [
+      { label: '作物品种', value: record.cropVariety || '-', fullWidth: true },
+    ],
+    [
+      { label: '单位', value: record.unit || '株' },
+      { label: '供应商', value: record.supplierName || '-' },
+    ],
+    [
+      { label: '计划数量', value: record.plannedQuantity },
+      { label: '实际数量', value: record.actualQuantity || 0 },
+    ],
+    [
+      { label: '创建人', value: record.createBy || '-' },
+      { label: '创建时间', value: record.createTime || '-' },
+    ],
+    [
+      { label: '备注', value: record.remarks || '-', fullWidth: true },
+    ],
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* 背景遮罩 */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-
-      {/* 弹窗内容 */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">订单详情</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </Button>
-        </div>
-
-        {/* 详情内容 */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* 订单基本信息 */}
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              订单信息
-            </h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">订单编号</p>
-                  <p className="text-sm font-medium text-emerald-600">{record.orderCode}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">订单名称</p>
-                  <p className="text-sm font-medium text-gray-900">{record.orderName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">订单类型</p>
-                  <p className="text-sm">{getOrderTypeBadge(record.orderType)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">订单状态</p>
-                  <p className="text-sm">{getStatusBadge(record.status)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">订单日期</p>
-                  <p className="text-sm text-gray-900">{record.orderDate}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">预计采收日期</p>
-                  <p className="text-sm text-gray-900">{record.expectedHarvestDate || '-'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 作物信息 */}
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              作物信息
-            </h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">品种路径</p>
-                  <p className="text-sm font-medium text-gray-900">{record.cropCategory || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">作物品种</p>
-                  <p className="text-sm font-medium text-gray-900">{record.cropVariety}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">供应商</p>
-                  <p className="text-sm text-gray-900">{record.supplierName || '-'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 数量信息 */}
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              数量信息
-            </h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">计划数量</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {record.plannedQuantity} {record.unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">实际数量</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {record.actualQuantity || 0} {record.unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 mb-1">完成率</p>
-                  <p className="text-sm font-medium text-emerald-600">
-                    {record.plannedQuantity > 0
-                      ? Math.round((record.actualQuantity / record.plannedQuantity) * 100)
-                      : 0}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 关联信息 */}
-          {record.instanceIds && record.instanceIds.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">关联作物实例</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-900">
-                  已关联 {record.instanceIds.length} 个作物实例
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {record.instanceIds.map((id) => (
-                    <span key={id} className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded">
-                      {id}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 备注 */}
-          {record.remarks && (
-            <div className="mb-6">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">备注</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-900">{record.remarks}</p>
-              </div>
-            </div>
-          )}
-
-          {/* 创建信息 */}
-          <div className="flex items-center gap-4 text-xs text-gray-500 pt-4 border-t border-gray-100">
-            <span>创建人：{record.createBy}</span>
-            <span>创建时间：{record.createTime}</span>
-          </div>
-        </div>
-
-        {/* 底部按钮 */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onClose}
-          >
-            关闭
-          </Button>
-        </div>
-      </div>
-    </div>
+    <DetailModal
+      title="订单详情"
+      fields={fields}
+      isOpen={isOpen}
+      onClose={onClose}
+    />
   );
 }

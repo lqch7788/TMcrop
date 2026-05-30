@@ -655,7 +655,7 @@ export function TempTaskPage() {
     onSubmit: (taskData, status) => {
       if (editingTask) {
         // 更新逻辑（后续实现）
-        console.log('更新临时任务:', editingTask.id, taskData);
+        // logger.info('更新临时任务:', editingTask.id, taskData);
       } else {
         // ========== 数据闭环：新建临时任务 ==========
         // 根据派发模式和状态决定最终状态

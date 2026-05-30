@@ -39,7 +39,7 @@ export const useMonthlyPlanStore = create<MonthlyPlanState>()(
         });
         set({ plans: plansMap, isLoading: false });
       } catch (error) {
-        console.error('[useMonthlyPlanStore] 获取月度计划失败:', error);
+        // logger.error('[useMonthlyPlanStore] 获取月度计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -55,7 +55,7 @@ export const useMonthlyPlanStore = create<MonthlyPlanState>()(
         }
         return null;
       } catch (error) {
-        console.error('[useMonthlyPlanStore] 获取月度计划详情失败:', error);
+        // logger.error('[useMonthlyPlanStore] 获取月度计划详情失败:', error);
         return null;
       }
     },
@@ -72,7 +72,7 @@ export const useMonthlyPlanStore = create<MonthlyPlanState>()(
         }));
         return true;
       } catch (error) {
-        console.error('[useMonthlyPlanStore] 保存月度计划失败:', error);
+        // logger.error('[useMonthlyPlanStore] 保存月度计划失败:', error);
         return false;
       }
     },
@@ -89,7 +89,7 @@ export const useMonthlyPlanStore = create<MonthlyPlanState>()(
         }
         return success;
       } catch (error) {
-        console.error('[useMonthlyPlanStore] 删除月度计划失败:', error);
+        // logger.error('[useMonthlyPlanStore] 删除月度计划失败:', error);
         return false;
       }
     },

@@ -105,7 +105,7 @@ export function CreateBatchModal({
                       flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border-2 transition-all
                       ${isSelected
                         ? `border-emerald-500 ${option.color.bg} ${option.color.text}`
-                        : 'border-gray-200 hover:border-gray-400 bg-white text-gray-700'}
+                        : 'border-gray-300 hover:border-gray-400 bg-white text-gray-700'}
                     `}
                   >
                     <span className="font-medium">{option.label}</span>

@@ -166,7 +166,7 @@ export function EditModal({
         workHours: formData.workHours || undefined,
       });
     } catch (error) {
-      console.error('更新育苗记录失败:', error);
+      // logger.error('更新育苗记录失败:', error);
       await showAlert('更新失败，请重试');
       return;
     }

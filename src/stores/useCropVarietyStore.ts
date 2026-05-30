@@ -59,7 +59,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         const data = await apiCropVarietyService.getAllVarieties();
         set({ items: data, isLoading: false, isInitialized: true });
       } catch (error) {
-        console.error('[useCropVarietyStore] 获取品种失败:', error);
+        // logger.error('[useCropVarietyStore] 获取品种失败:', error);
         set({ error: (error as Error).message, isLoading: false, isInitialized: true });
       }
     },
@@ -70,7 +70,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         const data = await apiCropVarietyService.getAllVarieties();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[useCropVarietyStore] 刷新失败:', error);
+        // logger.error('[useCropVarietyStore] 刷新失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -111,7 +111,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
           .sort((a, b) => a.label.localeCompare(b.label));
         set({ varietyOptions, categoryOptions });
       } catch (error) {
-        console.error('[useCropVarietyStore] 加载品种选项失败:', error);
+        // logger.error('[useCropVarietyStore] 加载品种选项失败:', error);
       }
     },
 
@@ -122,7 +122,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         await get().loadVarietyOptions();
         return get().items.find(v => v.id === id) || null;
       } catch (error) {
-        console.error('[useCropVarietyStore] 新增失败:', error);
+        // logger.error('[useCropVarietyStore] 新增失败:', error);
         return null;
       }
     },
@@ -138,7 +138,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         await get().loadVarietyOptions();
         return get().items.find(v => v.id === id) || null;
       } catch (error) {
-        console.error('[useCropVarietyStore] 更新失败:', error);
+        // logger.error('[useCropVarietyStore] 更新失败:', error);
         return null;
       }
     },
@@ -150,7 +150,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
         await get().loadVarietyOptions();
         return true;
       } catch (error) {
-        console.error('[useCropVarietyStore] 删除失败:', error);
+        // logger.error('[useCropVarietyStore] 删除失败:', error);
         return false;
       }
     },

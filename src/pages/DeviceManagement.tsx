@@ -69,7 +69,7 @@ export default function DeviceManagement() {
       setEditingDevice(null);
       setNewDevice({ status: 'online' });
     } catch (err) {
-      console.error('保存设备失败:', err);
+      // logger.error('保存设备失败:', err);
       await showAlert('保存设备失败');
     }
   };
@@ -79,7 +79,7 @@ export default function DeviceManagement() {
     try {
       await removeDevice(id);
     } catch (err) {
-      console.error('删除设备失败:', err);
+      // logger.error('删除设备失败:', err);
       await showAlert('删除设备失败');
     }
   };

@@ -52,7 +52,7 @@ export const usePurchasePlanStore = create<PurchasePlanState>()(
         const data = await planService.getPurchasePlans();
         set({ plans: data || [], isLoading: false });
       } catch (error) {
-        console.error('[usePurchasePlanStore] 获取采购计划失败:', error);
+        // logger.error('[usePurchasePlanStore] 获取采购计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },

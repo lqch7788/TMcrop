@@ -103,7 +103,7 @@ export function CreatePlanModal({
           showAlert('导入失败：未找到有效的物料数据');
         }
       } catch (error) {
-        console.error('导入失败:', error);
+        // logger.error('导入失败:', error);
         showAlert('导入失败：请确保文件格式正确');
       }
     };
@@ -327,7 +327,7 @@ export function CreatePlanModal({
         </div>
 
         {/* 物料明细区域 */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
+        <div className="border-t border-gray-300 pt-4 mt-4">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-gray-800">物料明细（{createItems.length}种物料）</h4>
             <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export function CreatePlanModal({
               暂无物料，请点击"添加物料"按钮添加
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-gray-300 bg-white">
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
@@ -395,7 +395,7 @@ export function CreatePlanModal({
                           value={item.materialCode}
                           onChange={(e) => handleUpdateItem(item.id, 'materialCode', e.target.value)}
                           placeholder="编码"
-                          className="h-6 w-20 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-20 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -403,7 +403,7 @@ export function CreatePlanModal({
                           value={item.materialName}
                           onChange={(e) => handleUpdateItem(item.id, 'materialName', e.target.value)}
                           placeholder="名称"
-                          className="h-6 w-20 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-20 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -411,7 +411,7 @@ export function CreatePlanModal({
                           value={item.category}
                           onChange={(e) => handleUpdateItem(item.id, 'category', e.target.value)}
                           placeholder="分类"
-                          className="h-6 w-24 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-24 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -419,7 +419,7 @@ export function CreatePlanModal({
                           value={item.specification}
                           onChange={(e) => handleUpdateItem(item.id, 'specification', e.target.value)}
                           placeholder="规格"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-center">
@@ -427,7 +427,7 @@ export function CreatePlanModal({
                           value={item.unit}
                           onChange={(e) => handleUpdateItem(item.id, 'unit', e.target.value)}
                           placeholder="单位"
-                          className="h-6 w-12 p-1 text-xs text-center rounded border-gray-200"
+                          className="h-6 w-12 p-1 text-xs text-center rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -436,7 +436,7 @@ export function CreatePlanModal({
                           value={item.quantity || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'quantity', Number(e.target.value))}
                           placeholder="0"
-                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-200"
+                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -445,7 +445,7 @@ export function CreatePlanModal({
                           value={item.estimatedPrice || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'estimatedPrice', Number(e.target.value))}
                           placeholder="0"
-                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-200"
+                          className="h-6 w-14 p-1 text-xs text-right rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
@@ -458,7 +458,7 @@ export function CreatePlanModal({
                           value={item.supplier}
                           onChange={(e) => handleUpdateItem(item.id, 'supplier', e.target.value)}
                           placeholder="供应商"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -466,7 +466,7 @@ export function CreatePlanModal({
                           value={item.purpose}
                           onChange={(e) => handleUpdateItem(item.id, 'purpose', e.target.value)}
                           placeholder="用途"
-                          className="h-6 w-16 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-16 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
@@ -474,7 +474,7 @@ export function CreatePlanModal({
                           value={item.remark}
                           onChange={(e) => handleUpdateItem(item.id, 'remark', e.target.value)}
                           placeholder="备注"
-                          className="h-6 w-14 p-1 text-xs rounded border-gray-200"
+                          className="h-6 w-14 p-1 text-xs rounded border-gray-300"
                         />
                       </td>
                     </tr>

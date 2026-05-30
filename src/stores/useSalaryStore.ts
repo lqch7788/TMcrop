@@ -122,7 +122,7 @@ export const useSalaryStore = create<SalaryState>()(
           }
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[SalaryStore] 获取工资数据失败:', error);
+          // logger.warn('[SalaryStore] 获取工资数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

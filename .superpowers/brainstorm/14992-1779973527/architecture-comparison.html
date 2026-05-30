@@ -1,0 +1,140 @@
+<h2>架构对比图</h2>
+<p class="subtitle">现有 Web 系统 vs Taro 小程序架构对比</p>
+
+<div class="split">
+  <div>
+    <div class="label" style="margin-bottom: 12px;">现有 Web 系统架构</div>
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; min-height: 300px;">
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="background: #e6f7ff; border: 1px solid #1890ff; border-radius: 6px; padding: 8px; display: inline-block;">
+          <strong>微信小程序</strong><br/>
+          <span style="font-size: 11px; color: #666;">(无需改动)</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 12px;">
+        <div style="background: #fff; border: 2px solid #1890ff; border-radius: 8px; padding: 12px; max-width: 180px; margin: 0 auto;">
+          <strong>微信小程序</strong><br/>
+          <span style="font-size: 11px;">React 18 + Vite</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 12px; font-size: 20px;">↓ HTTPS</div>
+
+      <div style="text-align: center; margin-bottom: 12px;">
+        <div style="background: #f6ffed; border: 2px solid #52c41a; border-radius: 8px; padding: 12px; max-width: 200px; margin: 0 auto;">
+          <strong>现有后端 API</strong><br/>
+          <span style="font-size: 11px;">Express + SQLite</span><br/>
+          <span style="font-size: 10px; color: #1890ff;">localhost:3001</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 20px; margin-bottom: 12px;">↓</div>
+
+      <div style="text-align: center;">
+        <div style="background: #fff; border: 1px solid #d9d9d9; border-radius: 8px; padding: 12px; max-width: 180px; margin: 0 auto;">
+          <strong>SQLite 数据库</strong><br/>
+          <span style="font-size: 11px;">yuanxingtu.db</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 10px; background: #fffbea; border-radius: 6px; font-size: 12px; text-align: left;">
+        <strong>改动点：</strong>
+        <ul style="margin: 8px 0 0 16px; padding-left: 0;">
+          <li>API 需支持 HTTPS（生产环境）</li>
+          <li>部分 API 需 CORS 配置</li>
+          <li>认证 Token 需适配</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="label" style="margin-bottom: 12px;">迁移后架构（Taro 小程序）</div>
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; min-height: 300px;">
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="background: #e6f7ff; border: 2px solid #1890ff; border-radius: 6px; padding: 10px; display: inline-block;">
+          <strong>微信小程序</strong><br/>
+          <span style="font-size: 11px;">Taro 4.x + React</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+        <div style="background: #fff; border: 1px solid #07c160; border-radius: 6px; padding: 6px 10px; font-size: 11px;">
+          主包<br/><span style="color: #07c160;">~500KB</span>
+        </div>
+        <div style="background: #fff; border: 1px solid #1890ff; border-radius: 6px; padding: 6px 10px; font-size: 11px;">
+          分包A<br/><span style="color: #1890ff;">~350KB</span>
+        </div>
+        <div style="background: #fff; border: 1px solid #1890ff; border-radius: 6px; padding: 6px 10px; font-size: 11px;">
+          分包B<br/><span style="color: #1890ff;">~300KB</span>
+        </div>
+        <div style="background: #fff; border: 1px solid #1890ff; border-radius: 6px; padding: 6px 10px; font-size: 11px;">
+          分包C<br/><span style="color: #1890ff;">~280KB</span>
+        </div>
+        <div style="background: #fff; border: 1px solid #1890ff; border-radius: 6px; padding: 6px 10px; font-size: 11px;">
+          分包D<br/><span style="color: #1890ff;">~250KB</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 12px; font-size: 20px;">↓ HTTPS</div>
+
+      <div style="text-align: center; margin-bottom: 12px;">
+        <div style="background: #f6ffed; border: 2px solid #52c41a; border-radius: 8px; padding: 12px; max-width: 200px; margin: 0 auto;">
+          <strong>现有后端 API</strong><br/>
+          <span style="font-size: 11px;">Express + SQLite</span><br/>
+          <span style="font-size: 10px; color: #1890ff;">复用餐服务层</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 20px; margin-bottom: 12px;">↓</div>
+
+      <div style="text-align: center;">
+        <div style="background: #fff; border: 1px solid #d9d9d9; border-radius: 8px; padding: 12px; max-width: 180px; margin: 0 auto;">
+          <strong>SQLite 数据库</strong><br/>
+          <span style="font-size: 11px;">yuanxingtu.db</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 10px; background: #f6ffed; border-radius: 6px; font-size: 12px; text-align: left;">
+        <strong style="color: #52c41a;">复用内容：</strong>
+        <ul style="margin: 8px 0 0 16px; padding-left: 0;">
+          <li>后端 API（Express）✓</li>
+          <li>数据库 SQLite ✓</li>
+          <li>Service 服务层 ✓</li>
+          <li>Zustand Store（需适配）⚠</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 20px;">
+  <h3>关键适配点</h3>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px;">
+      <div style="font-weight: bold; color: #fa8c16; margin-bottom: 6px;">UI 层</div>
+      <div style="font-size: 12px; color: #666;">
+        Radix UI → NutUI<br/>
+        Tailwind → Taro CSS<br/>
+        部分组件需重写
+      </div>
+    </div>
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px;">
+      <div style="font-weight: bold; color: #1890ff; margin-bottom: 6px;">状态管理</div>
+      <div style="font-size: 12px; color: #666;">
+        Zustand 保留<br/>
+        需适配 Taro 生命周期<br/>
+        API 层复用
+      </div>
+    </div>
+    <div style="background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px;">
+      <div style="font-weight: bold; color: #52c41a; margin-bottom: 6px;">路由/导航</div>
+      <div style="font-size: 12px; color: #666;">
+        React Router → Taro Router<br/>
+        TabBar 独立配置<br/>
+        页面栈管理调整
+      </div>
+    </div>
+  </div>
+</div>

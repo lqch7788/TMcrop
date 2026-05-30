@@ -83,7 +83,7 @@ export default function RoleManagement() {
       setShowModal(false);
       setEditingRole(null);
     } catch (err) {
-      console.error('保存失败:', err);
+      // logger.error('保存失败:', err);
     }
   };
 
@@ -93,7 +93,7 @@ export default function RoleManagement() {
     try {
       await deleteRole(oid);
     } catch (err) {
-      console.error('删除失败:', err);
+      // logger.error('删除失败:', err);
     }
   };
 

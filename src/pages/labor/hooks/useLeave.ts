@@ -341,7 +341,7 @@ export function useLeave(
       fetchItems();
       await showAlert('提交成功！');
     } catch (error) {
-      console.error('提交请假申请失败:', error);
+      // logger.error('提交请假申请失败:', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, createItem, fetchItems]);
@@ -352,7 +352,7 @@ export function useLeave(
       await approveLeave(record.id, record.approver);
       fetchItems();
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       await showAlert('审批失败，请重试');
     }
   }, [approveLeave, fetchItems]);
@@ -363,7 +363,7 @@ export function useLeave(
       await rejectLeave(record.id, '审批驳回');
       fetchItems();
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      // logger.error('审批驳回失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [rejectLeave, fetchItems]);
@@ -388,7 +388,7 @@ export function useLeave(
       fetchItems();
       await showAlert('请假申请已撤回');
     } catch (error) {
-      console.error('撤回申请失败:', error);
+      // logger.error('撤回申请失败:', error);
       await showAlert('撤回失败，请重试');
       setIsWithdrawModalOpen(false);
       setWithdrawRecord(null);

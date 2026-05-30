@@ -41,7 +41,7 @@ export const useTechSolutionStore = create<TechSolutionState>()(
         const data = await techService.getTechSolutions();
         set({ solutions: data || [], isLoading: false });
       } catch (error) {
-        console.error('[useTechSolutionStore] 获取技术方案失败:', error);
+        // logger.error('[useTechSolutionStore] 获取技术方案失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },

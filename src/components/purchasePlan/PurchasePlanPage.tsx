@@ -271,7 +271,7 @@ export function PurchasePlanPage() {
       if (result && result.id) {
         const approvalAmount = totalAmount;
 
-        console.log('【创建采购计划】提交审批，金额:', approvalAmount);
+        // logger.info('【创建采购计划】提交审批，金额:', approvalAmount);
 
         const approvalResult = await submitPurchaseApproval({
           purchaseId: result.id,
@@ -283,16 +283,16 @@ export function PurchasePlanPage() {
           department: result.applicantDepartment,
         });
 
-        console.log('【创建采购计划】审批提交结果:', approvalResult);
+        // logger.info('【创建采购计划】审批提交结果:', approvalResult);
 
         if (!approvalResult.success) {
           // 审批提交失败，回滚：删除已创建的采购计划
-          console.log('【创建采购计划】审批提交失败，执行回滚删除计划:', result.id);
+          // logger.info('【创建采购计划】审批提交失败，执行回滚删除计划:', result.id);
           try {
             await deletePlan(result.id);
-            console.log('【创建采购计划】回滚删除成功');
+            // logger.info('【创建采购计划】回滚删除成功');
           } catch (deleteError) {
-            console.error('【创建采购计划】回滚删除失败:', deleteError);
+            // logger.error('【创建采购计划】回滚删除失败:', deleteError);
           }
           await showAlert('审批提交失败: ' + approvalResult.message + '（采购计划已自动删除）');
           return;
@@ -305,7 +305,7 @@ export function PurchasePlanPage() {
         }
       }
     } catch (error) {
-      console.error('创建采购计划失败:', error);
+      // logger.error('创建采购计划失败:', error);
       await showAlert('创建采购计划失败，请重试');
     } finally {
       setShowCreateModal(false);
@@ -440,7 +440,7 @@ export function PurchasePlanPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // logger.error('Export failed:', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -502,7 +502,7 @@ export function PurchasePlanPage() {
       setSelectedRows([]);
       await showAlert(`已删除 ${selectedIds.length} 个采购计划`);
     } catch (error) {
-      console.error('删除采购计划失败:', error);
+      // logger.error('删除采购计划失败:', error);
       await showAlert('删除失败，请重试');
     }
   };
@@ -538,7 +538,7 @@ export function PurchasePlanPage() {
 
   // 单条删除处理
   const handleSingleDelete = async (plan: PurchasePlan) => {
-    console.log('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
+    // logger.info('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
     // 草稿、待审批或审批被拒绝的计划可以删除
     if (plan.status !== 'draft' && plan.status !== 'pending' && plan.approvalStatus !== 'rejected') {
       await showAlert('只有草稿、待审批和审批被拒绝的采购计划才能删除');
@@ -548,7 +548,7 @@ export function PurchasePlanPage() {
       await deletePlan(plan.id);
       await showAlert('删除成功');
     } catch (error) {
-      console.error('删除采购计划失败:', error);
+      // logger.error('删除采购计划失败:', error);
       await showAlert('删除失败: ' + (error as Error).message);
     }
   };
@@ -614,19 +614,8 @@ export function PurchasePlanPage() {
       const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
       const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
 
-      console.log('[保存采购计划] currentEditingPlan:', currentEditingPlan);
-      console.log('[保存采购计划] batchEditItems:', batchEditItems);
-      console.log('[保存采购计划] 发送数据:', {
-        relatedBatchCode: currentEditingPlan.relatedBatchCode,
-        purchaseType: batchEditData.purchaseType,
-        priority: batchEditData.priority,
-        requiredDate: batchEditData.requiredDate,
-        remark: batchEditData.remark,
-        applicantId: currentEditingPlan.applicantId,
-        applicantName: applicantName,
-        applicantDepartment: currentEditingPlan.applicantDepartment,
-        items: batchEditItems,
-      });
+      // logger.info('[保存采购计划] currentEditingPlan:', currentEditingPlan);
+      // logger.info('[保存采购计划] batchEditItems:', batchEditItems);
 
       await updatePlan(currentEditingPlan.id, {
         relatedBatchCode: currentEditingPlan.relatedBatchCode,
@@ -668,7 +657,7 @@ export function PurchasePlanPage() {
           });
           savedCount++;
         } catch (editError) {
-          console.error(`[保存采购计划] 保存 ${planCode} 失败:`, editError);
+          // logger.error(`[保存采购计划] 保存 ${planCode} 失败:`, editError);
           errors.push(`${planCode}: ${editError instanceof Error ? editError.message : '未知错误'}`);
         }
       }
@@ -685,7 +674,7 @@ export function PurchasePlanPage() {
       setEditedPlans({});
       setBatchEditItems([]);
     } catch (error) {
-      console.error('保存失败:', error);
+      // logger.error('保存失败:', error);
       await showAlert(`保存失败: ${error instanceof Error ? error.message : '请重试'}`);
     }
   };

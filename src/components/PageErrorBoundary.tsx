@@ -37,7 +37,7 @@ export class PageErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error(`[PageErrorBoundary:${props.pageName}] Caught error:`, error, errorInfo);
+    // logger.error(`[PageErrorBoundary:${props.pageName}] Caught error:`, error, errorInfo);
     this.props.onError?.(error, errorInfo);
   }
 

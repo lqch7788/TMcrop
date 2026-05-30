@@ -44,7 +44,7 @@ export function SupplierSelect({
           : data;
         setSuppliers(filtered);
       } catch (error) {
-        console.error('Failed to fetch suppliers:', error);
+        // logger.error('Failed to fetch suppliers:', error);
         setSuppliers([]);
       } finally {
         setLoading(false);

@@ -211,7 +211,7 @@ export function PersonnelManagementPage() {
         });
       }
     } catch (error) {
-      console.error('保存职位失败:', error);
+      // logger.error('保存职位失败:', error);
       await showAlert('保存失败，请重试');
     }
     setShowFormModal(false);
@@ -248,7 +248,7 @@ export function PersonnelManagementPage() {
         }
       }
     } catch (error) {
-      console.error('批量更新职位失败:', error);
+      // logger.error('批量更新职位失败:', error);
       await showAlert('批量更新失败，请重试');
     }
     setShowBatchEditModal(false);
@@ -274,7 +274,7 @@ export function PersonnelManagementPage() {
         await removePosition(id);
       }
     } catch (error) {
-      console.error('批量删除职位失败:', error);
+      // logger.error('批量删除职位失败:', error);
       await showAlert('批量删除失败，请重试');
     }
     setShowDeleteWarning(false);
@@ -351,7 +351,7 @@ export function PersonnelManagementPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // logger.error('Export failed:', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

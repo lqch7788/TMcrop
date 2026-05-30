@@ -197,7 +197,7 @@ export function EditModal({
         status
       });
     } catch (error) {
-      console.error('更新种源失败:', error);
+      // logger.error('更新种源失败:', error);
       await showAlert('更新失败，请重试');
       return;
     }

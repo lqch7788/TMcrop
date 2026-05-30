@@ -110,7 +110,7 @@ export const useIotStore = create<IotState>()(
           const normalized = (Array.isArray(data) ? data : []).map(normalize);
           set({ devices: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[IotStore] 获取设备列表失败:', error);
+          // logger.warn('[IotStore] 获取设备列表失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -120,7 +120,7 @@ export const useIotStore = create<IotState>()(
           const data = await enhancedApiClient.get<Record<string, unknown>>(`/iot/devices/${deviceId}/latest`);
           return data ? normalize(data) : null;
         } catch (error) {
-          console.warn('[IotStore] 获取设备最新数据失败:', error);
+          // logger.warn('[IotStore] 获取设备最新数据失败:', error);
           return null;
         }
       },
@@ -140,7 +140,7 @@ export const useIotStore = create<IotState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          console.warn('[IotStore] 获取环境数据失败:', error);
+          // logger.warn('[IotStore] 获取环境数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

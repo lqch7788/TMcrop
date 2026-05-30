@@ -107,7 +107,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-        }).catch(err => console.error('[confirmDispatch] farm accept failed:', err));
+        }).catch(() => { /* farm accept failed */ });
 
         // 同时更新执行人信息
         updateTask(sourceId, {
@@ -124,7 +124,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-        }).catch(err => console.error('[confirmDispatch] tempTask accept failed:', err));
+        }).catch(() => { /* tempTask accept failed */ });
 
         // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
         updateTempTask(sourceId, {
@@ -143,7 +143,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
               operator_name: workerName,
               comment: '开始执行任务',
             }),
-          }).catch(err => console.error('[confirmDispatch] tempTask submit-progress failed:', err));
+          }).catch(() => { /* submit-progress failed */ });
         }, 100);
 
         success = true;
@@ -253,7 +253,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_name: newWorkerName,
             reason: `更换执行人为 ${newWorkerName}`,
           }),
-        }).catch(err => console.error('[replaceWorker] farm reassign failed:', err));
+        }).catch(() => { /* farm reassign failed */ });
 
         // 同步更新本地状态
         updateTask(sourceId, {
@@ -322,7 +322,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_id: '',
             operator_name: '',
           }),
-        }).catch(err => console.error('[delayTask] farm extend-deadline failed:', err));
+        }).catch(() => { /* extend-deadline failed */ });
 
         // 同步更新本地状态
         updateTask(sourceId, {
@@ -380,7 +380,7 @@ export function useDispatchActions(): UseDispatchActionsReturn {
             operator_name: suggestion.suggestedWorkerName,
             reason: '接受AI优化建议',
           }),
-        }).catch(err => console.error('[acceptOptimization] farm reassign failed:', err));
+        }).catch(() => { /* farm reassign failed */ });
 
         // 同步更新本地状态
         updateTask(sourceId, {

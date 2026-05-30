@@ -73,7 +73,7 @@ export function SearchableSelect({
       const results = await onSearch(keyword);
       setRemoteOptions(results);
     } catch (error) {
-      console.error('搜索失败:', error);
+      // logger.error('搜索失败:', error);
       setRemoteOptions([]);
     } finally {
       setLoading(false);

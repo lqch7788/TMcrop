@@ -242,7 +242,7 @@ export function useAttendanceRepairPage() {
       setIsFormModalOpen(false);
       await showAlert('提交成功！');
     } catch (error) {
-      console.error('提交考勤补录失败:', error);
+      // logger.error('提交考勤补录失败:', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, storeCreateItem]);
@@ -252,7 +252,7 @@ export function useAttendanceRepairPage() {
     try {
       await storeUpdateItem(record.id, { status: 'approved' });
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       await showAlert('审批失败，请重试');
     }
   }, [storeUpdateItem]);
@@ -262,7 +262,7 @@ export function useAttendanceRepairPage() {
     try {
       await storeUpdateItem(record.id, { status: 'rejected' });
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      // logger.error('审批驳回失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [storeUpdateItem]);

@@ -65,7 +65,7 @@ function syncToApi(apiCall: () => Promise<unknown>, label: string): void {
     try {
       await apiCall();
     } catch (error) {
-      console.warn(`[useTasks] ${label} API同步失败:`, error);
+      // logger.warn(`[useTasks] ${label} API同步失败:`, error);
     }
   });
 }
@@ -244,7 +244,7 @@ function convertStoreTempTaskToTask(t: TempTaskData): Task {
     remarks: t.remarks || t.description || '',
     requiredFeedback: (() => {
       const raw = t.requiredFeedback ?? (t as Record<string, unknown>).required_feedback;
-      console.warn('[useTasks] convertStoreTempTaskToTask requiredFeedback:', { id, title, raw, rawType: typeof raw, isArr: Array.isArray(raw), rawKeys: typeof raw === 'object' && raw !== null ? Object.keys(raw as object) : 'N/A' });
+      // logger.warn('[useTasks] convertStoreTempTaskToTask requiredFeedback:', { id, title, raw, rawType: typeof raw, isArr: Array.isArray(raw), rawKeys: typeof raw === 'object' && raw !== null ? Object.keys(raw as object) : 'N/A' });
       if (Array.isArray(raw)) return raw as string[];
       if (typeof raw === 'string') { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
       return [];
@@ -540,17 +540,17 @@ export function useTasks(): UseTasksReturn {
     const convertedTempTasks = tempTasks.map(convertStoreTempTaskToTask);
     const convertedInspectionTasks = inspectionRecords.map(convertStoreInspectionToTask);
     const all = [...farmTasks, ...convertedTempTasks, ...convertedInspectionTasks];
-    console.warn('[useTasks] useMemo 合并任务: 农事=', farmTasks.length, '临时=', convertedTempTasks.length, '巡查=', convertedInspectionTasks.length, '总计=', all.length);
+    // logger.warn('[useTasks] useMemo 合并任务: 农事=', farmTasks.length, '临时=', convertedTempTasks.length, '巡查=', convertedInspectionTasks.length, '总计=', all.length);
     // 打印临时任务的 requiredFeedback 字段
     if (convertedTempTasks.length > 0) {
-      console.warn('[useTasks] 临时任务 requiredFeedback 示例:', convertedTempTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, rf: (t as Record<string, unknown>).requiredFeedback, rfLen: Array.isArray((t as Record<string, unknown>).requiredFeedback) ? (t as Record<string, unknown>).requiredFeedback?.length : 'NOT_ARRAY', status: t.status })));
+      // logger.warn('[useTasks] 临时任务 requiredFeedback 示例:', convertedTempTasks.slice(0, 3).map(t => ({ id: t.id, title: t.title, rf: (t as Record<string, unknown>).requiredFeedback, rfLen: Array.isArray((t as Record<string, unknown>).requiredFeedback) ? (t as Record<string, unknown>).requiredFeedback?.length : 'NOT_ARRAY', status: t.status })));
     }
     return Array.isArray(all) ? all : [];
   }, [storeTasks, tempTasks, inspectionRecords]);
 
   // 初始化：触发所有 Store 从 API 拉取数据
   useEffect(() => {
-    console.warn('[useTasks] 初始化 fetchTasks 调用');
+    // logger.warn('[useTasks] 初始化 fetchTasks 调用');
     useFarmTaskStore.getState().fetchTasks();
     useTempTaskStore.getState().fetchTasks();
   }, []);
@@ -586,7 +586,7 @@ export function useTasks(): UseTasksReturn {
         description: `${latest.operatorName} ${TASK_ACTION_CONFIG[latest.action]?.label || latest.action} 任务【${latest.taskTitle}】`,
         status: 'success',
       }).catch((e) => {
-        console.warn('[useTasks] 操作日志API写入失败:', e);
+        // logger.warn('[useTasks] 操作日志API写入失败:', e);
       });
     }
   }, []);
@@ -696,15 +696,15 @@ export function useTasks(): UseTasksReturn {
     // 注意：addTask 内部先做乐观本地更新（同步），再做 API 调用（异步）
     // 因此调用后 store 状态已立即更新，可以从 getState().tasks[0] 读取新任务
     useFarmTaskStore.getState().addTask(apiTaskData).then(s => {
-      if (s) console.log('[createTask] 后端API创建任务成功:', s.id);
-    }).catch(error => {
-      console.error('[createTask] 后端API创建任务失败:', error);
+      // 后端API创建任务成功
+    }).catch(() => {
+      // 后端API创建任务失败
     });
 
     // 读取乐观更新的任务（addTask 将新任务 prepend 到数组头部）
     const storeTask = useFarmTaskStore.getState().tasks[0];
     const result = storeTask ? convertStoreFarmTaskToTask(storeTask) : null;
-    console.log('[createTask] 返回任务:', result?.id || 'null');
+    // logger.info('[createTask] 返回任务:', result?.id || 'null');
     return result || ({
       id: '',
       taskCode: '',
@@ -869,7 +869,7 @@ export function useTasks(): UseTasksReturn {
         batchId: (task as { batchId?: string }).batchId,
       });
     } catch (error) {
-      console.error('创建考勤记录失败:', error);
+      // logger.error('创建考勤记录失败:', error);
     }
 
     // 本地状态更新（乐观更新）
@@ -1197,9 +1197,9 @@ export function useTasks(): UseTasksReturn {
             status: SeedlingStatus.COMPLETED,
             isFinished: true
           });
-          console.log('[acceptCompletion] 育苗状态已更新为已完成:', task.sourceId);
+          // logger.info('[acceptCompletion] 育苗状态已更新为已完成:', task.sourceId);
         } catch (error) {
-          console.error('[acceptCompletion] 更新育苗状态失败:', error);
+          // logger.error('[acceptCompletion] 更新育苗状态失败:', error);
         }
       });
     }
@@ -1300,7 +1300,7 @@ export function useTasks(): UseTasksReturn {
   const rejectByExecutor = useCallback((id: string, rejectReason: string, executorId: string, executorName: string) => {
     const task = tasks.find(t => t.id === id || t.taskCode === id);
     if (!task) {
-      console.warn('[useTasks] rejectByExecutor: 任务不存在 id=', id);
+      // logger.warn('[useTasks] rejectByExecutor: 任务不存在 id=', id);
       return;
     }
 
@@ -1342,7 +1342,7 @@ export function useTasks(): UseTasksReturn {
 
   // 重新派发
   const reassignTask = useCallback((id: string, newAssigneeId: string, newAssigneeName: string) => {
-    console.log('[reassignTask] called with:', id, newAssigneeId, newAssigneeName);
+    // logger.info('[reassignTask] called with:', id, newAssigneeId, newAssigneeName);
     const task = tasks.find(t => t.id === id);
     if (!task || !['failed', 'abandoned', 'rejected'].includes(task.status)) return;
 
@@ -1404,7 +1404,7 @@ export function useTasks(): UseTasksReturn {
     );
 
     if (todayReminders.length >= REMINDER_CONFIG.maxRemindersPerDay) {
-      console.warn('今日催办次数已达上限');
+      // logger.warn('今日催办次数已达上限');
       return;
     }
 
@@ -1413,7 +1413,7 @@ export function useTasks(): UseTasksReturn {
       const lastTime = new Date(lastReminder.remindedAt).getTime();
       const interval = now.getTime() - lastTime;
       if (interval < REMINDER_CONFIG.minIntervalMinutes * 60 * 1000) {
-        console.warn('催办间隔需大于1小时');
+        // logger.warn('催办间隔需大于1小时');
         return;
       }
     }
@@ -1452,7 +1452,7 @@ export function useTasks(): UseTasksReturn {
 
     // 检查延期次数限制
     if (task.deadlineExtensions.length >= DEADLINE_CONFIG.maxExtensions) {
-      console.warn('延期次数已达上限');
+      // logger.warn('延期次数已达上限');
       return;
     }
 

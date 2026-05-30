@@ -109,4 +109,4 @@ export const CostComparisonCharts: React.FC<CostComparisonChartsProps> = ({
 };
 
 export default CostComparisonCharts;
-console.log('组件创建成功: CostComparisonCharts');
+// logger.info('组件创建成功: CostComparisonCharts');

@@ -370,7 +370,7 @@ export default function DataMigrationPage() {
           skippedCount: 0,
         });
       } catch (error) {
-        console.error(`扫描 ${key} 失败:`, error);
+        // logger.error(`扫描 ${key} 失败:`, error);
         items.push({
           key,
           name: config.name,
@@ -403,7 +403,7 @@ export default function DataMigrationPage() {
         );
       }
     } catch (error) {
-      console.error('获取数据库统计失败:', error);
+      // logger.error('获取数据库统计失败:', error);
     }
   };
 
@@ -607,7 +607,7 @@ export default function DataMigrationPage() {
         conflicts: conflicts.slice(0, 20), // 最多显示 20 条冲突
       };
     } catch (error: any) {
-      console.error('检测数据冲突失败:', error);
+      // logger.error('检测数据冲突失败:', error);
       return { totalConflicts: 0, conflicts: [] };
     }
   };

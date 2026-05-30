@@ -337,4 +337,4 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
 };
 
 export default CostComparisonTable;
-console.log('组件创建成功: CostComparisonTable');
+// logger.info('组件创建成功: CostComparisonTable');

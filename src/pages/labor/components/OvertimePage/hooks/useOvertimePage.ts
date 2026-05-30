@@ -270,7 +270,7 @@ export function useOvertimePage() {
       setIsFormModalOpen(false);
       await showAlert('提交成功！');
     } catch (error) {
-      console.error('提交加班申请失败:', error);
+      // logger.error('提交加班申请失败:', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, store]);
@@ -280,7 +280,7 @@ export function useOvertimePage() {
     try {
       await store.approveOvertime(record.id);
     } catch (error) {
-      console.error('审批通过失败:', error);
+      // logger.error('审批通过失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [store]);
@@ -290,7 +290,7 @@ export function useOvertimePage() {
     try {
       await store.rejectOvertime(record.id, '不符合条件');
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      // logger.error('审批驳回失败:', error);
       await showAlert('操作失败，请重试');
     }
   }, [store]);
@@ -321,7 +321,7 @@ export function useOvertimePage() {
       await store.deleteItem(record.id);
       await showAlert('删除成功！');
     } catch (error) {
-      console.error('删除失败:', error);
+      // logger.error('删除失败:', error);
       await showAlert('删除失败，请重试');
     }
   }, [store]);
@@ -334,7 +334,7 @@ export function useOvertimePage() {
       setBatchMode('none');
       await showAlert('批量删除成功！');
     } catch (error) {
-      console.error('批量删除失败:', error);
+      // logger.error('批量删除失败:', error);
       await showAlert('批量删除失败，请重试');
     }
   }, [selectedRowKeys, store]);

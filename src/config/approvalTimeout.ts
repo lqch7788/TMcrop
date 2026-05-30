@@ -113,7 +113,7 @@ function loadTimeoutConfigFromStore(): LoadedTimeoutConfig {
       ultimateAction: (getSystemConfigValue('approval.timeout.ultimate-action', 'auto_approve') as 'auto_approve' | 'auto_reject') || 'auto_approve',
     };
   } catch (error) {
-    console.error('【超时配置】读取Store失败，使用默认配置', error);
+    // logger.error('【超时配置】读取Store失败，使用默认配置', error);
     return getDefaultTimeoutConfig();
   }
 }
@@ -269,7 +269,7 @@ function loadDelegationRulesFromStore(): DelegationRule[] {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (error) {
-    console.warn('【委托规则】解析Store配置失败，使用默认规则', error);
+    // logger.warn('【委托规则】解析Store配置失败，使用默认规则', error);
   }
   return DELEGATION_RULE_DEFAULTS;
 }

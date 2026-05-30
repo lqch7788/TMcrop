@@ -151,7 +151,7 @@ export const useResignationStore = create<ResignationState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[ResignationStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[ResignationStore] API 获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -171,7 +171,7 @@ export const useResignationStore = create<ResignationState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[ResignationStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 创建失败，已加入离线队列:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -190,7 +190,7 @@ export const useResignationStore = create<ResignationState>()(
         try {
           await enhancedApiClient.put(`/resignation/${id}`, body);
         } catch (error) {
-          console.warn('[ResignationStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 更新失败，已加入离线队列:', error);
         }
       },
 
@@ -204,7 +204,7 @@ export const useResignationStore = create<ResignationState>()(
           await enhancedApiClient.delete(`/resignation/${id}`);
           return true;
         } catch (error) {
-          console.warn('[ResignationStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 删除失败，已加入离线队列:', error);
           return false;
         }
       },

@@ -306,7 +306,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         return dispatchMode === 'farm' && taskCode.startsWith('NS');
       })
       .sort(sortByCreatedAt);
-    console.log('[useFarmHub] tasks from useTasks (三级降级), count:', farmTasks.length);
+    // tasks from useTasks (三级降级)
     return farmTasks;
   }, [useTasksData, refreshKey]);
 
@@ -364,13 +364,13 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
 
     // 从 Zustand Store 加载数据（Store 内部处理 API → IndexedDB → localStorage 降级）
     try {
-      console.log('[useFarmHub] loadData 开始 - 步骤1: 调用 fetchRecords');
+      // loadData 开始
       // 等待 fetchRecords 完成（确保 Store 有最新数据）
       await useInspectionDataStore.getState().fetchRecords();
-      console.log('[useFarmHub] loadData - fetchRecords 完成，当前 Store 有', useInspectionDataStore.getState().records.length, '条记录');
+      // fetchRecords 完成
 
       await useProblemStore.getState().fetchProblems();
-      console.log('[useFarmHub] loadData - fetchProblems 完成');
+      // fetchProblems 完成
 
       // 问题数据：从 useProblemStore 获取
       const storeProblems = useProblemStore.getState().problems;
@@ -378,20 +378,20 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
 
       // 巡查数据：从 useInspectionDataStore 获取（直接替换，不合并）
       const storeInspections = useInspectionDataStore.getState().records;
-      console.log('[useFarmHub] loadData - 从 Store 获取巡查记录:', storeInspections.length, '条');
+      // 从 Store 获取巡查记录
       const normalizedInspections = storeInspections.map((r: Record<string, unknown>) => normalizeInspectionRecord(r as InspectionRecord));
       setInspections(normalizedInspections);
-      console.log('[useFarmHub] loadData - 设置 inspections:', normalizedInspections.length, '条');
+      // 设置 inspections
 
       // 操作记录（工作日志）从 useWorkLogStore 获取（API模式，不再从localStorage读取）
       await useWorkLogStore.getState().fetchWorkLogs();
       const storeWorkLogs = useWorkLogStore.getState().workLogs;
       setOperationRecords(storeWorkLogs || []);
     } catch (error) {
-      console.error('[useFarmHub] loadData 失败:', error);
+      // loadData 失败
     } finally {
       setIsLoading(false);
-      console.log('[useFarmHub] loadData 完成');
+      // loadData 完成
 
       // 从后端 API 拉取今日任务操作记录（替换 localStorage）
       getTodayTaskRecords().then(taskRecords => {

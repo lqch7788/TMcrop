@@ -115,7 +115,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           const normalized = rawData.map((item: Record<string, unknown>) => normalizeItem(item));
           set({ templates: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[AnnouncementTemplateStore] API获取失败，使用本地数据:', error);
+          // logger.warn('[AnnouncementTemplateStore] API获取失败，使用本地数据:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -168,7 +168,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
         } catch (error) {
           // API失败：移除乐观更新项，抛出错误让调用方处理
           const errMsg = (error as Error)?.message || '创建模板失败';
-          console.warn('[AnnouncementTemplateStore] 创建模板API失败:', errMsg);
+          // logger.warn('[AnnouncementTemplateStore] 创建模板API失败:', errMsg);
           set((state) => ({
             templates: state.templates.filter((t) => t.id !== localId),
             error: errMsg,
@@ -198,7 +198,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
         } catch (error) {
           // API失败：回滚乐观更新
           const errMsg = (error as Error)?.message || '更新模板失败';
-          console.warn('[AnnouncementTemplateStore] 更新模板API失败:', errMsg);
+          // logger.warn('[AnnouncementTemplateStore] 更新模板API失败:', errMsg);
           if (prev) {
             set((state) => ({
               templates: state.templates.map((t) => (t.id === id ? prev : t)),
@@ -216,7 +216,7 @@ export const useAnnouncementTemplateStore = create<AnnouncementTemplateState>()(
           await enhancedApiClient.delete(`/announcements/templates/${id}`);
           return true;
         } catch (error) {
-          console.warn('[AnnouncementTemplateStore] 删除模板API失败:', error);
+          // logger.warn('[AnnouncementTemplateStore] 删除模板API失败:', error);
           return false;
         }
       },

@@ -95,7 +95,7 @@ export function useProductionReports() {
         setCostStatsSummary(costData.summary);
       }
     } catch (err) {
-      console.error('加载生产报表数据失败:', err);
+      // 加载生产报表数据失败
       setError('加载数据失败');
       // 回退到本地数据
       fallbackToLocalData();

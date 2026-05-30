@@ -75,7 +75,7 @@ export async function getMaterialRequests(params?: {
         return { data: cached, total: cached.length };
       }
       // 无缓存数据时返回空
-      console.log('[物料申请] 缓存为空，返回空列表');
+      // logger.info('[物料申请] 缓存为空，返回空列表');
       return { data: [], total: 0 };
     }
   });
@@ -90,7 +90,7 @@ export async function getMaterialRequestById(id: string): Promise<MaterialReques
   try {
     return await apiClient.get<MaterialRequestRecord>(`/material-requests/${id}`);
   } catch (error) {
-    console.warn('[物料申请] API获取失败，尝试从缓存读取:', error);
+    // logger.warn('[物料申请] API获取失败，尝试从缓存读取:', error);
     // 从缓存中查找
     const cached = await unifiedCache.get<MaterialRequestRecord[]>(CACHE_KEY);
     if (cached) {

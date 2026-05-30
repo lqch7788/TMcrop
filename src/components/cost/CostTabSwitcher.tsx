@@ -49,4 +49,4 @@ export const CostTabSwitcher: React.FC<CostTabSwitcherProps> = ({ activeTab, onT
 };
 
 export default CostTabSwitcher;
-console.log('组件创建成功: CostTabSwitcher');
+// logger.info('组件创建成功: CostTabSwitcher');

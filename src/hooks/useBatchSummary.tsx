@@ -72,7 +72,7 @@ export function useBatchSummary(filters?: BatchFilters) {
       });
       setBatchStats(data);
     } catch (err) {
-      console.error('加载批次汇总数据失败:', err);
+      // logger.error('加载批次汇总数据失败:', err);
       setError('加载数据失败');
       // 回退到 mockData（使用已订阅的响应式数据）
       setBatchStats(buildMockData(plans, tasks));

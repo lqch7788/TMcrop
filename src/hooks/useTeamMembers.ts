@@ -10,7 +10,7 @@ function getCurrentUser(): { id?: string; name?: string } {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : {};
   } catch {
-    console.warn('解析用户信息失败');
+    // logger.warn('解析用户信息失败');
     return {};
   }
 }
@@ -70,7 +70,7 @@ export function useTeamMembers(teamId: string | null): UseTeamMembersResult {
       }
     } catch (err) {
       setError('网络错误');
-      console.error('获取班组成员失败:', err);
+      // logger.error('获取班组成员失败:', err);
     } finally {
       setLoading(false);
     }

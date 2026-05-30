@@ -484,7 +484,7 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
 
   const submitVoidApply = useCallback(async () => {
     if (!voidReason.trim()) {
-      console.warn('作废申请需要填写作废原因');
+      // 作废申请需要填写作废原因
       return;
     }
     if (!selectedRecord) return;
@@ -532,11 +532,11 @@ export function useMaterialReceiving(): UseMaterialReceivingReturn {
 
   const handleSaveAdd = useCallback(async () => {
     if (!addForm.applicant) {
-      console.warn('新增领料单需要选择申请人');
+      // 新增领料单需要选择申请人
       return;
     }
     if (addForm.materials.length === 0) {
-      console.warn('新增领料单需要添加至少一个物料');
+      // 新增领料单需要添加至少一个物料
       return;
     }
 

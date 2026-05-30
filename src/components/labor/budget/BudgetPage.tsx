@@ -177,13 +177,13 @@ export const BudgetPage: React.FC = () => {
   // 新增记录
   const handleAdd = (data: Omit<MonthlyBudget, 'costPerUnit'>) => {
     // 新增逻辑
-    console.log('新增预算:', data);
+    // logger.info('新增预算:', data);
   };
 
   // 编辑记录
   const handleUpdate = (data: Omit<MonthlyBudget, 'costPerUnit'>) => {
     // 更新逻辑
-    console.log('更新预算:', data);
+    // logger.info('更新预算:', data);
   };
 
   // 判断是否显示复选框

@@ -584,7 +584,7 @@ export default function ProduceInventoryPage() {
 
         setInventoryData(mappedData);
       } catch (error) {
-        console.error('加载库存数据失败:', error);
+        // logger.error('加载库存数据失败:', error);
         setInventoryData([]);
       } finally {
         setIsLoading(false);
@@ -863,7 +863,7 @@ export default function ProduceInventoryPage() {
           throw new Error(errData.error || `HTTP ${res.status}`);
         }
       } catch (error: any) {
-        console.error(`保存库存 ${itemId} 失败:`, error);
+        // logger.error(`保存库存 ${itemId} 失败:`, error);
         await showAlert(`保存库存 ${itemId} 失败: ${error.message || error}`);
       }
     });
@@ -891,9 +891,9 @@ export default function ProduceInventoryPage() {
     // 异步删除后端数据
     try {
       await inventoryService.deleteInventoryBatch(selectedRows);
-      console.log(`删除 ${selectedRows.length} 条库存记录成功`);
+      // logger.info(`删除 ${selectedRows.length} 条库存记录成功`);
     } catch (error) {
-      console.error('删除库存记录失败:', error);
+      // logger.error('删除库存记录失败:', error);
       await showAlert(`删除失败: ${error instanceof Error ? error.message : error}`);
     }
     setSelectedRows([]);
@@ -953,7 +953,7 @@ export default function ProduceInventoryPage() {
         } catch (err) {
           // 用户取消选择不算错误
           if ((err as Error).name !== 'AbortError') {
-            console.error('Export failed:', err);
+            // logger.error('Export failed:', err);
             // 降级到 fallback 下载方式
             downloadAsBlob();
           }
@@ -1295,7 +1295,7 @@ export default function ProduceInventoryPage() {
             id: `PI${String(inventoryData.length + 1).padStart(3, '0')}`,
           };
           // 实际应用中这里会调用API，现在只做模拟
-          console.log('新增库存记录:', newRecord);
+          // logger.info('新增库存记录:', newRecord);
           showAlert('新增成功！');
           setShowAddModal(false);
         }}

@@ -342,7 +342,7 @@ export default function HarvestPage() {
       setExportMode(false);
       setSelectedRows([]);
     } catch (error) {
-      console.error('导出失败:', error);
+      // logger.error('导出失败:', error);
       showAlert('导出失败，请重试');
       setShowExportTypeModal(false);
       setExportMode(false);
@@ -404,7 +404,7 @@ export default function HarvestPage() {
           await updateItem(String(id), updatedRecord);
           updatedRecords[index] = updatedRecord;
         } catch (error) {
-          console.error(`更新记录 ${id} 失败:`, error);
+          // logger.error(`更新记录 ${id} 失败:`, error);
           failedIds.push(id);
         }
       }
@@ -449,7 +449,7 @@ export default function HarvestPage() {
     try {
       await deleteItems(idsToDelete);
     } catch (error) {
-      console.error('批量删除失败:', error);
+      // logger.error('批量删除失败:', error);
     }
 
     setShowDeleteWarning(false);
@@ -765,7 +765,7 @@ export default function HarvestPage() {
     });
     setErrors({});
     } catch (error) {
-      console.error('保存采收记录失败:', error);
+      // logger.error('保存采收记录失败:', error);
       showAlert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     }
   };

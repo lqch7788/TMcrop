@@ -352,7 +352,7 @@ export default function MaterialsPage() {
     if (codeError || nameError) return;
     if (!newInbound.materialCode || !newInbound.materialName || !newInbound.quantity) return;
 
-    console.log('Saving inbound:', newInbound);
+    // logger.info('Saving inbound:', newInbound);
     setShowAddModal(false);
     setNewInbound(defaultNewInbound);
     setCodeError('');

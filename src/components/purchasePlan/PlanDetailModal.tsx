@@ -1,15 +1,16 @@
 /**
- * 采购计划详情弹窗组件
+ * 采购计划详情弹窗
+ * 使用通用DetailModal组件统一样式
  */
+
 import React from 'react';
-import { Modal, FormField, Input } from '../ui/Modal';
-import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
+import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
+import { Button } from '@/components/ui/button';
+import type { PurchasePlan, PurchasePlanItem } from '@/types/purchase';
 
 interface PlanDetailModalProps {
-  // 弹窗状态
   isOpen: boolean;
   onClose: () => void;
-  // 选中详情
   selectedPlanDetail: PurchasePlan | null;
 }
 
@@ -18,7 +19,7 @@ interface PlanDetailModalProps {
  */
 function MaterialItemsTable({ items }: { items: PurchasePlanItem[] }) {
   return (
-    <div className="overflow-auto max-h-80 rounded-lg border border-gray-200 bg-white">
+    <div className="overflow-auto max-h-80 rounded-lg border border-gray-300 bg-white">
       <table className="text-sm" style={{ minWidth: '1600px' }}>
         <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
           <tr>
@@ -92,7 +93,7 @@ function StatusBadge({ status, statusText }: { status: string; statusText: strin
 }
 
 /**
- * 采购计划详情弹窗组件
+ * 采购计划详情弹窗
  */
 export function PlanDetailModal({
   isOpen,
@@ -101,110 +102,61 @@ export function PlanDetailModal({
 }: PlanDetailModalProps) {
   if (!selectedPlanDetail) return null;
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="采购申请单详情"
-      size="xxl"
-      showFooter={false}
-    >
-      <div className="space-y-3">
-        {/* 第一行：采购申请批次号、采购类型、关联生产批次 */}
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="采购申请批次号">
-            <Input
-              value={selectedPlanDetail.purchaseApplicationCode}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-          <FormField label="采购类型">
-            <Input
-              value={selectedPlanDetail.purchaseTypeName}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-          <FormField label="关联生产批次号">
-            <Input
-              value={selectedPlanDetail.relatedBatchCode || '不关联批次'}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-        </div>
-        {/* 第二行：申请人、申请部门、申请日期 */}
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="申请人">
-            <Input
-              value={selectedPlanDetail.applicant}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-          <FormField label="申请部门">
-            <Input
-              value={selectedPlanDetail.applicantDepartment}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-          <FormField label="申请日期">
-            <Input
-              type="date"
-              value={selectedPlanDetail.applyDate}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-        </div>
-        {/* 第三行：需求日期、优先级、状态 */}
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="需求日期">
-            <Input
-              type="date"
-              value={selectedPlanDetail.requiredDate}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-          <FormField label="优先级">
-            <div className="flex items-center h-9 px-3 border border-gray-200 rounded-lg bg-gray-100">
-              <PriorityBadge priority={selectedPlanDetail.priority} priorityText={selectedPlanDetail.priorityText} />
-            </div>
-          </FormField>
-          <FormField label="状态">
-            <div className="flex items-center h-9 px-3 border border-gray-200 rounded-lg bg-gray-100">
-              <StatusBadge status={selectedPlanDetail.status} statusText={selectedPlanDetail.statusText} />
-            </div>
-          </FormField>
-        </div>
-        {/* 第四行：备注（占整行） */}
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="备注" className="col-span-2">
-            <Input
-              value={selectedPlanDetail.remark || '-'}
-              disabled
-              className="bg-gray-100"
-            />
-          </FormField>
-        </div>
-
-        {/* 物料明细区域 */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <h4 className="text-sm font-semibold text-gray-800 mb-3">物料明细（{selectedPlanDetail.items?.length || 0}种物料）</h4>
+  // 字段配置
+  const fields: DetailField[][] = [
+    [
+      { label: '采购申请批次号', value: selectedPlanDetail.purchaseApplicationCode },
+      { label: '采购类型', value: selectedPlanDetail.purchaseTypeName },
+    ],
+    [
+      { label: '关联生产批次号', value: selectedPlanDetail.relatedBatchCode || '不关联批次' },
+      { label: '申请人', value: selectedPlanDetail.applicant },
+    ],
+    [
+      { label: '申请部门', value: selectedPlanDetail.applicantDepartment },
+      { label: '申请日期', value: selectedPlanDetail.applyDate },
+    ],
+    [
+      { label: '需求日期', value: selectedPlanDetail.requiredDate },
+      { label: '优先级', value: <PriorityBadge priority={selectedPlanDetail.priority} priorityText={selectedPlanDetail.priorityText} /> },
+    ],
+    [
+      { label: '状态', value: <StatusBadge status={selectedPlanDetail.status} statusText={selectedPlanDetail.statusText} /> },
+      { label: '备注', value: selectedPlanDetail.remark || '-' },
+    ],
+    [
+      { label: '物料明细', value: (
+        <div className="w-full">
           {selectedPlanDetail.items && selectedPlanDetail.items.length > 0 ? (
-            <MaterialItemsTable items={selectedPlanDetail.items} />
-          ) : (
-            <div className="text-center py-8 text-gray-500 text-sm border border-dashed border-gray-400 rounded-lg">
-              暂无物料明细
+            <div className="mt-1">
+              <MaterialItemsTable items={selectedPlanDetail.items} />
             </div>
+          ) : (
+            <span className="text-gray-400">暂无物料明细</span>
           )}
         </div>
-      </div>
-    </Modal>
+      ), fullWidth: true },
+    ],
+  ];
+
+  // 底部按钮
+  const footer = (
+    <div className="flex items-center justify-end gap-3">
+      <Button variant="secondary" size="sm" onClick={onClose}>
+        关闭
+      </Button>
+    </div>
+  );
+
+  return (
+    <DetailModal
+      title="采购申请单详情"
+      fields={fields}
+      isOpen={isOpen}
+      onClose={onClose}
+      footer={footer}
+      width={900}
+      height={600}
+    />
   );
 }
-
-export default PlanDetailModal;

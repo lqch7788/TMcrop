@@ -217,7 +217,7 @@ export function LaborExportButton({
       }
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Export failed:', error)
+      // logger.error('Export failed:', error);
     }
   }
 

@@ -197,7 +197,7 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // 导出失败
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

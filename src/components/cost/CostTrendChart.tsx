@@ -104,4 +104,4 @@ export const CostTrendChart: React.FC<CostTrendChartProps> = ({ data }) => {
 };
 
 export default CostTrendChart;
-console.log('组件创建成功: CostTrendChart');
+// logger.info('组件创建成功: CostTrendChart');

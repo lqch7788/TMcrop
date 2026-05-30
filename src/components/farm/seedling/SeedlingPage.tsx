@@ -135,7 +135,7 @@ export default function SeedlingPage() {
         await useSeedSourceStore.getState().loadItems();
         setSeedSources(useSeedSourceStore.getState().items);
       } catch (error) {
-        console.error('获取种源数据失败:', error);
+        // logger.error('获取种源数据失败:', error);
       }
     };
     loadSeedSources();
@@ -474,7 +474,7 @@ export default function SeedlingPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // logger.error('Export failed:', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

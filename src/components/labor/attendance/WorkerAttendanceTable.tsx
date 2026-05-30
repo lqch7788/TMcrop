@@ -76,7 +76,7 @@ export function WorkerAttendanceTable({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
-            console.log('导入文件:', file.name);
+            // logger.info('导入文件:', file.name);
             // 这里可以添加文件处理逻辑
             showAlert(`已选择文件: ${file.name}`);
           }

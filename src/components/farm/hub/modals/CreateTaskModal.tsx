@@ -270,8 +270,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
     const taskStatus: 'pending' | 'draft' = publish ? 'pending' : 'draft';
 
-    console.log('[CreateTaskModal] handleCreateTask called, publish:', publish, 'taskStatus:', taskStatus);
-    console.log('[CreateTaskModal] assignee:', finalAssigneeName, 'id:', finalAssigneeId);
+    // logger.info('[CreateTaskModal] handleCreateTask called, publish:', publish, 'taskStatus:', taskStatus);
+    // logger.info('[CreateTaskModal] assignee:', finalAssigneeName, 'id:', finalAssigneeId);
 
     const createdTask = tasksHook.createTask({
       id: newTask.taskId,  // 传递用户生成的任务编号
@@ -316,7 +316,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
 
     // 重置状态
     handleClose();
-    console.log('[CreateTaskModal] calling onCreated, created task id:', createdTask?.id);
+    // logger.info('[CreateTaskModal] calling onCreated, created task id:', createdTask?.id);
     onCreated();
   };
 
@@ -391,7 +391,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
         })).filter(item => item.code || item.name);
         setResponsiblePersons(persons);
       } catch (error) {
-        console.error('加载执行人列表失败:', error);
+        // logger.error('加载执行人列表失败:', error);
       }
     }
     if (showCreateModal) {

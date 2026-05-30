@@ -133,7 +133,7 @@ export const useTeamManageStore = create<TeamManageState>()(
           }
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[TeamManageStore] 获取班组数据失败:', error);
+          // logger.warn('[TeamManageStore] 获取班组数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -177,7 +177,7 @@ export const useTeamManageStore = create<TeamManageState>()(
             operatorName,
           });
         } catch (error) {
-          console.warn('[TeamManageStore] 批量添加成员API失败:', error);
+          // logger.warn('[TeamManageStore] 批量添加成员API失败:', error);
         }
         // 无论API成功与否，都更新本地状态（乐观更新）
         set((state) => {
@@ -201,7 +201,7 @@ export const useTeamManageStore = create<TeamManageState>()(
           // 调用后端API移除成员
           await enhancedApiClient.delete(`/team-members/teams/${teamId}/members/${workerId}`);
         } catch (error) {
-          console.warn('[TeamManageStore] 移除成员API失败:', error);
+          // logger.warn('[TeamManageStore] 移除成员API失败:', error);
         }
         // 无论API成功与否，都更新本地状态（乐观更新）
         set((state) => {

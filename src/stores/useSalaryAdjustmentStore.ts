@@ -183,7 +183,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[SalaryAdjustmentStore] API获取失败，使用本地缓存:', error);
           set({ isLoading: false });
         }
       },
@@ -219,7 +219,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           const body = denormalize(data);
           await enhancedApiClient.post('/salary_adjustment', body);
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 创建API不可用，仅本地保存:', error);
+          // logger.warn('[SalaryAdjustmentStore] 创建API不可用，仅本地保存:', error);
         }
 
         return localItem;
@@ -247,7 +247,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           const body = denormalize(updates);
           await enhancedApiClient.put(`/salary_adjustment/${id}`, body);
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 更新API不可用:', error);
+          // logger.warn('[SalaryAdjustmentStore] 更新API不可用:', error);
         }
       },
 
@@ -261,7 +261,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           await enhancedApiClient.delete(`/salary_adjustment/${id}`);
           return true;
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 删除API不可用:', error);
+          // logger.warn('[SalaryAdjustmentStore] 删除API不可用:', error);
           return false;
         }
       },
@@ -301,7 +301,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
             {}
           );
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 审批API不可用:', error);
+          // logger.warn('[SalaryAdjustmentStore] 审批API不可用:', error);
         }
       },
 
@@ -320,7 +320,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
             {}
           );
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 驳回API不可用:', error);
+          // logger.warn('[SalaryAdjustmentStore] 驳回API不可用:', error);
         }
       },
 
@@ -340,7 +340,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
             {}
           );
         } catch (error) {
-          console.warn('[SalaryAdjustmentStore] 状态更新API不可用:', error);
+          // logger.warn('[SalaryAdjustmentStore] 状态更新API不可用:', error);
         }
       },
     })

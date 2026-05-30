@@ -40,10 +40,10 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
         const res = await fetch(`/api/farm-tasks/${taskId}/records`);
         const result = await res.json();
 
-        console.warn('[TaskDetailModal] API 返回:', result);
+        // API 返回数据
 
         if (result.success && Array.isArray(result.data)) {
-          console.warn('[TaskDetailModal] 流转记录数据:', result.data);
+          // 流转记录数据
           // 解析 feedback 字段（存储为 JSON 字符串）
           // 后端 queryToObjects 返回的是 camelCase 格式
           const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => {
@@ -78,16 +78,16 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
               createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
             };
           });
-          console.warn('[TaskDetailModal] 格式化后的记录:', formattedRecords);
+          // 格式化后的记录
           setRecords(formattedRecords);
         } else {
-          console.warn('[TaskDetailModal] API 返回格式不对或无数据');
+          // API 返回格式不对或无数据
           // 回退到父组件传入的记录获取函数
           const taskRecords = getTaskRecordsByTaskId(taskId);
           setRecords(taskRecords);
         }
       } catch (error) {
-        console.warn('[TaskDetailModal] 获取流转记录失败:', error);
+        // 获取流转记录失败
         // 回退到父组件传入的记录获取函数
         const taskRecords = getTaskRecordsByTaskId(taskId);
         setRecords(taskRecords);

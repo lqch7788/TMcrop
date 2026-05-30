@@ -34,7 +34,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         const data = await seedlingService.getSeedlings();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[useSeedlingStore] 获取育苗数据失败:', error);
+        // logger.error('[useSeedlingStore] 获取育苗数据失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -47,7 +47,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 添加育苗失败:', error);
+        // logger.error('[useSeedlingStore] 添加育苗失败:', error);
         return null;
       }
     },
@@ -60,7 +60,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 更新育苗失败:', error);
+        // logger.error('[useSeedlingStore] 更新育苗失败:', error);
         return null;
       }
     },
@@ -73,7 +73,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 删除育苗失败:', error);
+        // logger.error('[useSeedlingStore] 删除育苗失败:', error);
         return false;
       }
     },
@@ -86,7 +86,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 批量删除育苗失败:', error);
+        // logger.error('[useSeedlingStore] 批量删除育苗失败:', error);
         return false;
       }
     },
@@ -99,7 +99,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 添加每日记录失败:', error);
+        // logger.error('[useSeedlingStore] 添加每日记录失败:', error);
         return null;
       }
     },
@@ -112,7 +112,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 更新每日记录失败:', error);
+        // logger.error('[useSeedlingStore] 更新每日记录失败:', error);
         return false;
       }
     },
@@ -125,7 +125,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 删除每日记录失败:', error);
+        // logger.error('[useSeedlingStore] 删除每日记录失败:', error);
         return false;
       }
     },
@@ -142,7 +142,7 @@ export const useSeedlingStore = create<SeedlingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useSeedlingStore] 增加定植数量失败:', error);
+        // logger.error('[useSeedlingStore] 增加定植数量失败:', error);
         return false;
       }
     },

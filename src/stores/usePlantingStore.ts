@@ -31,7 +31,7 @@ export const usePlantingStore = create<PlantingState>()(
         const data = await plantingService.getPlantings();
         set({ items: data, isLoading: false });
       } catch (error) {
-        console.error('[usePlantingStore] 获取种植数据失败:', error);
+        // logger.error('[usePlantingStore] 获取种植数据失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -42,7 +42,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: [result, ...s.items] }));
         return result;
       } catch (error) {
-        console.error('[usePlantingStore] 添加种植失败:', error);
+        // logger.error('[usePlantingStore] 添加种植失败:', error);
         return null;
       }
     },
@@ -53,7 +53,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
         return result;
       } catch (error) {
-        console.error('[usePlantingStore] 更新种植失败:', error);
+        // logger.error('[usePlantingStore] 更新种植失败:', error);
         return null;
       }
     },
@@ -64,7 +64,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        console.error('[usePlantingStore] 删除种植失败:', error);
+        // logger.error('[usePlantingStore] 删除种植失败:', error);
         return false;
       }
     },
@@ -75,7 +75,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return result;
       } catch (error) {
-        console.error('[usePlantingStore] 批量删除种植失败:', error);
+        // logger.error('[usePlantingStore] 批量删除种植失败:', error);
         return false;
       }
     },
@@ -94,7 +94,7 @@ export const usePlantingStore = create<PlantingState>()(
         }
         return result;
       } catch (error) {
-        console.error('[usePlantingStore] 采收种植失败:', error);
+        // logger.error('[usePlantingStore] 采收种植失败:', error);
         return false;
       }
     },

@@ -203,11 +203,11 @@ export const useApprovalStore = create<ApprovalStore>()(
             const approvals = response.data.map(item => normalizeApproval(item as Record<string, unknown>));
             set({ approvals, stats: computeStats(approvals), isLoaded: true, isLoading: false });
           } else if (!response.success) {
-            console.warn('[ApprovalStore] API 返回数据无效，保留现有数据');
+            // logger.warn('[ApprovalStore] API 返回数据无效，保留现有数据');
             set({ isLoading: false });
           }
         } catch (err) {
-          console.warn('[ApprovalStore] 获取审批数据失败:', err);
+          // logger.warn('[ApprovalStore] 获取审批数据失败:', err);
           set({ error: (err as Error).message, isLoading: false });
         }
       },
@@ -265,7 +265,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           }
           return null;
         } catch (error) {
-          console.error('[ApprovalStore] 创建审批失败:', error);
+          // logger.error('[ApprovalStore] 创建审批失败:', error);
           return null;
         }
       },
@@ -285,7 +285,7 @@ export const useApprovalStore = create<ApprovalStore>()(
             });
           }
         } catch (error) {
-          console.error('[ApprovalStore] 更新审批失败:', error);
+          // logger.error('[ApprovalStore] 更新审批失败:', error);
         }
       },
 
@@ -301,7 +301,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           }
           return false;
         } catch (error) {
-          console.error('[ApprovalStore] 删除审批失败:', error);
+          // logger.error('[ApprovalStore] 删除审批失败:', error);
           return false;
         }
       },
@@ -327,10 +327,10 @@ export const useApprovalStore = create<ApprovalStore>()(
             // 重新加载以获取最新数据
             await get().fetchApprovals();
           } else {
-            console.error('[ApprovalStore] 审批失败:', response.error);
+            // logger.error('[ApprovalStore] 审批失败:', response.error);
           }
         } catch (error) {
-          console.error('[ApprovalStore] 审批操作失败:', error);
+          // logger.error('[ApprovalStore] 审批操作失败:', error);
         }
       },
 
@@ -351,10 +351,10 @@ export const useApprovalStore = create<ApprovalStore>()(
             });
             await get().fetchApprovals();
           } else {
-            console.error('[ApprovalStore] 拒绝失败:', response.error);
+            // logger.error('[ApprovalStore] 拒绝失败:', response.error);
           }
         } catch (error) {
-          console.error('[ApprovalStore] 拒绝操作失败:', error);
+          // logger.error('[ApprovalStore] 拒绝操作失败:', error);
         }
       },
 
@@ -376,7 +376,7 @@ export const useApprovalStore = create<ApprovalStore>()(
             await get().fetchApprovals();
           }
         } catch (error) {
-          console.error('[ApprovalStore] 撤回失败:', error);
+          // logger.error('[ApprovalStore] 撤回失败:', error);
         }
       },
 
@@ -392,7 +392,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           await Promise.all(promises);
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[ApprovalStore] 批量通过失败:', error);
+          // logger.error('[ApprovalStore] 批量通过失败:', error);
           throw error;
         }
       },
@@ -409,7 +409,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           await Promise.all(promises);
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[ApprovalStore] 批量拒绝失败:', error);
+          // logger.error('[ApprovalStore] 批量拒绝失败:', error);
           throw error;
         }
       },

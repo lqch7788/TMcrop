@@ -205,7 +205,7 @@ export function PerformancePage() {
 
   // 新增/编辑记录
   const handleAdd = (data: Omit<PerformanceRecord, 'id' | 'totalScore'>) => {
-    console.log('新增考核记录:', data);
+    // logger.info('新增考核记录:', data);
   };
 
   const handleEdit = (record: PerformanceRecord) => {
@@ -214,7 +214,7 @@ export function PerformancePage() {
   };
 
   const handleUpdate = (data: Omit<PerformanceRecord, 'id' | 'totalScore'>) => {
-    console.log('更新考核记录:', data);
+    // logger.info('更新考核记录:', data);
   };
 
   // 取消批量操作

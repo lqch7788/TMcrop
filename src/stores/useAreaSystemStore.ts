@@ -100,7 +100,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ items: data.map(normalize), isLoading: false });
         } catch (error) {
-          console.warn('[AreaSystemStore] API 获取失败:', error);
+          // logger.warn('[AreaSystemStore] API 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -116,7 +116,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[AreaSystemStore] 创建失败:', error);
+          // logger.warn('[AreaSystemStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -130,7 +130,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
         try {
           await enhancedApiClient.put(`/api/area-systems/${oid}`, body);
         } catch (error) {
-          console.warn('[AreaSystemStore] 更新失败:', error);
+          // logger.warn('[AreaSystemStore] 更新失败:', error);
         }
       },
 
@@ -140,7 +140,7 @@ export const useAreaSystemStore = create<AreaSystemState>()(
           await enhancedApiClient.delete(`/api/area-systems/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[AreaSystemStore] 删除失败:', error);
+          // logger.warn('[AreaSystemStore] 删除失败:', error);
           return false;
         }
       },

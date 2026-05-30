@@ -184,7 +184,7 @@ export default function CropGrowthConfigPanel() {
       // 触发 Store 重新加载 + CustomEvent 通知
       setTimeout(() => loadConfigs(), 500);
     } catch (err) {
-      console.error('保存作物生长配置失败:', err);
+      // logger.error('保存作物生长配置失败:', err);
     } finally {
       setSaving(false);
     }

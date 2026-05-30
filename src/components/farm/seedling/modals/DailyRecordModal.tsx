@@ -113,7 +113,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         operator: ''
       });
     } catch (error) {
-      console.error('添加每日记录失败:', error);
+      // logger.error('添加每日记录失败:', error);
       await showAlert('添加记录失败，请重试');
       return;
     }
@@ -146,7 +146,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       setEditingRow({});
       handleSuccess();
     } catch (error) {
-      console.error('更新每日记录失败:', error);
+      // logger.error('更新每日记录失败:', error);
       await showAlert('更新记录失败，请重试');
     }
   };
@@ -163,7 +163,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       }
       handleSuccess();
     } catch (error) {
-      console.error('删除每日记录失败:', error);
+      // logger.error('删除每日记录失败:', error);
       await showAlert('删除记录失败，请重试');
     }
   };

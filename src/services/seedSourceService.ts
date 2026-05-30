@@ -220,7 +220,7 @@ function getStoredData(): SeedSource[] {
     try {
       return JSON.parse(stored);
     } catch (error) {
-      console.error('种源数据解析失败:', error);
+      // logger.error('种源数据解析失败:', error);
       return defaultData;
     }
   }

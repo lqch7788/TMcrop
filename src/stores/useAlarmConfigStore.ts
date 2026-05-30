@@ -108,7 +108,7 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           });
           set({ levels: merged, isLoading: false });
         } catch (error) {
-          console.warn('[AlarmConfigStore] 获取级别失败:', error);
+          // logger.warn('[AlarmConfigStore] 获取级别失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -121,7 +121,7 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           const body: Record<string, unknown> = { level_name: data.levelName, notify_email: data.notifyEmail, notify_sms: data.notifySms, notify_phone: data.notifyPhone };
           await enhancedApiClient.put(`/api/alarm-configs/levels/${level}`, body);
         } catch (error) {
-          console.warn('[AlarmConfigStore] 保存级别失败:', error);
+          // logger.warn('[AlarmConfigStore] 保存级别失败:', error);
         }
       },
 
@@ -134,7 +134,7 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           const data = Array.isArray(response?.data) ? response.data : [];
           set({ contacts: data.map(normalizeContact) });
         } catch (error) {
-          console.warn('[AlarmConfigStore] 获取联系人失败:', error);
+          // logger.warn('[AlarmConfigStore] 获取联系人失败:', error);
         }
       },
 
@@ -147,7 +147,7 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           set((state) => ({ contacts: [newContact, ...state.contacts] }));
           return newContact;
         } catch (error) {
-          console.warn('[AlarmConfigStore] 添加联系人失败:', error);
+          // logger.warn('[AlarmConfigStore] 添加联系人失败:', error);
           return null;
         }
       },
@@ -158,7 +158,7 @@ export const useAlarmConfigStore = create<AlarmConfigState>()(
           await enhancedApiClient.delete(`/api/alarm-configs/contacts/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[AlarmConfigStore] 删除联系人失败:', error);
+          // logger.warn('[AlarmConfigStore] 删除联系人失败:', error);
           return false;
         }
       },

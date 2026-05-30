@@ -900,7 +900,7 @@ export function useComprehensiveDispatch() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ operator_id: workerId, operator_name: workerName }),
-          }).catch(err => console.error('[executeDispatch] tempTask accept failed:', err));
+          }).catch(() => { /* accept failed */ });
 
           // 2. 更新执行人信息（不改变状态，状态由 submit-progress 改变）
           updateTempTask(task.sourceId, {
@@ -919,14 +919,14 @@ export function useComprehensiveDispatch() {
                 operator_name: workerName,
                 comment: '开始执行任务',
               }),
-            }).catch(err => console.error('[executeDispatch] tempTask submit-progress failed:', err));
+            }).catch(() => { /* submit-progress failed */ });
           }, 100);
           break;
         }
         case 'inspection': {
           // 巡查问题：需要创建新任务或直接分派（取决于业务逻辑）
           // 这里暂时标记问题已被处理
-          console.log('巡查问题待分派:', task.sourceId, workerName);
+          // 巡查问题待分派
           break;
         }
       }

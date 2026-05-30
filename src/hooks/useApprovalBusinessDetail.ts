@@ -419,7 +419,7 @@ export function useApprovalBusinessDetail(approval: Approval | null): BusinessDe
       const data = await storeConfig.loader(requestId);
       setBusinessData(data || null);
     } catch (err) {
-      console.error(`[useApprovalBusinessDetail] 加载业务数据失败 (${businessType}):`, err);
+      // logger.error(`[useApprovalBusinessDetail] 加载业务数据失败 (${businessType}):`, err);
       setError((err as Error).message);
       setBusinessData(null);
     } finally {

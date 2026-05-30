@@ -139,7 +139,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[FarmPartitionStore] API 获取失败:', error);
+          // logger.warn('[FarmPartitionStore] API 获取失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -151,7 +151,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
             : Array.isArray((response as any)?.data) ? (response as any).data : [];
           set({ tree: data });
         } catch (error) {
-          console.warn('[FarmPartitionStore] 获取分区树失败:', error);
+          // logger.warn('[FarmPartitionStore] 获取分区树失败:', error);
         }
       },
 
@@ -166,7 +166,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[FarmPartitionStore] 创建失败:', error);
+          // logger.warn('[FarmPartitionStore] 创建失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -180,7 +180,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
         try {
           await enhancedApiClient.put(`/api/farm-partitions/${oid}`, body);
         } catch (error) {
-          console.warn('[FarmPartitionStore] 更新失败:', error);
+          // logger.warn('[FarmPartitionStore] 更新失败:', error);
         }
       },
 
@@ -192,7 +192,7 @@ export const useFarmPartitionStore = create<FarmPartitionState>()(
           await enhancedApiClient.delete(`/api/farm-partitions/${oid}`);
           return true;
         } catch (error) {
-          console.warn('[FarmPartitionStore] 删除失败:', error);
+          // logger.warn('[FarmPartitionStore] 删除失败:', error);
           return false;
         }
       },

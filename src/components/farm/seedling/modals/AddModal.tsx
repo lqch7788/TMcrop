@@ -344,7 +344,7 @@ export function AddModal({
     try {
       addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
     } catch (error) {
-      console.error('保存育苗记录失败:', error);
+      // logger.error('保存育苗记录失败:', error);
       await showAlert('保存失败，请重试');
       return;
     }
@@ -384,7 +384,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
     try {
       await decreaseAvailableCount(formData.sourceId, deductCount);
     } catch (error) {
-      console.error('扣减种源可用数量失败:', error);
+      // logger.error('扣减种源可用数量失败:', error);
     }
 
     // 更新作物实例状态为育苗中
@@ -392,7 +392,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       try {
         await cropInstanceService.updateQuantity(source.instanceId, 'seedling', 0);
       } catch (error) {
-        console.error('更新作物实例状态失败:', error);
+        // logger.error('更新作物实例状态失败:', error);
       }
     }
 

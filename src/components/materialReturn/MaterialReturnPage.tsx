@@ -35,7 +35,7 @@ export function MaterialReturnPage() {
   }, []);
 
   const handleBatchSaveAll = useCallback(() => {
-    console.log('Saving all batch edits:', hook.batchEditedRecords);
+    // logger.info('Saving all batch edits:', hook.batchEditedRecords);
     hook.setShowBatchEditModal(false);
     hook.setBatchEditMode(false);
     hook.setSelectedRows([]);

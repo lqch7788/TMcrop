@@ -192,12 +192,12 @@ export const EfficiencyPage: React.FC = () => {
 
   // 新增记录
   const handleAdd = (formData: Omit<EfficiencyMetrics, 'id'>) => {
-    console.log('新增人效记录:', formData);
+    // logger.info('新增人效记录:', formData);
   };
 
   // 编辑记录
   const handleUpdate = (formData: Omit<EfficiencyMetrics, 'id'>) => {
-    console.log('更新人效记录:', formData);
+    // logger.info('更新人效记录:', formData);
   };
 
   // 判断是否显示复选框

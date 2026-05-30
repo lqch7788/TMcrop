@@ -139,7 +139,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           const normalized = rawData.map((item: Record<string, unknown>) => normalizeItem(item));
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[AnnouncementDataStore] API获取失败，使用本地数据:', error);
+          // logger.warn('[AnnouncementDataStore] API获取失败，使用本地数据:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -192,7 +192,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           }));
           return { ...optimisticItem, id: savedId, code: savedCode };
         } catch (error) {
-          console.warn('[AnnouncementDataStore] 创建公告API失败:', error);
+          // logger.warn('[AnnouncementDataStore] 创建公告API失败:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -209,7 +209,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
         try {
           await enhancedApiClient.put(`/announcements/${id}`, updates);
         } catch (error) {
-          console.warn('[AnnouncementDataStore] 更新公告API失败:', error);
+          // logger.warn('[AnnouncementDataStore] 更新公告API失败:', error);
         }
       },
 
@@ -220,7 +220,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           await enhancedApiClient.delete(`/announcements/${id}`);
           return true;
         } catch (error) {
-          console.warn('[AnnouncementDataStore] 删除公告API失败:', error);
+          // logger.warn('[AnnouncementDataStore] 删除公告API失败:', error);
           return false;
         }
       },
@@ -242,7 +242,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
       submitForApproval: async (id) => {
         const item = get().items.find((i) => i.id === id);
         if (!item) {
-          console.warn('[AnnouncementDataStore] 提交审批失败：公告不存在');
+          // logger.warn('[AnnouncementDataStore] 提交审批失败：公告不存在');
           return false;
         }
 
@@ -282,7 +282,7 @@ export const useAnnouncementDataStore = create<AnnouncementDataState>()(
           }
           return false;
         } catch (error) {
-          console.warn('[AnnouncementDataStore] 提交审批失败:', error);
+          // logger.warn('[AnnouncementDataStore] 提交审批失败:', error);
           return false;
         }
       },

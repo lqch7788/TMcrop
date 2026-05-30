@@ -121,7 +121,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
         const normalized = data.map(normalize);
         set({ items: normalized, isLoading: false });
       } catch (error) {
-        console.warn('[ContractRenewalStore] API获取失败:', error);
+        // logger.warn('[ContractRenewalStore] API获取失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
@@ -139,7 +139,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
         set((state) => ({ items: [newItem, ...state.items] }));
         return newItem;
       } catch (error) {
-        console.warn('[ContractRenewalStore] 创建失败:', error);
+        // logger.warn('[ContractRenewalStore] 创建失败:', error);
         return null;
       }
     },
@@ -155,7 +155,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
       try {
         await enhancedApiClient.put(`/contract-renewal/${id}`, body);
       } catch (error) {
-        console.warn('[ContractRenewalStore] 更新失败:', error);
+        // logger.warn('[ContractRenewalStore] 更新失败:', error);
       }
     },
 
@@ -168,7 +168,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
         await enhancedApiClient.delete(`/contract-renewal/${id}`);
         return true;
       } catch (error) {
-        console.warn('[ContractRenewalStore] 删除失败:', error);
+        // logger.warn('[ContractRenewalStore] 删除失败:', error);
         return false;
       }
     },
@@ -200,7 +200,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
       try {
         await enhancedApiClient.put(`/contract-renewal/${id}`, { status: 'approved' });
       } catch (error) {
-        console.warn('[ContractRenewalStore] 审批失败:', error);
+        // logger.warn('[ContractRenewalStore] 审批失败:', error);
       }
     },
 
@@ -214,7 +214,7 @@ export const useContractRenewalStore = create<ContractRenewalState>()(
       try {
         await enhancedApiClient.put(`/contract-renewal/${id}`, { status: 'rejected' });
       } catch (error) {
-        console.warn('[ContractRenewalStore] 驳回失败:', error);
+        // logger.warn('[ContractRenewalStore] 驳回失败:', error);
       }
     },
   })

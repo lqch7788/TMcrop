@@ -287,7 +287,7 @@ export function useMaterialReturn() {
 
   const submitVoidApply = useCallback(() => {
     if (!voidReason.trim()) {
-      console.warn('作废申请需要填写作废原因');
+      // 作废申请需要填写作废原因
       return;
     }
     setShowVoidModal(false);
@@ -390,7 +390,7 @@ export function useMaterialReturn() {
 
   const handleSaveAdd = useCallback(async () => {
     if (!addForm.code) {
-      console.warn('新增退料单需要先生成退料单号');
+      // 新增退料单需要先生成退料单号
       return;
     }
     const newRecord: Omit<ReturnRecord, 'id'> = {
@@ -530,7 +530,7 @@ export function useMaterialReturn() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      // 导出失败
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -549,7 +549,7 @@ export function useMaterialReturn() {
 
   const handleBatchDeleteConfirm = useCallback(() => {
     if (selectedRows.length === 0) {
-      console.warn('批量删除需要先选择要删除的记录');
+      // 批量删除需要先选择要删除的记录
       setShowBatchDeleteConfirm(false);
       return;
     }
@@ -569,7 +569,7 @@ export function useMaterialReturn() {
 
   const handleBatchEditWarning = useCallback(() => {
     if (selectedRows.length === 0) {
-      console.warn('批量编辑需要先选择要编辑的记录');
+      // 批量编辑需要先选择要编辑的记录
       setBatchEditMode(false);
     } else {
       setShowBatchEditModal(true);

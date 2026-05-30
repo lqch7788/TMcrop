@@ -33,7 +33,7 @@ function transformSingle(item: BackendDailyPlan): DailyPlanRecord {
     try {
       planData = JSON.parse(item.plan_data) as DailyPlan;
     } catch (e) {
-      console.warn(`[apiDailyPlanService] 解析 plan_data 失败:`, e);
+      // logger.warn(`[apiDailyPlanService] 解析 plan_data 失败:`, e);
       planData = null;
     }
   } else if (item.planData) {

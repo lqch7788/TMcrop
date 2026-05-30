@@ -19,7 +19,7 @@ export { SettingsProvider, useSettings } from './SettingsContext';
  * @deprecated 请使用 useOrganization() 代替
  */
 export function useAuthSettings() {
-  console.warn('useAuthSettings 已废弃，请使用 useOrganization() 和 useSettings()');
+  // logger.warn('useAuthSettings 已废弃，请使用 useOrganization() 和 useSettings()');
   return {
     ...useOrganization(),
     ...useSettings(),

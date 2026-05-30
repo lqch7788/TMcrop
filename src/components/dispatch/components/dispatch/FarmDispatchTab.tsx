@@ -82,10 +82,10 @@ export const FarmDispatchTab: React.FC = () => {
       const res = await fetch(`/api/farm-tasks/${task.id}/records`);
       const result = await res.json();
 
-      console.warn('[FarmDispatchTab] API 返回:', result);
+      // logger.warn('[FarmDispatchTab] API 返回:', result);
 
       if (result.success && Array.isArray(result.data)) {
-        console.warn('[FarmDispatchTab] 流转记录条数:', result.data.length);
+        // logger.warn('[FarmDispatchTab] 流转记录条数:', result.data.length);
         // 后端 queryToObjects 返回的是 camelCase 格式
         const formattedRecords: TaskRecord[] = result.data.map((r: Record<string, unknown>) => {
           // 解析 feedback 字段（存储为 JSON 字符串）
@@ -119,13 +119,13 @@ export const FarmDispatchTab: React.FC = () => {
             createdAt: String(r.createdAt || r.actionTime || new Date().toISOString()),
           };
         });
-        console.warn('[FarmDispatchTab] 格式化后的记录:', formattedRecords);
+        // logger.warn('[FarmDispatchTab] 格式化后的记录:', formattedRecords);
         setViewingTaskRecords(formattedRecords);
       } else {
-        console.warn('[FarmDispatchTab] API 返回格式不对或无数据');
+        // logger.warn('[FarmDispatchTab] API 返回格式不对或无数据');
       }
     } catch (error) {
-      console.warn('[FarmDispatchTab] 获取流转记录失败:', error);
+      // logger.warn('[FarmDispatchTab] 获取流转记录失败:', error);
       // 回退到本地记录
       const records = getTaskRecordsByTaskId(task.id);
       setViewingTaskRecords(records);

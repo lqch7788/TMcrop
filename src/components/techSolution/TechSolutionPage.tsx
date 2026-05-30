@@ -7,6 +7,7 @@ import { Select as UISelect, SelectContent, SelectItem, SelectTrigger, SelectVal
 import { Input as UIInput } from '../ui/input';
 import { Checkbox } from '../ui/checkbox';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { TechSolutionDetailModal } from './TechSolutionDetailModal';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
@@ -102,7 +103,7 @@ export function TechSolutionPage() {
         }
         setOperatorOptions(options);
       } catch (error) {
-        console.error('加载操作人员失败:', error);
+        // logger.error('加载操作人员失败:', error);
         // 使用默认选项
         setOperatorOptions([
           { value: '陆启闯', label: '陆启闯' },
@@ -294,7 +295,7 @@ export function TechSolutionPage() {
       }
       setEditModalOpen(false);
     } catch (error) {
-      console.error('更新技术方案失败:', error);
+      // logger.error('更新技术方案失败:', error);
       await showAlert('更新失败，请重试');
     }
   };
@@ -371,7 +372,7 @@ export function TechSolutionPage() {
         relatedBatchCode: '',
       });
     } catch (error) {
-      console.error('创建技术方案失败:', error);
+      // logger.error('创建技术方案失败:', error);
       await showAlert('创建技术方案失败，请重试');
     }
   };
@@ -509,7 +510,7 @@ export function TechSolutionPage() {
         await deleteSolutions(selectedIds);
       }
     } catch (error) {
-      console.error('删除技术方案失败:', error);
+      // logger.error('删除技术方案失败:', error);
       await showAlert('删除失败，请重试');
     }
 
@@ -875,98 +876,11 @@ export function TechSolutionPage() {
       </div>
 
       {/* View Modal */}
-      <Modal
+      <TechSolutionDetailModal
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
-        title="方案详情"
-        size="lg"
-        showFooter={false}
-      >
-        {selectedTech && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">方案编号</label>
-                <p className="text-gray-900 font-medium">{selectedTech.code}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">版本</label>
-                <p className="text-gray-900">{selectedTech.version}</p>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">方案标题</label>
-              <p className="text-gray-900 font-medium">{selectedTech.title}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">作物品种</label>
-                <p className="text-gray-900">{selectedTech.crop}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">种植模式</label>
-                <p className="text-gray-900">{selectedTech.plantingMode}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">适用范围</label>
-                <p className="text-gray-900">{selectedTech.stage}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">编制人</label>
-                <p className="text-gray-900">{selectedTech.author}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">创建日期</label>
-                <p className="text-gray-900">{selectedTech.createDate}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">审核人</label>
-                <p className="text-gray-900">{selectedTech.approver}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">审批状态</label>
-                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                  selectedTech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {selectedTech.approveStatus}
-                </span>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">状态</label>
-                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                  selectedTech.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
-                  selectedTech.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedTech.status}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">审批人</label>
-                <p className="text-gray-900">{selectedTech.approver}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">审批日期</label>
-                <p className="text-gray-900">{selectedTech.approvalDate}</p>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">方案内容</label>
-              <div className="mt-2 p-4 bg-gray-50 rounded-lg text-gray-700 text-sm leading-relaxed">
-                {selectedTech.content}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        tech={selectedTech}
+      />
 
       {/* Edit Modal */}
       <Modal
@@ -1597,7 +1511,7 @@ export function TechSolutionPage() {
                   setEditedTechs({});
                   await showAlert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
                 } catch (error) {
-                  console.error('批量保存失败:', error);
+                  // logger.error('批量保存失败:', error);
                   await showAlert('保存失败，请重试');
                 }
               }}

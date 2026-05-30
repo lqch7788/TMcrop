@@ -67,7 +67,7 @@ export function TempTaskAcceptanceAdapter({
         setRecords(recordsArray);
       })
       .catch((err) => {
-        console.error('[TempTaskAcceptanceAdapter] 加载任务记录失败:', err);
+        // logger.error('[TempTaskAcceptanceAdapter] 加载任务记录失败:', err);
         setRecords([]);
       })
       .finally(() => {

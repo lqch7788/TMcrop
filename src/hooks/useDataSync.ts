@@ -83,7 +83,6 @@ export function useDataSync<T>({
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err : new Error('数据加载失败'));
-          console.error(`[useDataSync] 加载失败 ${key}:`, err);
         }
       } finally {
         if (!cancelled) {
@@ -125,7 +124,6 @@ export function useDataSync<T>({
     } catch (err) {
       const error = err instanceof Error ? err : new Error('数据保存失败');
       setError(error);
-      console.error(`[useDataSync] 保存失败 ${key}:`, err);
       throw error;
     } finally {
       setIsSyncing(false);
@@ -157,7 +155,7 @@ export function useDataSync<T>({
       const finalData = result ?? defaultValue ?? [];
       setData(finalData as T);
     } catch (err) {
-      console.error(`[useDataSync] 刷新失败 ${key}:`, err);
+      // 刷新失败
     } finally {
       setIsLoading(false);
     }

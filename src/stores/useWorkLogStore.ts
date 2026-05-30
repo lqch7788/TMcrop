@@ -131,7 +131,7 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
         set({ workLogs: [], isLoading: false });
       }
     } catch (error) {
-      console.error('获取工作日志失败:', error);
+      // logger.error('获取工作日志失败:', error);
       set({
         error: error instanceof Error ? error.message : '获取工作日志失败',
         isLoading: false,
@@ -161,7 +161,7 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
       }));
       return newLog;
     } catch (error) {
-      console.error('创建工作日志失败:', error);
+      // logger.error('创建工作日志失败:', error);
       set({
         error: error instanceof Error ? error.message : '创建工作日志失败',
         isLoading: false,
@@ -192,7 +192,7 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error('更新工作日志失败:', error);
+      // logger.error('更新工作日志失败:', error);
       set({
         error: error instanceof Error ? error.message : '更新工作日志失败',
         isLoading: false,
@@ -210,7 +210,7 @@ export const useWorkLogStore = create<WorkLogState>()((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error('删除工作日志失败:', error);
+      // logger.error('删除工作日志失败:', error);
       set({
         error: error instanceof Error ? error.message : '删除工作日志失败',
         isLoading: false,

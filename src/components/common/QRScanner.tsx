@@ -96,7 +96,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
     } catch (err) {
       setError('无法访问摄像头，请检查权限设置');
       setIsScanning(false);
-      console.error('Scanner error:', err);
+      // logger.error('Scanner error:', err);
     }
   };
 
@@ -106,7 +106,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
         await scannerRef.current.stop();
         scannerRef.current.clear();
       } catch (err) {
-        console.error('Error stopping scanner:', err);
+        // logger.error('Error stopping scanner:', err);
       }
       scannerRef.current = null;
     }

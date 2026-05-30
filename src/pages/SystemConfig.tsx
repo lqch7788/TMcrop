@@ -132,7 +132,7 @@ export default function SystemConfig() {
       setEditingId(null);
       setEditValue('');
     } catch (err) {
-      console.error('更新配置失败:', err);
+      // logger.error('更新配置失败:', err);
       showAlert('更新配置失败');
     }
   }, [updateConfig, editValue]);
@@ -148,7 +148,7 @@ export default function SystemConfig() {
     try {
       await removeConfig(id);
     } catch (err) {
-      console.error('删除配置失败:', err);
+      // logger.error('删除配置失败:', err);
       showAlert('删除配置失败');
     }
   }, [removeConfig]);
@@ -171,7 +171,7 @@ export default function SystemConfig() {
         setShowAddModal(false);
       }
     } catch (err) {
-      console.error('创建配置失败:', err);
+      // logger.error('创建配置失败:', err);
       showAlert('创建配置失败');
     }
   }, [newConfig, addConfig]);

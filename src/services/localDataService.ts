@@ -62,7 +62,7 @@ class LocalDataService {
         this.recordChange(key, 'update', value);
       }
     } catch (error) {
-      console.error(`[LocalDataService] 保存数据失败: ${key}`, error);
+      // logger.error(`[LocalDataService] 保存数据失败: ${key}`, error);
     }
   }
 
@@ -85,7 +85,7 @@ class LocalDataService {
       }
       localStorage.setItem(STORAGE_KEYS.pendingChanges, JSON.stringify(changes));
     } catch (error) {
-      console.error('[LocalDataService] 记录变更失败', error);
+      // logger.error('[LocalDataService] 记录变更失败', error);
     }
   }
 

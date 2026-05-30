@@ -210,7 +210,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           const normalized = (Array.isArray(data) ? data : []).map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[OnboardingStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[OnboardingStore] API 获取失败，使用本地缓存:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -230,7 +230,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          console.warn('[OnboardingStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[OnboardingStore] 创建失败，已加入离线队列:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -249,7 +249,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         try {
           await enhancedApiClient.put(`/onboarding/${id}`, body);
         } catch (error) {
-          console.warn('[OnboardingStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[OnboardingStore] 更新失败，已加入离线队列:', error);
         }
       },
 
@@ -277,7 +277,7 @@ export const useOnboardingStore = create<OnboardingState>()(
             {}
           );
         } catch (error) {
-          console.warn('[OnboardingStore] 状态更新失败，已加入离线队列:', error);
+          // logger.warn('[OnboardingStore] 状态更新失败，已加入离线队列:', error);
         }
       },
 
@@ -291,7 +291,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           await enhancedApiClient.delete(`/onboarding/${id}`);
           return true;
         } catch (error) {
-          console.warn('[OnboardingStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[OnboardingStore] 删除失败，已加入离线队列:', error);
           return false;
         }
       },
@@ -310,7 +310,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           );
           return true;
         } catch (error) {
-          console.warn('[OnboardingStore] 批量删除失败，已加入离线队列:', error);
+          // logger.warn('[OnboardingStore] 批量删除失败，已加入离线队列:', error);
           return false;
         }
       },

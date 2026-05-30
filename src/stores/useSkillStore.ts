@@ -214,7 +214,7 @@ export const useSkillStore = create<SkillState>()(
           }
           set({ isLoading: false });
         } catch (error) {
-          console.warn('[SkillStore] 获取技能数据失败:', error);
+          // logger.warn('[SkillStore] 获取技能数据失败:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

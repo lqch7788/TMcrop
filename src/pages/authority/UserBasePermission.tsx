@@ -90,7 +90,7 @@ export default function UserBasePermission() {
         setUserPermissions(data || []);
       }
     } catch (error) {
-      console.error('加载用户基地权限失败:', error);
+      // logger.error('加载用户基地权限失败:', error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function UserBasePermission() {
         setAllBases(data || []);
       }
     } catch (error) {
-      console.error('加载基地列表失败:', error);
+      // logger.error('加载基地列表失败:', error);
     }
   };
 
@@ -177,7 +177,7 @@ export default function UserBasePermission() {
         });
       }
     } catch (error) {
-      console.error('保存权限失败:', error);
+      // logger.error('保存权限失败:', error);
     } finally {
       setSaving(false);
     }
@@ -211,7 +211,7 @@ export default function UserBasePermission() {
         setPermissionChanges(new Map());
       }
     } catch (error) {
-      console.error('批量保存权限失败:', error);
+      // logger.error('批量保存权限失败:', error);
     } finally {
       setSaving(false);
     }

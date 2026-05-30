@@ -165,7 +165,7 @@ export default function UserManagement() {
       try {
         await authorityService.assignUserRoles(payload.oid!, userRoleOids);
       } catch (err) {
-        console.error('保存用户角色失败:', err);
+        // logger.error('保存用户角色失败:', err);
       }
     }
 
@@ -196,7 +196,7 @@ export default function UserManagement() {
       });
       setShowPasswordModal(false);
     } catch (err) {
-      console.error('修改密码失败:', err);
+      // logger.error('修改密码失败:', err);
     }
   };
 
@@ -210,7 +210,7 @@ export default function UserManagement() {
       });
       loadUsers();
     } catch (err) {
-      console.error('启停用户失败:', err);
+      // logger.error('启停用户失败:', err);
     }
   };
 

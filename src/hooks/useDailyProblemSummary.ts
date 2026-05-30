@@ -47,7 +47,7 @@ export function useDailyProblemSummary(filters?: DailyProblemFilters) {
       setSummaries(summaryData);
       setOverview(overviewData);
     } catch (err) {
-      console.error('加载问题汇总数据失败:', err);
+      // 加载问题汇总数据失败
       setError('加载数据失败');
       // 回退到本地数据
       fallbackToLocalData();
