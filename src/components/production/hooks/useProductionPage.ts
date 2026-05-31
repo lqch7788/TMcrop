@@ -5,7 +5,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore } from '../../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../../types';
-import { getAllVarieties } from '../../../services/cropVarietyService';
 import { useApproval } from '../../../hooks/useApproval';
 import { apiClient, USE_API } from '../../../services/apiClient';
 import { showAlert, showConfirm } from '../../../lib/dialogService';
@@ -332,9 +331,6 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSaveDraft = useCallback(async () => {
     if (!validateForm()) return;
 
-    const cropVariety = getAllVarieties().find(v =>
-      v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
-    );
     const today = new Date().toISOString().slice(0, 10);
     const greenhouseIds = formData.greenhouseId.join(',');
     // 调试：检查温室ID匹配
@@ -402,9 +398,6 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSubmitForApproval = useCallback(async () => {
     if (!validateForm()) return;
 
-    const cropVariety2 = getAllVarieties().find(v =>
-      v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
-    );
     const today = new Date().toISOString().slice(0, 10);
     const greenhouseIds = formData.greenhouseId.join(',');
     // 调试：检查温室ID匹配
@@ -449,9 +442,7 @@ export function useProductionPage(): UseProductionPageReturn {
 
     try {
       if (USE_API) {
-        console.log('[DEBUG] 提交生产计划数据:', apiData);
         const addResult = await addPlan(apiData as any);
-        console.log('[DEBUG] addPlan 结果:', addResult);
         await fetchPlans(); // 刷新生产计划列表
 
         const approvalData = {
@@ -489,7 +480,6 @@ export function useProductionPage(): UseProductionPageReturn {
       resetForm();
       setErrors({});
     } catch (error) {
-      console.error('[DEBUG] 提交审批失败:', error);
       await showAlert('提交审批失败，请重试');
     }
   }, [formData, greenhouses, validateForm, addPlan, resetForm, refreshApprovals, fetchPlans]);
@@ -813,8 +803,11 @@ export function useProductionPage(): UseProductionPageReturn {
 
       setSelectedRows(selectedRows.filter(id => !voidedBatchIds.includes(id)));
 
-      delete editedBatches[currentBatch.batchCode];
-      setEditedBatches({ ...editedBatches });
+      setEditedBatches(prev => {
+        const next = { ...prev };
+        delete next[currentBatch.batchCode];
+        return next;
+      });
 
       await showAlert(`已提交作废申请：${currentBatch.batchCode}`);
 

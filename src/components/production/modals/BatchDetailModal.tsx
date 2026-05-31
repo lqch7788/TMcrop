@@ -8,6 +8,7 @@ import { CropBatch } from '@/types';
 import { batchStatusColors, batchStatusLabels, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
 import { getProductionPlanApprovals, ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
+import { Button } from '@/components/ui/button';
 
 interface BatchDetailModalProps {
   batch: CropBatch | null;
@@ -182,19 +183,13 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <button
-        onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-      >
+      <Button variant="secondary" onClick={onClose}>
         关闭
-      </button>
+      </Button>
       {onViewWorkOrders && (
-        <button
-          onClick={onViewWorkOrders}
-          className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
-        >
+        <Button onClick={onViewWorkOrders}>
           查看工单
-        </button>
+        </Button>
       )}
     </div>
   );
