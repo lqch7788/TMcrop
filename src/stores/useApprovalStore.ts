@@ -307,26 +307,26 @@ export const useApprovalStore = create<ApprovalStore>()(
       approve: async (id, comment) => {
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
+        console.log('[DEBUG] approve 开始:', id, `${API_BASE}/${id}/action`);
         try {
-          const response = await enhancedApiClient.patch<{ success: boolean; data?: unknown; error?: string }>(
+          // enhancedApiClient.patch 返回的是 result.data（已经过 apiClient 解析）
+          // 如果成功，result.data 是 truthy；如果失败，apiClient 会抛异常
+          const result = await enhancedApiClient.patch(
             `${API_BASE}/${id}/action`,
             { action: 'approve', comment, approverId, approverName }
           );
-          if (response.success) {
-            // 乐观更新本地状态
-            set((state) => {
-              const approvals = state.approvals.map((a) =>
-                a.id === id ? { ...a, status: ApprovalStatus.APPROVED as string, updatedAt: new Date().toISOString() } : a
-              );
-              return { approvals, stats: computeStats(approvals as Approval[]) };
-            });
-            // 重新加载以获取最新数据
-            await get().fetchApprovals();
-          } else {
-            // logger.error('[ApprovalStore] 审批失败:', response.error);
-          }
+          console.log('[DEBUG] approve 成功:', result);
+          // 乐观更新本地状态
+          set((state) => {
+            const approvals = state.approvals.map((a) =>
+              a.id === id ? { ...a, status: ApprovalStatus.APPROVED as string, updatedAt: new Date().toISOString() } : a
+            );
+            return { approvals, stats: computeStats(approvals as Approval[]) };
+          });
+          // 重新加载以获取最新数据
+          await get().fetchApprovals();
         } catch (error) {
-          // logger.error('[ApprovalStore] 审批操作失败:', error);
+          console.error('[DEBUG] approve 失败:', error);
         }
       },
 
@@ -334,23 +334,19 @@ export const useApprovalStore = create<ApprovalStore>()(
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
-          const response = await enhancedApiClient.patch<{ success: boolean; data?: unknown; error?: string }>(
+          await enhancedApiClient.patch(
             `${API_BASE}/${id}/action`,
             { action: 'reject', comment, approverId, approverName }
           );
-          if (response.success) {
-            set((state) => {
-              const approvals = state.approvals.map((a) =>
-                a.id === id ? { ...a, status: ApprovalStatus.REJECTED as string, updatedAt: new Date().toISOString() } : a
-              );
-              return { approvals, stats: computeStats(approvals as Approval[]) };
-            });
-            await get().fetchApprovals();
-          } else {
-            // logger.error('[ApprovalStore] 拒绝失败:', response.error);
-          }
+          set((state) => {
+            const approvals = state.approvals.map((a) =>
+              a.id === id ? { ...a, status: ApprovalStatus.REJECTED as string, updatedAt: new Date().toISOString() } : a
+            );
+            return { approvals, stats: computeStats(approvals as Approval[]) };
+          });
+          await get().fetchApprovals();
         } catch (error) {
-          // logger.error('[ApprovalStore] 拒绝操作失败:', error);
+          console.error('[ApprovalStore] 拒绝操作失败:', error);
         }
       },
 
@@ -358,21 +354,19 @@ export const useApprovalStore = create<ApprovalStore>()(
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
         try {
-          const response = await enhancedApiClient.patch<{ success: boolean }>(
+          await enhancedApiClient.patch(
             `${API_BASE}/${id}/action`,
             { action: 'cancel', comment: reason, approverId, approverName }
           );
-          if (response.success) {
-            set((state) => {
-              const approvals = state.approvals.map((a) =>
-                a.id === id ? { ...a, status: ApprovalStatus.CANCELLED as string, updatedAt: new Date().toISOString() } : a
-              );
-              return { approvals, stats: computeStats(approvals as Approval[]) };
-            });
-            await get().fetchApprovals();
-          }
+          set((state) => {
+            const approvals = state.approvals.map((a) =>
+              a.id === id ? { ...a, status: ApprovalStatus.CANCELLED as string, updatedAt: new Date().toISOString() } : a
+            );
+            return { approvals, stats: computeStats(approvals as Approval[]) };
+          });
+          await get().fetchApprovals();
         } catch (error) {
-          // logger.error('[ApprovalStore] 撤回失败:', error);
+          console.error('[ApprovalStore] 撤回失败:', error);
         }
       },
 
