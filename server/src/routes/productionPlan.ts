@@ -69,6 +69,9 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     endType: 'endType',
     batchStatus: 'batchStatus',
     planDetailFileName: 'planDetailFileName',
+    // 关联订单字段
+    orderId: 'orderId',
+    orderCode: 'orderCode',
   };
 
   const result: Record<string, unknown> = {};
@@ -241,7 +244,9 @@ router.post('/', (req: Request, res: Response) => {
       supplierName,
       seedlingSiteName,
       seedQuantity,
-      targetSeedlingCount
+      targetSeedlingCount,
+      orderId,
+      orderCode
     } = req.body;
 
     if (!id) {
@@ -259,8 +264,9 @@ router.post('/', (req: Request, res: Response) => {
         status, priority, remarks, create_by, create_time, update_time,
         responsible_person, unit, publish_date, batch_status,
         plan_detail, plan_detail_file_name, planting_area, planting_area_unit, planting_mode,
-        supplier_name, seedling_site_name, seed_quantity, target_seedling_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        supplier_name, seedling_site_name, seed_quantity, target_seedling_count,
+        order_id, order_code
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -293,7 +299,9 @@ router.post('/', (req: Request, res: Response) => {
       supplierName || '',
       seedlingSiteName || '',
       seedQuantity || 0,
-      targetSeedlingCount || 0
+      targetSeedlingCount || 0,
+      orderId || '',
+      orderCode || ''
     ]);
 
     saveDatabase();
@@ -362,7 +370,10 @@ router.put('/:id', (req: Request, res: Response) => {
       supplierName: 'supplier_name',
       seedlingSiteName: 'seedling_site_name',
       seedQuantity: 'seed_quantity',
-      targetSeedlingCount: 'target_seedling_count'
+      targetSeedlingCount: 'target_seedling_count',
+      // 关联订单字段
+      orderId: 'order_id',
+      orderCode: 'order_code'
     };
 
     const updateFields: string[] = [];

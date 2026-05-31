@@ -5,7 +5,7 @@
 // 使用真实数据：从ApprovalContext获取
 // ============================================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sprout, Search, ChevronLeft, ChevronRight,
@@ -27,11 +27,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function ProductionApproval() {
-  const { approvals, approve, reject } = useApproval();
+  const { approvals, approve, reject, refreshApprovals } = useApproval();
+
+  // 页面加载时获取审批数据
+  useEffect(() => {
+    refreshApprovals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在挂载时加载一次
 
   const [activeTab, setActiveTab] = useState<
     'tech' | 'plan' | 'purchase' | 'batch' | 'batch_change' | 'batch_void' | 'harvest'
-  >('tech');
+  >('plan');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,7 +119,6 @@ export default function ProductionApproval() {
   const getCurrentData = useMemo(() => {
     const currentTab = tabs.find(t => t.key === activeTab);
     if (!currentTab) return [];
-    // 目前只有生产计划和采收申请有对应的ApprovalType
     return approvals.filter(a => currentTab.types.includes(a.type));
   }, [approvals, activeTab, tabs]);
 

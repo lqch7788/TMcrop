@@ -97,7 +97,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">场地/供应商</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
@@ -105,7 +105,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">关联订单</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划文件</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
@@ -181,8 +181,7 @@ export function ProductionTable({
                     {batchStatusLabels[batch.batchStatus || 'draft']}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">V1.0</td>
-                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">-</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.orderCode || '-'}</td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载生产计划文件" onClick={() => {

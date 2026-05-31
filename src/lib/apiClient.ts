@@ -67,9 +67,9 @@ class EnhancedApiClient {
         return response as T;
       } catch (error) {
         lastError = error as Error;
+        console.warn(`[EnhancedApiClient] 请求失败 (${i + 1}/${maxRetries}):`, error);
         if (i < maxRetries - 1) {
           const delay = 1000 * Math.pow(2, i); // 指数退避
-          console.warn(`[EnhancedApiClient] 请求失败，${delay}ms后重试 (${i + 1}/${maxRetries})`);
           await this.delay(delay);
         }
       }

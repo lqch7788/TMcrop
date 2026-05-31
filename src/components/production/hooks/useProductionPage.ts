@@ -3,7 +3,7 @@
  * 将 ProductionPage 的所有状态和逻辑提取为独立 hook，便于维护和测试
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useGreenhouseStore, useProductionPlanStore } from '../../../stores';
+import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore } from '../../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../../types';
 import { getAllVarieties } from '../../../services/cropVarietyService';
 import { useApproval } from '../../../hooks/useApproval';
@@ -18,18 +18,21 @@ export interface ProductionFormData {
   cropCode: string;
   cropName: string;
   variety: string;
-  greenhouseId: string;
+  greenhouseId: string[];
   plantingArea: string;
   plantingAreaUnit: string;
   startDate: string;
   expectedHarvestDate: string;
   targetYield: string;
   unit: string;
-  plantingMode: string;
+  plantingMode: string[];
   responsiblePerson: string;
   publisher: string;
   description: string;
   planDetail: string;
+  // 关联订单字段
+  orderId: string[];
+  orderCode: string[];
 }
 
 // 表单默认值
@@ -40,18 +43,21 @@ const getInitialFormData = (): ProductionFormData => ({
   cropCode: '',
   cropName: '',
   variety: '',
-  greenhouseId: '',
+  greenhouseId: [],
   plantingArea: '',
   plantingAreaUnit: 'm²',
   startDate: '',
   expectedHarvestDate: '',
   targetYield: '',
   unit: 'kg',
-  plantingMode: '',
+  plantingMode: [],
   responsiblePerson: '',
   publisher: localStorage.getItem('username') || '',
   description: '',
-  planDetail: ''
+  planDetail: '',
+  // 关联订单字段
+  orderId: [],
+  orderCode: []
 });
 
 // 编辑中的批次数据
@@ -99,6 +105,7 @@ export interface UseProductionPageReturn {
   batches: CropBatch[];
   filteredBatches: CropBatch[];
   greenhouses: ReturnType<typeof useGreenhouseStore>['greenhouses'];
+  orders: ReturnType<typeof useOrderDataStore>['orders'];
   batchesLength: number;
 
   // 搜索状态
@@ -186,6 +193,9 @@ export function useProductionPage(): UseProductionPageReturn {
     deletePlan,
     deletePlans,
   } = useProductionPlanStore();
+  // 订单数据（用于关联）
+  const orders = useOrderDataStore((s) => s.orders);
+  const fetchOrders = useOrderDataStore((s) => s.fetchOrders);
 
   // ==================== 数据加载 ====================
   useEffect(() => {
@@ -197,6 +207,13 @@ export function useProductionPage(): UseProductionPageReturn {
   useEffect(() => {
     fetchPlans();
   }, [fetchPlans]);
+
+  // 加载订单数据（用于关联选择）
+  useEffect(() => {
+    if (orders.length === 0) {
+      fetchOrders();
+    }
+  }, [orders.length, fetchOrders]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -241,8 +258,8 @@ export function useProductionPage(): UseProductionPageReturn {
   useEffect(() => {
     if (showCreateModal) {
       const activeGreenhouses = greenhouses.filter(g => g.status === 'active');
-      const firstGreenhouseId = activeGreenhouses[0]?.id || '';
-      const defaultMode = 'open_field';
+      const firstGreenhouseId = activeGreenhouses[0]?.id ? [activeGreenhouses[0].id] : [];
+      const defaultMode = ['open_field'];
       const firstResponsiblePerson = localStorage.getItem('username') || '';
 
       setFormData(prev => ({
@@ -278,12 +295,12 @@ export function useProductionPage(): UseProductionPageReturn {
     if (!formData.batchCode.trim()) newErrors.batchCode = '请输入批次编号';
     if (!formData.cropName) newErrors.cropName = '请选择作物';
     if (!formData.variety.trim()) newErrors.variety = '请输入品种';
-    if (!formData.greenhouseId) newErrors.greenhouseId = '请选择区域';
+    if (formData.greenhouseId.length === 0) newErrors.greenhouseId = '请选择区域';
     if (!formData.plantingArea) newErrors.plantingArea = '请输入种植面积';
     if (!formData.startDate) newErrors.startDate = '请选择定植日期';
     if (!formData.expectedHarvestDate) newErrors.expectedHarvestDate = '请选择预计采收日期';
     if (!formData.targetYield) newErrors.targetYield = '请输入目标产量';
-    if (!formData.plantingMode) newErrors.plantingMode = '请选择种植模式';
+    if (formData.plantingMode.length === 0) newErrors.plantingMode = '请选择种植模式';
     if (!formData.responsiblePerson) newErrors.responsiblePerson = '请选择负责人';
 
     setErrors(newErrors);
@@ -316,11 +333,13 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSaveDraft = useCallback(async () => {
     if (!validateForm()) return;
 
-    const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
+    const greenhouse = greenhouses.find(g => formData.greenhouseId.includes(g.id));
     const cropVariety = getAllVarieties().find(v =>
       v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
     );
     const today = new Date().toISOString().slice(0, 10);
+    const greenhouseIds = formData.greenhouseId.join(',');
+    const plantingModes = formData.plantingMode.join(',');
 
     const apiData = {
       id: `PP${Date.now()}`,
@@ -329,9 +348,9 @@ export function useProductionPage(): UseProductionPageReturn {
       planType: formData.planType,
       cropName: formData.cropName,
       variety: formData.variety,
-      greenhouseId: formData.greenhouseId,
-      greenhouseName: greenhouse?.name || '',
-      areaName: greenhouse?.name || '',
+      greenhouseId: greenhouseIds,
+      greenhouseName: greenhouse?.name || greenhouseIds,
+      areaName: greenhouse?.name || greenhouseIds,
       areaId: '',
       targetQuantity: parseInt(formData.targetYield) || 0,
       targetYield: parseInt(formData.targetYield) || 0,
@@ -354,11 +373,14 @@ export function useProductionPage(): UseProductionPageReturn {
       planDetailFileName: '',
       plantingArea: parseFloat(formData.plantingArea) || 0,
       plantingAreaUnit: formData.plantingAreaUnit || 'm²',
-      plantingMode: formData.plantingMode,
+      plantingMode: plantingModes,
       supplierName: '',
       seedlingSiteName: '',
       seedQuantity: 0,
       targetSeedlingCount: 0,
+      // 关联订单
+      orderId: formData.orderId.join(',') || undefined,
+      orderCode: formData.orderCode.join(',') || undefined,
     };
 
     try {
@@ -378,11 +400,13 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSubmitForApproval = useCallback(async () => {
     if (!validateForm()) return;
 
-    const greenhouse = greenhouses.find(g => g.id === formData.greenhouseId);
+    const greenhouse = greenhouses.find(g => formData.greenhouseId.includes(g.id));
     const cropVariety2 = getAllVarieties().find(v =>
       v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
     );
     const today = new Date().toISOString().slice(0, 10);
+    const greenhouseIds = formData.greenhouseId.join(',');
+    const plantingModes = formData.plantingMode.join(',');
 
     const apiData = {
       id: `PP${Date.now()}`,
@@ -391,9 +415,9 @@ export function useProductionPage(): UseProductionPageReturn {
       planType: formData.planType,
       cropName: formData.cropName,
       variety: formData.variety,
-      greenhouseId: formData.greenhouseId,
-      greenhouseName: greenhouse?.name || '',
-      areaName: greenhouse?.name || '',
+      greenhouseId: greenhouseIds,
+      greenhouseName: greenhouse?.name || greenhouseIds,
+      areaName: greenhouse?.name || greenhouseIds,
       areaId: '',
       targetQuantity: parseInt(formData.targetYield) || 0,
       targetYield: parseInt(formData.targetYield) || 0,
@@ -416,11 +440,14 @@ export function useProductionPage(): UseProductionPageReturn {
       planDetailFileName: '',
       plantingArea: parseFloat(formData.plantingArea) || 0,
       plantingAreaUnit: formData.plantingAreaUnit || 'm²',
-      plantingMode: formData.plantingMode,
+      plantingMode: plantingModes,
       supplierName: '',
       seedlingSiteName: '',
       seedQuantity: 0,
       targetSeedlingCount: 0,
+      // 关联订单
+      orderId: formData.orderId.join(',') || undefined,
+      orderCode: formData.orderCode.join(',') || undefined,
     };
 
     try {
@@ -451,7 +478,7 @@ export function useProductionPage(): UseProductionPageReturn {
             responsiblePerson: formData.responsiblePerson,
             targetYield: parseInt(formData.targetYield) || 0,
             plantingArea: parseFloat(formData.plantingArea) || 0,
-            plantingMode: formData.plantingMode,
+            plantingMode: formData.plantingMode.join(','),
           },
         };
         await apiClient.post('/approvals', approvalData);
@@ -905,6 +932,7 @@ export function useProductionPage(): UseProductionPageReturn {
     batches,
     filteredBatches,
     greenhouses,
+    orders,
     batchesLength: batches.length,
 
     // 搜索状态
