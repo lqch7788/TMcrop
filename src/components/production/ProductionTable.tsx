@@ -101,7 +101,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">目标产量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
@@ -158,21 +158,13 @@ export function ProductionTable({
                 <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {batch.planType === PlanType.SEED_BREEDING
-                    ? batch.supplierName || '-'
-                    : batch.planType === PlanType.SEEDLING
-                    ? batch.seedlingSiteName || batch.greenhouseName || '-'
-                    : batch.greenhouseName || '-'}
+                  {batch.greenhouseName || batch.supplierName || batch.seedlingSiteName || '-'}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap font-medium">
-                  {batch.planType === PlanType.SEED_BREEDING
-                    ? `${batch.seedQuantity || 0} ${batch.unit || 'kg'}`
-                    : batch.planType === PlanType.SEEDLING
-                    ? `${batch.targetSeedlingCount || 0} ${batch.unit || '株'}`
-                    : `${batch.targetQuantity || 0} ${batch.unit || 'kg'}`}
+                  {`${batch.targetYield || 0} ${batch.unit || 'kg'}`}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>

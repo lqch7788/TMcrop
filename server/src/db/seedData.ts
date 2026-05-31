@@ -637,6 +637,14 @@ function seedPropagationSeedSources() {
 function seedProductionPlans() {
   const db = getDatabase();
 
+  // 检查是否已有数据（保留用户创建的生产计划）
+  const existingCount = db.exec('SELECT COUNT(*) as count FROM production_plans');
+  const count = Number(existingCount[0]?.values[0]?.[0] || 0);
+  if (count > 0) {
+    console.log(`[seedData] production_plans 表已有 ${count} 条数据，跳过种子数据导入`);
+    return;
+  }
+
   // 生产计划数据 - 与计划管理-生产计划表对齐
   // JZB=育种计划, YMB=育苗计划, ZZB=种植计划
   const productionPlans = [

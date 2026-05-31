@@ -40,6 +40,8 @@ export interface DetailModalProps {
   height?: number;
   /** 是否显示最大化按钮 */
   showMaximize?: boolean;
+  /** 自定义底部内容（如审批记录、关联记录等） */
+  bottom?: React.ReactNode;
 }
 
 /**
@@ -55,6 +57,7 @@ export function DetailModal({
   width = 700,
   height = 600,
   showMaximize = true,
+  bottom,
 }: DetailModalProps) {
   // 底部按钮
   const defaultFooter = (
@@ -114,6 +117,7 @@ export function DetailModal({
     >
       <div className="px-2 space-y-4">
         {fields.map((row, rowIndex) => renderRow(row, rowIndex))}
+        {bottom && <div className="mt-4">{bottom}</div>}
       </div>
     </Modal>
   );

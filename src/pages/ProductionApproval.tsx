@@ -25,6 +25,9 @@ import { Label } from '@/components/ui/label';
 import { TextArea } from '@/components/ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KpiCard, KpiCardGrid } from '@/components/summary';
+import { BatchDetailModal } from '@/components/production/modals';
+import { CropBatch } from '@/types';
+import { getProductionPlanById } from '@/services/apiProductionPlanService';
 
 export default function ProductionApproval() {
   const { approvals, approve, reject, refreshApprovals } = useApproval();
@@ -43,7 +46,12 @@ export default function ProductionApproval() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [detailModal, setDetailModal] = useState<{ show: boolean; approval: Approval | null; purchasePlanDetail?: any }>({ show: false, approval: null, purchasePlanDetail: null });
+  const [detailModal, setDetailModal] = useState<{
+    show: boolean;
+    approval: Approval | null;
+    purchasePlanDetail?: any;
+    productionPlanDetail?: CropBatch | null;
+  }>({ show: false, approval: null, purchasePlanDetail: null, productionPlanDetail: null });
   const [approvalModal, setApprovalModal] = useState<{ show: boolean; approval: Approval | null; action: 'approve' | 'reject' | null }>({ show: false, approval: null, action: null });
   const [approvalComment, setApprovalComment] = useState('');
 
@@ -59,14 +67,29 @@ export default function ProductionApproval() {
         }
         const planDetail = store.plans.find(p => p.id === approval.businessLink?.requestId);
         if (planDetail) {
-          setDetailModal({ show: true, approval, purchasePlanDetail: planDetail });
+          setDetailModal({ show: true, approval, purchasePlanDetail: planDetail, productionPlanDetail: null });
           return;
         }
-      } catch (error) {
-        // logger.error('加载采购计划详情失败:', error);
+      } catch {
+        // 忽略错误，继续执行
       }
     }
-    setDetailModal({ show: true, approval, purchasePlanDetail: null });
+
+    // 如果是生产计划相关，从API获取完整详情
+    if (approval.businessLink?.type === 'production' || approval.businessLink?.type === 'production_batch') {
+      try {
+        const requestId = approval.businessLink.requestId;
+        if (requestId) {
+          const planDetail = await getProductionPlanById(requestId);
+          setDetailModal({ show: true, approval, purchasePlanDetail: null, productionPlanDetail: planDetail || null });
+          return;
+        }
+      } catch {
+        // 忽略错误，继续执行
+      }
+    }
+
+    setDetailModal({ show: true, approval, purchasePlanDetail: null, productionPlanDetail: null });
   };
 
   // 审批操作处理
@@ -101,7 +124,7 @@ export default function ProductionApproval() {
 
   // 关闭详情弹窗
   const closeDetailModal = () => {
-    setDetailModal({ show: false, approval: null, purchasePlanDetail: null });
+    setDetailModal({ show: false, approval: null, purchasePlanDetail: null, productionPlanDetail: null });
   };
 
   // Tab配置 - 生产类审批
@@ -493,9 +516,9 @@ export default function ProductionApproval() {
         )}
       </div>
 
-      {/* 详情弹窗 */}
+      {/* 详情弹窗 - 当没有生产计划详情时才显示（避免与 BatchDetailModal 重复） */}
       <UnifiedModal
-        isOpen={detailModal.show && !!detailModal.approval}
+        isOpen={detailModal.show && !!detailModal.approval && !detailModal.productionPlanDetail}
         onClose={closeDetailModal}
         title="审批详情"
         size="xl"
@@ -750,6 +773,14 @@ export default function ProductionApproval() {
         </div>
         )}
       </UnifiedModal>
+
+      {/* 生产计划详情弹窗 - 复用 BatchDetailModal */}
+      {detailModal.productionPlanDetail && (
+        <BatchDetailModal
+          batch={detailModal.productionPlanDetail}
+          onClose={closeDetailModal}
+        />
+      )}
 
       {/* 审批确认弹窗 */}
       <UnifiedModal

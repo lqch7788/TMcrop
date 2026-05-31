@@ -1,20 +1,27 @@
+/**
+ * 批量编辑生产计划弹窗
+ * 字段来源与新建弹窗保持一致
+ */
+
 import { X, Upload } from 'lucide-react';
-import { CropBatch, Greenhouse } from '../../../types';
-import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS } from '../constants';
+import { useState } from 'react';
+import { CropBatch, Greenhouse, PlanType } from '../../../types';
+import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { getAllVarieties } from '../../../services/cropVarietyService';
-import { getDictItems } from '../../../stores/useDictionaryStore';
+import { Checkbox } from '@/components/ui/checkbox';
+import CropCodeSelector from '../../farm/common/CropCodeSelector';
+import { CropVariety } from '../../../types/cropVariety';
+import { DictSelect } from '../../common/settings/DictSelect';
 
-// 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 interface BatchEditModalProps {
   isOpen: boolean;
-  selectedRows: number[];
+  selectedRows: string[];  // 改为 string[] (id)
   batches: CropBatch[];
   greenhouses: Greenhouse[];
   editedBatchCodes: string[];
@@ -45,25 +52,29 @@ export function BatchEditModal({
   onPublish,
   onConfirmNext,
 }: BatchEditModalProps) {
+  // 作物变更状态（必须在条件返回之前）
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+  // 种植区域展开状态
+  const [greenhouseExpanded, setGreenhouseExpanded] = useState(false);
+  // 种植模式展开状态
+  const [plantingModeExpanded, setPlantingModeExpanded] = useState(false);
+
   if (!isOpen) return null;
 
-  // 从作物品种库获取作物类型列表（去重）
-  const allVarieties = getAllVarieties();
-  const cropTypeOptions = Array.from(
-    new Map(allVarieties.map(v => [v.varietyName, v])).values()
-  ).map(v => ({ name: v.varietyName, typeName: v.typeName, varieties: [v.subVariety1Name || v.varietyName].filter(Boolean) }));
-
-  // 从字典获取种植模式选项
-  const plantingModeOptions = getDictItems('planting_mode').map(d => ({
-    id: d.dictCode,
-    name: d.dictLabel,
-    description: d.dictLabel,
-  }));
-
+  // 获取当前编辑的批次
   const selectedBatches = selectedRows.map(id => batches.find(b => b.id === id)).filter(Boolean) as CropBatch[];
   const currentBatch = selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) : null;
   const editedData = selectedBatchCode ? editedBatches[selectedBatchCode] || {} : {};
 
+  // 获取当前批次的计划类型，用于种植模式选项
+  const currentPlanType = editedData.planType || currentBatch?.planType || PlanType.PLANTING;
+  const plantingModeOptions = getModesByPlanType(currentPlanType);
+
+  // 完整的种植模式映射（用于显示已选值）
+  const allModes = [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES];
+  const modeMap = Object.fromEntries(allModes.map(m => [m.value, m.label]));
+
+  // 处理字段变更
   const handleFieldChange = (field: keyof CropBatch, value: unknown) => {
     const updated = {
       ...editedBatches,
@@ -75,25 +86,39 @@ export function BatchEditModal({
     }
   };
 
-  const handleCropChange = (cropName: string) => {
-    const crop = cropTypeOptions.find(c => c.name === cropName);
-    handleFieldChange('cropName', cropName);
-    if (crop) {
-      handleFieldChange('variety', crop.varieties[0]);
+  // 作物变更（使用 CropCodeSelector 一致的方式）
+  const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
+    if (varietyInfo) {
+      setSelectedCrop(varietyInfo);
+      handleFieldChange('cropCode', varietyInfo.cropCode);
+      handleFieldChange('cropName', varietyInfo.varietyName);
+      handleFieldChange('variety', varietyInfo.subVariety1Name || varietyInfo.varietyName);
+    } else {
+      setSelectedCrop(null);
+      handleFieldChange('cropCode', '');
+      handleFieldChange('cropName', '');
+      handleFieldChange('variety', '');
     }
   };
 
-  const handleGreenhouseChange = (greenhouseId: string) => {
-    const gh = greenhouses.find(g => g.id === greenhouseId);
-    handleFieldChange('greenhouseId', greenhouseId);
-    if (gh) {
-      handleFieldChange('greenhouseName', gh.name);
-    }
-  };
+  // 种植区域ID列表
+  const currentGreenhouseIds = editedData.greenhouseId
+    ? [editedData.greenhouseId].flat()
+    : currentBatch?.greenhouseId
+      ? [currentBatch.greenhouseId]
+      : [];
+
+  // 种植模式列表
+  const currentPlantingModes = editedData.plantingMode
+    ? editedData.plantingMode.split(',')
+    : currentBatch?.plantingMode
+      ? currentBatch.plantingMode.split(',')
+      : [];
+
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col">
+      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-gray-300 flex items-center justify-between bg-blue-600 flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -138,125 +163,148 @@ export function BatchEditModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden p-4 flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4">
           {selectedBatchCode && currentBatch && (
-            <>
-              {/* 第一行：基本信息 */}
-              <div className="grid grid-cols-4 gap-3 flex-shrink-0 mb-3">
+            <div className="space-y-4">
+              {/* 第一行：批次号 + 作物品种 */}
+              <div className="grid grid-cols-2 gap-4">
                 {/* 批次号 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
+                <div className="bg-gray-100 rounded-lg p-3">
                   <div className="text-xs text-gray-500 mb-1">生产计划批次号</div>
                   <div className="text-sm font-medium text-gray-900">{currentBatch.batchCode}</div>
                 </div>
 
-                {/* 种植模式 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">种植模式</div>
-                  <Select
-                    value={editedData.plantingMode ?? currentBatch.plantingMode}
-                    onValueChange={(v) => handleFieldChange('plantingMode', v)}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plantingModeOptions.map(m => (
-                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 作物名称 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">作物名称</div>
-                  <Select
-                    value={editedData.cropName ?? currentBatch.cropName}
-                    onValueChange={(v) => handleCropChange(v)}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cropTypeOptions.map(c => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* 作物品种 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
+                {/* 作物品种 - 可编辑（与新建一致） */}
+                <div>
                   <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                  <Select
-                    value={editedData.variety ?? currentBatch.variety}
-                    onValueChange={(v) => handleFieldChange('variety', v)}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(cropTypeOptions.find(c => c.name === (editedData.cropName ?? currentBatch.cropName))?.varieties || []).map(v => (
-                        <SelectItem key={v} value={v}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CropCodeSelector
+                    value={(editedData.cropCode || currentBatch.cropCode || '')}
+                    onChange={handleCropChange}
+                    placeholder="搜索或选择作物品种..."
+                    size="sm"
+                    showFullPath={true}
+                  />
+                  {selectedCrop && (
+                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
+                      <span className="text-emerald-700">
+                        {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                        {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* 种植区域 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">种植区域</div>
-                  <Select
-                    value={editedData.greenhouseId ?? currentBatch.greenhouseId}
-                    onValueChange={(v) => handleGreenhouseChange(v)}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
+              {/* 第二行：种植区域 + 生产模式（多选） */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* 种植区域 - 多选 */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-gray-500">种植区域</span>
+                    <button
+                      type="button"
+                      onClick={() => setGreenhouseExpanded(!greenhouseExpanded)}
+                      className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                    >
+                      {greenhouseExpanded ? '收起' : '展开'}
+                    </button>
+                  </div>
+                  {greenhouseExpanded ? (
+                    <div className="flex flex-col gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
                       {greenhouses.filter(g => g.status === 'active').map(g => (
-                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                        <div key={g.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`edit-gh-${g.id}`}
+                            checked={currentGreenhouseIds.includes(g.id) || currentGreenhouseIds.includes(g.name)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                handleFieldChange('greenhouseId', [...currentGreenhouseIds.filter(id => id !== g.name), g.id]);
+                                handleFieldChange('greenhouseName', g.name);
+                              } else {
+                                handleFieldChange('greenhouseId', currentGreenhouseIds.filter(id => id !== g.id && id !== g.name));
+                              }
+                            }}
+                          />
+                          <label htmlFor={`edit-gh-${g.id}`} className="text-sm cursor-pointer">{g.name}</label>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  ) : (
+                    <div className="h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-center">
+                      {currentGreenhouseIds.length === 0 ? '请选择' : currentGreenhouseIds.map(id => greenhouses.find(g => g.id === id || g.name === id)?.name).filter(Boolean).join(', ')}
+                    </div>
+                  )}
                 </div>
 
-                {/* 种植面积 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">种植面积</div>
+                {/* 生产模式 - 多选 */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-gray-500">生产模式</span>
+                    <button
+                      type="button"
+                      onClick={() => setPlantingModeExpanded(!plantingModeExpanded)}
+                      className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700"
+                    >
+                      {plantingModeExpanded ? '收起' : '展开'}
+                    </button>
+                  </div>
+                  {plantingModeExpanded ? (
+                    <div className="flex flex-col gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                      {plantingModeOptions.map(mode => (
+                        <div key={mode.value} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`edit-pm-${mode.value}`}
+                            checked={currentPlantingModes.includes(mode.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                const newModes = [...currentPlantingModes.filter(m => m !== ''), mode.value];
+                                handleFieldChange('plantingMode', newModes.join(','));
+                              } else {
+                                const newModes = currentPlantingModes.filter(m => m !== mode.value);
+                                handleFieldChange('plantingMode', newModes.join(','));
+                              }
+                            }}
+                          />
+                          <label htmlFor={`edit-pm-${mode.value}`} className="text-sm cursor-pointer">{mode.label}</label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-center">
+                      {currentPlantingModes.length === 0 ? '请选择' : currentPlantingModes.map(m => modeMap[m] || m).filter(Boolean).join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 第三行：开始时间 + 预计结束时间 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">开始时间</div>
                   <Input
-                    type="text"
-                    value={editedData.plantingArea ?? currentBatch.plantingArea}
-                    onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
+                    type="date"
+                    value={editedData.startDate || currentBatch.startDate || ''}
+                    onChange={(e) => handleFieldChange('startDate', e.target.value)}
                     className={deepInputClass}
                   />
                 </div>
-
-                {/* 开始时间 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">开始时间</div>
-                  <DatePicker
-                    selected={editedData.startDate ? new Date(editedData.startDate) : currentBatch.startDate ? new Date(currentBatch.startDate) : undefined}
-                    onChange={(date) => handleFieldChange('startDate', date.toISOString().split('T')[0])}
-                    placeholder="选择日期"
-                  />
-                </div>
-
-                {/* 预计结束时间 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
+                <div>
                   <div className="text-xs text-gray-500 mb-1">预计结束时间</div>
-                  <DatePicker
-                    selected={editedData.expectedHarvestDate ? new Date(editedData.expectedHarvestDate) : currentBatch.expectedHarvestDate ? new Date(currentBatch.expectedHarvestDate) : undefined}
-                    onChange={(date) => handleFieldChange('expectedHarvestDate', date.toISOString().split('T')[0])}
-                    placeholder="选择日期"
+                  <Input
+                    type="date"
+                    value={editedData.expectedHarvestDate || currentBatch.expectedHarvestDate || ''}
+                    onChange={(e) => handleFieldChange('expectedHarvestDate', e.target.value)}
+                    className={deepInputClass}
                   />
                 </div>
+              </div>
 
-                {/* 负责人 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
+              {/* 第四行：负责人 + 目标产量 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <div className="text-xs text-gray-500 mb-1">负责人</div>
                   <Select
-                    value={editedData.responsiblePerson ?? currentBatch.responsiblePerson}
+                    value={editedData.responsiblePerson || currentBatch.responsiblePerson || ''}
                     onValueChange={(v) => handleFieldChange('responsiblePerson', v)}
                   >
                     <SelectTrigger className={deepInputClass}>
@@ -269,69 +317,76 @@ export function BatchEditModal({
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">目标产量</div>
+                    <Input
+                      type="number"
+                      value={editedData.targetYield ?? currentBatch.targetYield ?? ''}
+                      onChange={(e) => handleFieldChange('targetYield', e.target.value)}
+                      placeholder="0"
+                      className={deepInputClass}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">单位</div>
+                    <DictSelect
+                      category="unit"
+                      value={editedData.unit || currentBatch.unit || ''}
+                      onChange={(v) => handleFieldChange('unit', v)}
+                      placeholder="选择单位"
+                    />
+                  </div>
+                </div>
+              </div>
 
-                {/* 目标产量 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">目标产量</div>
+              {/* 第五行：种植面积 + 面积单位 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">种植面积</div>
                   <Input
-                    type="text"
-                    value={editedData.targetYield ?? currentBatch.targetYield}
-                    onChange={(e) => handleFieldChange('targetYield', e.target.value)}
+                    type="number"
+                    value={editedData.plantingArea ?? currentBatch.plantingArea ?? ''}
+                    onChange={(e) => handleFieldChange('plantingArea', e.target.value)}
+                    placeholder="0"
                     className={deepInputClass}
                   />
                 </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">面积单位</div>
+                  <DictSelect
+                    category="unit"
+                    value={editedData.plantingAreaUnit || currentBatch.plantingAreaUnit || ''}
+                    onChange={(v) => handleFieldChange('plantingAreaUnit', v)}
+                    placeholder="选择面积单位"
+                  />
+                </div>
+              </div>
 
-                {/* 发布人 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
+              {/* 第六行：只读字段 */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-gray-100 rounded-lg p-3">
                   <div className="text-xs text-gray-500 mb-1">发布人</div>
                   <div className="text-sm text-gray-700">{currentBatch.publisher || '-'}</div>
                 </div>
-
-                {/* 初次发布时间 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
+                <div className="bg-gray-100 rounded-lg p-3">
                   <div className="text-xs text-gray-500 mb-1">初次发布时间</div>
                   <div className="text-sm text-gray-700">{currentBatch.publishDate || '-'}</div>
                 </div>
-
-                {/* 最后修改时间 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
+                <div className="bg-gray-100 rounded-lg p-3">
                   <div className="text-xs text-gray-500 mb-1">最后修改时间</div>
                   <div className="text-sm text-gray-700">{currentBatch.lastModifyDate || '-'}</div>
                 </div>
-
-                {/* 当前状态 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
+                <div className="bg-gray-100 rounded-lg p-3">
                   <div className="text-xs text-gray-500 mb-1">当前状态</div>
                   <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${batchStatusColors[currentBatch.batchStatus || 'draft']}`}>
                     {batchStatusLabels[currentBatch.batchStatus || 'draft']}
                   </span>
                 </div>
-
-                {/* 计划是否完成 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">计划是否完成</div>
-                  <Select
-                    value={editedData.isCompleted === undefined ? 'no' : editedData.isCompleted ? 'yes' : 'no'}
-                    onValueChange={(v) => handleFieldChange('isCompleted', v === 'yes')}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no">否</SelectItem>
-                      <SelectItem value="yes">是</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {editedData.isCompleted === true && (
-                    <p className="text-xs text-red-600 mt-1 font-medium">
-                      ⚠️ 选择"是"后计划将归档，无法编辑和删除
-                    </p>
-                  )}
-                </div>
               </div>
 
-              {/* 第二行：计划详情文件上传 */}
-              <div className="bg-gray-50 rounded-lg p-3 flex-shrink-0">
+              {/* 计划详情文件上传 */}
+              <div className="bg-gray-50 rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-2">计划详情文件</div>
                 <div className="flex items-center gap-4">
                   {editedData.planDetailFileName ?? currentBatch.planDetailFileName ? (
@@ -350,7 +405,6 @@ export function BatchEditModal({
                             const file = (e.target as HTMLInputElement).files?.[0];
                             if (file) {
                               handleFieldChange('planDetailFileName', file.name);
-                              // 读取文件内容
                               const reader = new FileReader();
                               reader.onload = (event) => {
                                 handleFieldChange('planDetail', event.target?.result as string);
@@ -376,7 +430,6 @@ export function BatchEditModal({
                           const file = (e.target as HTMLInputElement).files?.[0];
                           if (file) {
                             handleFieldChange('planDetailFileName', file.name);
-                            // 读取文件内容
                             const reader = new FileReader();
                             reader.onload = (event) => {
                               handleFieldChange('planDetail', event.target?.result as string);
@@ -394,7 +447,7 @@ export function BatchEditModal({
                   <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 

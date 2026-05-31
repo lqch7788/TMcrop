@@ -990,6 +990,45 @@ router.get('/:id/history', (req, res) => {
 });
 
 /**
+ * 按业务信息查询审批单
+ * GET /api/approvals/by-business/:type/:requestId
+ * 返回该业务关联的审批单（含 records 审批记录）
+ */
+router.get('/by-business/:type/:requestId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { type, requestId } = req.params;
+
+    // 从 business_link JSON 字段中匹配 type 和 requestId
+    const stmt = db.prepare(`
+      SELECT * FROM approvals
+      WHERE business_link LIKE ? AND business_link LIKE ?
+      ORDER BY created_at DESC
+    `);
+    stmt.bind([`%"type":"${type}"%`, `%${requestId}%`]);
+
+    const approvals: any[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject() as Record<string, unknown>;
+      // 解析 JSON 字段
+      approvals.push({
+        ...row,
+        approvers: row.approvers ? JSON.parse(row.approvers as string) : [],
+        records: row.records ? JSON.parse(row.records as string) : [],
+        businessLink: row.business_link ? JSON.parse(row.business_link as string) : null,
+        attachments: row.attachments ? JSON.parse(row.attachments as string) : [],
+      });
+    }
+    stmt.free();
+
+    res.json({ success: true, data: approvals });
+  } catch (error) {
+    console.error('按业务查询审批单失败:', error);
+    res.status(500).json({ success: false, error: '按业务查询审批单失败' });
+  }
+});
+
+/**
  * 获取用户的待审批列表
  * GET /api/approvals/pending/me
  * Query: userId, userRoles (逗号分隔)

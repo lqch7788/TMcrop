@@ -9,6 +9,53 @@ import { enhancedApiClient } from '../lib/apiClient';
 import { CropBatch } from '../types';
 
 /**
+ * 标准化 API 返回数据到 CropBatch 接口
+ * 处理后端字段名与前端接口名不一致的问题
+ */
+function normalizeBatch(raw: Record<string, unknown>): CropBatch {
+  return {
+    id: raw.id as string,
+    batchCode: raw.batchCode as string,
+    cropName: (raw.cropName as string) || '',
+    cropType: (raw.cropType as string) || '',
+    variety: (raw.variety as string) || '',
+    greenhouseId: (raw.greenhouseId as string) || (raw.greenhouseName as string) || '',
+    greenhouseName: (raw.greenhouseName as string) || '',
+    plantingArea: (raw.plantingArea as number) || 0,
+    plantingAreaUnit: raw.plantingAreaUnit as string | undefined,
+    stage: (raw.stage as CropBatch['stage']) || 'seedling',
+    stageName: (raw.stageName as string) || '',
+    startDate: (raw.startDate as string) || '',
+    expectedHarvestDate: (raw.expectedHarvestDate as string) || '',
+    // API 返回 targetQuantity，映射到 targetYield
+    targetYield: (raw.targetQuantity as number) || (raw.targetYield as number) || 0,
+    actualYield: (raw.actualYield as number) || 0,
+    // API 返回 status，前端用 batchStatus
+    batchStatus: (raw.status as CropBatch['batchStatus']) || (raw.batchStatus as CropBatch['batchStatus']) || 'draft',
+    plantingMode: (raw.plantingMode as string) || '',
+    responsiblePerson: (raw.responsiblePerson as string) || '',
+    publisher: raw.publisher as string | undefined,
+    publishDate: raw.publishDate as string | undefined,
+    lastModifyDate: raw.lastModifyDate as string | undefined,
+    planDetailFileName: raw.planDetailFileName as string | undefined,
+    planDetail: raw.planDetail as string | undefined,
+    planType: raw.planType as CropBatch['planType'],
+    planTypeName: raw.planTypeName as string | undefined,
+    locationName: raw.locationName as string | undefined,
+    targetQuantity: raw.targetQuantity as number | undefined,
+    unit: raw.unit as string | undefined,
+    supplierName: raw.supplierName as string | undefined,
+    seedQuantity: raw.seedQuantity as number | undefined,
+    seedlingSiteName: raw.seedlingSiteName as string | undefined,
+    targetSeedlingCount: raw.targetSeedlingCount as number | undefined,
+    orderId: raw.orderId as string | undefined,
+    orderCode: raw.orderCode as string | undefined,
+    remarks: raw.remarks as string | undefined,
+    areaName: raw.areaName as string | undefined,
+  };
+}
+
+/**
  * 获取所有生产计划
  */
 export async function getProductionPlans(filters?: {
@@ -26,15 +73,18 @@ export async function getProductionPlans(filters?: {
   if (filters?.limit) params.append('limit', String(filters.limit));
 
   const url = params.toString() ? `/production-plans?${params.toString()}` : '/production-plans';
-  const data = await enhancedApiClient.get<CropBatch[]>(url);
-  return Array.isArray(data) ? data : [];
+  const data = await enhancedApiClient.get<Record<string, unknown>[]>(url);
+  if (!Array.isArray(data)) return [];
+  return data.map(normalizeBatch);
 }
 
 /**
  * 根据ID获取单个生产计划
  */
 export async function getProductionPlanById(id: string): Promise<CropBatch | undefined> {
-  return await enhancedApiClient.get<CropBatch>(`/production-plans/${id}`);
+  const data = await enhancedApiClient.get<Record<string, unknown>>(`/production-plans/${id}`);
+  if (!data) return undefined;
+  return normalizeBatch(data);
 }
 
 /**
@@ -43,7 +93,8 @@ export async function getProductionPlanById(id: string): Promise<CropBatch | und
 export async function createProductionPlan(
   plan: Omit<CropBatch, 'id'>
 ): Promise<CropBatch> {
-  return await enhancedApiClient.post<CropBatch>('/production-plans', plan);
+  const data = await enhancedApiClient.post<Record<string, unknown>>('/production-plans', plan);
+  return normalizeBatch(data);
 }
 
 /**
@@ -53,7 +104,9 @@ export async function updateProductionPlan(
   id: string,
   updates: Partial<CropBatch>
 ): Promise<CropBatch | null> {
-  return await enhancedApiClient.put<CropBatch>(`/production-plans/${id}`, updates);
+  const data = await enhancedApiClient.put<Record<string, unknown>>(`/production-plans/${id}`, updates);
+  if (!data) return null;
+  return normalizeBatch(data);
 }
 
 /**
