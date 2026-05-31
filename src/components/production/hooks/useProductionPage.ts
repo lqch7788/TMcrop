@@ -332,12 +332,15 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSaveDraft = useCallback(async () => {
     if (!validateForm()) return;
 
-    const greenhouse = greenhouses.find(g => formData.greenhouseId.includes(g.id));
     const cropVariety = getAllVarieties().find(v =>
       v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
     );
     const today = new Date().toISOString().slice(0, 10);
     const greenhouseIds = formData.greenhouseId.join(',');
+    // 调试：检查温室ID匹配
+    const greenhouseNames = greenhouses
+      .filter(g => formData.greenhouseId.includes(g.id))
+      .map(g => g.name).join(',') || greenhouseIds;
     const plantingModes = formData.plantingMode.join(',');
 
     const apiData = {
@@ -348,8 +351,8 @@ export function useProductionPage(): UseProductionPageReturn {
       cropName: formData.cropName,
       variety: formData.variety,
       greenhouseId: greenhouseIds,
-      greenhouseName: greenhouse?.name || greenhouseIds,
-      areaName: greenhouse?.name || greenhouseIds,
+      greenhouseName: greenhouseNames,
+      areaName: greenhouseNames,
       areaId: '',
       targetQuantity: parseInt(formData.targetYield) || 0,
       targetYield: parseInt(formData.targetYield) || 0,
@@ -399,12 +402,15 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSubmitForApproval = useCallback(async () => {
     if (!validateForm()) return;
 
-    const greenhouse = greenhouses.find(g => formData.greenhouseId.includes(g.id));
     const cropVariety2 = getAllVarieties().find(v =>
       v.varietyName === formData.cropName || v.typeName === formData.cropName || v.categoryName === formData.cropName
     );
     const today = new Date().toISOString().slice(0, 10);
     const greenhouseIds = formData.greenhouseId.join(',');
+    // 调试：检查温室ID匹配
+    const greenhouseNames = greenhouses
+      .filter(g => formData.greenhouseId.includes(g.id))
+      .map(g => g.name).join(',') || greenhouseIds;
     const plantingModes = formData.plantingMode.join(',');
 
     const apiData = {
@@ -414,8 +420,8 @@ export function useProductionPage(): UseProductionPageReturn {
       planType: formData.planType,
       cropName: formData.cropName,
       variety: formData.variety,
-      greenhouseName: greenhouse?.name || greenhouseIds,
-      areaName: greenhouse?.name || greenhouseIds,
+      greenhouseName: greenhouseNames,
+      areaName: greenhouseNames,
       targetQuantity: parseInt(formData.targetYield) || 0,
       startDate: formData.startDate,
       expectedHarvestDate: formData.expectedHarvestDate,
@@ -453,7 +459,7 @@ export function useProductionPage(): UseProductionPageReturn {
           type: 'production_plan',
           typeName: '生产计划',
           title: `生产计划审批：${formData.batchCode}`,
-          description: `作物：${formData.cropName} ${formData.variety}\n种植区域：${greenhouse?.name || ''}\n目标产量：${formData.targetYield}kg`,
+          description: `作物：${formData.cropName} ${formData.variety}\n种植区域：${greenhouseNames || greenhouseIds}\n目标产量：${formData.targetYield}kg`,
           applicantId: localStorage.getItem('userId') || '',
           applicantName: formData.publisher || localStorage.getItem('username') || '',
           applicantDepartment: localStorage.getItem('department') || '',
@@ -466,7 +472,7 @@ export function useProductionPage(): UseProductionPageReturn {
             requestCode: apiData.batchCode,
             cropName: formData.cropName,
             variety: formData.variety,
-            greenhouseName: greenhouse?.name || '',
+            greenhouseName: greenhouseNames || greenhouseIds,
             startDate: formData.startDate,
             expectedHarvestDate: formData.expectedHarvestDate,
             responsiblePerson: formData.responsiblePerson,
@@ -775,7 +781,8 @@ export function useProductionPage(): UseProductionPageReturn {
   }, [selectedRows.length, filteredBatches]);
 
   const handleBatchDeleteSelectAll = useCallback(() => {
-    const deletableBatches = filteredBatches.filter(b => b.batchStatus === 'draft' || b.batchStatus === 'cancelled');
+    // 所有状态的生产计划都可以删除
+    const deletableBatches = filteredBatches;
     if (selectedRows.length === deletableBatches.length) {
       setSelectedRows([]);
     } else {

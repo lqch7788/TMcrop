@@ -282,3 +282,62 @@ export async function getProductionPlanProgress(productionPlanId: string): Promi
     cancelled: all.filter(r => r.status === 'cancelled' || r.status === 'void').length,
   };
 }
+
+/**
+ * 审批记录结构
+ */
+export interface ApprovalRecord {
+  id: string;
+  approvalId: string;
+  approverId: string;
+  approverName: string;
+  action: 'approve' | 'reject' | 'partially_approve' | 'cancel';
+  comment?: string;
+  attachments?: string[];
+  actionTime: string;
+}
+
+/**
+ * 生产计划关联的审批单摘要
+ */
+export interface ProductionPlanApproval {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  currentStep: number;
+  totalSteps: number;
+  records: ApprovalRecord[];
+  createdAt: string;
+}
+
+/**
+ * 获取生产计划的审批记录
+ * @param productionPlanId 生产计划ID
+ */
+export async function getProductionPlanApprovals(
+  productionPlanId: string
+): Promise<ProductionPlanApproval[]> {
+  try {
+    const response = await fetch(
+      `/api/approvals/by-business/production/${productionPlanId}`
+    );
+    const result = await response.json();
+    if (result.success && Array.isArray(result.data)) {
+      return result.data.map((item: any) => ({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        status: item.status,
+        currentStep: item.currentStep,
+        totalSteps: item.totalSteps,
+        records: item.records || [],
+        createdAt: item.created_at,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error('获取生产计划审批记录失败:', error);
+    return [];
+  }
+}

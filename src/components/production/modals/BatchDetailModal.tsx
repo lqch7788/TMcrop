@@ -5,8 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { CropBatch } from '@/types';
-import { batchStatusColors, batchStatusLabels, stageProgress } from '../constants';
-import { getProductionPlanRelations, ProductionPlanRelation } from '@/services/productionPlanService';
+import { batchStatusColors, batchStatusLabels, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
+import { getProductionPlanApprovals, ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 
 interface BatchDetailModalProps {
@@ -15,39 +15,76 @@ interface BatchDetailModalProps {
   onViewWorkOrders?: () => void;
 }
 
+// 审批操作类型中文映射
+const actionLabels: Record<string, string> = {
+  approve: '通过',
+  reject: '拒绝',
+  partially_approve: '部分通过',
+  cancel: '撤销',
+};
+
+// 审批状态中文映射
+const approvalStatusLabels: Record<string, string> = {
+  pending: '审批中',
+  approved: '已通过',
+  rejected: '已拒绝',
+  cancelled: '已撤销',
+  partially_approved: '部分通过',
+};
+
 export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'relations'>('info');
-  const [relations, setRelations] = useState<ProductionPlanRelation[]>([]);
-  const [loadingRelations, setLoadingRelations] = useState(false);
+  const [approvals, setApprovals] = useState<ProductionPlanApproval[]>([]);
+  const [loadingApprovals, setLoadingApprovals] = useState(false);
 
+  // 加载审批记录
   useEffect(() => {
-    if (batch && activeTab === 'relations') {
-      loadRelations();
+    if (batch) {
+      loadApprovals();
     }
-  }, [batch, activeTab]);
+  }, [batch]);
 
-  const loadRelations = async () => {
+  const loadApprovals = async () => {
     if (!batch) return;
-    setLoadingRelations(true);
+    setLoadingApprovals(true);
     try {
-      const result = await getProductionPlanRelations(batch.id, batch.batchCode);
-      setRelations(result.relations);
+      const result = await getProductionPlanApprovals(batch.id);
+      setApprovals(result);
     } catch {
-      setRelations([]);
+      setApprovals([]);
     } finally {
-      setLoadingRelations(false);
+      setLoadingApprovals(false);
     }
   };
 
   if (!batch) return null;
 
-  const stages = [
-    { key: 'seedling', label: '苗期' },
-    { key: 'vegetative', label: '生长期' },
-    { key: 'flowering', label: '开花期' },
-    { key: 'fruiting', label: '结果期' },
-    { key: 'harvest', label: '采收期' },
-  ];
+  // 格式化时间
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  // 种植模式中文映射（合并所有模式列表）
+  const allModes = [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES];
+  const modeMap = Object.fromEntries(allModes.map(m => [m.value, m.label]));
+  const plantingModeLabel = (batch.plantingMode || '')
+    .split(',')
+    .map(v => modeMap[v.trim()] || v.trim())
+    .join('、');
+
+  // 单位中文映射
+  const unitLabels: Record<string, string> = {
+    kg: '公斤',
+    t: '吨',
+    '株': '株',
+    '粒': '粒',
+    '袋': '袋',
+    'm²': '平方米',
+    '亩': '亩',
+  };
+  const unitLabel = unitLabels[batch.unit || ''] || batch.unit || '公斤';
 
   // 状态Badge
   const statusBadge = (
@@ -56,35 +93,11 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
     </span>
   );
 
-  // 生长进度
-  const progressBar = (
-    <div className="space-y-2">
-      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"
-          style={{ width: `${stageProgress[batch.stage]}%` }}
-        />
-      </div>
-      <div className="flex justify-between">
-        {stages.map((stage) => (
-          <span
-            key={stage.key}
-            className={`text-xs ${
-              batch.stage === stage.key ? 'text-emerald-600 font-medium' : 'text-gray-500'
-            }`}
-          >
-            {stage.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-
   // 基本信息字段配置
   const fields: DetailField[][] = [
     [
       { label: '批次编号', value: batch.batchCode },
-      { label: '种植模式', value: batch.plantingMode },
+      { label: '种植模式', value: plantingModeLabel || '-' },
     ],
     [
       { label: '作物名称', value: batch.cropName },
@@ -100,7 +113,7 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
     ],
     [
       { label: '负责人', value: batch.responsiblePerson },
-      { label: '目标产量', value: `${batch.targetYield} ${batch.unit || 'kg'}` },
+      { label: '目标产量', value: batch.targetYield != null ? `${batch.targetYield} ${unitLabel}` : '-' },
     ],
     [
       { label: '当前状态', value: statusBadge },
@@ -110,10 +123,61 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
       { label: '初次发布时间', value: batch.publishDate || '-' },
       { label: '最后修改时间', value: batch.lastModifyDate || '-' },
     ],
-    [
-      { label: '生长进度', value: progressBar, fullWidth: true },
-    ],
   ];
+
+  // 审批记录渲染
+  const renderApprovalRecords = () => {
+    if (loadingApprovals) {
+      return <div className="text-center text-gray-500 py-4">加载中...</div>;
+    }
+
+    if (approvals.length === 0) {
+      return <div className="text-center text-gray-400 py-4">暂无审批记录</div>;
+    }
+
+    return approvals.map((approval) => (
+      <div key={approval.id} className="mb-4">
+        {/* 审批单概要 */}
+        <div className="flex items-center gap-3 mb-2 text-sm flex-wrap">
+          <span className="font-medium text-gray-700">{approval.title || approval.code}</span>
+          <span className={`px-2 py-0.5 rounded text-xs ${
+            approval.status === 'approved' ? 'bg-green-100 text-green-700' :
+            approval.status === 'rejected' ? 'bg-red-100 text-red-700' :
+            approval.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {approvalStatusLabels[approval.status] || approval.status}
+          </span>
+          <span className="text-gray-400">第{approval.currentStep}/{approval.totalSteps}步</span>
+          <span className="text-gray-400">提交时间：{formatDateTime(approval.createdAt)}</span>
+        </div>
+
+        {/* 审批记录列表 */}
+        {approval.records.length > 0 ? (
+          <div className="space-y-2 pl-4 border-l-2 border-gray-200">
+            {approval.records.map((record, idx) => (
+              <div key={record.id || idx} className="flex flex-wrap items-start gap-x-4 gap-y-1 text-sm">
+                <span className="text-gray-500 min-w-[60px]">{formatDateTime(record.actionTime)}</span>
+                <span className="text-gray-700">{record.approverName}</span>
+                <span className={`font-medium ${
+                  record.action === 'approve' ? 'text-green-600' :
+                  record.action === 'reject' ? 'text-red-600' :
+                  'text-gray-600'
+                }`}>
+                  {actionLabels[record.action] || record.action}
+                </span>
+                {record.comment && (
+                  <span className="text-gray-500 w-full pl-24">理由：{record.comment}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-400 pl-4 border-l-2 border-gray-200">尚未有审批操作</div>
+        )}
+      </div>
+    ));
+  };
 
   // 底部按钮
   const footer = (
@@ -144,6 +208,12 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
       footer={footer}
       width={700}
       height={600}
+      bottom={
+        <div className="border-t mt-4 pt-4">
+          <div className="text-sm font-medium text-gray-700 mb-3">审批记录</div>
+          {renderApprovalRecords()}
+        </div>
+      }
     />
   );
 }

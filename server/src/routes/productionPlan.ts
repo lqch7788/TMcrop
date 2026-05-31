@@ -306,7 +306,15 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
 
-    res.status(201).json({ success: true, message: '生产计划创建成功', id, code });
+    // 返回完整数据（与 GET /:id 保持一致）
+    const createdPlans = queryToObjects<Record<string, unknown>>(
+      db,
+      'SELECT * FROM production_plans WHERE id = ?',
+      [id]
+    );
+    const createdData = createdPlans.length > 0 ? mapFieldsToFrontend(createdPlans[0]) : null;
+
+    res.status(201).json({ success: true, message: '生产计划创建成功', data: createdData });
   } catch (error: any) {
     console.error('创建生产计划失败:', error);
     res.status(500).json({ success: false, error: '创建生产计划失败: ' + error.message });
