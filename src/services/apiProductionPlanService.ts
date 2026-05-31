@@ -52,6 +52,7 @@ function normalizeBatch(raw: Record<string, unknown>): CropBatch {
     orderCode: raw.orderCode as string | undefined,
     remarks: raw.remarks as string | undefined,
     areaName: raw.areaName as string | undefined,
+    executionStatus: raw.executionStatus as CropBatch['executionStatus'],
   };
 }
 

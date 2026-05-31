@@ -72,6 +72,8 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     // 关联订单字段
     orderId: 'orderId',
     orderCode: 'orderCode',
+    // 执行状态字段
+    executionStatus: 'executionStatus',
   };
 
   const result: Record<string, unknown> = {};
@@ -246,7 +248,8 @@ router.post('/', (req: Request, res: Response) => {
       seedQuantity,
       targetSeedlingCount,
       orderId,
-      orderCode
+      orderCode,
+      executionStatus
     } = req.body;
 
     if (!id) {
@@ -265,8 +268,8 @@ router.post('/', (req: Request, res: Response) => {
         responsible_person, unit, publish_date, batch_status,
         plan_detail, plan_detail_file_name, planting_area, planting_area_unit, planting_mode,
         supplier_name, seedling_site_name, seed_quantity, target_seedling_count,
-        order_id, order_code
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        order_id, order_code, execution_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -301,7 +304,8 @@ router.post('/', (req: Request, res: Response) => {
       seedQuantity || 0,
       targetSeedlingCount || 0,
       orderId || '',
-      orderCode || ''
+      orderCode || '',
+      executionStatus || 'pending_execution'
     ]);
 
     saveDatabase();
@@ -381,7 +385,9 @@ router.put('/:id', (req: Request, res: Response) => {
       targetSeedlingCount: 'target_seedling_count',
       // 关联订单字段
       orderId: 'order_id',
-      orderCode: 'order_code'
+      orderCode: 'order_code',
+      // 执行状态字段
+      executionStatus: 'execution_status',
     };
 
     const updateFields: string[] = [];

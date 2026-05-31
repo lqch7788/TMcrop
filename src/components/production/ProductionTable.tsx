@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/ui/Pagination';
 import { showConfirm } from '@/lib/dialogService';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
-import { batchStatusColors, batchStatusLabels } from './constants';
+import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels } from './constants';
 
 interface ProductionTableProps {
   filteredBatches: CropBatch[];
@@ -105,6 +105,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">发布时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">当前状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">执行状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">关联订单</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产计划文件</th>
@@ -172,6 +173,13 @@ export function ProductionTable({
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
                     {batchStatusLabels[batch.batchStatus || 'draft']}
                   </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {batch.executionStatus && (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${executionStatusColors[batch.executionStatus]}`}>
+                      {executionStatusLabels[batch.executionStatus]}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.orderCode || '-'}</td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">

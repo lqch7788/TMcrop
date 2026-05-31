@@ -4,9 +4,11 @@ export const batchStatusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',    // 待审批
   pending_complete: 'bg-orange-100 text-orange-700', // 待审批（完成）
   published: 'bg-blue-100 text-blue-700',    // 已发布
+  approved: 'bg-blue-100 text-blue-700',     // 已审批通过
   in_progress: 'bg-emerald-100 text-emerald-700', // 执行中
   completed: 'bg-green-600 text-white',   // 已完成 - 深绿色底色白字
   cancelled: 'bg-gray-300 text-gray-600',    // 已作废 - 深灰色
+  rejected: 'bg-red-100 text-red-700',       // 已拒绝
 };
 
 // 计划类型选项配置
@@ -29,9 +31,25 @@ export const batchStatusLabels: Record<string, string> = {
   pending: '待审批',
   pending_complete: '待审批（完成）',
   published: '已发布',
+  approved: '已通过',
   in_progress: '执行中',
   completed: '已完成',
   cancelled: '已作废',
+  rejected: '已拒绝',
+};
+
+// 执行状态颜色配置（双轨并行）
+export const executionStatusColors: Record<string, string> = {
+  pending_execution: 'bg-blue-100 text-blue-700',  // 待执行
+  in_progress: 'bg-orange-100 text-orange-700',    // 进行中
+  completed: 'bg-green-100 text-green-700',         // 已完成
+};
+
+// 执行状态文本配置
+export const executionStatusLabels: Record<string, string> = {
+  pending_execution: '待执行',
+  in_progress: '进行中',
+  completed: '已完成',
 };
 
 export const stageProgress: Record<string, number> = {

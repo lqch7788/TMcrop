@@ -4,9 +4,9 @@
  */
 
 import { X, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
-import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
+import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,7 @@ interface BatchEditModalProps {
   onClose: () => void;
   onVoidWarning: () => void;
   onPublish: () => void;
+  onSave: () => void;
   onConfirmNext: () => void;
 }
 
@@ -50,6 +51,7 @@ export function BatchEditModal({
   onClose,
   onVoidWarning,
   onPublish,
+  onSave,
   onConfirmNext,
 }: BatchEditModalProps) {
   // 作物变更状态（必须在条件返回之前）
@@ -59,12 +61,26 @@ export function BatchEditModal({
   // 种植模式展开状态
   const [plantingModeExpanded, setPlantingModeExpanded] = useState(false);
 
-  if (!isOpen) return null;
-
-  // 获取当前编辑的批次
+  // 获取当前编辑的批次（在条件返回之前获取，供 useMemo 使用）
   const selectedBatches = selectedRows.map(id => batches.find(b => b.id === id)).filter(Boolean) as CropBatch[];
   const currentBatch = selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) : null;
   const editedData = selectedBatchCode ? editedBatches[selectedBatchCode] || {} : {};
+
+  if (!isOpen) return null;
+
+  // 种植区域名称列表（直接从数据计算，不用 useMemo，与种植模式保持一致）
+  const currentGreenhouseNames = editedData.greenhouseName
+    ? editedData.greenhouseName.split(',').map(n => n.trim()).filter(Boolean)
+    : currentBatch?.greenhouseName
+      ? currentBatch.greenhouseName.split(',').map(n => n.trim()).filter(Boolean)
+      : [];
+
+  // 种植区域ID列表
+  const currentGreenhouseIds = editedData.greenhouseId
+    ? [editedData.greenhouseId].flat()
+    : currentBatch?.greenhouseId
+      ? [currentBatch.greenhouseId]
+      : currentGreenhouseNames;
 
   // 获取当前批次的计划类型，用于种植模式选项
   const currentPlanType = editedData.planType || currentBatch?.planType || PlanType.PLANTING;
@@ -100,13 +116,6 @@ export function BatchEditModal({
       handleFieldChange('variety', '');
     }
   };
-
-  // 种植区域ID列表
-  const currentGreenhouseIds = editedData.greenhouseId
-    ? [editedData.greenhouseId].flat()
-    : currentBatch?.greenhouseId
-      ? [currentBatch.greenhouseId]
-      : [];
 
   // 种植模式列表
   const currentPlantingModes = editedData.plantingMode
@@ -215,13 +224,18 @@ export function BatchEditModal({
                         <div key={g.id} className="flex items-center gap-2">
                           <Checkbox
                             id={`edit-gh-${g.id}`}
-                            checked={currentGreenhouseIds.includes(g.id) || currentGreenhouseIds.includes(g.name)}
+                            checked={currentGreenhouseNames.includes(g.name)}
                             onCheckedChange={(checked) => {
+                              // 使用局部变量保存当前值，避免闭包问题
+                              const currentNames = currentGreenhouseNames;
                               if (checked) {
-                                handleFieldChange('greenhouseId', [...currentGreenhouseIds.filter(id => id !== g.name), g.id]);
-                                handleFieldChange('greenhouseName', g.name);
+                                // 勾选：添加这个温室名称
+                                const newNames = [...currentNames.filter(n => n !== g.name), g.name];
+                                handleFieldChange('greenhouseName', newNames.join(','));
                               } else {
-                                handleFieldChange('greenhouseId', currentGreenhouseIds.filter(id => id !== g.id && id !== g.name));
+                                // 取消勾选：移除这个温室名称
+                                const newNames = currentNames.filter(n => n !== g.name);
+                                handleFieldChange('greenhouseName', newNames.join(','));
                               }
                             }}
                           />
@@ -256,11 +270,13 @@ export function BatchEditModal({
                             id={`edit-pm-${mode.value}`}
                             checked={currentPlantingModes.includes(mode.value)}
                             onCheckedChange={(checked) => {
+                              // 使用局部变量保存当前值，避免闭包问题
+                              const currentModes = currentPlantingModes;
                               if (checked) {
-                                const newModes = [...currentPlantingModes.filter(m => m !== ''), mode.value];
+                                const newModes = [...currentModes.filter((m: string) => m !== ''), mode.value];
                                 handleFieldChange('plantingMode', newModes.join(','));
                               } else {
-                                const newModes = currentPlantingModes.filter(m => m !== mode.value);
+                                const newModes = currentModes.filter((m: string) => m !== mode.value);
                                 handleFieldChange('plantingMode', newModes.join(','));
                               }
                             }}
@@ -385,6 +401,30 @@ export function BatchEditModal({
                 </div>
               </div>
 
+              {/* 执行状态切换（仅审批通过后可见） */}
+              {currentBatch.batchStatus === 'published' && (
+                <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="text-xs text-gray-500 mb-1">执行状态</div>
+                      <Select
+                        value={editedData.executionStatus || currentBatch.executionStatus || 'pending_execution'}
+                        onValueChange={(v) => handleFieldChange('executionStatus', v)}
+                      >
+                        <SelectTrigger className={deepInputClass}>
+                          <SelectValue placeholder="请选择执行状态" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending_execution">待执行</SelectItem>
+                          <SelectItem value="in_progress">进行中</SelectItem>
+                          <SelectItem value="completed">已完成</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 计划详情文件上传 */}
               <div className="bg-gray-50 rounded-lg p-3">
                 <div className="text-xs text-gray-500 mb-2">计划详情文件</div>
@@ -460,8 +500,8 @@ export function BatchEditModal({
             <Button variant="warning" onClick={onVoidWarning}>
               申请作废
             </Button>
-            <Button variant="blue" onClick={onPublish}>
-              提交
+            <Button variant="blue" onClick={currentBatch.batchStatus === 'published' ? onSave : onPublish}>
+              {currentBatch.batchStatus === 'published' ? '保存' : '提交'}
             </Button>
           </div>
         </div>

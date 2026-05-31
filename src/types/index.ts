@@ -95,6 +95,8 @@ export interface CropBatch {
   // ========== 关联订单字段（生产计划可关联订单，订单为主）==========
   orderId?: string;           // 关联的订单ID
   orderCode?: string;         // 关联的订单编号
+  // ========== 执行状态字段（双轨并行）==========
+  executionStatus?: 'pending_execution' | 'in_progress' | 'completed';
 }
 
 export interface Task {
