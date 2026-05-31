@@ -50,19 +50,19 @@ export function OrderTable({
   canDelete = true,
   canExport = true,
 }: OrderTableProps) {
-  const getStatusBadge = (status: CropOrderStatus) => {
-    switch (status) {
-      case CropOrderStatus.PLANNED:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已计划</span>;
-      case CropOrderStatus.IN_PROGRESS:
-        return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">进行中</span>;
-      case CropOrderStatus.COMPLETED:
-        return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已完成</span>;
-      case CropOrderStatus.CANCELLED:
-        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已取消</span>;
-      default:
-        return null;
+  // 根据完成数量计算显示状态：COMPLETED/CANCELLED 是终态，否则按数量判断
+  const getStatusBadge = (record: CropOrder) => {
+    if (record.status === CropOrderStatus.COMPLETED) {
+      return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已完成</span>;
     }
+    if (record.status === CropOrderStatus.CANCELLED) {
+      return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已取消</span>;
+    }
+    // 非终态：根据完成数量判断
+    if ((record.completedQuantity || 0) > 0) {
+      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">进行中</span>;
+    }
+    return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已计划</span>;
   };
 
   const getOrderTypeBadge = (type: string) => {
@@ -187,7 +187,7 @@ export function OrderTable({
                     {record.expectedCompletionDate || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {getStatusBadge(record.status)}
+                    {getStatusBadge(record)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs">
                     {record.createBy || '-'}

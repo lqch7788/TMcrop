@@ -223,7 +223,11 @@ export default function OrderPage() {
       '单位': record.unit,
       '订单日期': record.orderDate,
       '预计完成日期': record.expectedCompletionDate || '',
-      '状态': record.status === CropOrderStatus.PLANNED ? '已计划' : record.status === CropOrderStatus.IN_PROGRESS ? '进行中' : record.status === CropOrderStatus.COMPLETED ? '已完成' : '已取消',
+      '状态': (() => {
+        if (record.status === CropOrderStatus.COMPLETED) return '已完成';
+        if (record.status === CropOrderStatus.CANCELLED) return '已取消';
+        return (record.completedQuantity || 0) > 0 ? '进行中' : '已计划';
+      })(),
       '创建人': record.createBy,
       '创建时间': record.createTime,
       '备注': record.remarks || ''
