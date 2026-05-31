@@ -17,7 +17,7 @@ import {
   getApprovalTypeName,
 } from '../types/approval';
 
-const API_BASE = '/api/approvals';
+const API_BASE = '/approvals';
 
 // ==================== 第一步：字段映射表 ====================
 
@@ -195,19 +195,15 @@ export const useApprovalStore = create<ApprovalStore>()(
       fetchApprovals: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await enhancedApiClient.get<{ success: boolean; data: unknown[] }>(
-            API_BASE,
-            {}
-          );
-          if (response.success && Array.isArray(response.data)) {
-            const approvals = response.data.map(item => normalizeApproval(item as Record<string, unknown>));
+          // enhancedApiClient.get 返回的是 result.data（已经过 apiClient 解析）
+          const approvalsData = await enhancedApiClient.get<unknown[]>(API_BASE, {});
+          if (Array.isArray(approvalsData)) {
+            const approvals = approvalsData.map(item => normalizeApproval(item as Record<string, unknown>));
             set({ approvals, stats: computeStats(approvals), isLoaded: true, isLoading: false });
-          } else if (!response.success) {
-            // logger.warn('[ApprovalStore] API 返回数据无效，保留现有数据');
+          } else {
             set({ isLoading: false });
           }
         } catch (err) {
-          // logger.warn('[ApprovalStore] 获取审批数据失败:', err);
           set({ error: (err as Error).message, isLoading: false });
         }
       },

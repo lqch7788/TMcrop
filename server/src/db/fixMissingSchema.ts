@@ -978,7 +978,29 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
-  // 36. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
+  // 36. production_plans 表添加关联订单字段（生产计划可关联订单）
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN order_id TEXT`);
+    console.log('✓ production_plans 表添加 order_id 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• production_plans.order_id 列已存在');
+    } else {
+      console.log('• production_plans.order_id:', e.message);
+    }
+  }
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN order_code TEXT`);
+    console.log('✓ production_plans 表添加 order_code 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• production_plans.order_code 列已存在');
+    } else {
+      console.log('• production_plans.order_code:', e.message);
+    }
+  }
+
+  // 37. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
   const farmTaskColumnsToAdd = [
     { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },
     { name: 'source_inspection_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_inspection_id TEXT' },

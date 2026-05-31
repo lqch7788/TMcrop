@@ -174,6 +174,7 @@ export default function ProductionPage() {
         formData={hook.formData}
         errors={hook.errors}
         greenhouses={hook.greenhouses}
+        orders={hook.orders}
         onFormChange={hook.handleFormChange}
         onGenerateCode={hook.generateBatchCode}
       />

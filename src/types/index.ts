@@ -92,6 +92,9 @@ export interface CropBatch {
   // ========== V3.1 结束类型字段 ==========
   // 结束类型：区分正常结束和异常结束
   endType?: 'normal' | 'abnormal';
+  // ========== 关联订单字段（生产计划可关联订单，订单为主）==========
+  orderId?: string;           // 关联的订单ID
+  orderCode?: string;         // 关联的订单编号
 }
 
 export interface Task {
