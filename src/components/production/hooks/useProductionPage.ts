@@ -588,6 +588,7 @@ export function useProductionPage(): UseProductionPageReturn {
               if (edited.remarks !== undefined) apiData.remarks = edited.remarks;
               if (edited.planDetail !== undefined) apiData.planDetail = edited.planDetail;
               if (edited.planDetailFileName !== undefined) apiData.planDetailFileName = edited.planDetailFileName;
+              if (edited.executionStatus !== undefined) apiData.executionStatus = edited.executionStatus;
 
               apiData.batchStatus = edited.isCompleted === true ? 'pending_complete' : 'pending';
 
@@ -684,6 +685,78 @@ export function useProductionPage(): UseProductionPageReturn {
       await showAlert('请先编辑至少一个生产计划');
     }
   }, [editedBatches, batches, selectedRows, updatePlan, refreshApprovals, fetchPlans]);
+
+  // ==================== 已发布状态直接保存（不提交审批）====================
+  const handleSave = useCallback(async () => {
+    if (Object.keys(editedBatches).length === 0) {
+      await showAlert('请先编辑至少一个生产计划');
+      return;
+    }
+
+    const savedBatchCodes: string[] = [];
+
+    try {
+      for (const batch of batches) {
+        const edited = editedBatches[batch.batchCode];
+        if (edited) {
+          if (USE_API) {
+            const apiData: Record<string, unknown> = {};
+            if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
+            if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
+            if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
+            if (edited.variety !== undefined) apiData.variety = edited.variety;
+            if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
+            if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
+            if (edited.plantingArea !== undefined) apiData.plantingArea = edited.plantingArea;
+            if (edited.plantingMode !== undefined) apiData.plantingMode = edited.plantingMode;
+            if (edited.startDate !== undefined) apiData.startDate = edited.startDate;
+            if (edited.expectedHarvestDate !== undefined) apiData.expectedHarvestDate = edited.expectedHarvestDate;
+            if (edited.responsiblePerson !== undefined) apiData.responsiblePerson = edited.responsiblePerson;
+            if (edited.remarks !== undefined) apiData.remarks = edited.remarks;
+            if (edited.planDetail !== undefined) apiData.planDetail = edited.planDetail;
+            if (edited.planDetailFileName !== undefined) apiData.planDetailFileName = edited.planDetailFileName;
+            if (edited.executionStatus !== undefined) apiData.executionStatus = edited.executionStatus;
+
+            // 不改变 batchStatus，只保存编辑内容
+            await updatePlan(batch.id, apiData as any);
+          }
+          savedBatchCodes.push(batch.batchCode);
+        }
+      }
+
+      await showAlert('保存成功！');
+    } catch (error) {
+      await showAlert('保存失败，请重试');
+      return;
+    }
+
+    await fetchPlans();
+
+    const remainingSelectedRows = selectedRows.filter(id => !savedBatchCodes.includes(id));
+    setSelectedRows(remainingSelectedRows);
+
+    const remainingEditedBatches: Record<string, EditedBatch> = {};
+    const remainingEditedBatchCodes: string[] = [];
+    batches.forEach(batch => {
+      if (savedBatchCodes.includes(batch.batchCode)) {
+        // 已保存
+      } else if (editedBatches[batch.batchCode]) {
+        remainingEditedBatches[batch.batchCode] = editedBatches[batch.batchCode];
+        remainingEditedBatchCodes.push(batch.batchCode);
+      }
+    });
+    setEditedBatches(remainingEditedBatches);
+    setEditedBatchCodes(remainingEditedBatchCodes);
+
+    if (savedBatchCodes.length === selectedRows.length) {
+      setShowBatchEditModal(false);
+      setEditedBatches({});
+      setEditedBatchCodes([]);
+      setSelectedRows([]);
+    } else {
+      await showAlert(`已保存 ${savedBatchCodes.length} 项`);
+    }
+  }, [editedBatches, batches, selectedRows, updatePlan, fetchPlans]);
 
   // ==================== 申请作废 ====================
   const handleVoidConfirm = useCallback(async () => {
@@ -986,6 +1059,7 @@ export function useProductionPage(): UseProductionPageReturn {
     handleSingleDelete,
     handleDeleteConfirm,
     handlePublish,
+    handleSave,
     handleVoidConfirm,
 
     // 选择

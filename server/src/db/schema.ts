@@ -1755,6 +1755,7 @@ export function initializeDatabase() {
       crop_name TEXT,
       crop_variety TEXT,
       greenhouse_name TEXT,
+      greenhouse_id TEXT,
       area_name TEXT,
       planned_quantity INTEGER DEFAULT 0,
       actual_quantity INTEGER DEFAULT 0,
@@ -1778,7 +1779,8 @@ export function initializeDatabase() {
       supplier_name TEXT,
       seedling_site_name TEXT,
       seed_quantity INTEGER DEFAULT 0,
-      target_seedling_count INTEGER DEFAULT 0
+      target_seedling_count INTEGER DEFAULT 0,
+      execution_status TEXT DEFAULT 'pending_execution'
     )
   `);
 

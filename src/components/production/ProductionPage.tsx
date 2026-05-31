@@ -210,6 +210,7 @@ export default function ProductionPage() {
         onClose={() => hook.setShowBatchEditModal(false)}
         onVoidWarning={() => hook.setShowVoidWarning(true)}
         onPublish={hook.handlePublish}
+        onSave={hook.handleSave}
         onConfirmNext={hook.handleConfirmNext}
       />
 

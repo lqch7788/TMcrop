@@ -1000,6 +1000,30 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 36.5 production_plans 表添加 execution_status 执行状态字段
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN execution_status TEXT DEFAULT 'pending_execution'`);
+    console.log('✓ production_plans 表添加 execution_status 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• production_plans.execution_status 列已存在');
+    } else {
+      console.log('• production_plans.execution_status:', e.message);
+    }
+  }
+
+  // 36.6 production_plans 表添加 greenhouse_id 字段（种植区域ID）
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN greenhouse_id TEXT`);
+    console.log('✓ production_plans 表添加 greenhouse_id 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• production_plans.greenhouse_id 列已存在');
+    } else {
+      console.log('• production_plans.greenhouse_id:', e.message);
+    }
+  }
+
   // 37. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
   const farmTaskColumnsToAdd = [
     { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },
