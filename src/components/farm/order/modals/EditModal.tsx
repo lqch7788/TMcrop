@@ -49,7 +49,9 @@ export function EditModal({
     orderDate: '',
     expectedCompletionDate: '',
     remarks: '',
-    isCompleted: false, // 是否完成
+    // 订单状态：'in_progress' | 'completed' | 'cancelled'
+    // PLANNED 状态不存储，由 completedQuantity=0 隐式表达
+    orderStatus: 'in_progress' as 'in_progress' | 'completed' | 'cancelled',
     // 客户相关字段
     customerId: '',
     customerPhone: '',
@@ -66,9 +68,10 @@ export function EditModal({
   // 当记录变化时更新表单
   useEffect(() => {
     if (record && isOpen) {
-      // 如果订单已完成，禁止编辑
-      if (record.status === CropOrderStatus.COMPLETED) {
-        showAlert('该订单已完成，无法编辑');
+      // 如果订单已完成或已取消，禁止编辑
+      if (record.status === CropOrderStatus.COMPLETED || record.status === CropOrderStatus.CANCELLED) {
+        const msg = record.status === CropOrderStatus.COMPLETED ? '已完成' : '已取消';
+        showAlert(`该订单已${msg}，无法编辑`);
         onClose();
         return;
       }
@@ -84,7 +87,13 @@ export function EditModal({
         orderDate: record.orderDate || '',
         expectedCompletionDate: record.expectedCompletionDate || '',
         remarks: record.remarks || '',
-        isCompleted: record.status === CropOrderStatus.COMPLETED,
+        // COMPLETED/CANCELLED 是终态，在下拉中可选
+        // PLANNED 状态在表单中用 'in_progress' 表示（都是可编辑状态的起点）
+        orderStatus: record.status === CropOrderStatus.COMPLETED
+          ? 'completed'
+          : record.status === CropOrderStatus.CANCELLED
+          ? 'cancelled'
+          : 'in_progress',
         // 客户相关字段
         customerId: (record as any).customerId || '',
         customerPhone: (record as any).customerPhone || '',
@@ -147,19 +156,34 @@ export function EditModal({
   }, [showDropdown]);
 
   const handleSubmit = async () => {
-    // 如果订单已完成，禁止编辑
-    if (record && record.status === CropOrderStatus.COMPLETED) {
-      await showAlert('该订单已完成，无法编辑');
+    // 如果订单已完成或已取消，禁止编辑
+    if (record && (record.status === CropOrderStatus.COMPLETED || record.status === CropOrderStatus.CANCELLED)) {
+      const msg = record.status === CropOrderStatus.COMPLETED ? '已完成' : '已取消';
+      await showAlert(`该订单已${msg}，无法编辑`);
       onClose();
       return;
     }
 
-    // 如果选择"是"完成订单，弹出确认警告
-    if (formData.isCompleted) {
+    // 如果选择"已完成"或"已取消"，弹出确认警告
+    if (formData.orderStatus === 'completed') {
       const confirmed = await showConfirm(
         '⚠️ 重要提示：\n\n' +
         '确认将订单标记为完成吗？\n\n' +
         '完成后该订单将进入保存档案状态：\n' +
+        '• 无法进行任何编辑操作\n' +
+        '• 无法删除订单\n' +
+        '• 无法关联新的作物实例\n\n' +
+        '此操作不可逆，请确认！'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    if (formData.orderStatus === 'cancelled') {
+      const confirmed = await showConfirm(
+        '⚠️ 重要提示：\n\n' +
+        '确认取消该订单吗？\n\n' +
+        '取消后该订单将无法操作：\n' +
         '• 无法进行任何编辑操作\n' +
         '• 无法删除订单\n' +
         '• 无法关联新的作物实例\n\n' +
@@ -184,6 +208,17 @@ export function EditModal({
 
     if (!record) return;
 
+    // 计算最终状态：
+    // - 手动选择了 completed/cancelled → 使用该状态（终态）
+    // - 否则根据完成数量计算：0 → PLANNED，>0 → IN_PROGRESS
+    const finalStatus = formData.orderStatus === 'completed'
+      ? CropOrderStatus.COMPLETED
+      : formData.orderStatus === 'cancelled'
+      ? CropOrderStatus.CANCELLED
+      : formData.completedQuantity > 0
+        ? CropOrderStatus.IN_PROGRESS
+        : CropOrderStatus.PLANNED;
+
     // 更新订单
     const updates: Partial<CropOrder> & Record<string, unknown> = {
       orderCode: formData.orderCode,
@@ -198,8 +233,7 @@ export function EditModal({
       completedQuantity: formData.completedQuantity,
       unit: formData.unit,
       remarks: formData.remarks,
-      // 如果选择完成，状态变为已完成
-      status: formData.isCompleted ? CropOrderStatus.COMPLETED : record.status,
+      status: finalStatus,
       // 客户相关字段
       customerId: formData.customerId || undefined,
     };
@@ -471,25 +505,26 @@ export function EditModal({
         />
       </div>
 
-      {/* 是否完成 */}
+      {/* 订单状态 */}
       <div>
         <Label className="text-gray-700">
-          订单完成
+          订单状态
         </Label>
         <Select
-          value={formData.isCompleted ? 'yes' : 'no'}
-          onValueChange={(v) => setFormData({ ...formData, isCompleted: v === 'yes' })}
+          value={formData.orderStatus}
+          onValueChange={(v) => setFormData({ ...formData, orderStatus: v as 'in_progress' | 'completed' | 'cancelled' })}
         >
           <SelectTrigger className="border-gray-300">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="no">否</SelectItem>
-            <SelectItem value="yes">是</SelectItem>
+            <SelectItem value="in_progress">进行中</SelectItem>
+            <SelectItem value="completed">已完成</SelectItem>
+            <SelectItem value="cancelled">已取消</SelectItem>
           </SelectContent>
         </Select>
-        {formData.isCompleted && (
-          <p className="text-xs text-orange-500 mt-1">⚠️ 选择"是"后订单将无法编辑</p>
+        {(formData.orderStatus === 'completed' || formData.orderStatus === 'cancelled') && (
+          <p className="text-xs text-orange-500 mt-1">⚠️ 选择终态后订单将无法编辑</p>
         )}
       </div>
 
