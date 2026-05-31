@@ -97,13 +97,13 @@ export function OrderTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* 数据表格 */}
-      <div className="overflow-x-auto">
+      {/* 数据表格 - 支持水平滚动和垂直滚动 */}
+      <div className="overflow-auto max-h-[calc(100vh-280px)]">
         <table className="w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
               {(exportMode || batchEditMode) && (
-                <th className="px-4 py-3 text-left text-sm font-semibold w-12">
+                <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">
                   <Checkbox
                     checked={selectedRows.length === data.length && data.length > 0}
                     onCheckedChange={() => onExportSelectAll()}
@@ -111,23 +111,26 @@ export function OrderTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold">订单编号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">订单名称</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">订单类型</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">作物信息</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">计划数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">实际数量</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">客户</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">订单日期</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">预计完成</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">状态</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">订单编号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">订单名称</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">订单类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物信息</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">计划数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成数量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">完成进度</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">客户</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">订单日期</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计完成时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={(exportMode || batchEditMode) ? 12 : 11} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={(exportMode || batchEditMode) ? 15 : 14} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -153,35 +156,46 @@ export function OrderTable({
                       {record.orderCode}
                     </Button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                     {record.orderName}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {getOrderTypeBadge(record.orderType)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm text-gray-900">{record.cropVariety}</div>
-                    <div className="text-xs text-gray-500 truncate" title={record.cropCategory}>{record.cropCategory}</div>
+                    <div className="text-sm text-gray-900 truncate max-w-xs">{record.cropVariety}</div>
+                    <div className="text-xs text-gray-500 truncate max-w-xs" title={record.cropCategory}>{record.cropCategory}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.plannedQuantity} {record.unit}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {record.actualQuantity || 0} {record.unit}
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {record.completedQuantity || 0} {record.unit}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {record.plannedQuantity > 0
+                      ? `${Math.round((record.completedQuantity / record.plannedQuantity) * 100)}%`
+                      : '0%'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs">
                     {record.customerName || '-'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.orderDate}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.expectedCompletionDate || '-'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {getStatusBadge(record.status)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs">
+                    {record.createBy || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 truncate max-w-xs" title={record.remarks || '-'}>
+                    {record.remarks || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {record.status !== CropOrderStatus.COMPLETED && (
                         <>

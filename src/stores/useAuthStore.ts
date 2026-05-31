@@ -131,6 +131,7 @@ export const useAuthStore = create<AuthState>()(
 
           // 直接写入 localStorage，确保 enhancedApiClient 立即可读取
           localStorage.setItem('token', response.token);
+          localStorage.setItem('username', user.username);
 
           set({
             token: response.token,
@@ -164,6 +165,7 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         });
         localStorage.removeItem('token');
+        localStorage.removeItem('username');
         localStorage.removeItem('currentUser');
         localStorage.removeItem('userRoles');
       },

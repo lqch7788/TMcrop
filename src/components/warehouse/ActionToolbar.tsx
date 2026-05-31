@@ -28,6 +28,9 @@ interface ActionToolbarProps {
   canExport?: boolean;
   // 是否显示库存不足按钮
   showLowStockButton?: boolean;
+  // 是否显示客户管理按钮
+  showCustomerButton?: boolean;
+  onCustomer?: () => void;
   // 是否使用卡片样式
   noCard?: boolean;
 }
@@ -57,6 +60,8 @@ export default function ActionToolbar({
   canDelete = true,
   canExport = true,
   showLowStockButton = true,
+  showCustomerButton = false,
+  onCustomer,
   noCard = false,
 }: ActionToolbarProps) {
   return (
@@ -98,6 +103,11 @@ export default function ActionToolbar({
               <Button size="sm" onClick={onExport}>
                 <Download className="w-4 h-4" />
                 导出
+              </Button>
+            )}
+            {showCustomerButton && onCustomer && (
+              <Button size="sm" variant="blue" onClick={onCustomer}>
+                客户管理
               </Button>
             )}
           </>

@@ -1793,15 +1793,15 @@ function seedCropOrders() {
     db.run(`
       INSERT INTO crop_orders
       (id, order_code, order_name, order_type, crop_category, crop_name, crop_variety,
-       planned_quantity, actual_quantity, unit, unit_price, total_amount,
+       planned_quantity, completed_quantity, actual_quantity, unit, unit_price, total_amount,
        customer_name, customer_contact, delivery_address, order_date,
        expected_harvest_date, actual_delivery_date, status, remarks,
        create_by, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       order.id, order.order_code, order.order_name, order.order_type,
       order.crop_category, order.crop_name, order.crop_variety,
-      order.planned_quantity, order.actual_quantity, order.unit,
+      order.planned_quantity, order.actual_quantity, order.actual_quantity, order.unit,
       order.unit_price, order.total_amount, order.customer_name,
       order.customer_contact, order.delivery_address, order.order_date,
       order.expected_harvest_date, order.actual_delivery_date,

@@ -52,7 +52,7 @@ export function OrderDetailModal({ isOpen, onClose, record }: OrderDetailModalPr
 
   // 完成率
   const completionRate = record.plannedQuantity > 0
-    ? `${Math.round((record.actualQuantity / record.plannedQuantity) * 100)}%`
+    ? `${Math.round((record.completedQuantity / record.plannedQuantity) * 100)}%`
     : '0%';
 
   // 字段配置
@@ -70,7 +70,7 @@ export function OrderDetailModal({ isOpen, onClose, record }: OrderDetailModalPr
     ],
     [
       { label: '预计完成日期', value: record.expectedCompletionDate || '-' },
-      { label: '完成率', value: completionRate },
+      { label: '完成进度', value: completionRate },
     ],
     [
       { label: '品种路径', value: record.cropCategory || '-', fullWidth: true },
@@ -80,11 +80,11 @@ export function OrderDetailModal({ isOpen, onClose, record }: OrderDetailModalPr
     ],
     [
       { label: '单位', value: record.unit || '株' },
-      { label: '供应商', value: record.supplierName || '-' },
+      { label: '完成数量', value: record.completedQuantity || 0 },
     ],
     [
       { label: '计划数量', value: record.plannedQuantity },
-      { label: '实际数量', value: record.actualQuantity || 0 },
+      { label: '完成进度', value: record.plannedQuantity > 0 ? `${Math.round((record.completedQuantity / record.plannedQuantity) * 100)}%` : '0%' },
     ],
     [
       { label: '客户名称', value: record.customerName || '-' },
