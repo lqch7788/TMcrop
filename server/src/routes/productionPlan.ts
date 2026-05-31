@@ -266,7 +266,7 @@ router.post('/', (req: Request, res: Response) => {
         plan_detail, plan_detail_file_name, planting_area, planting_area_unit, planting_mode,
         supplier_name, seedling_site_name, seed_quantity, target_seedling_count,
         order_id, order_code
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       code,
@@ -277,10 +277,10 @@ router.post('/', (req: Request, res: Response) => {
       greenhouseName || '',
       areaName || '',
       targetQuantity || targetYield || 0,
-      actualYield || 0,
+      0,
       startDate || '',
       expectedHarvestDate || '',
-      actualHarvestDate || '',
+      '',
       status || 'planning',
       priority || 'normal',
       remarks || '',
@@ -307,9 +307,9 @@ router.post('/', (req: Request, res: Response) => {
     saveDatabase();
 
     res.status(201).json({ success: true, message: '生产计划创建成功', id, code });
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建生产计划失败:', error);
-    res.status(500).json({ success: false, error: '创建生产计划失败' });
+    res.status(500).json({ success: false, error: '创建生产计划失败: ' + error.message });
   }
 });
 

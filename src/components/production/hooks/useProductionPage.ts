@@ -296,7 +296,6 @@ export function useProductionPage(): UseProductionPageReturn {
     if (!formData.cropName) newErrors.cropName = '请选择作物';
     if (!formData.variety.trim()) newErrors.variety = '请输入品种';
     if (formData.greenhouseId.length === 0) newErrors.greenhouseId = '请选择区域';
-    if (!formData.plantingArea) newErrors.plantingArea = '请输入种植面积';
     if (!formData.startDate) newErrors.startDate = '请选择定植日期';
     if (!formData.expectedHarvestDate) newErrors.expectedHarvestDate = '请选择预计采收日期';
     if (!formData.targetYield) newErrors.targetYield = '请输入目标产量';
@@ -415,19 +414,12 @@ export function useProductionPage(): UseProductionPageReturn {
       planType: formData.planType,
       cropName: formData.cropName,
       variety: formData.variety,
-      greenhouseId: greenhouseIds,
       greenhouseName: greenhouse?.name || greenhouseIds,
       areaName: greenhouse?.name || greenhouseIds,
-      areaId: '',
       targetQuantity: parseInt(formData.targetYield) || 0,
-      targetYield: parseInt(formData.targetYield) || 0,
-      actualYield: 0,
       startDate: formData.startDate,
       expectedHarvestDate: formData.expectedHarvestDate,
-      actualHarvestDate: '',
       status: 'pending',
-      stage: 'seedling',
-      stageName: '苗期',
       priority: 'normal',
       remarks: formData.description || '',
       publisher: formData.publisher || localStorage.getItem('username') || '',
@@ -445,14 +437,16 @@ export function useProductionPage(): UseProductionPageReturn {
       seedlingSiteName: '',
       seedQuantity: 0,
       targetSeedlingCount: 0,
-      // 关联订单
-      orderId: formData.orderId.join(',') || undefined,
-      orderCode: formData.orderCode.join(',') || undefined,
+      orderId: formData.orderId.join(',') || '',
+      orderCode: formData.orderCode.join(',') || '',
     };
 
     try {
       if (USE_API) {
-        await addPlan(apiData as any);
+        console.log('[DEBUG] 提交生产计划数据:', apiData);
+        const addResult = await addPlan(apiData as any);
+        console.log('[DEBUG] addPlan 结果:', addResult);
+        await fetchPlans(); // 刷新生产计划列表
 
         const approvalData = {
           id: `AP${Date.now()}`,
@@ -489,10 +483,10 @@ export function useProductionPage(): UseProductionPageReturn {
       resetForm();
       setErrors({});
     } catch (error) {
-      // logger.error('提交审批失败:', error);
+      console.error('[DEBUG] 提交审批失败:', error);
       await showAlert('提交审批失败，请重试');
     }
-  }, [formData, greenhouses, validateForm, addPlan, resetForm, refreshApprovals]);
+  }, [formData, greenhouses, validateForm, addPlan, resetForm, refreshApprovals, fetchPlans]);
 
   // ==================== 单条编辑 ====================
   const handleSingleEdit = useCallback((batch: CropBatch) => {
