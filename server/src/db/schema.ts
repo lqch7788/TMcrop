@@ -1727,11 +1727,12 @@ export function initializeDatabase() {
     `ALTER TABLE crop_orders ADD COLUMN order_name TEXT`,
     `ALTER TABLE crop_orders ADD COLUMN crop_category TEXT`,
     `ALTER TABLE crop_orders ADD COLUMN planned_quantity INTEGER DEFAULT 0`,
+    `ALTER TABLE crop_orders ADD COLUMN completed_quantity INTEGER DEFAULT 0`,
     `ALTER TABLE crop_orders ADD COLUMN actual_quantity INTEGER DEFAULT 0`,
     `ALTER TABLE crop_orders ADD COLUMN expected_harvest_date TEXT`,
-    `ALTER TABLE crop_orders ADD COLUMN supplier_name TEXT`,
     `ALTER TABLE crop_orders ADD COLUMN customer_id TEXT`,
     `ALTER TABLE crop_orders ADD COLUMN customer_phone TEXT`,
+    `ALTER TABLE crop_orders ADD COLUMN expected_completion_date TEXT`,
   ];
   for (const sql of cropOrdersMigrations) {
     try {

@@ -148,9 +148,9 @@ router.post('/', (req: Request, res: Response) => {
       order_name,
       crop_category,
       planned_quantity,
-      actual_quantity,
+      completed_quantity,
       expected_harvest_date,
-      supplier_name
+      expected_completion_date
     } = req.body;
 
     // 如果没有提供id，则自动生成一个
@@ -218,8 +218,8 @@ router.post('/', (req: Request, res: Response) => {
         delivery_address, delivery_plan, total_delivered_quantity,
         order_date, expected_delivery_date, actual_delivery_date,
         status, remarks, create_by, create_time, update_time,
-        order_name, crop_category, planned_quantity, actual_quantity, expected_harvest_date,
-        supplier_name
+        order_name, crop_category, planned_quantity, completed_quantity, expected_harvest_date,
+        expected_completion_date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
@@ -249,9 +249,9 @@ router.post('/', (req: Request, res: Response) => {
       order_name || '',
       crop_category || '',
       planned_quantity || 0,
-      actual_quantity || 0,
+      completed_quantity || 0,
       expected_harvest_date || '',
-      supplier_name || ''
+      expected_completion_date || ''
     ]);
 
     saveDatabase();
@@ -318,10 +318,10 @@ router.put('/:id', (req: Request, res: Response) => {
       orderName: 'order_name',
       cropCategory: 'crop_category',
       plannedQuantity: 'planned_quantity',
-      actualQuantity: 'actual_quantity',
+      completedQuantity: 'completed_quantity',
       expectedHarvestDate: 'expected_harvest_date',
-      supplierName: 'supplier_name',
-      createBy: 'create_by'
+      createBy: 'create_by',
+      expectedCompletionDate: 'expected_completion_date'
     };
 
     const updateFields: string[] = [];

@@ -608,7 +608,7 @@ export interface CropOrder {
   cropName: string;               // 作物名称
   cropVariety: string;            // 作物品种
   plannedQuantity: number;         // 计划数量
-  actualQuantity: number;         // 实际数量
+  completedQuantity: number;         // 完成数量
   unit: string;                   // 单位
 
   // 关联的供应商/客户

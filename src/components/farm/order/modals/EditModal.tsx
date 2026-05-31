@@ -44,9 +44,8 @@ export function EditModal({
     cropCategory: '',
     cropVariety: '',
     plannedQuantity: 0,
-    actualQuantity: 0,
+    completedQuantity: 0,
     unit: '株',
-    supplierName: '',
     orderDate: '',
     expectedCompletionDate: '',
     remarks: '',
@@ -80,9 +79,8 @@ export function EditModal({
         cropCategory: record.cropCategory || '',
         cropVariety: record.cropVariety || '',
         plannedQuantity: record.plannedQuantity || 0,
-        actualQuantity: record.actualQuantity || 0,
+        completedQuantity: record.completedQuantity || 0,
         unit: record.unit || '株',
-        supplierName: record.supplierName || '',
         orderDate: record.orderDate || '',
         expectedCompletionDate: record.expectedCompletionDate || '',
         remarks: record.remarks || '',
@@ -192,14 +190,13 @@ export function EditModal({
       orderName: formData.orderName,
       orderType: formData.orderType,
       orderDate: formData.orderDate,
-      expectedCompletionDate: formData.expectedCompletionDate || undefined,
+      expectedCompletionDate: formData.expectedCompletionDate || '',
       cropCategory: formData.cropCategory,
       cropName: '',
       cropVariety: formData.cropVariety,
       plannedQuantity: formData.plannedQuantity,
-      actualQuantity: formData.actualQuantity,
+      completedQuantity: formData.completedQuantity,
       unit: formData.unit,
-      supplierName: formData.supplierName,
       remarks: formData.remarks,
       // 如果选择完成，状态变为已完成
       status: formData.isCompleted ? CropOrderStatus.COMPLETED : record.status,
@@ -393,13 +390,13 @@ export function EditModal({
       {/* 实际数量 */}
       <div>
         <Label className="text-gray-700">
-          实际数量
+          完成数量
         </Label>
         <Input
           type="number"
-          value={formData.actualQuantity || ''}
-          onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
-          placeholder="请输入实际数量"
+          value={formData.completedQuantity || ''}
+          onChange={(e) => setFormData({ ...formData, completedQuantity: Number(e.target.value) })}
+          placeholder="请输入完成数量"
           className={deepInputClass}
         />
       </div>

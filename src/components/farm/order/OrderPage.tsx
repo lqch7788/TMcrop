@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Users } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { OrderStats } from './components/OrderStats';
 import { OrderFilter } from './components/OrderFilter';
 import { OrderTable } from './components/OrderTable';
@@ -209,7 +209,7 @@ export default function OrderPage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头
-    const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '实际数量', '单位', '订单日期', '预计完成日期', '状态', '创建人', '创建时间', '备注'];
+    const headers = ['订单编号', '订单名称', '订单类型', '品种路径', '作物品种', '计划数量', '完成数量', '单位', '订单日期', '预计完成日期', '状态', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -219,7 +219,7 @@ export default function OrderPage() {
       '品种路径': record.cropCategory,
       '作物品种': record.cropVariety,
       '计划数量': record.plannedQuantity,
-      '实际数量': record.actualQuantity,
+      '完成数量': record.completedQuantity,
       '单位': record.unit,
       '订单日期': record.orderDate,
       '预计完成日期': record.expectedCompletionDate || '',
@@ -330,17 +330,6 @@ export default function OrderPage() {
               <p className="text-gray-500">管理作物订单、跟踪订单执行状态和交付进度</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/crop/customer')}
-              className="flex items-center gap-2"
-            >
-              <Users className="w-4 h-4" />
-              客户管理
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -382,6 +371,8 @@ export default function OrderPage() {
         canDelete={false}
         canExport={true}
         showLowStockButton={false}
+        showCustomerButton={true}
+        onCustomer={() => navigate('/crop/customer')}
         noCard={true}
       />
 

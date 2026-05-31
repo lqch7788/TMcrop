@@ -54,9 +54,8 @@ export function AddModal({
     cropCategory: '',       // 品种路径
     cropVariety: '',       // 作物品种（搜索用）
     plannedQuantity: 0,
-    actualQuantity: 0,
+    completedQuantity: 0,
     unit: '株',
-    supplierName: '',
     orderDate: new Date().toISOString().split('T')[0],
     expectedCompletionDate: '',
     remarks: '',
@@ -137,14 +136,13 @@ export function AddModal({
       orderName: formData.orderName,
       orderType: formData.orderType,
       orderDate: formData.orderDate,
-      expectedCompletionDate: formData.expectedCompletionDate || undefined,
+      expectedCompletionDate: formData.expectedCompletionDate || '',
       cropCategory: formData.cropCategory,  // 品种路径（完整路径）
       cropName: '',                          // 作物名称（已取消字段）
       cropVariety: formData.cropVariety,     // 作物品种
       plannedQuantity: formData.plannedQuantity,
-      actualQuantity: formData.actualQuantity,
+      completedQuantity: formData.completedQuantity,
       unit: formData.unit,
-      supplierName: formData.supplierName,
       status: CropOrderStatus.PLANNED,
       remarks: formData.remarks,
       instanceIds: [],
@@ -179,9 +177,8 @@ export function AddModal({
       cropCategory: '',
       cropVariety: '',
       plannedQuantity: 0,
-      actualQuantity: 0,
+      completedQuantity: 0,
       unit: '株',
-      supplierName: '',
       orderDate: new Date().toISOString().split('T')[0],
       expectedCompletionDate: '',
       remarks: '',
@@ -276,6 +273,18 @@ export function AddModal({
         />
       </div>
 
+      {/* 创建人 */}
+      <div>
+        <Label className="text-gray-700">
+          创建人
+        </Label>
+        <Input
+          value={localStorage.getItem('username') || '未知用户'}
+          disabled
+          className="border-gray-400 bg-gray-50"
+        />
+      </div>
+
       {/* 作物品种 - 使用统一的 CropCodeSelector（与种源管理一致） */}
       <div>
         <Label className="text-gray-700">
@@ -341,16 +350,16 @@ export function AddModal({
         {errors.plannedQuantity && <p className="text-xs text-red-500 mt-1">{errors.plannedQuantity}</p>}
       </div>
 
-      {/* 实际数量 */}
+      {/* 完成数量 */}
       <div>
         <Label className="text-gray-700">
-          实际数量
+          完成数量
         </Label>
         <Input
           type="number"
-          value={formData.actualQuantity || ''}
-          onChange={(e) => setFormData({ ...formData, actualQuantity: Number(e.target.value) })}
-          placeholder="请输入实际数量"
+          value={formData.completedQuantity || ''}
+          onChange={(e) => setFormData({ ...formData, completedQuantity: Number(e.target.value) })}
+          placeholder="请输入完成数量"
           className={inputDeepClass}
         />
       </div>
