@@ -188,9 +188,14 @@ export async function deletePurchasePlan(id: string): Promise<boolean> {
  * 批量删除采购计划
  * 数据流：API → SQLite DB
  */
-export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.post('/purchase-plans/batch-delete', { ids });
-  return true;
+export async function deletePurchasePlans(
+  ids: string[]
+): Promise<{ deleted: number; skipped: { id: string; reason: string }[] }> {
+  const result = await enhancedApiClient.post<{ deleted: number; skipped: { id: string; reason: string }[] }>(
+    '/purchase-plans/batch-delete',
+    { ids }
+  );
+  return result || { deleted: 0, skipped: [] };
 }
 
 /**
@@ -198,4 +203,14 @@ export async function deletePurchasePlans(ids: string[]): Promise<boolean> {
  */
 export async function resetPurchasePlans(): Promise<void> {
   await enhancedApiClient.post('/purchase-plans/reset');
+}
+
+/**
+ * 获取下一个可用的采购申请批次号
+ * 规则：PA + YYYYMM + 4位流水号（基于数据库最大已用序号 +1）
+ * 用于"生成"按钮和打开新建弹窗时的初始值
+ */
+export async function getNextPurchaseApplicationCode(): Promise<string> {
+  const result = await enhancedApiClient.get<{ code: string }>('/purchase-plans/next-code');
+  return result?.code || '';
 }
