@@ -57,21 +57,71 @@ export const useDictionaryStore = create<DictionaryStore>()(
 
 // 辅助函数 - 按分类获取字典项
 // 注意：API返回的是 snake_case (category_code, dict_code)，需要兼容处理
+// 还要兼容旧格式: category + code + name
 export const getDictItems = (category: string): Dictionary[] => {
   const dicts = useDictionaryStore.getState().dictionaries;
-  return dicts.filter(
-    d => (d.categoryCode === category || (d as any).category_code === category) && d.status === 'active'
-  );
+  return dicts
+    .filter(d => {
+      const cat = d.categoryCode || (d as any).category_code || d.category;
+      return cat === category && d.status === 'active';
+    })
+    .map(d => ({
+      // 统一转换为新格式
+      id: d.id,
+      categoryCode: d.categoryCode || (d as any).category_code || d.category,
+      dictCode: d.dictCode || (d as any).dict_code || d.code,
+      dictLabel: d.dictLabel || d.name,
+      dictValue: d.dictValue || d.name,
+      sortOrder: d.sortOrder || (d as any).sort_order,
+      color: d.color,
+      status: d.status,
+      createdAt: d.createdAt || (d as any).created_at,
+      updatedAt: d.updatedAt || (d as any).updated_at,
+    }));
 };
 
 // 获取字典项名称
 export const getDictItemName = (category: string, code: string): string => {
-  const dicts = useDictionaryStore.getState().dictionaries;
-  const item = dicts.find(
-    d => (d.categoryCode === category || (d as any).category_code === category) &&
-         (d.dictCode === code || (d as any).dict_code === code)
-  );
-  return item?.dictLabel || code;
+  if (!code) return '';
+
+  const state = useDictionaryStore.getState();
+
+  // 如果字典未加载，触发加载（异步，不阻塞）
+  if (state.dictionaries.length === 0 && !state.loading) {
+    state.loadDictionaries();
+  }
+
+  const dicts = state.dictionaries;
+
+  // 标准化字段映射，兼容多种数据格式
+  const item = dicts.find(d => {
+    const cat = d.categoryCode || (d as any).category || (d as any).category_code;
+    const c = d.dictCode || (d as any).code || (d as any).dict_code;
+    return cat === category && c === code;
+  });
+
+  if (!item) {
+    // 如果找不到，尝试模糊匹配（处理空格/逗号分隔的多值情况）
+    const codeParts = code.split(/[,\s]+/).filter(Boolean);
+    if (codeParts.length > 1) {
+      // 多个值，用中文分隔符连接
+      const names = codeParts.map(part => {
+        const partItem = dicts.find(d => {
+          const cat = d.categoryCode || (d as any).category || (d as any).category_code;
+          const c = d.dictCode || (d as any).code || (d as any).dict_code;
+          return cat === category && c === part;
+        });
+        return partItem
+          ? (partItem.dictLabel || partItem.name || partItem.dictCode || part)
+          : part;
+      });
+      return names.join('、');
+    }
+    return code; // 找不到就返回原始 code
+  }
+
+  // 优先使用 name（兼容旧格式），其次 dictLabel（新格式），最后是 dictCode
+  return item.name || item.dictLabel || item.dictCode || code;
 };
 
 // 获取字典分类列表
