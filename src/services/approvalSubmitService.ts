@@ -93,7 +93,7 @@ class ApprovalSubmitService {
       // 4. 调用 API 保存审批数据（使用 enhancedApiClient，走三级降级）
       const { enhancedApiClient } = await import('../lib/apiClient');
       const response = await enhancedApiClient.post<{ success: boolean; id: string; code: string; error?: string }>(
-        '/api/approvals',
+        '/approvals',
         fullApproval
       );
 
@@ -113,7 +113,7 @@ class ApprovalSubmitService {
           const approverId = businessData.applicantId || 'system';
           const approverName = businessData.applicantName || '系统';
           await enhancedApiClient.patch(
-            `/api/approvals/${fullApproval.id}/action`,
+            `/approvals/${fullApproval.id}/action`,
             { action: 'approve', comment: '免审批自动通过', approverId, approverName }
           );
           console.log('【审批提交】自动通过审批，业务联动更新成功');

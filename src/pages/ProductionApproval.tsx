@@ -103,13 +103,16 @@ export default function ProductionApproval() {
     setApprovalComment('');
   };
 
-  // 确认审批操作
+  // 确认审批操作（参照 HrApproval.tsx：立即关闭弹窗，异步执行审批）
   const confirmApproval = () => {
+    console.log('[DEBUG] confirmApproval 被调用', { action: approvalModal.action, id: approvalModal.approval?.id });
     if (!approvalModal.approval || !approvalModal.action) return;
 
     if (approvalModal.action === 'approve') {
+      console.log('[DEBUG] 调用 approve', approvalModal.approval.id);
       approve(approvalModal.approval.id, approvalComment);
     } else {
+      console.log('[DEBUG] 调用 reject', approvalModal.approval.id);
       reject(approvalModal.approval.id, approvalComment || '审批拒绝');
     }
     setApprovalModal({ show: false, approval: null, action: null });
