@@ -160,19 +160,27 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     await store.deleteApproval(id);
   }, [store.deleteApproval]);
 
-  // 审批操作 — 先执行业务联动，再委托到Store
+  // 审批操作 — 先执行业务联动（已注册到registry），再委托到Store
   const approve = useCallback(async (id: string, comment?: string) => {
     const approval = store.approvals.find(a => a.id === id);
-    if (approval) {
-      executeApprovalIntegration('approved', approval, { comment });
+    try {
+      if (approval) {
+        executeApprovalIntegration('approved', approval, { comment });
+      }
+    } catch (e) {
+      console.error('业务联动异常（不影响主流程）:', e);
     }
     await store.approve(id, comment);
   }, [store.approvals, store.approve]);
 
   const reject = useCallback(async (id: string, comment: string) => {
     const approval = store.approvals.find(a => a.id === id);
-    if (approval) {
-      executeApprovalIntegration('rejected', approval, { reason: comment });
+    try {
+      if (approval) {
+        executeApprovalIntegration('rejected', approval, { reason: comment });
+      }
+    } catch (e) {
+      console.error('业务联动异常（不影响主流程）:', e);
     }
     await store.reject(id, comment);
   }, [store.approvals, store.reject]);
@@ -186,7 +194,7 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     const approverName = storageGet('username') || '系统';
     try {
       const { enhancedApiClient } = await import('../lib/apiClient');
-      await enhancedApiClient.patch(`/api/approvals/${id}/action`, {
+      await enhancedApiClient.patch(`/approvals/${id}/action`, {
         action: 'partially_approve', comment, approvedItems: items, approverId, approverName,
       });
       await store.fetchApprovals();
