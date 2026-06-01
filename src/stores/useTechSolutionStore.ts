@@ -48,8 +48,10 @@ export const useTechSolutionStore = create<TechSolutionState>()(
 
     addSolution: async (data) => {
       const result = await techService.addTechSolution(data);
-      set((state) => ({ solutions: [result, ...state.solutions] }));
-      return result;
+      // 使用后端返回的完整数据，如果失败则使用前端数据作为降级
+      const solutionData = result || data;
+      set((state) => ({ solutions: [solutionData, ...state.solutions] }));
+      return solutionData;
     },
 
     updateSolution: async (id, updates) => {

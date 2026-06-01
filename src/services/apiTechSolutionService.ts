@@ -107,8 +107,13 @@ export async function getTechSolutionById(id: string): Promise<TechSolution | un
  * 降级策略：API → 离线队列
  */
 export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
-  const result = await enhancedApiClient.post<{ id: string }>('/tech-solutions', solution);
-  return { ...solution, id: result.id } as TechSolution;
+  const result = await enhancedApiClient.post<{ success: boolean; data?: TechSolution }>('/tech-solutions', solution);
+  // 返回后端转换后的完整数据（包含正确的字段映射）
+  if (result.data) {
+    return result.data as TechSolution;
+  }
+  // 降级：使用前端构建的数据
+  return { ...solution, id: (result as any).id } as TechSolution;
 }
 
 /**
@@ -143,4 +148,53 @@ export async function deleteTechSolutions(ids: string[]): Promise<boolean> {
  */
 export async function resetTechSolutions(): Promise<void> {
   await enhancedApiClient.post('/tech-solutions/reset');
+}
+
+// ============================================================
+// 审批记录相关
+// ============================================================
+
+import { ApprovalRecord } from '@/types/approval';
+
+/**
+ * 审批记录数据结构（用于技术方案详情展示）
+ */
+export interface TechSolutionApproval {
+  id: string;
+  code: string;
+  title: string;
+  status: string;
+  currentStep: number;
+  totalSteps: number;
+  records: ApprovalRecord[];
+  createdAt: string;
+}
+
+/**
+ * 获取技术方案的审批记录
+ * @param techSolutionId 技术方案ID
+ */
+export async function getTechSolutionApprovals(techSolutionId: string): Promise<TechSolutionApproval[]> {
+  try {
+    const response = await fetch(
+      `/api/approvals/by-business/tech_solution/${techSolutionId}`
+    );
+    const result = await response.json();
+    if (result.success && Array.isArray(result.data)) {
+      return result.data.map((item: any) => ({
+        id: item.id,
+        code: item.code,
+        title: item.title,
+        status: item.status,
+        currentStep: item.currentStep,
+        totalSteps: item.totalSteps,
+        records: item.records || [],
+        createdAt: item.created_at,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error('获取技术方案审批记录失败:', error);
+    return [];
+  }
 }
