@@ -147,6 +147,35 @@ export interface SortConfig {
 }
 
 // ============================================================
+// 业务规则（前后端共用的纯函数）
+// ============================================================
+
+/** 允许删除的状态集合（草稿/待审批/已拒绝） */
+const DELETABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'pending', 'rejected']);
+
+/** 允许编辑的状态集合（排除已审批、采购中、已完成、已取消） */
+const EDITABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'pending', 'rejected']);
+
+/**
+ * 判断采购计划是否可删除
+ * 规则：草稿 / 待审批 / 已拒绝 状态可删除；其他状态不可删除
+ */
+export function canDeletePurchasePlan(plan: Pick<PurchasePlan, 'status' | 'approvalStatus'> | null | undefined): boolean {
+  if (!plan) return false;
+  if (plan.approvalStatus === 'rejected') return true;
+  return DELETABLE_STATUSES.has(plan.status);
+}
+
+/**
+ * 判断采购计划是否可编辑
+ * 规则：草稿 / 待审批 / 已拒绝 状态可编辑
+ */
+export function canEditPurchasePlan(plan: Pick<PurchasePlan, 'status'> | null | undefined): boolean {
+  if (!plan) return false;
+  return EDITABLE_STATUSES.has(plan.status);
+}
+
+// ============================================================
 // 预警类型定义
 // ============================================================
 
