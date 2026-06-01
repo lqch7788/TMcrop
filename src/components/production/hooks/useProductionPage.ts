@@ -3,7 +3,7 @@
  * 将 ProductionPage 的所有状态和逻辑提取为独立 hook，便于维护和测试
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore } from '../../../stores';
+import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore, useAuthStore } from '../../../stores';
 import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../../types';
 import { useApproval } from '../../../hooks/useApproval';
 import { apiClient, USE_API } from '../../../services/apiClient';
@@ -35,7 +35,10 @@ export interface ProductionFormData {
 }
 
 // 表单默认值
-const getInitialFormData = (): ProductionFormData => ({
+const getInitialFormData = (): ProductionFormData => {
+  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
+  const initialUsername = useAuthStore.getState().currentUser?.username || '陆启闯';
+  return {
   batchCode: '',
   planType: PlanType.PLANTING as PlanType,
   planTypeName: '种植计划',
@@ -51,13 +54,14 @@ const getInitialFormData = (): ProductionFormData => ({
   unit: 'kg',
   plantingMode: [],
   responsiblePerson: '',
-  publisher: localStorage.getItem('username') || '',
+  publisher: initialUsername,
   description: '',
   planDetail: '',
   // 关联订单字段
   orderId: [],
   orderCode: []
-});
+  };
+};
 
 // 编辑中的批次数据
 export interface EditedBatch {
@@ -196,6 +200,11 @@ export function useProductionPage(): UseProductionPageReturn {
   const orders = useOrderDataStore((s) => s.orders);
   const fetchOrders = useOrderDataStore((s) => s.fetchOrders);
 
+  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
+  const currentUsername = useAuthStore((s) => s.currentUser?.username || '陆启闯');
+  const currentUserId = useAuthStore((s) => s.currentUser?.oid || '');
+  const currentDepartment = useAuthStore((s) => s.currentUser?.orgOid || '');
+
   // ==================== 数据加载 ====================
   useEffect(() => {
     if (greenhouses.length === 0) {
@@ -259,7 +268,7 @@ export function useProductionPage(): UseProductionPageReturn {
       const activeGreenhouses = greenhouses.filter(g => g.status === 'active');
       const firstGreenhouseId = activeGreenhouses[0]?.id ? [activeGreenhouses[0].id] : [];
       const defaultMode = ['open_field'];
-      const firstResponsiblePerson = localStorage.getItem('username') || '';
+      const firstResponsiblePerson = currentUsername;
 
       setFormData(prev => ({
         ...prev,
@@ -361,8 +370,8 @@ export function useProductionPage(): UseProductionPageReturn {
       stageName: '苗期',
       priority: 'normal',
       remarks: formData.description || '',
-      publisher: formData.publisher || localStorage.getItem('username') || '',
-      createBy: formData.publisher || localStorage.getItem('username') || '',
+      publisher: formData.publisher || currentUsername,
+      createBy: formData.publisher || currentUsername,
       responsiblePerson: formData.responsiblePerson,
       unit: formData.unit || 'kg',
       publishDate: '',
@@ -421,8 +430,8 @@ export function useProductionPage(): UseProductionPageReturn {
       status: 'pending',
       priority: 'normal',
       remarks: formData.description || '',
-      publisher: formData.publisher || localStorage.getItem('username') || '',
-      createBy: formData.publisher || localStorage.getItem('username') || '',
+      publisher: formData.publisher || currentUsername,
+      createBy: formData.publisher || currentUsername,
       responsiblePerson: formData.responsiblePerson,
       unit: formData.unit || 'kg',
       publishDate: today,
@@ -451,9 +460,9 @@ export function useProductionPage(): UseProductionPageReturn {
           typeName: '生产计划',
           title: `生产计划审批：${formData.batchCode}`,
           description: `作物：${formData.cropName} ${formData.variety}\n种植区域：${greenhouseNames || greenhouseIds}\n目标产量：${formData.targetYield}kg`,
-          applicantId: localStorage.getItem('userId') || '',
-          applicantName: formData.publisher || localStorage.getItem('username') || '',
-          applicantDepartment: localStorage.getItem('department') || '',
+          applicantId: currentUserId,
+          applicantName: formData.publisher || currentUsername,
+          applicantDepartment: currentDepartment,
           applyDate: today,
           status: 'pending',
           priority: 'normal',
@@ -555,9 +564,11 @@ export function useProductionPage(): UseProductionPageReturn {
       const submittedBatchIds: string[] = [];
 
       try {
-        const currentUserId = localStorage.getItem('userId') || '';
-        const currentUserName = localStorage.getItem('username') || '';
-        const currentDepartment = localStorage.getItem('department') || '';
+        // 直接复用 hook 顶部定义的 currentUserId/currentUsername/currentDepartment
+        // 避免重复 localStorage 访问
+        const currentUserIdValue = currentUserId;
+        const currentUserNameValue = currentUsername;
+        const currentDepartmentValue = currentDepartment;
 
         for (const batch of batches) {
           const edited = editedBatches[batch.batchCode];
@@ -750,9 +761,7 @@ export function useProductionPage(): UseProductionPageReturn {
 
   // ==================== 申请作废 ====================
   const handleVoidConfirm = useCallback(async () => {
-    const currentUserId = localStorage.getItem('userId') || '';
-    const currentUserName = localStorage.getItem('username') || '';
-    const currentDepartment = localStorage.getItem('department') || '';
+    // 复用 hook 顶部定义的 currentUserId/currentUsername/currentDepartment
     const today = new Date().toISOString().slice(0, 10);
 
     const currentBatch = batches.find(b => b.batchCode === selectedBatchCode);

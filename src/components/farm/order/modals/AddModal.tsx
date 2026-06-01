@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVariety } from '@/types/cropVariety';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
-import { useCustomerStore } from '@/stores';
+import { useAuthStore, useCustomerStore } from '@/stores';
 import { Modal } from '@/components/ui/Modal';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert } from '@/lib/dialogService';
@@ -87,6 +87,9 @@ export function AddModal({
     }
   }, [isOpen]);
 
+  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
+  const currentUsername = useAuthStore((s) => s.currentUser?.username || '未知用户');
+
   // 作物品种选择回调（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
   const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
     setCropCode(code);
@@ -146,7 +149,7 @@ export function AddModal({
       status: CropOrderStatus.PLANNED,
       remarks: formData.remarks,
       instanceIds: [],
-      createBy: localStorage.getItem('username') || '',
+      createBy: currentUsername,
       // 客户相关字段
       customerId: formData.customerId || undefined,
       customerName: formData.customerName || '',
@@ -279,7 +282,7 @@ export function AddModal({
           创建人
         </Label>
         <Input
-          value={localStorage.getItem('username') || '未知用户'}
+          value={currentUsername}
           disabled
           className="border-gray-400 bg-gray-50"
         />
