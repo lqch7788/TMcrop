@@ -1840,6 +1840,52 @@ export function initializeDatabase() {
     // 索引可能已存在，忽略错误
   }
 
+  // ========== V9.0: 一次性数据迁移 - 把旧 stage 字符串映射到 tech_solution_scopes ==========
+  // 适用场景：升级到 V9.0 后，旧的 tech_solutions.stage 字段值（如"播种期"、"全周期"）
+  // 需要插入到 tech_solution_scopes 表中，让前端能通过 scopes 数组正确显示
+  try {
+    const migrationCheck = db.prepare(`SELECT COUNT(*) as cnt FROM tech_solution_scopes`);
+    migrationCheck.step();
+    const scopeCount = (migrationCheck.getAsObject() as { cnt: number }).cnt;
+    migrationCheck.free();
+
+    // 只在 scopes 表为空且 tech_solutions 有数据时执行迁移
+    if (scopeCount === 0) {
+      const techCountResult = db.prepare(`SELECT COUNT(*) as cnt FROM tech_solutions WHERE stage IS NOT NULL AND stage != ''`);
+      techCountResult.step();
+      const techCount = (techCountResult.getAsObject() as { cnt: number }).cnt;
+      techCountResult.free();
+
+      if (techCount > 0) {
+        // 遍历所有有 stage 值的方案，把 stage 写入 scopes 表
+        const techRows = db.prepare(`SELECT id, stage FROM tech_solutions WHERE stage IS NOT NULL AND stage != ''`);
+        const insertStmt = db.prepare(
+          `INSERT OR IGNORE INTO tech_solution_scopes (solution_id, scope_code, scope_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`
+        );
+        const now = new Date().toISOString();
+        let migrated = 0;
+        while (techRows.step()) {
+          const row = techRows.getAsObject() as { id: string; stage: string };
+          // 兼容 stage 可能是单值或逗号分隔多值
+          const stages = row.stage.split(',').map((s) => s.trim()).filter(Boolean);
+          for (let i = 0; i < stages.length; i++) {
+            const stage = stages[i];
+            // code 用阶段名本身（不重复）+ 索引
+            insertStmt.run([row.id, `legacy_${i}_${stage}`, stage, i, now]);
+            migrated++;
+          }
+        }
+        techRows.free();
+        insertStmt.free();
+        if (migrated > 0) {
+          console.log(`[V9.0 迁移] 已将 ${migrated} 个旧 stage 字符串映射到 tech_solution_scopes 表`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[V9.0 迁移] 数据迁移失败（可忽略，不影响核心功能）:', e);
+  }
+
   // 为技术方案表添加最后提交时间字段（如果不存在）
   try {
     db.run(`ALTER TABLE tech_solutions ADD COLUMN last_submit_time TEXT`);
