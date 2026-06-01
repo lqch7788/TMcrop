@@ -18,32 +18,12 @@ import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import { Pagination } from '@/components/ui/Pagination';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
+import { getVarietyByCode } from '../../services/cropVarietyService';
+// 使用 import type 确保类型导入在编译时被擦除
+import type { TechSolution } from '../../types/techSolution';
 
-// 技术方案类型定义
-export interface TechSolution {
-  id: string;
-  code: string;
-  title: string;
-  crop: string;
-  cropCode?: string;
-  plantingMode: string;
-  stage: string;
-  author: string;
-  authorId?: string;
-  createDate: string;
-  status: string;
-  batchStatus?: string;
-  statusClass?: 'normal' | 'pending' | 'draft';
-  version: string;
-  approveStatus?: string;
-  content: string;
-  approvalDate?: string;
-  approver?: string;
-  relatedBatchCode?: string;
-  planDetailFileName?: string;
-  lastSubmitTime?: string;
-  isValid?: string;
-}
+// re-export 保持向后兼容（type-only re-export 编译时被擦除）
+export type { TechSolution };
 
 // 适用范围选项（多选）
 const scopeOptions = [
@@ -152,6 +132,15 @@ export function TechSolutionPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [fetchSolutions]);
 
+  // 窗口聚焦时刷新（解决审批通过后状态不同步问题）
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchSolutions();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchSolutions]);
+
   // 过滤后的技术方案数据
   const filteredTechSolutions = techSolutions.filter(tech => {
     // 方案编号过滤
@@ -214,10 +203,14 @@ export function TechSolutionPage() {
   const [editForm, setEditForm] = useState({
     title: '',
     crop: '',
+    cropCode: '',
     plantingMode: '',
     stage: '',
     version: '',
     content: '',
+    remarks: '',
+    relatedBatchCode: '',
+    planDetailFileName: '',
     isValid: '有效',
     lastSubmitTime: '',
   });
@@ -235,11 +228,14 @@ export function TechSolutionPage() {
     author: localStorage.getItem('username') || '陆启闯',
     version: 'V1.0',
     content: '',
+    remarks: '',
     planDetailFileName: '',
     relatedBatchCode: '',
   });
 
   // 作物品种选择回调（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
+  const [scopeExpandedEdit, setScopeExpandedEdit] = useState(false); // 编辑弹窗适用范围折叠状态
+
   const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
     if (varietyInfo) {
       setSelectedCrop(varietyInfo);
@@ -272,22 +268,50 @@ export function TechSolutionPage() {
     setViewModalOpen(true);
   };
 
+  // 编辑弹窗的作物品种选择
+  const [selectedCropEdit, setSelectedCropEdit] = useState<CropVariety | null>(null);
+  const handleCropChangeEdit = (code: string, varietyInfo: CropVariety | null) => {
+    if (varietyInfo) {
+      setSelectedCropEdit(varietyInfo);
+      setEditForm(prev => ({
+        ...prev,
+        crop: varietyInfo.subVariety1Name || varietyInfo.varietyName,
+        cropCode: varietyInfo.cropCode,
+      }));
+    } else {
+      setSelectedCropEdit(null);
+      setEditForm(prev => ({
+        ...prev,
+        crop: '',
+        cropCode: '',
+      }));
+    }
+  };
+
   const handleEditClick = (tech: TechSolution) => {
     // 作废的方案不能编辑
     if (tech.isValid === '作废') {
       showAlert('该方案已作废，无法编辑');
       return;
     }
+    // 根据 cropCode 获取品种信息
+    const varietyInfo = tech.cropCode ? getVarietyByCode(tech.cropCode) : null;
+    setSelectedCropEdit(varietyInfo);
     setSelectedTech(tech);
     setEditForm({
       title: tech.title,
       crop: tech.crop,
+      cropCode: tech.cropCode || '',
       plantingMode: tech.plantingMode,
       stage: tech.stage,
       version: tech.version,
       content: tech.content,
+      remarks: tech.remarks || '',
+      relatedBatchCode: tech.relatedBatchCode || '',
+      planDetailFileName: tech.planDetailFileName || '',
       isValid: tech.isValid || '有效',
-      lastSubmitTime: new Date().toISOString().split('T')[0],
+      // 保留原始最后提交时间，不重置（避免编辑时误覆盖）
+      lastSubmitTime: tech.lastSubmitTime || '',
     });
     setEditModalOpen(true);
   };
@@ -298,21 +322,24 @@ export function TechSolutionPage() {
     const updateData = {
       solutionTitle: editForm.title,
       cropName: editForm.crop,
+      cropCode: editForm.cropCode,
       plantingMode: editForm.plantingMode,
       stage: editForm.stage,
       version: editForm.version,
       content: editForm.content,
-      relatedBatchCode: selectedTech.relatedBatchCode || '',
-      planDetailFileName: selectedTech.planDetailFileName || '',
+      remarks: editForm.remarks,
+      relatedBatchCode: editForm.relatedBatchCode || '',
+      planDetailFileName: editForm.planDetailFileName || '',
       priority: selectedTech.priority || 'normal',
-      remarks: '',
       isValid: editForm.isValid,
-      lastSubmitTime: editForm.lastSubmitTime || new Date().toISOString().split('T')[0],
+      // 仅在原值为空时兜底，不强制覆盖
+      lastSubmitTime: editForm.lastSubmitTime || selectedTech.lastSubmitTime || '',
     };
 
     try {
       if (USE_API) {
         await updateSolution(selectedTech.id, updateData);
+        await fetchSolutions(); // 刷新列表
       }
       setEditModalOpen(false);
     } catch (error) {
@@ -327,6 +354,7 @@ export function TechSolutionPage() {
     // 构造技术方案数据
     const techSolutionData = {
       code: newPlanForm.code, // 方案编号
+      solutionCode: newPlanForm.code, // 后端字段名（与 database map 兼容）
       solutionTitle: newPlanForm.title,
       cropName: newPlanForm.crop,
       cropCode: newPlanForm.cropCode,
@@ -334,6 +362,7 @@ export function TechSolutionPage() {
       stage: newPlanForm.stage,
       version: newPlanForm.version || 'V1.0',
       content: newPlanForm.content,
+      remarks: newPlanForm.remarks,
       author: newPlanForm.author || localStorage.getItem('username') || '陆启闯',
       authorId: localStorage.getItem('userId') || '',
       relatedBatchCode: newPlanForm.relatedBatchCode || '',
@@ -377,6 +406,9 @@ export function TechSolutionPage() {
           // 刷新审批中心数据
           await refreshApprovals();
         }
+
+        // 刷新列表数据
+        await fetchSolutions();
       }
 
       // 关闭模态框
@@ -390,6 +422,7 @@ export function TechSolutionPage() {
         stage: '',
         version: 'V1.0',
         content: '',
+        remarks: '',
         planDetailFileName: '',
         relatedBatchCode: '',
       });
@@ -431,7 +464,7 @@ export function TechSolutionPage() {
   // 导出数据处理
   const handleDoExport = async () => {
     const selectedData = techSolutions.filter(t => selectedRows.includes(t.id));
-    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '审批状态', '状态', '方案是否有效'];
+    const headers = ['方案编号', '关联生产计划批次', '方案标题', '作物品种', '种植模式', '适用范围', '版本', '编制人', '创建日期', '状态', '方案是否有效'];
     const exportData = selectedData.map(row => ({
       '方案编号': row.code,
       '关联生产计划批次': row.relatedBatchCode || '-',
@@ -442,7 +475,6 @@ export function TechSolutionPage() {
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
-      '审批状态': row.approveStatus,
       '状态': row.status,
       '方案是否有效': row.isValid || '有效'
     }));
@@ -549,6 +581,7 @@ export function TechSolutionPage() {
       stage: '',
       version: 'V1.0',
       content: '',
+      remarks: '',
       planDetailFileName: '',
       relatedBatchCode: '',
     });
@@ -585,10 +618,10 @@ export function TechSolutionPage() {
               <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="全部">全部</SelectItem>
-                <SelectItem value="番茄">番茄</SelectItem>
-                <SelectItem value="黄瓜">黄瓜</SelectItem>
-                <SelectItem value="草莓">草莓</SelectItem>
-                <SelectItem value="辣椒">辣椒</SelectItem>
+                {/* 从已加载数据动态提取作物品种，避免硬编码 */}
+                {Array.from(new Set(techSolutions.map(t => t.crop).filter(Boolean))).map(crop => (
+                  <SelectItem key={crop} value={crop}>{crop}</SelectItem>
+                ))}
               </SelectContent>
             </UISelect>
           </div>
@@ -763,9 +796,9 @@ export function TechSolutionPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案是否有效</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案详情文件</th>
               </tr>
@@ -796,15 +829,10 @@ export function TechSolutionPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      tech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {tech.approveStatus}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      tech.statusClass === 'normal' ? 'bg-green-100 text-green-700' :
-                      tech.statusClass === 'pending' ? 'bg-amber-100 text-amber-700' :
+                      tech.status === '已发布' ? 'bg-green-100 text-green-700' :
+                      tech.status === '待审批' ? 'bg-amber-100 text-amber-700' :
+                      tech.status === '已拒绝' ? 'bg-red-100 text-red-700' :
+                      tech.status === '已作废' ? 'bg-gray-300 text-gray-600' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {tech.status}
@@ -816,6 +844,9 @@ export function TechSolutionPage() {
                     }`}>
                       {tech.isValid || '有效'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={tech.remarks}>
+                    {tech.remarks || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
@@ -916,6 +947,7 @@ export function TechSolutionPage() {
       >
         {selectedTech && (
           <div className="space-y-4">
+            {/* 方案编号 + 版本 */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="方案编号">
                 <Input value={selectedTech.code} disabled className="bg-gray-50" />
@@ -927,24 +959,37 @@ export function TechSolutionPage() {
                 />
               </FormField>
             </div>
+
+            {/* 方案标题 */}
             <FormField label="方案标题">
               <Input
                 value={editForm.title}
                 onChange={(e) => setEditForm({...editForm, title: e.target.value})}
               />
             </FormField>
+
+            {/* 作物品种 + 种植模式 */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="作物品种">
-                <Select
-                  value={editForm.crop}
-                  onChange={(e) => setEditForm({...editForm, crop: e.target.value})}
-                  options={[
-                    { value: '番茄', label: '番茄' },
-                    { value: '黄瓜', label: '黄瓜' },
-                    { value: '草莓', label: '草莓' },
-                    { value: '辣椒', label: '辣椒' },
-                  ]}
+                <CropCodeSelector
+                  value={editForm.cropCode || ''}
+                  onChange={handleCropChangeEdit}
+                  placeholder="搜索或选择作物品种..."
+                  size="md"
+                  showFullPath={true}
                 />
+                {selectedCropEdit && (
+                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                    <div className="text-emerald-700 flex items-center gap-1">
+                      <Leaf className="w-3 h-3 flex-shrink-0" />
+                      {selectedCropEdit.categoryName} &gt; {selectedCropEdit.typeName} &gt; {selectedCropEdit.varietyName}
+                      {selectedCropEdit.subVariety1Name && ` > ${selectedCropEdit.subVariety1Name}`}
+                    </div>
+                    <div className="text-emerald-600 mt-0.5">
+                      编码：{selectedCropEdit.cropCode}
+                    </div>
+                  </div>
+                )}
               </FormField>
               <FormField label="种植模式">
                 <DictSelect
@@ -955,12 +1000,64 @@ export function TechSolutionPage() {
                 />
               </FormField>
             </div>
-            <FormField label="适用范围">
-              <Input
-                value={editForm.stage}
-                onChange={(e) => setEditForm({...editForm, stage: e.target.value})}
+
+            {/* 适用范围（多选Checkbox） */}
+            <FormField label="适用范围（可多选）">
+              <div className="space-y-2">
+                {/* 折叠/展开按钮 */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setScopeExpandedEdit(!scopeExpandedEdit)}
+                  className="flex items-center gap-1 text-gray-600"
+                >
+                  {scopeExpandedEdit ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <span>{scopeExpandedEdit ? '收起' : '展开'}</span>
+                </Button>
+                {/* 选项列表 - 折叠时隐藏 */}
+                {scopeExpandedEdit && (
+                  <div className="flex flex-wrap gap-2">
+                    {scopeOptions.map(option => (
+                      <label key={option} className="flex items-center gap-1 cursor-pointer">
+                        <Checkbox
+                          checked={editForm.stage.split(',').includes(option)}
+                          onCheckedChange={(checked) => {
+                            const currentStages = editForm.stage ? editForm.stage.split(',').filter(s => s) : [];
+                            if (checked) {
+                              setEditForm({...editForm, stage: [...currentStages, option].join(',')});
+                            } else {
+                              setEditForm({...editForm, stage: currentStages.filter(s => s !== option).join(',')});
+                            }
+                          }}
+                        />
+                        <span className="text-sm">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </FormField>
+
+            {/* 关联生产批次号 */}
+            <FormField label="关联生产批次号">
+              <Select
+                value={editForm.relatedBatchCode}
+                onChange={(e) => setEditForm({...editForm, relatedBatchCode: e.target.value})}
+                options={[
+                  { value: '', label: '不关联生产批次' },
+                  { value: 'ZZB2026-001', label: 'ZZB2026-001' },
+                  { value: 'ZZB2026-002', label: 'ZZB2026-002' },
+                  { value: 'ZZB2026-003', label: 'ZZB2026-003' },
+                  { value: 'YMB2026-001', label: 'YMB2026-001' },
+                  { value: 'YMB2026-002', label: 'YMB2026-002' },
+                  { value: 'JZB2026-001', label: 'JZB2026-001' },
+                  { value: 'JZB2026-002', label: 'JZB2026-002' },
+                ]}
               />
             </FormField>
+
+            {/* 编制人 + 创建日期 */}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="编制人">
                 <Input value={selectedTech.author} disabled className="bg-gray-50" />
@@ -969,29 +1066,88 @@ export function TechSolutionPage() {
                 <Input value={selectedTech.createDate} disabled className="bg-gray-50" />
               </FormField>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="方案是否有效">
-                <Select
-                  value={editForm.isValid}
-                  onChange={(e) => setEditForm({...editForm, isValid: e.target.value})}
-                  options={[
-                    { value: '有效', label: '有效' },
-                    { value: '作废', label: '作废' },
-                  ]}
-                />
-                {editForm.isValid === '作废' && (
-                  <p className="text-xs text-red-600 mt-1 font-medium">
-                    ⚠️ 选择"作废"后方案将无法使用，提交后将进入审核流程
-                  </p>
-                )}
-              </FormField>
-            </div>
+
+            {/* 备注 */}
+            <FormField label="备注">
+              <Textarea
+                value={editForm.remarks}
+                onChange={(e) => setEditForm({...editForm, remarks: e.target.value})}
+                rows={2}
+              />
+            </FormField>
+
+            {/* 方案是否有效 */}
+            <FormField label="方案是否有效">
+              <Select
+                value={editForm.isValid}
+                onChange={(e) => setEditForm({...editForm, isValid: e.target.value})}
+                options={[
+                  { value: '有效', label: '有效' },
+                  { value: '作废', label: '作废' },
+                ]}
+              />
+              {editForm.isValid === '作废' && (
+                <p className="text-xs text-red-600 mt-1 font-medium">
+                  ⚠️ 选择"作废"后方案将无法使用，提交后将进入审核流程
+                </p>
+              )}
+            </FormField>
+
+            {/* 方案内容 */}
             <FormField label="方案内容">
               <Textarea
                 value={editForm.content}
                 onChange={(e) => setEditForm({...editForm, content: e.target.value})}
                 rows={6}
               />
+            </FormField>
+
+            {/* 方案详细文件上传 */}
+            <FormField label="方案详情文件">
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="blue"
+                  size="sm"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.txt,.md,.docx';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setEditForm({...editForm, content: event.target?.result as string});
+                          setEditForm({...editForm, planDetailFileName: file.name});
+                        };
+                        reader.readAsText(file);
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  <Upload className="w-3 h-3 mr-1" />
+                  导入文件
+                </Button>
+                <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>
+                {editForm.planDetailFileName && (
+                  <span className="text-xs text-emerald-600">{editForm.planDetailFileName}</span>
+                )}
+                {editForm.planDetailFileName && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditForm({...editForm, content: '', planDetailFileName: ''});
+                    }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    删除
+                  </Button>
+                )}
+              </div>
             </FormField>
           </div>
         )}
@@ -1167,8 +1323,8 @@ export function TechSolutionPage() {
           {/* 第六行：备注（单独一行） */}
           <FormField label="备注">
             <Textarea
-              value={newPlanForm.content}
-              onChange={(e) => setNewPlanForm({...newPlanForm, content: e.target.value})}
+              value={newPlanForm.remarks}
+              onChange={(e) => setNewPlanForm({...newPlanForm, remarks: e.target.value})}
               placeholder="请输入备注信息"
               rows={3}
             />
@@ -1324,10 +1480,10 @@ export function TechSolutionPage() {
                   }}>
                     <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="番茄">番茄</SelectItem>
-                      <SelectItem value="黄瓜">黄瓜</SelectItem>
-                      <SelectItem value="草莓">草莓</SelectItem>
-                      <SelectItem value="辣椒">辣椒</SelectItem>
+                      {/* 从已加载数据动态提取作物品种，避免硬编码 */}
+                      {Array.from(new Set(techSolutions.map(t => t.crop).filter(Boolean))).map(crop => (
+                        <SelectItem key={crop} value={crop}>{crop}</SelectItem>
+                      ))}
                     </SelectContent>
                   </UISelect>
                 </div>
@@ -1381,38 +1537,6 @@ export function TechSolutionPage() {
                 <div className="bg-gray-100 rounded-lg p-2">
                   <div className="text-xs text-gray-500 mb-1">创建日期</div>
                   <div className="text-sm text-gray-700">{currentTech.createDate}</div>
-                </div>
-
-                {/* 审批状态 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">审批状态</div>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                    currentTech.approveStatus === '已审批' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {currentTech.approveStatus}
-                  </span>
-                </div>
-
-                {/* 状态 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">状态</div>
-                  <UISelect value={editedData.status ?? currentTech.status} onValueChange={(v) => {
-                    const updated = {
-                      ...editedTechs,
-                      [selectedTechCode]: { ...editedTechs[selectedTechCode], status: v },
-                    };
-                    setEditedTechs(updated);
-                    if (!editedTechCodes.includes(selectedTechCode)) {
-                      setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                    }
-                  }}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="已发布">已发布</SelectItem>
-                      <SelectItem value="审核中">审核中</SelectItem>
-                      <SelectItem value="草稿">草稿</SelectItem>
-                    </SelectContent>
-                  </UISelect>
                 </div>
 
                 {/* 方案详情文件 - 可编辑 */}

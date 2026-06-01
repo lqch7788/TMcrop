@@ -77,7 +77,7 @@ export { useOrderDataStore } from './useOrderDataStore';
 export { useProductionPlanStore } from './useProductionPlanStore';
 
 export { useTechSolutionStore } from './useTechSolutionStore';
-export type { TechSolution } from '../services/techSolutionService';
+export type { TechSolution, TechSolutionStatus, TechSolutionStatusValue } from '../types/techSolution';
 
 export { usePurchasePlanStore } from './usePurchasePlanStore';
 export type { PurchasePlanStatusUpdate } from './usePurchasePlanStore';

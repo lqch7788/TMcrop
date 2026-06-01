@@ -4,22 +4,6 @@
 // 这些类型是从 V1.2 的 index.ts 中引用的，但原始文件不存在
 // ============================================================
 
-// 技术方案
-export interface TechSolution {
-  id: string;
-  code: string;
-  name: string;
-  cropName: string;
-  variety: string;
-  greenhouseId: string;
-  greenhouseName: string;
-  content: string;
-  attachments?: string[];
-  status: 'draft' | 'published' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
-}
-
 // 采购计划项
 export interface PurchasePlanItem {
   materialId: string;

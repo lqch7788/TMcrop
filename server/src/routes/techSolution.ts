@@ -215,9 +215,6 @@ router.post('/', (req: Request, res: Response) => {
     // 默认草稿状态
     const batchStatus = req.body.batchStatus || 'draft';
 
-    console.log('[技术方案创建] relatedBatchCode:', relatedBatchCode);
-    console.log('[技术方案创建] req.body:', JSON.stringify(req.body, null, 2));
-
     const id = generateId('TS');
     // 优先使用前端传入的编号，否则按规则生成
     const solutionCode = code || generateSolutionCode();
@@ -255,7 +252,6 @@ router.post('/', (req: Request, res: Response) => {
     ]);
 
     saveDatabase();
-    console.log('[技术方案创建] 插入数据 - related_batch_code:', relatedBatchCode || '');
 
     const newItems = queryToObjects(db, 'SELECT * FROM tech_solutions WHERE id = ?', [id]);
     const resultData = newItems.length > 0 ? mapFieldsToFrontend(newItems[0]) : {};
@@ -295,43 +291,32 @@ router.put('/:id', (req: Request, res: Response) => {
     } = req.body;
 
     const now = new Date().toISOString();
-    // 如果方案被标记为作废，更新 batch_status
-    const batchStatus = isValid === '作废' ? 'cancelled' : 'pending';
+    // 保持原状态不变，只有显式提交审核时才改变状态
+    // 作废时设置为 cancelled，其他情况保持原状态
+    const batchStatus = isValid === '作废' ? 'cancelled' : undefined;
 
-    db.run(`
-      UPDATE tech_solutions SET
-        solution_title = ?,
-        crop_name = ?,
-        planting_mode = ?,
-        stage = ?,
-        version = ?,
-        content = ?,
-        related_batch_code = ?,
-        plan_detail_file_name = ?,
-        priority = ?,
-        remarks = ?,
-        update_time = ?,
-        batch_status = ?,
-        is_valid = ?,
-        last_submit_time = ?
-      WHERE id = ?
-    `, [
-      solutionTitle,
-      cropName,
-      plantingMode,
-      stage,
-      version,
-      content,
-      relatedBatchCode,
-      planDetailFileName,
-      priority,
-      remarks,
-      now,
-      batchStatus,
-      isValid,
-      lastSubmitTime || now,
-      id,
-    ]);
+    // 动态构建更新字段
+    const fields = [
+      'solution_title = ?', 'crop_name = ?', 'planting_mode = ?', 'stage = ?',
+      'version = ?', 'content = ?', 'related_batch_code = ?', 'plan_detail_file_name = ?',
+      'priority = ?', 'remarks = ?', 'update_time = ?', 'is_valid = ?', 'last_submit_time = ?'
+    ];
+    const values = [
+      solutionTitle, cropName, plantingMode, stage,
+      version, content, relatedBatchCode, planDetailFileName,
+      priority, remarks, now, isValid, lastSubmitTime || now
+    ];
+
+    // 只有显式设置状态时才更新 batch_status
+    if (batchStatus !== undefined) {
+      fields.push('batch_status = ?');
+      values.push(batchStatus);
+    }
+
+    const sql = `UPDATE tech_solutions SET ${fields.join(', ')} WHERE id = ?`;
+    values.push(id);
+
+    db.run(sql, values);
 
     saveDatabase();
 

@@ -163,12 +163,15 @@ function updateTechSolution(db: any, id: string, status: string, approvalCode: s
     const now = new Date().toISOString();
     // 映射审批状态到技术方案状态
     // approved -> published (已发布)
-    // rejected -> cancelled (已作废)
+    // rejected -> rejected (已拒绝)
+    // cancelled -> cancelled (已作废)
     let solutionStatus = status;
     if (status === 'approved') {
       solutionStatus = 'published';
-    } else if (status === 'rejected' || status === 'cancelled') {
-      solutionStatus = 'cancelled';
+    } else if (status === 'rejected') {
+      solutionStatus = 'rejected';  // 审批拒绝
+    } else if (status === 'cancelled') {
+      solutionStatus = 'cancelled';  // 用户操作作废
     }
     db.run(`
       UPDATE tech_solutions SET
@@ -514,7 +517,7 @@ export function updateBusinessTable(
   db: any,
   businessType: string,
   requestId: string,
-  action: 'approved' | 'rejected' | 'cancelled' | 'partially_approved',
+  action: 'approved' | 'rejected' | 'cancelled' | 'partially_approved' | 'reject',
   approvalCode: string,
   extra?: Record<string, unknown>
 ): { success: boolean; message: string } {
@@ -522,7 +525,10 @@ export function updateBusinessTable(
   let status = 'pending';
   let finalStatus = 'pending';
 
-  switch (action) {
+  // 统一 action 值：reject -> rejected
+  const normalizedAction = action === 'reject' ? 'rejected' : action;
+
+  switch (normalizedAction) {
     case 'approved':
       status = 'approved';
       finalStatus = 'approved';
@@ -703,7 +709,7 @@ export function updateBusinessTable(
 
     case 'tech_solution':
       // 技术方案使用专门的 tech_solutions 表
-      if (updateTechSolution(db, requestId, action, approvalCode, extra)) {
+      if (updateTechSolution(db, requestId, status, approvalCode, extra)) {
         return { success: true, message: '技术方案状态已更新' };
       }
       break;
