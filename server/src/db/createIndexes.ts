@@ -317,7 +317,45 @@ export function createIndexes() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_type ON pesticide_records(control_type)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_pest_records_crop ON pesticide_records(crop_name)`);
 
-  console.log('索引创建完成！共创建 79 个索引');
+  // ========== N. 采购计划表索引（含 UNIQUE 防重）==========
+  // 先清理已存在的 plan_code 重复（保留最早一条），再创建 UNIQUE 索引
+  try {
+    const dupResult = db.exec(`
+      SELECT plan_code, MIN(create_time) AS keep_time
+      FROM purchase_plans
+      WHERE plan_code IS NOT NULL AND plan_code <> ''
+      GROUP BY plan_code
+      HAVING COUNT(*) > 1
+    `);
+    if (dupResult.length > 0 && dupResult[0].values.length > 0) {
+      const codeIdx = dupResult[0].columns.indexOf('plan_code');
+      const timeIdx = dupResult[0].columns.indexOf('keep_time');
+      for (const row of dupResult[0].values) {
+        const code = row[codeIdx] as string;
+        const keepTime = row[timeIdx] as string;
+        // 删除除保留行外的所有重复记录
+        db.run(
+          `DELETE FROM purchase_plans WHERE plan_code = ? AND create_time <> ?`,
+          [code, keepTime]
+        );
+      }
+      console.log(`✓ 清理了 ${dupResult[0].values.length} 组 plan_code 重复`);
+    }
+  } catch (e) {
+    // 表可能尚未存在（首次启动）
+  }
+  // 复合索引
+  db.run(`CREATE INDEX IF NOT EXISTS idx_purchase_plans_code ON purchase_plans(plan_code)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_purchase_plans_status ON purchase_plans(status, approval_status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_purchase_plans_apply_date ON purchase_plans(apply_date DESC)`);
+  // UNIQUE 索引：保证 plan_code 唯一（先去重后建索引）
+  try {
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_plans_code_unique ON purchase_plans(plan_code) WHERE plan_code IS NOT NULL AND plan_code <> ''`);
+  } catch (e: any) {
+    // 已存在或数据冲突，忽略
+  }
+
+  console.log('索引创建完成！共创建 83 个索引');
 }
 
 // 导出索引信息查询函数
