@@ -6,13 +6,17 @@
 import React from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
+import { Clock } from 'lucide-react';
 import type { PurchasePlan } from '@/types/purchase';
+import type { Approval } from '@/types/approval';
 import { MaterialItemsTable } from './MaterialItemsTable';
 
 interface PlanDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPlanDetail: PurchasePlan | null;
+  /** 审批记录（可选） */
+  approvalRecords?: Approval['records'];
 }
 
 /**
@@ -56,6 +60,7 @@ export function PlanDetailModal({
   isOpen,
   onClose,
   selectedPlanDetail,
+  approvalRecords,
 }: PlanDetailModalProps) {
   if (!selectedPlanDetail) return null;
 
@@ -98,6 +103,42 @@ export function PlanDetailModal({
     ],
   ];
 
+  // 审批记录卡片（参照 ProductionApproval.tsx）
+  const renderApprovalRecords = () => {
+    if (!approvalRecords || approvalRecords.length === 0) return null;
+    return (
+      <div className="mt-4 bg-purple-50 rounded-xl p-4">
+        <h4 className="text-sm font-medium text-purple-600 mb-3 flex items-center gap-2">
+          <Clock className="w-4 h-4" /> 审批记录
+        </h4>
+        <div className="space-y-3">
+          {approvalRecords.map((record: any, index: number) => (
+            <div key={index} className="flex items-start gap-3 p-2 bg-white rounded-lg">
+              <div className={`w-2 h-2 rounded-full mt-2 ${
+                record.action === 'approve' ? 'bg-emerald-500' :
+                record.action === 'reject' ? 'bg-red-500' : 'bg-gray-400'
+              }`} />
+              <div className="flex-1">
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">{record.approverName}</span>
+                  <span className="text-gray-500 mx-1">
+                    {record.action === 'approve' ? '通过了申请' :
+                     record.action === 'reject' ? '拒绝了申请' :
+                     record.action === 'partially_approve' ? '部分通过了' : '操作了'}
+                  </span>
+                </p>
+                {record.comment && (
+                  <p className="text-xs text-gray-500 mt-1">备注：{record.comment}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">{record.actionTime}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
@@ -116,6 +157,7 @@ export function PlanDetailModal({
       footer={footer}
       width={900}
       height={600}
+      customFooter={renderApprovalRecords()}
     />
   );
 }
