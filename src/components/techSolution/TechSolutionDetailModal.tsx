@@ -20,6 +20,7 @@ interface TechSolution {
   author: string;
   authorId?: string;
   createDate: string;
+  updateTime?: string;
   status: string;
   batchStatus?: string;
   statusClass?: 'normal' | 'pending' | 'draft';
@@ -30,6 +31,8 @@ interface TechSolution {
   approver?: string;
   relatedBatchCode?: string;
   planDetailFileName?: string;
+  priority?: string;
+  remarks?: string;
   lastSubmitTime?: string;
   isValid?: string;
 }
@@ -166,7 +169,7 @@ export function TechSolutionDetailModal({ isOpen, onClose, tech }: TechSolutionD
     </span>
   );
 
-  // 字段配置
+  // 字段配置 - 与列表字段保持一致
   const fields: DetailField[][] = [
     [
       { label: '方案编号', value: tech.code },
@@ -188,16 +191,16 @@ export function TechSolutionDetailModal({ isOpen, onClose, tech }: TechSolutionD
       { label: '创建日期', value: tech.createDate },
     ],
     [
-      { label: '审核人', value: tech.approver || '-' },
-      { label: '审批状态', value: approveStatusBadge },
+      { label: '最后修改时间', value: tech.updateTime ? formatDateTime(tech.updateTime) : '-' },
+      { label: '最后提交时间', value: tech.lastSubmitTime ? formatDateTime(tech.lastSubmitTime) : '-' },
     ],
     [
       { label: '状态', value: statusBadge },
-      { label: '审批日期', value: tech.approvalDate || '-' },
+      { label: '方案是否有效', value: tech.isValid || '有效' },
     ],
     [
-      { label: '方案是否有效', value: tech.isValid || '有效' },
-      { label: '最后提交时间', value: tech.lastSubmitTime || '-' },
+      { label: '备注', value: (tech as any).remarks || '-' },
+      { label: '方案详情文件', value: (tech as any).planDetailFileName || '-' },
     ],
     [
       { label: '方案内容', value: tech.content, fullWidth: true },

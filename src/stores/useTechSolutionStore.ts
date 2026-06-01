@@ -1,10 +1,15 @@
 /**
- * 技术方案数据 Zustand Store (V2.1 架构 - 已简化)
+ * 技术方案数据 Zustand Store (V2.1 架构)
  * 管理技术方案的完整 CRUD 数据流
- * 数据流：enhancedApiClient → Store → 页面组件
+ *
+ * 数据流：API → enhancedApiClient（无缓存）→ Store → 页面组件
+ * - L1：Store 内存数据
+ * - L2：（未使用）无 IndexedDB 缓存
+ * - L3：（未使用）techSolution 页面不读取 localStorage
  */
 import { create } from 'zustand';
-import { TechSolution } from '../services/techSolutionService';
+// 使用 import type 确保类型导入在编译时被擦除，不会出现在运行时 ESM 中
+import type { TechSolution } from '../types/techSolution';
 import * as techService from '../services/apiTechSolutionService';
 
 interface TechSolutionFilters {
@@ -57,8 +62,9 @@ export const useTechSolutionStore = create<TechSolutionState>()(
     updateSolution: async (id, updates) => {
       const result = await techService.updateTechSolution(id, updates);
       if (result) {
+        // 使用后端返回的完整数据（merge 模式），避免前端传参不完整
         set((state) => ({
-          solutions: state.solutions.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+          solutions: state.solutions.map((s) => (s.id === id ? { ...s, ...result } : s)),
         }));
       }
       return result;

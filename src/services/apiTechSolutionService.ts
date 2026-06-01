@@ -2,15 +2,26 @@
  * 技术方案数据 API 服务
  * 对接后端 /api/tech-solutions
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient（无缓存，仅 3 次重试）→ 组件
  *
- * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * 缓存策略（已确认无三级缓存）：
+ * - L1：Zustand Store 内存数组
+ * - L2：（未使用）无 IndexedDB 缓存
+ * - L3：（未使用）techSolution 页面不读取 localStorage 中的方案数据
+ *
+ * 网络策略：
+ * - GET 请求：API 直接调用，失败时 3 次指数退避重试
+ * - POST/PUT/DELETE：API 直接调用，无离线队列（apiClient 不支持）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { TechSolution } from './techSolutionService';
+// 使用 `import type` 告诉 TS 这些是类型导入，编译时会被擦除，不会出现在运行时 ESM 中
+import type { TechSolution, TechSolutionStatusValue } from '../types/techSolution';
+import { TechSolutionStatus } from '../types/techSolution';
+
+// 重新导出类型（让其他模块仍可从 apiTechSolutionService 导入）
+export type { TechSolution, TechSolutionStatusValue };
+export { TechSolutionStatus };
 
 // 后端返回的数据字段类型
 interface BackendTechSolution {
@@ -86,7 +97,7 @@ function transformSingle(item: BackendTechSolution): TechSolution {
 
 /**
  * 获取所有技术方案
- * 降级策略：API → IndexedDB 缓存
+ * 直接 API 调用（无缓存），失败时 3 次指数退避重试
  */
 export async function getTechSolutions(): Promise<TechSolution[]> {
   const data = await enhancedApiClient.get<BackendTechSolution[]>('/tech-solutions');
@@ -95,7 +106,7 @@ export async function getTechSolutions(): Promise<TechSolution[]> {
 
 /**
  * 根据ID获取单个技术方案
- * 降级策略：API → IndexedDB 缓存
+ * 直接 API 调用（无缓存），失败时 3 次指数退避重试
  */
 export async function getTechSolutionById(id: string): Promise<TechSolution | undefined> {
   const data = await enhancedApiClient.get<BackendTechSolution>(`/tech-solutions/${id}`);
@@ -121,8 +132,11 @@ export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promi
  * 降级策略：API → 离线队列
  */
 export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/tech-solutions/${id}`, updates);
-  return result ? { ...updates, id } as TechSolution : null;
+  const result = await enhancedApiClient.put<{ success: boolean; data?: TechSolution }>(`/tech-solutions/${id}`, updates);
+  if (result?.data) {
+    return transformTechSolution(result.data) as TechSolution;
+  }
+  return null;
 }
 
 /**

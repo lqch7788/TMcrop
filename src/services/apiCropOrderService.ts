@@ -3,10 +3,19 @@
  * 对接后端 /api/crop-orders
  *
  * 核心原则：服务器数据是唯一真相来源
+ *
+ * 数据流：API → enhancedApiClient（无缓存，仅 3 次重试）→ 组件
+ *
+ * 缓存策略（已确认无三级缓存）：
+ * - L1：Zustand Store 内存数组
+ * - L2：（未使用）无 IndexedDB 缓存
+ * - L3：（未使用）订单管理页面不读取 localStorage
+ *
+ * 网络策略：失败时 3 次指数退避重试，无离线队列
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { CropOrder, CropOrderStatus } from '../types/crop';
+import type { CropOrder, CropOrderStatus } from '../types/crop';
 
 /**
  * 将前端驼峰命名字段转换为后端蛇形命名字段

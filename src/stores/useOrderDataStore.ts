@@ -1,10 +1,14 @@
 /**
- * 订单数据 Zustand Store
+ * 订单数据 Zustand Store (V2.1 架构)
  * 管理订单的完整 CRUD 数据流
- * 数据流：enhancedApiClient → Store → 页面组件
+ *
+ * 数据流：API → enhancedApiClient（无缓存）→ Store → 页面组件
+ * - L1：Store 内存数据
+ * - L2：（未使用）无 IndexedDB 缓存
+ * - L3：（未使用）订单管理页面不读取 localStorage
  */
 import { create } from 'zustand';
-import { CropOrder, CropOrderFilters, CropOrderStatus } from '../types/crop';
+import type { CropOrder, CropOrderFilters, CropOrderStatus } from '../types/crop';
 import * as orderService from '../services/apiCropOrderService';
 
 interface OrderStats {

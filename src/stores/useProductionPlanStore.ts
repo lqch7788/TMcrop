@@ -1,10 +1,14 @@
 /**
- * 生产计划数据 Zustand Store (V2.1 架构 - 已简化)
+ * 生产计划数据 Zustand Store (V2.1 架构)
  * 管理生产计划的完整 CRUD 数据流
- * 数据流：API → Store → 页面组件
+ *
+ * 数据流：API → enhancedApiClient（无缓存）→ Store → 页面组件
+ * - L1：Store 内存数据
+ * - L2：（未使用）无 IndexedDB 缓存
+ * - L3：（未使用）生产计划页面不读取 localStorage
  */
 import { create } from 'zustand';
-import { CropBatch } from '../types';
+import type { CropBatch } from '../types';
 import * as apiService from '../services/apiProductionPlanService';
 
 interface ProductionPlanFilters {

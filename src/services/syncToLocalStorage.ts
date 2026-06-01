@@ -9,6 +9,9 @@
  * 使用方法：
  * import { syncAllToLocalStorage } from './syncToLocalStorage';
  * await syncAllToLocalStorage();
+ *
+ * 注意：技术方案（techSolution）页面不从此 localStorage 读取数据，
+ * 此处对 tech_solutions 的写入对技术方案模块无效（仅为兼容其他旧模块）。
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -441,6 +444,8 @@ async function syncCropInstances(): Promise<SyncResult> {
 }
 
 async function syncCropOrders(): Promise<SyncResult> {
+  // 注意：订单管理页面（OrderPage）不从此 localStorage 读取数据，
+  // 此处的写入对订单管理模块无效（仅为兼容旧模块保留）。
   try {
     const response = await apiClient.get<any[]>('/crop-orders');
     const data = response || [];
@@ -455,6 +460,8 @@ async function syncCropOrders(): Promise<SyncResult> {
 }
 
 async function syncProductionPlans(): Promise<SyncResult> {
+  // 注意：生产计划页面（ProductionPage）不从此 localStorage 读取数据，
+  // 此处的写入对生产计划模块无效（仅为兼容旧模块保留）。
   try {
     const response = await apiClient.get<any[]>('/production-plans');
     const data = response || [];
