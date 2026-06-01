@@ -183,7 +183,13 @@ export function TechSolutionDetailModal({ isOpen, onClose, tech }: TechSolutionD
       { label: '种植模式', value: getDictItemName('planting_mode', tech.plantingMode) },
     ],
     [
-      { label: '适用范围', value: tech.stage },
+      {
+        label: '适用范围',
+        value:
+          (tech.scopes && tech.scopes.length > 0)
+            ? tech.scopes.join('、')
+            : tech.stage || '-',
+      },
       { label: '关联批次', value: tech.relatedBatchCode || '-' },
     ],
     [

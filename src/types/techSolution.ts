@@ -16,7 +16,10 @@ export interface TechSolution {
   crop: string;
   cropCode?: string;
   plantingMode: string;
+  // 旧的 stage 字段保留兼容（来自 tech_solutions.stage 旧种子值）
   stage: string;
+  // V9.0: 新增适用范围数组（来自 tech_solution_scopes 关联表）
+  scopes?: string[];
   author: string;
   authorId?: string;
   createDate: string;

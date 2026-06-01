@@ -11,23 +11,17 @@ import { DictSelect } from '../common/settings/DictSelect';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';
 import { TechSolution } from '../../types/techSolution';
-
-// 适用范围选项（多选）
-const scopeOptions = [
-  '品种选育', '种子生产', '种源采集', '种子加工', '种子检测',
-  '播种育苗', '催芽管理', '苗期管理', '出圃管理', '嫁接育苗', '组培育苗',
-  '土壤准备', '定植移栽', '生长期管理', '开花结果期', '采收期管理',
-  '温室环境调控', '大棚管理', '灌溉管理', '施肥管理', '病虫害防治',
-  '采收管理', '分级包装', '贮藏保鲜', '加工处理',
-  '全周期管理', '综合技术方案', '应急处理', '其他',
-];
+import { TECH_SOLUTION_SCOPES } from './constants';
 
 export interface EditForm {
   title: string;
   crop: string;
   cropCode: string;
   plantingMode: string;
+  // 旧的 stage 字符串保留兼容
   stage: string;
+  // V9.0: 新增适用范围数组（替代字符串拼接）
+  scopes: string[];
   version: string;
   content: string;
   remarks: string;
@@ -163,18 +157,17 @@ export function EditModal({
               </Button>
               {scopeExpanded && (
                 <div className="flex flex-wrap gap-2">
-                  {scopeOptions.map((option) => (
+                  {TECH_SOLUTION_SCOPES.map((option) => (
                     <label key={option} className="flex items-center gap-1 cursor-pointer">
                       <Checkbox
-                        checked={form.stage.split(',').includes(option)}
+                        checked={form.scopes.includes(option)}
                         onCheckedChange={(checked) => {
-                          const currentStages = form.stage ? form.stage.split(',').filter((s) => s) : [];
                           if (checked) {
-                            onFormChange({ ...form, stage: [...currentStages, option].join(',') });
+                            onFormChange({ ...form, scopes: [...form.scopes, option] });
                           } else {
                             onFormChange({
                               ...form,
-                              stage: currentStages.filter((s) => s !== option).join(','),
+                              scopes: form.scopes.filter((s) => s !== option),
                             });
                           }
                         }}
