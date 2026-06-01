@@ -118,182 +118,137 @@ export const useMaterialCodeRuleStore = create<MaterialCodeRuleState>()((set, ge
 
   // ========== 更新大类名称 ==========
   updateBigName: async (bigCode, newName) => {
-    try {
-      await updateCategory(bigCode, { name: newName });
-      set(state => ({
-        categories: state.categories.map(b =>
-          b.code === bigCode ? { ...b, name: newName } : b
-        ),
-      }));
-    } catch (err: unknown) {
-      // logger.error('更新大类名称失败:', err);
-      throw err;
-    }
+    await updateCategory(bigCode, { name: newName });
+    set(state => ({
+      categories: state.categories.map(b =>
+        b.code === bigCode ? { ...b, name: newName } : b
+      ),
+    }));
   },
 
   // ========== 更新中类名称 ==========
   updateMidName: async (bigCode, midCode, newName) => {
-    try {
-      await updateCategory(midCode, { name: newName });
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: b.midCategories.map(m =>
-              m.code === midCode ? { ...m, name: newName } : m
-            ),
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('更新中类名称失败:', err);
-      throw err;
-    }
+    await updateCategory(midCode, { name: newName });
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: b.midCategories.map(m =>
+            m.code === midCode ? { ...m, name: newName } : m
+          ),
+        };
+      }),
+    }));
   },
 
   // ========== 更新小类名称 ==========
   updateSubName: async (bigCode, midCode, subCode, newName) => {
-    try {
-      await updateCategory(subCode, { name: newName });
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: b.midCategories.map(m => {
-              if (m.code !== midCode) return m;
-              return {
-                ...m,
-                subCategories: m.subCategories.map(s =>
-                  s.code === subCode ? { ...s, name: newName } : s
-                ),
-              };
-            }),
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('更新小类名称失败:', err);
-      throw err;
-    }
+    await updateCategory(subCode, { name: newName });
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: b.midCategories.map(m => {
+            if (m.code !== midCode) return m;
+            return {
+              ...m,
+              subCategories: m.subCategories.map(s =>
+                s.code === subCode ? { ...s, name: newName } : s
+              ),
+            };
+          }),
+        };
+      }),
+    }));
   },
 
   // ========== 新增大类 ==========
   addBigCategory: async (code, name, nameEn) => {
     const payload: CreateCategoryPayload = { code, name, nameEn: nameEn || '', level: 'big', ruleType: 'material' };
-    try {
-      await createCategory(payload);
-      set(state => ({
-        categories: [...state.categories, { code, name, nameEn: nameEn || '', midCategories: [] }],
-      }));
-    } catch (err: unknown) {
-      // logger.error('新增大类失败:', err);
-      throw err;
-    }
+    await createCategory(payload);
+    set(state => ({
+      categories: [...state.categories, { code, name, nameEn: nameEn || '', midCategories: [] }],
+    }));
   },
 
   // ========== 新增中类 ==========
   addMidCategory: async (bigCode, code, name) => {
     const payload: CreateCategoryPayload = { code, name, parentCode: bigCode, level: 'mid', ruleType: 'material' };
-    try {
-      await createCategory(payload);
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: [...b.midCategories, { code, name, subCategories: [] }],
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('新增中类失败:', err);
-      throw err;
-    }
+    await createCategory(payload);
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: [...b.midCategories, { code, name, subCategories: [] }],
+        };
+      }),
+    }));
   },
 
   // ========== 新增小类 ==========
   addSubCategory: async (bigCode, midCode, code, name) => {
     const parentKey = bigCode + midCode; // e.g., "SP01"
     const payload: CreateCategoryPayload = { code, name, parentCode: parentKey, level: 'sub', ruleType: 'material' };
-    try {
-      await createCategory(payload);
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: b.midCategories.map(m => {
-              if (m.code !== midCode) return m;
-              return {
-                ...m,
-                subCategories: [...m.subCategories, { code, name }],
-              };
-            }),
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('新增小类失败:', err);
-      throw err;
-    }
+    await createCategory(payload);
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: b.midCategories.map(m => {
+            if (m.code !== midCode) return m;
+            return {
+              ...m,
+              subCategories: [...m.subCategories, { code, name }],
+            };
+          }),
+        };
+      }),
+    }));
   },
 
   // ========== 删除大类 ==========
   deleteBigCategory: async (bigCode) => {
-    try {
-      await deleteCategory(bigCode);
-      set(state => ({
-        categories: state.categories.filter(b => b.code !== bigCode),
-      }));
-    } catch (err: unknown) {
-      // logger.error('删除大类失败:', err);
-      throw err;
-    }
+    await deleteCategory(bigCode);
+    set(state => ({
+      categories: state.categories.filter(b => b.code !== bigCode),
+    }));
   },
 
   // ========== 删除中类 ==========
   deleteMidCategory: async (bigCode, midCode) => {
-    try {
-      await deleteCategory(midCode);
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: b.midCategories.filter(m => m.code !== midCode),
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('删除中类失败:', err);
-      throw err;
-    }
+    await deleteCategory(midCode);
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: b.midCategories.filter(m => m.code !== midCode),
+        };
+      }),
+    }));
   },
 
   // ========== 删除小类 ==========
   deleteSubCategory: async (bigCode, midCode, subCode) => {
-    try {
-      await deleteCategory(subCode);
-      set(state => ({
-        categories: state.categories.map(b => {
-          if (b.code !== bigCode) return b;
-          return {
-            ...b,
-            midCategories: b.midCategories.map(m => {
-              if (m.code !== midCode) return m;
-              return {
-                ...m,
-                subCategories: m.subCategories.filter(s => s.code !== subCode),
-              };
-            }),
-          };
-        }),
-      }));
-    } catch (err: unknown) {
-      // logger.error('删除小类失败:', err);
-      throw err;
-    }
+    await deleteCategory(subCode);
+    set(state => ({
+      categories: state.categories.map(b => {
+        if (b.code !== bigCode) return b;
+        return {
+          ...b,
+          midCategories: b.midCategories.map(m => {
+            if (m.code !== midCode) return m;
+            return {
+              ...m,
+              subCategories: m.subCategories.filter(s => s.code !== subCode),
+            };
+          }),
+        };
+      }),
+    }));
   },
 }));

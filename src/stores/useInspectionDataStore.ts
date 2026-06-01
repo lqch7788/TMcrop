@@ -127,22 +127,16 @@ export const useInspectionDataStore = create<InspectionDataState>()(
       },
 
       createRecord: async (record) => {
-        try {
-          // logger.info('[InspectionDataStore] createRecord 发送数据:', JSON.stringify(record, null, 2));
-          const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
-            '/inspections', record
-          );
-          // logger.info('[InspectionDataStore] createRecord 响应:', response);
-          // 从响应中提取 ID
-          const newId = (response as { id?: string })?.id || (response as { data?: { id?: string } })?.data?.id || `INS${Date.now()}`;
-          const newRecord = { ...record, id: newId } as InspectionData;
-          set((state) => ({ records: [newRecord, ...state.records] }));
-          return newRecord;
-        } catch (error) {
-          // logger.error('[InspectionDataStore] 创建失败:', error);
-          // 抛出错误，让调用方可以处理
-          throw error;
-        }
+        // logger.info('[InspectionDataStore] createRecord 发送数据:', JSON.stringify(record, null, 2));
+        const response = await enhancedApiClient.post<{ success: boolean; data: { id: string } }>(
+          '/inspections', record
+        );
+        // logger.info('[InspectionDataStore] createRecord 响应:', response);
+        // 从响应中提取 ID
+        const newId = (response as { id?: string })?.id || (response as { data?: { id?: string } })?.data?.id || `INS${Date.now()}`;
+        const newRecord = { ...record, id: newId } as InspectionData;
+        set((state) => ({ records: [newRecord, ...state.records] }));
+        return newRecord;
       },
 
       updateRecord: async (id, updates) => {

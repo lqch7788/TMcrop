@@ -373,35 +373,25 @@ export const useApprovalStore = create<ApprovalStore>()(
       batchApprove: async (ids, comment) => {
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
-        try {
-          const promises = ids.map(id =>
-            enhancedApiClient.patch(`${API_BASE}/${id}/action`, {
-              action: 'approve', comment, approverId, approverName,
-            })
-          );
-          await Promise.all(promises);
-          await get().fetchApprovals();
-        } catch (error) {
-          // logger.error('[ApprovalStore] 批量通过失败:', error);
-          throw error;
-        }
+        const promises = ids.map(id =>
+          enhancedApiClient.patch(`${API_BASE}/${id}/action`, {
+            action: 'approve', comment, approverId, approverName,
+          })
+        );
+        await Promise.all(promises);
+        await get().fetchApprovals();
       },
 
       batchReject: async (ids, comment) => {
         const approverId = useAuthStore.getState().currentUser?.oid || '';
         const approverName = useAuthStore.getState().currentUser?.realName || '系统';
-        try {
-          const promises = ids.map(id =>
-            enhancedApiClient.patch(`${API_BASE}/${id}/action`, {
-              action: 'reject', comment, approverId, approverName,
-            })
-          );
-          await Promise.all(promises);
-          await get().fetchApprovals();
-        } catch (error) {
-          // logger.error('[ApprovalStore] 批量拒绝失败:', error);
-          throw error;
-        }
+        const promises = ids.map(id =>
+          enhancedApiClient.patch(`${API_BASE}/${id}/action`, {
+            action: 'reject', comment, approverId, approverName,
+          })
+        );
+        await Promise.all(promises);
+        await get().fetchApprovals();
       },
     })
 );

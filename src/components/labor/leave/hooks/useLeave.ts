@@ -143,79 +143,59 @@ export function useLeave(): UseLeaveReturn {
 
   // ========== 保存记录（新建/编辑） ==========
   const handleSave = useCallback(async (saveData: Partial<LeaveRecord>) => {
-    try {
-      if (selectedRecord) {
-        // 更新现有记录
-        const updates: Partial<StoreLeaveRecord> = {};
-        if (saveData.leaveType) {
-          updates.leaveType = (LEAVE_TYPE_CN_TO_EN[saveData.leaveType] || 'personal') as StoreLeaveType;
-        }
-        if (saveData.startDate) updates.startDate = saveData.startDate;
-        if (saveData.endDate) updates.endDate = saveData.endDate;
-        if (saveData.days !== undefined) updates.days = saveData.days;
-        if (saveData.reason) updates.reason = saveData.reason;
-        if (saveData.remarks !== undefined) updates.remarks = saveData.remarks;
-
-        await updateItem(selectedRecord.id, updates);
-      } else {
-        // 创建新记录
-        await createItem({
-          workerId: saveData.staffId || '',
-          workerName: saveData.staffName || '',
-          leaveType: (LEAVE_TYPE_CN_TO_EN[saveData.leaveType || ''] || 'personal') as StoreLeaveType,
-          startDate: saveData.startDate || '',
-          endDate: saveData.endDate || '',
-          days: saveData.days || 0,
-          reason: saveData.reason || '',
-          remarks: saveData.remarks,
-          status: 'pending' as StoreLeaveStatus,
-        });
+    if (selectedRecord) {
+      // 更新现有记录
+      const updates: Partial<StoreLeaveRecord> = {};
+      if (saveData.leaveType) {
+        updates.leaveType = (LEAVE_TYPE_CN_TO_EN[saveData.leaveType] || 'personal') as StoreLeaveType;
       }
-      setIsFormOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('保存请假记录失败:', error);
-      throw error;
+      if (saveData.startDate) updates.startDate = saveData.startDate;
+      if (saveData.endDate) updates.endDate = saveData.endDate;
+      if (saveData.days !== undefined) updates.days = saveData.days;
+      if (saveData.reason) updates.reason = saveData.reason;
+      if (saveData.remarks !== undefined) updates.remarks = saveData.remarks;
+
+      await updateItem(selectedRecord.id, updates);
+    } else {
+      // 创建新记录
+      await createItem({
+        workerId: saveData.staffId || '',
+        workerName: saveData.staffName || '',
+        leaveType: (LEAVE_TYPE_CN_TO_EN[saveData.leaveType || ''] || 'personal') as StoreLeaveType,
+        startDate: saveData.startDate || '',
+        endDate: saveData.endDate || '',
+        days: saveData.days || 0,
+        reason: saveData.reason || '',
+        remarks: saveData.remarks,
+        status: 'pending' as StoreLeaveStatus,
+      });
     }
+    setIsFormOpen(false);
+    fetchItems();
   }, [selectedRecord, createItem, updateItem, fetchItems]);
 
   // ========== 审批通过 ==========
   const handleApprove = useCallback(async (record: LeaveRecord) => {
-    try {
-      const store = useLeaveStore.getState();
-      await store.approveLeave(record.id, record.approver);
-      setIsDetailOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('审批通过失败:', error);
-      throw error;
-    }
+    const store = useLeaveStore.getState();
+    await store.approveLeave(record.id, record.approver);
+    setIsDetailOpen(false);
+    fetchItems();
   }, [fetchItems]);
 
   // ========== 驳回 ==========
   const handleReject = useCallback(async (record: LeaveRecord) => {
-    try {
-      const store = useLeaveStore.getState();
-      await store.rejectLeave(record.id, '审批驳回');
-      setIsDetailOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('审批驳回失败:', error);
-      throw error;
-    }
+    const store = useLeaveStore.getState();
+    await store.rejectLeave(record.id, '审批驳回');
+    setIsDetailOpen(false);
+    fetchItems();
   }, [fetchItems]);
 
   // ========== 取消申请 ==========
   const handleCancel = useCallback(async (record: LeaveRecord) => {
-    try {
-      await updateItem(record.id, {
-        status: 'cancelled' as StoreLeaveStatus,
-      });
-      fetchItems();
-    } catch (error) {
-      // logger.error('取消申请失败:', error);
-      throw error;
-    }
+    await updateItem(record.id, {
+      status: 'cancelled' as StoreLeaveStatus,
+    });
+    fetchItems();
   }, [updateItem, fetchItems]);
 
   return {
