@@ -89,14 +89,15 @@ router.post('/dictionaries', (req, res) => {
       for (const dict of inserted) {
         const id = dict.id || `DICT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         db.run(
-          `INSERT INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO dictionaries (id, category_code, dict_code, dict_label, dict_value, display_name, sort_order, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             dict.category_code,
             dict.dict_code,
             dict.dict_label,
             dict.dict_value || dict.dict_label,
+            dict.display_name || dict.dict_label,
             dict.sort_order || 0,
             'active',
             now,
@@ -113,13 +114,14 @@ router.post('/dictionaries', (req, res) => {
         console.log('[Dictionary] Updating dict:', JSON.stringify(dict));
         try {
           db.run(
-            `UPDATE dictionaries SET category_code = ?, dict_code = ?, dict_label = ?, dict_value = ?, sort_order = ?, updated_at = ?
+            `UPDATE dictionaries SET category_code = ?, dict_code = ?, dict_label = ?, dict_value = ?, display_name = ?, sort_order = ?, updated_at = ?
              WHERE id = ?`,
             [
               dict.category_code,
               dict.dict_code,
               dict.dict_label,
               dict.dict_value || dict.dict_label,
+              dict.display_name || dict.dict_label,
               dict.sort_order || 0,
               now,
               dict.id
@@ -142,6 +144,52 @@ router.post('/dictionaries', (req, res) => {
     }
 
     saveDatabase();
+
+    // 同步金额阈值到 approval_amount_thresholds（数据源：dictionaries.amount_threshold）
+    // dict_value 存金额数字，display_name 存显示描述（如"500元以下免审批"）
+    // sort_order 0=exempt, 1=quick, 2=standard, 3+=strict
+    try {
+      const levelMap: Record<number, string> = { 0: 'exempt', 1: 'quick', 2: 'standard', 3: 'strict' };
+      const stmt = db.prepare(
+        `SELECT dict_code, dict_label, dict_value, display_name, sort_order
+         FROM dictionaries
+         WHERE category_code = 'amount_threshold' AND status = 'active'
+         ORDER BY sort_order ASC`
+      );
+      const thresholds: Array<{ dict_code: string; dict_label: string; dict_value: string; display_name: string; sort_order: number }> = [];
+      while (stmt.step()) {
+        const row = stmt.getAsObject() as any;
+        thresholds.push({
+          dict_code: row.dict_code,
+          dict_label: row.dict_label,
+          dict_value: row.dict_value,
+          display_name: row.display_name || row.dict_label,
+          sort_order: row.sort_order,
+        });
+      }
+      stmt.free();
+
+      if (thresholds.length > 0) {
+        // 软删旧记录，重建
+        db.run(`UPDATE approval_amount_thresholds SET status = 'inactive' WHERE status = 'active'`);
+        for (const t of thresholds) {
+          const maxAmount = Number(t.dict_value || t.dict_code) || 0;
+          const levelCode = levelMap[t.sort_order] || 'strict';
+          const now2 = new Date().toISOString();
+          const oid = `AAT${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          db.run(
+            `INSERT INTO approval_amount_thresholds (oid, max_amount, level_code, sort_order, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+            [oid, maxAmount, levelCode, t.sort_order, now2, now2]
+          );
+        }
+        saveDatabase(); // 阈值同步后落盘
+        console.log(`[Dictionary→Approval] 同步 ${thresholds.length} 个金额阈值到 approval_amount_thresholds`);
+      }
+    } catch (syncError) {
+      console.error('[Dictionary→Approval] 同步金额阈值失败（不影响字典保存）:', syncError);
+    }
+
     res.json(results);
   } catch (error) {
     console.error('保存字典失败:', error);

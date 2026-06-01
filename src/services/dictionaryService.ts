@@ -417,6 +417,7 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
       category: item.category_code as string,
       code: item.dict_code as string,
       name: item.dict_label as string,
+      displayName: (item.display_name as string) || (item.dict_label as string),
       sortNumber: item.sort_order as number,
       status: item.status as string,
       createdAt: item.created_at as string,
@@ -532,6 +533,7 @@ export async function saveDictionaries(data: {
     dict_code: dict.code,
     dict_label: dict.name,
     dict_value: dict.name,
+    display_name: (dict as any).displayName || dict.name,
     sort_order: dict.sortNumber || 0,
   });
 
