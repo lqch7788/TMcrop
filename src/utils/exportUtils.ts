@@ -72,30 +72,25 @@ export function exportToWord(headers: string[], data: Record<string, unknown>[],
  * @param filename 下载文件名（不含扩展名）
  */
 export async function exportChartAsImage(chartRef: HTMLElement, filename: string): Promise<void> {
-  try {
-    const canvas = await domToCanvas(chartRef);
-    const dataUrl = canvas.toDataURL('image/png');
+  const canvas = await domToCanvas(chartRef);
+  const dataUrl = canvas.toDataURL('image/png');
 
-    if (window.showSaveFilePicker) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: `${filename}.png`,
-        types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] } }],
-      });
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    } else {
-      // 降级：使用传统下载方式
-      const link = document.createElement('a');
-      link.download = `${filename}.png`;
-      link.href = dataUrl;
-      link.click();
-    }
-  } catch (err) {
-    // logger.error('[exportUtils] 图表导出失败:', err);
-    throw err;
+  if (window.showSaveFilePicker) {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: `${filename}.png`,
+      types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] } }],
+    });
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  } else {
+    // 降级：使用传统下载方式
+    const link = document.createElement('a');
+    link.download = `${filename}.png`;
+    link.href = dataUrl;
+    link.click();
   }
 }
 

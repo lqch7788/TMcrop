@@ -157,77 +157,57 @@ export function useOvertime(): UseOvertimeReturn {
 
   // ========== 保存记录（新建/编辑） ==========
   const handleSave = useCallback(async (formData: OvertimeFormData) => {
-    try {
-      const hourlyRate = 50; // 临时默认值，后续可从员工配置获取
+    const hourlyRate = 50; // 临时默认值，后续可从员工配置获取
 
-      if (selectedRecord) {
-        // 编辑现有记录
-        const updates: Partial<StoreOvertimeRecord> = {
-          workDate: formData.date,
-          hours: formData.hours,
-          overtimeType: (OVERTIME_TYPE_CN_TO_EN[formData.type] || 'workday') as StoreOvertimeType,
-          reason: formData.reason,
-          hourlyRate,
-          overtimePay: calculateOvertimePay(formData.hours, OVERTIME_TYPE_CN_TO_EN[formData.type] || formData.type, hourlyRate),
-        };
-        await updateItem(selectedRecord.id, updates);
-      } else {
-        // 创建新记录 — 调用 Store 的 createItem
-        await createItem({
-          workerId: formData.staffId,
-          workerName: formData.staffName,
-          overtimeType: (OVERTIME_TYPE_CN_TO_EN[formData.type] || 'workday') as StoreOvertimeType,
-          workDate: formData.date,
-          startTime: '',
-          endTime: '',
-          hours: formData.hours,
-          hourlyRate,
-          overtimePay: calculateOvertimePay(formData.hours, OVERTIME_TYPE_CN_TO_EN[formData.type] || formData.type, hourlyRate),
-          reason: formData.reason,
-          status: 'pending' as StoreOvertimeStatus,
-        });
-      }
-      setIsFormOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('保存加班记录失败:', error);
-      throw error;
+    if (selectedRecord) {
+      // 编辑现有记录
+      const updates: Partial<StoreOvertimeRecord> = {
+        workDate: formData.date,
+        hours: formData.hours,
+        overtimeType: (OVERTIME_TYPE_CN_TO_EN[formData.type] || 'workday') as StoreOvertimeType,
+        reason: formData.reason,
+        hourlyRate,
+        overtimePay: calculateOvertimePay(formData.hours, OVERTIME_TYPE_CN_TO_EN[formData.type] || formData.type, hourlyRate),
+      };
+      await updateItem(selectedRecord.id, updates);
+    } else {
+      // 创建新记录 — 调用 Store 的 createItem
+      await createItem({
+        workerId: formData.staffId,
+        workerName: formData.staffName,
+        overtimeType: (OVERTIME_TYPE_CN_TO_EN[formData.type] || 'workday') as StoreOvertimeType,
+        workDate: formData.date,
+        startTime: '',
+        endTime: '',
+        hours: formData.hours,
+        hourlyRate,
+        overtimePay: calculateOvertimePay(formData.hours, OVERTIME_TYPE_CN_TO_EN[formData.type] || formData.type, hourlyRate),
+        reason: formData.reason,
+        status: 'pending' as StoreOvertimeStatus,
+      });
     }
+    setIsFormOpen(false);
+    fetchItems();
   }, [selectedRecord, createItem, updateItem, fetchItems]);
 
   // ========== 审批通过 ==========
   const handleApprove = useCallback(async (record: OvertimeRecord) => {
-    try {
-      await approveOvertime(record.id);
-      setIsDetailOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('审批通过失败:', error);
-      throw error;
-    }
+    await approveOvertime(record.id);
+    setIsDetailOpen(false);
+    fetchItems();
   }, [approveOvertime, fetchItems]);
 
   // ========== 驳回 ==========
   const handleReject = useCallback(async (record: OvertimeRecord) => {
-    try {
-      await rejectOvertime(record.id, '审批驳回');
-      setIsDetailOpen(false);
-      fetchItems();
-    } catch (error) {
-      // logger.error('驳回失败:', error);
-      throw error;
-    }
+    await rejectOvertime(record.id, '审批驳回');
+    setIsDetailOpen(false);
+    fetchItems();
   }, [rejectOvertime, fetchItems]);
 
   // ========== 取消申请 ==========
   const handleCancel = useCallback(async (record: OvertimeRecord) => {
-    try {
-      await cancelOvertime(record.id);
-      fetchItems();
-    } catch (error) {
-      // logger.error('取消申请失败:', error);
-      throw error;
-    }
+    await cancelOvertime(record.id);
+    fetchItems();
   }, [cancelOvertime, fetchItems]);
 
   return {
