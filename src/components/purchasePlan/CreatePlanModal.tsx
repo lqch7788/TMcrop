@@ -8,8 +8,12 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
+import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
+import { useDictionaryStore, usePlantingStore, useUserStore } from '../../stores';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
+
+const safeArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : [];
 
 interface CreatePlanModalProps {
   // 弹窗状态
@@ -39,12 +43,21 @@ interface CreatePlanModalProps {
 }
 
 /**
- * 生成采购申请批次号（使用 crypto.randomUUID 替代 Math.random）
+ * 生成采购申请批次号
+ * 改为调用后端 /api/purchase-plans/next-code 端点
+ * 规则：PA + YYYYMM + 4位流水号，流水号基于 DB 最大已用序号 +1
  */
-const generateCode = () => {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const randomPart = crypto.randomUUID().split('-')[0].toUpperCase();
-  return `PA${timestamp}${randomPart}`;
+const generateCode = async (): Promise<string> => {
+  try {
+    const { getNextPurchaseApplicationCode } = await import('../../services/apiPurchasePlanService');
+    return await getNextPurchaseApplicationCode();
+  } catch (err) {
+    // 后端调用失败时的兜底：PA+年月+4位随机（不保证唯一，但前端会校验）
+    const now = new Date();
+    const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    return `PA${ym}${random}`;
+  }
 };
 
 /**
@@ -64,6 +77,44 @@ export function CreatePlanModal({
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 字典：从 store 动态加载（字段名以实际 store 定义为准）
+  const plantingItems = safeArray(usePlantingStore((s: any) => s.items));
+  const loadPlantings = usePlantingStore((s: any) => s.loadItems);
+  const approvalPersons = safeArray(useUserStore((s: any) => s.users));
+  const loadUsers = useUserStore((s: any) => s.loadUsers);
+  const dictionaries = safeArray(useDictionaryStore((s: any) => s.dictionaries));
+  const loadDictionaries = useDictionaryStore((s: any) => s.loadDictionaries);
+
+  React.useEffect(() => {
+    if (plantingItems.length === 0 && loadPlantings) loadPlantings();
+    if (approvalPersons.length === 0 && loadUsers) loadUsers();
+    if (dictionaries.length === 0 && loadDictionaries) loadDictionaries();
+  }, [plantingItems.length, approvalPersons.length, dictionaries.length, loadPlantings, loadUsers, loadDictionaries]);
+
+  // 关联批次选项：usePlantingStore.items 字段为 plantCode / cropName
+  const batchOptions = React.useMemo(() => {
+    const opts = plantingItems.map((b: any) => ({
+      value: String(b.plantCode || b.id),
+      label: `${b.plantCode || b.id} - ${b.cropName || ''}`,
+    }));
+    opts.push({ value: 'other', label: '其他' });
+    return opts;
+  }, [plantingItems]);
+
+  // 部门选项：useDictionaryStore.dictionaries 过滤 categoryCode === 'department'
+  const departmentOptions = React.useMemo(() => {
+    const depts = dictionaries
+      .filter((d: any) => (d.categoryCode || d.category_code || d.category) === 'department')
+      .map((d: any) => ({ value: d.dictLabel || d.name, label: d.dictLabel || d.name }));
+    return depts;
+  }, [dictionaries]);
+
+  // 审批人选项（从用户列表取）
+  const approvalPersonOptions = React.useMemo(
+    () => approvalPersons.map((u: any) => ({ value: u.realName || u.name, label: u.realName || u.name })),
+    [approvalPersons]
+  );
 
   // 导入物料处理
   const handleImportClick = () => {
@@ -161,17 +212,18 @@ export function CreatePlanModal({
     }));
   };
 
-  // 生成不重复编号
-  const handleGenerateCode = () => {
-    let newCode = '';
-    let exists = true;
-    let attempts = 0;
-    while (exists && attempts < 100) {
-      newCode = generateCode();
-      exists = purchasePlansData.some(plan => plan.purchaseApplicationCode === newCode);
-      attempts++;
+  // 生成不重复编号（调用后端端点获取下一个可用流水号）
+  const handleGenerateCode = async () => {
+    const newCode = await generateCode();
+    if (newCode) {
+      onFormChange('purchaseApplicationCode', newCode);
+    } else {
+      // 极端情况兜底：手动生成
+      const now = new Date();
+      const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+      onFormChange('purchaseApplicationCode', `PA${ym}${random}`);
     }
-    onFormChange('purchaseApplicationCode', newCode);
   };
 
   return (
@@ -192,7 +244,7 @@ export function CreatePlanModal({
               <Input
                 value={createForm.purchaseApplicationCode}
                 onChange={(e) => onFormChange('purchaseApplicationCode', e.target.value)}
-                placeholder="PA2026XXXXX"
+                placeholder="PA2026060001"
                 className="flex-1"
               />
               <Button
@@ -213,20 +265,20 @@ export function CreatePlanModal({
               onValueChange={(v) => {
                 onFormChange('purchaseType', v);
                 // 生产物资采购必须关联批次，其他类型不关联
-                if (v !== '生产物资采购') {
+                if (v !== 'production') {
                   onFormChange('relatedBatchCode', '');
                 }
               }}
             >
               <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="生产物资采购">生产物资采购</SelectItem>
-                <SelectItem value="紧急采购">紧急采购</SelectItem>
-                <SelectItem value="常规采购">常规采购</SelectItem>
-                <SelectItem value="通用物资">通用物资</SelectItem>
-                <SelectItem value="劳保用品">劳保用品</SelectItem>
-                <SelectItem value="设备采购">设备采购</SelectItem>
-                <SelectItem value="其他">其他</SelectItem>
+                <SelectItem value="production">生产物资采购</SelectItem>
+                <SelectItem value="urgent">紧急采购</SelectItem>
+                <SelectItem value="routine">常规采购</SelectItem>
+                <SelectItem value="material">通用物资</SelectItem>
+                <SelectItem value="safety">劳保用品</SelectItem>
+                <SelectItem value="equipment">设备采购</SelectItem>
+                <SelectItem value="other">其他</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
@@ -237,14 +289,9 @@ export function CreatePlanModal({
             >
               <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
-                <SelectItem value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</SelectItem>
-                <SelectItem value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</SelectItem>
-                <SelectItem value="YMB2026-001">YMB2026-001 - 番茄育苗批次</SelectItem>
-                <SelectItem value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</SelectItem>
-                <SelectItem value="JZB2026-001">JZB2026-001 - 番茄种源批次</SelectItem>
-                <SelectItem value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</SelectItem>
-                <SelectItem value="other">其他</SelectItem>
+                {batchOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </FormField>
@@ -268,11 +315,18 @@ export function CreatePlanModal({
             />
           </FormField>
           <FormField label="申请部门">
-            <Input
+            <Select
               value={createForm.applicantDepartment}
-              disabled
-              className="bg-gray-100 cursor-not-allowed"
-            />
+              onValueChange={(v) => onFormChange('applicantDepartment', v)}
+              disabled={departmentOptions.length === 0}
+            >
+              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择部门" /></SelectTrigger>
+              <SelectContent>
+                {departmentOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -301,10 +355,10 @@ export function CreatePlanModal({
             >
               <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="紧急">紧急</SelectItem>
-                <SelectItem value="高">高</SelectItem>
-                <SelectItem value="中">中</SelectItem>
-                <SelectItem value="低">低</SelectItem>
+                <SelectItem value="urgent">紧急</SelectItem>
+                <SelectItem value="high">高</SelectItem>
+                <SelectItem value="normal">中</SelectItem>
+                <SelectItem value="low">低</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
@@ -317,9 +371,9 @@ export function CreatePlanModal({
             >
               <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="陆启闯">陆启闯</SelectItem>
-                <SelectItem value="周总">周总</SelectItem>
-                <SelectItem value="Susan">Susan</SelectItem>
+                {approvalPersonOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </FormField>

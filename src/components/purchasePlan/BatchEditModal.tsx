@@ -7,10 +7,13 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ChevronDown, Trash2, Plus } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import { UserSelect } from '../common/settings/UserSelect';
-import { useUserStore } from '../../stores';
+import { useUserStore, useDictionaryStore, usePlantingStore } from '../../stores';
+import { MaterialItemsTable } from './MaterialItemsTable';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
+
+const safeArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : [];
 
 interface BatchEditModalProps {
   // 弹窗状态
@@ -131,169 +134,6 @@ function BatchSelectDropdown({
 }
 
 /**
- * 物料明细表格组件
- */
-function MaterialItemsEditTable({
-  items,
-  onItemsChange,
-}: {
-  items: PurchasePlanItem[];
-  onItemsChange: (items: PurchasePlanItem[]) => void;
-}) {
-  return (
-    <div className="overflow-auto rounded-lg border border-gray-300 bg-white">
-      <table className="w-full text-xs">
-        <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
-          <tr>
-            <th className="px-2 py-2 text-center font-semibold w-10">操作</th>
-            <th className="px-2 py-2 text-left font-semibold">物料编码</th>
-            <th className="px-2 py-2 text-left font-semibold">物料名称</th>
-            <th className="px-2 py-2 text-left font-semibold">分类</th>
-            <th className="px-2 py-2 text-left font-semibold">规格型号</th>
-            <th className="px-2 py-2 text-center font-semibold w-16">单位</th>
-            <th className="px-2 py-2 text-center font-semibold w-24">数量</th>
-            <th className="px-2 py-2 text-center font-semibold w-28">预估单价</th>
-            <th className="px-2 py-2 text-left font-semibold">供应商</th>
-            <th className="px-2 py-2 text-left font-semibold">用途说明</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {items.map((item, idx) => (
-            <tr key={idx} className="hover:bg-gray-50">
-              {/* 删除按钮 */}
-              <td className="px-2 py-2 text-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    onItemsChange(items.filter((_, i) => i !== idx));
-                  }}
-                  title="删除此行"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
-              </td>
-              {/* 物料编码 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.materialCode || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], materialCode: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-              {/* 物料名称 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.materialName || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], materialName: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-              {/* 分类 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.category || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], category: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-              {/* 规格型号 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.specification || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], specification: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-              {/* 单位 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.unit || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], unit: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className="h-7 p-1 text-xs text-center rounded border-gray-300"
-                />
-              </td>
-              {/* 数量 */}
-              <td className="px-2 py-2">
-                <Input
-                  type="number"
-                  value={item.quantity || 0}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], quantity: Number(e.target.value) };
-                    onItemsChange(newItems);
-                  }}
-                  className="h-7 p-1 text-xs text-right rounded border-gray-300"
-                />
-              </td>
-              {/* 预估单价 */}
-              <td className="px-2 py-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={item.estimatedPrice || 0}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], estimatedPrice: Number(e.target.value) };
-                    onItemsChange(newItems);
-                  }}
-                  className="h-7 p-1 text-xs text-right rounded border-gray-300"
-                />
-              </td>
-              {/* 供应商 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.supplier || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], supplier: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-              {/* 用途说明 */}
-              <td className="px-2 py-2">
-                <Input
-                  value={item.purpose || ''}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx] = { ...newItems[idx], purpose: e.target.value };
-                    onItemsChange(newItems);
-                  }}
-                  className={deepInputClass}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/**
  * 采购计划批量编辑弹窗组件
  */
 export function BatchEditModal({
@@ -322,14 +162,35 @@ export function BatchEditModal({
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
   // 用户列表（用于获取申请人姓名）
-  const users = useUserStore((state) => state.users);
-  const loadUsers = useUserStore((state) => state.loadUsers);
+  const users = safeArray(useUserStore((state: any) => state.users));
+  const loadUsers = useUserStore((state: any) => state.loadUsers);
+
+  // 部门和种植批次从字典加载
+  const dictionaries = safeArray(useDictionaryStore((s: any) => s.dictionaries));
+  const loadDictionaries = useDictionaryStore((s: any) => s.loadDictionaries);
+  const plantingItems = safeArray(usePlantingStore((s: any) => s.items));
+  const loadPlantings = usePlantingStore((s: any) => s.loadItems);
 
   useEffect(() => {
-    if (users.length === 0) {
-      loadUsers();
-    }
-  }, [users.length, loadUsers]);
+    if (users.length === 0) loadUsers();
+    if (dictionaries.length === 0) loadDictionaries();
+    if (plantingItems.length === 0) loadPlantings();
+  }, [users.length, dictionaries.length, plantingItems.length, loadUsers, loadDictionaries, loadPlantings]);
+
+  const departmentOptions = React.useMemo(
+    () => dictionaries
+      .filter((d: any) => (d.categoryCode || d.category_code || d.category) === 'department')
+      .map((d: any) => ({ value: d.dictLabel || d.name, label: d.dictLabel || d.name })),
+    [dictionaries]
+  );
+
+  const batchOptions = React.useMemo(
+    () => plantingItems.map((b: any) => ({
+      value: String(b.plantCode || b.id),
+      label: `${b.plantCode || b.id} - ${b.cropName || ''}`,
+    })),
+    [plantingItems]
+  );
 
   // 选择采购计划时的处理
   const handlePlanSelect = (plan: PurchasePlan) => {
@@ -426,13 +287,9 @@ export function BatchEditModal({
                 <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="不关联批次" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">不关联批次</SelectItem>
-                  <SelectItem value="ZZB2026-001">ZZB2026-001 - 番茄种植批次</SelectItem>
-                  <SelectItem value="ZZB2026-002">ZZB2026-002 - 黄瓜种植批次</SelectItem>
-                  <SelectItem value="ZZB2026-003">ZZB2026-003 - 草莓种植批次</SelectItem>
-                  <SelectItem value="YMB2026-001">YMB2026-001 - 番茄育苗批次</SelectItem>
-                  <SelectItem value="YMB2026-002">YMB2026-002 - 黄瓜育苗批次</SelectItem>
-                  <SelectItem value="JZB2026-001">JZB2026-001 - 番茄种源批次</SelectItem>
-                  <SelectItem value="JZB2026-002">JZB2026-002 - 黄瓜种源批次</SelectItem>
+                  {batchOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -469,14 +326,9 @@ export function BatchEditModal({
               >
                 <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="生产部">生产部</SelectItem>
-                  <SelectItem value="技术部">技术部</SelectItem>
-                  <SelectItem value="后勤部">后勤部</SelectItem>
-                  <SelectItem value="办公室">办公室</SelectItem>
-                  <SelectItem value="财务部">财务部</SelectItem>
-                  <SelectItem value="采购部">采购部</SelectItem>
-                  <SelectItem value="仓储部">仓储部</SelectItem>
-                  <SelectItem value="销售部">销售部</SelectItem>
+                  {departmentOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -575,8 +427,12 @@ export function BatchEditModal({
               </div>
 
               {showEditItemsExpanded && batchEditItems.length > 0 && (
-                <div className="mt-3">
-                  <MaterialItemsEditTable items={batchEditItems} onItemsChange={onBatchEditItemsChange} />
+                <div className="mt-3 overflow-auto rounded-lg border border-gray-300 bg-white">
+                  <MaterialItemsTable
+                    items={batchEditItems}
+                    mode="edit"
+                    onItemsChange={onBatchEditItemsChange}
+                  />
                 </div>
               )}
 

@@ -10,6 +10,7 @@ import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui/Pagination';
+import { MaterialItemsTable } from './MaterialItemsTable';
 
 interface PurchasePlanTableProps {
   // 数据
@@ -96,48 +97,6 @@ function StatusBadge({ status, statusText, plan }: { status: string; statusText:
         </span>
       )}
     </>
-  );
-}
-
-/**
- * 物料明细表格行组件
- */
-function MaterialItemsTable({ items }: { items: PurchasePlanItem[] }) {
-  return (
-    <table className="w-full bg-white rounded-lg overflow-hidden">
-      <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-        <tr>
-          <th className="px-2 py-2 text-left text-xs font-semibold">物料编码</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">物料名称</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">分类</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">规格型号</th>
-          <th className="px-2 py-2 text-center text-xs font-semibold">单位</th>
-          <th className="px-2 py-2 text-right text-xs font-semibold">数量</th>
-          <th className="px-2 py-2 text-right text-xs font-semibold">预估单价</th>
-          <th className="px-2 py-2 text-right text-xs font-semibold">小计</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">供应商</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">用途说明</th>
-          <th className="px-2 py-2 text-left text-xs font-semibold">备注</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {items.map((item) => (
-          <tr key={item.id} className="hover:bg-gray-50">
-            <td className="px-2 py-2 text-xs text-gray-600 font-mono">{item.materialCode}</td>
-            <td className="px-2 py-2 text-xs text-gray-900 font-medium">{item.materialName}</td>
-            <td className="px-2 py-2 text-xs text-gray-600">{item.category || '-'}</td>
-            <td className="px-2 py-2 text-xs text-gray-600">{item.specification}</td>
-            <td className="px-2 py-2 text-xs text-gray-600 text-center">{item.unit}</td>
-            <td className="px-2 py-2 text-xs text-gray-900 text-right font-medium">{item.quantity}</td>
-            <td className="px-2 py-2 text-xs text-gray-600 text-right">¥{item.estimatedPrice.toFixed(2)}</td>
-            <td className="px-2 py-2 text-xs text-gray-900 text-right font-medium">¥{item.estimatedTotalPrice.toLocaleString()}</td>
-            <td className="px-2 py-2 text-xs text-gray-600">{item.supplier || '-'}</td>
-            <td className="px-2 py-2 text-xs text-gray-600">{item.purpose || '-'}</td>
-            <td className="px-2 py-2 text-xs text-gray-600">{item.remark || '-'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
 
@@ -406,7 +365,7 @@ export function PurchasePlanTable({
                   <tr key={`${plan.id}-expanded`} className="bg-blue-50/50">
                     <td colSpan={12} className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-700 mb-3">物料明细（共 {plan.items?.length || 0} 项）</div>
-                      <MaterialItemsTable items={plan.items || []} />
+                      <MaterialItemsTable items={plan.items || []} headerTheme="emerald" />
                     </td>
                   </tr>
                 )}
