@@ -13,7 +13,7 @@ import { useAuthPermission } from '../../hooks/usePermission';
 import { useApproval } from '../../hooks/useApproval';
 import { apiClient, USE_API } from '../../services/apiClient';
 import { getDictionaries } from '../../services/dictionaryService';
-import { useTechSolutionStore, useDictionaryStore, getDictItemName } from '../../stores';
+import { useTechSolutionStore, useDictionaryStore, useAuthStore, getDictItemName } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import { Pagination } from '@/components/ui/Pagination';
@@ -64,6 +64,12 @@ export function TechSolutionPage() {
     updateSolution,
     deleteSolutions,
   } = useTechSolutionStore();
+
+  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const currentUsername = currentUser?.username || '陆启闯';
+  const currentUserId = currentUser?.oid || '';
+  const currentDepartment = currentUser?.orgOid || '';
 
   // 操作人员选项（从数据字典获取）
   const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([]);
@@ -225,7 +231,7 @@ export function TechSolutionPage() {
     cropCode: '',
     plantingMode: '水培',
     stage: '',
-    author: localStorage.getItem('username') || '陆启闯',
+    author: currentUsername,
     version: 'V1.0',
     content: '',
     remarks: '',
@@ -363,8 +369,8 @@ export function TechSolutionPage() {
       version: newPlanForm.version || 'V1.0',
       content: newPlanForm.content,
       remarks: newPlanForm.remarks,
-      author: newPlanForm.author || localStorage.getItem('username') || '陆启闯',
-      authorId: localStorage.getItem('userId') || '',
+      author: newPlanForm.author || currentUsername,
+      authorId: currentUserId,
       relatedBatchCode: newPlanForm.relatedBatchCode || '',
       planDetailFileName: newPlanForm.planDetailFileName || '',
       priority: 'normal',
@@ -384,9 +390,9 @@ export function TechSolutionPage() {
             typeName: '技术方案',
             title: `技术方案审批：${newPlanForm.title}`,
             description: `作物：${newPlanForm.crop}\n种植模式：${getDictItemName('planting_mode', newPlanForm.plantingMode)}\n适用范围：${newPlanForm.stage}`,
-            applicantId: localStorage.getItem('userId') || '',
-            applicantName: localStorage.getItem('username') || '陆启闯',
-            applicantDepartment: localStorage.getItem('department') || '',
+            applicantId: currentUserId,
+            applicantName: currentUsername,
+            applicantDepartment: currentDepartment,
             applyDate: today,
             status: 'pending',
             priority: 'normal',
