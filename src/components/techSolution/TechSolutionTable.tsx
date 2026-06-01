@@ -180,7 +180,11 @@ export function TechSolutionTable({
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {getDictItemName('planting_mode', tech.plantingMode)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.stage}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {(tech.scopes && tech.scopes.length > 0)
+                      ? tech.scopes.join('、')
+                      : (tech.stage || '-')}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>

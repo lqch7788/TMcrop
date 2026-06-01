@@ -84,6 +84,26 @@ function mapArrayToFrontend(items: Record<string, unknown>[]): Record<string, un
   return items.map(item => mapFieldsToFrontend(item));
 }
 
+/**
+ * 加载技术方案的适用范围（关联表 tech_solution_scopes）
+ * 返回格式：{ solution_id: ['品种选育', '种子生产', ...] }
+ */
+function loadScopesBySolutionIds(db: any, solutionIds: string[]): Record<string, string[]> {
+  if (solutionIds.length === 0) return {};
+  const placeholders = solutionIds.map(() => '?').join(',');
+  const sql = `SELECT solution_id, scope_name FROM tech_solution_scopes WHERE solution_id IN (${placeholders}) ORDER BY sort_order ASC, id ASC`;
+  const stmt = db.prepare(sql);
+  stmt.bind(solutionIds);
+  const result: Record<string, string[]> = {};
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as { solution_id: string; scope_name: string };
+    if (!result[row.solution_id]) result[row.solution_id] = [];
+    result[row.solution_id].push(row.scope_name);
+  }
+  stmt.free();
+  return result;
+}
+
 // ============================================
 // API 路由
 // ============================================
@@ -128,6 +148,13 @@ router.get('/', (req: Request, res: Response) => {
 
     // 转换字段格式为前端期望格式
     const camelItems = mapArrayToFrontend(rawItems);
+
+    // 加载所有方案的适用范围（V9.0 关联表）
+    const solutionIds = camelItems.map((it) => it.id as string);
+    const scopesMap = loadScopesBySolutionIds(db, solutionIds);
+    camelItems.forEach((it) => {
+      it.scopes = scopesMap[it.id as string] || [];
+    });
 
     // 获取总数
     let countSql = 'SELECT COUNT(*) as total FROM tech_solutions WHERE 1=1';
@@ -176,9 +203,14 @@ router.get('/:id', (req: Request, res: Response) => {
     );
 
     if (items && items.length > 0) {
+      const data = mapFieldsToFrontend(items[0]);
+      // 加载适用范围（V9.0 关联表）
+      const db = getDatabase();
+      const scopesMap = loadScopesBySolutionIds(db, [data.id as string]);
+      data.scopes = scopesMap[data.id as string] || [];
       res.json({
         success: true,
-        data: mapFieldsToFrontend(items[0]),
+        data,
       });
     } else {
       res.status(404).json({ success: false, error: '技术方案不存在' });
@@ -253,8 +285,32 @@ router.post('/', (req: Request, res: Response) => {
 
     saveDatabase();
 
+    // V9.0: 写入适用范围到关联表
+    // 前端可传 scopeCodes (string[]) + scopeNames (string[]) 或单个 stage 字符串
+    const scopeCodes: string[] = Array.isArray(req.body.scopeCodes) ? req.body.scopeCodes : [];
+    const scopeNames: string[] = Array.isArray(req.body.scopeNames) ? req.body.scopeNames : [];
+    // 兼容旧 stage 字符串：自动按逗号分割
+    if (scopeCodes.length === 0 && typeof stage === 'string' && stage.length > 0) {
+      const stagesFromStage = stage.split(',').map((s) => s.trim()).filter(Boolean);
+      for (const s of stagesFromStage) {
+        scopeNames.push(s);
+      }
+    }
+    for (let i = 0; i < scopeNames.length; i++) {
+      const name = scopeNames[i];
+      const code = scopeCodes[i] || `custom_${i}`;
+      db.run(
+        `INSERT INTO tech_solution_scopes (solution_id, scope_code, scope_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`,
+        [id, code, name, i, now]
+      );
+    }
+    saveDatabase();
+
     const newItems = queryToObjects(db, 'SELECT * FROM tech_solutions WHERE id = ?', [id]);
     const resultData = newItems.length > 0 ? mapFieldsToFrontend(newItems[0]) : {};
+    // 加载已写入的 scopes 返回
+    const scopesMap = loadScopesBySolutionIds(db, [id]);
+    resultData.scopes = scopesMap[id] || [];
 
     res.json({
       success: true,
@@ -318,10 +374,35 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(sql, values);
 
+    // V9.0: 如果传了 scopes 相关字段，替换 tech_solution_scopes
+    const scopeCodes: string[] | undefined = Array.isArray(req.body.scopeCodes) ? req.body.scopeCodes : undefined;
+    const scopeNames: string[] | undefined = Array.isArray(req.body.scopeNames) ? req.body.scopeNames : undefined;
+    if (scopeCodes || scopeNames) {
+      // 1. 删除旧 scopes
+      db.run('DELETE FROM tech_solution_scopes WHERE solution_id = ?', [id]);
+      // 2. 插入新 scopes
+      const names = scopeNames || [];
+      const codes = scopeCodes || [];
+      const now2 = new Date().toISOString();
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i];
+        const code = codes[i] || `custom_${i}`;
+        db.run(
+          `INSERT INTO tech_solution_scopes (solution_id, scope_code, scope_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`,
+          [id, code, name, i, now2]
+        );
+      }
+    }
+
     saveDatabase();
 
     const updatedItems = queryToObjects<Record<string, unknown>>(db, 'SELECT * FROM tech_solutions WHERE id = ?', [id]);
     const updatedData = updatedItems.length > 0 ? mapFieldsToFrontend(updatedItems[0]) : null;
+    // 加载最新的 scopes
+    if (updatedData) {
+      const scopesMap = loadScopesBySolutionIds(db, [id]);
+      updatedData.scopes = scopesMap[id] || [];
+    }
 
     res.json({ success: true, message: '技术方案更新成功', data: updatedData });
   } catch (error) {

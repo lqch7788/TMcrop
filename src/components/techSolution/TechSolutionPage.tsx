@@ -32,16 +32,6 @@ import { BatchEditModal, type BatchEditData } from './BatchEditModal';
 // re-export 保持向后兼容（type-only re-export 编译时被擦除）
 export type { TechSolution };
 
-// 适用范围选项（多选）
-const scopeOptions = [
-  '品种选育', '种子生产', '种源采集', '种子加工', '种子检测',
-  '播种育苗', '催芽管理', '苗期管理', '出圃管理', '嫁接育苗', '组培育苗',
-  '土壤准备', '定植移栽', '生长期管理', '开花结果期', '采收期管理',
-  '温室环境调控', '大棚管理', '灌溉管理', '施肥管理', '病虫害防治',
-  '采收管理', '分级包装', '贮藏保鲜', '加工处理',
-  '全周期管理', '综合技术方案', '应急处理', '其他'
-];
-
 export function TechSolutionPage() {
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -219,6 +209,7 @@ export function TechSolutionPage() {
     cropCode: '',
     plantingMode: '',
     stage: '',
+    scopes: [] as string[], // V9.0: 适用范围数组
     version: '',
     content: '',
     remarks: '',
@@ -238,6 +229,7 @@ export function TechSolutionPage() {
     cropCode: '',
     plantingMode: '水培',
     stage: '',
+    scopes: [] as string[], // V9.0: 适用范围数组
     author: currentUsername,
     version: 'V1.0',
     content: '',
@@ -317,6 +309,7 @@ export function TechSolutionPage() {
       cropCode: tech.cropCode || '',
       plantingMode: tech.plantingMode,
       stage: tech.stage,
+      scopes: tech.scopes || [], // V9.0: 适用范围数组
       version: tech.version,
       content: tech.content,
       remarks: tech.remarks || '',
@@ -338,6 +331,8 @@ export function TechSolutionPage() {
       cropCode: editForm.cropCode,
       plantingMode: editForm.plantingMode,
       stage: editForm.stage,
+      // V9.0: 传 scopes 数组（替代 stage 字符串拼接）
+      scopeNames: editForm.scopes,
       version: editForm.version,
       content: editForm.content,
       remarks: editForm.remarks,
@@ -373,6 +368,8 @@ export function TechSolutionPage() {
       cropCode: newPlanForm.cropCode,
       plantingMode: newPlanForm.plantingMode,
       stage: newPlanForm.stage,
+      // V9.0: 传 scopes 数组（替代 stage 字符串拼接）
+      scopeNames: newPlanForm.scopes,
       version: newPlanForm.version || 'V1.0',
       content: newPlanForm.content,
       remarks: newPlanForm.remarks,

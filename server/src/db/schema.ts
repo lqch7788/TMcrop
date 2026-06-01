@@ -1819,6 +1819,27 @@ export function initializeDatabase() {
     // 列可能已存在，忽略错误
   }
 
+  // ========== V9.0: 技术方案适用范围关联表 ==========
+  // 替代旧的 stage 字符串拼接字段，支持多对多关系
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tech_solution_scopes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      solution_id TEXT NOT NULL,
+      scope_code TEXT NOT NULL,
+      scope_name TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT,
+      FOREIGN KEY (solution_id) REFERENCES tech_solutions(id) ON DELETE CASCADE,
+      UNIQUE(solution_id, scope_code)
+    )
+  `);
+  // 为 tech_solution_scopes 创建索引（如果不存在）
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_tech_scopes_solution ON tech_solution_scopes(solution_id)`);
+  } catch (e) {
+    // 索引可能已存在，忽略错误
+  }
+
   // 为技术方案表添加最后提交时间字段（如果不存在）
   try {
     db.run(`ALTER TABLE tech_solutions ADD COLUMN last_submit_time TEXT`);
