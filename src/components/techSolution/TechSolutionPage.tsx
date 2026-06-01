@@ -25,6 +25,9 @@ import { TechSolutionHeader } from './Header';
 import { TechSolutionFilters, type TechSolutionFiltersValue } from './TechSolutionFilters';
 import { TechSolutionTable, type TechSolutionTableHandlers } from './TechSolutionTable';
 import { ExportFormatModal } from './ExportFormatModal';
+import { EditModal, type EditForm } from './EditModal';
+import { CreateModal, type NewPlanForm } from './CreateModal';
+import { BatchEditModal, type BatchEditData } from './BatchEditModal';
 
 // re-export 保持向后兼容（type-only re-export 编译时被擦除）
 export type { TechSolution };
@@ -844,436 +847,118 @@ export function TechSolutionPage() {
       />
 
       {/* Edit Modal */}
-      <Modal
+      <EditModal
         isOpen={editModalOpen}
+        tech={selectedTech}
+        form={editForm}
+        scopeExpanded={scopeExpandedEdit}
+        selectedCrop={selectedCropEdit}
         onClose={() => setEditModalOpen(false)}
-        title="编辑方案"
-        size="lg"
         onSubmit={handleEditSubmit}
-        submitText="保存"
-        cancelText="取消"
-      >
-        {selectedTech && (
-          <div className="space-y-4">
-            {/* 方案编号 + 版本 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="方案编号">
-                <Input value={selectedTech.code} disabled className="bg-gray-50" />
-              </FormField>
-              <FormField label="版本">
-                <Input
-                  value={editForm.version}
-                  onChange={(e) => setEditForm({...editForm, version: e.target.value})}
-                />
-              </FormField>
-            </div>
-
-            {/* 方案标题 */}
-            <FormField label="方案标题">
-              <Input
-                value={editForm.title}
-                onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-              />
-            </FormField>
-
-            {/* 作物品种 + 种植模式 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="作物品种">
-                <CropCodeSelector
-                  value={editForm.cropCode || ''}
-                  onChange={handleCropChangeEdit}
-                  placeholder="搜索或选择作物品种..."
-                  size="md"
-                  showFullPath={true}
-                />
-                {selectedCropEdit && (
-                  <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-                    <div className="text-emerald-700 flex items-center gap-1">
-                      <Leaf className="w-3 h-3 flex-shrink-0" />
-                      {selectedCropEdit.categoryName} &gt; {selectedCropEdit.typeName} &gt; {selectedCropEdit.varietyName}
-                      {selectedCropEdit.subVariety1Name && ` > ${selectedCropEdit.subVariety1Name}`}
-                    </div>
-                    <div className="text-emerald-600 mt-0.5">
-                      编码：{selectedCropEdit.cropCode}
-                    </div>
-                  </div>
-                )}
-              </FormField>
-              <FormField label="种植模式">
-                <DictSelect
-                  category="planting_mode"
-                  value={editForm.plantingMode}
-                  onChange={(value) => setEditForm({...editForm, plantingMode: value})}
-                  placeholder="选择种植模式"
-                />
-              </FormField>
-            </div>
-
-            {/* 适用范围（多选Checkbox） */}
-            <FormField label="适用范围（可多选）">
-              <div className="space-y-2">
-                {/* 折叠/展开按钮 */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setScopeExpandedEdit(!scopeExpandedEdit)}
-                  className="flex items-center gap-1 text-gray-600"
-                >
-                  {scopeExpandedEdit ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  <span>{scopeExpandedEdit ? '收起' : '展开'}</span>
-                </Button>
-                {/* 选项列表 - 折叠时隐藏 */}
-                {scopeExpandedEdit && (
-                  <div className="flex flex-wrap gap-2">
-                    {scopeOptions.map(option => (
-                      <label key={option} className="flex items-center gap-1 cursor-pointer">
-                        <Checkbox
-                          checked={editForm.stage.split(',').includes(option)}
-                          onCheckedChange={(checked) => {
-                            const currentStages = editForm.stage ? editForm.stage.split(',').filter(s => s) : [];
-                            if (checked) {
-                              setEditForm({...editForm, stage: [...currentStages, option].join(',')});
-                            } else {
-                              setEditForm({...editForm, stage: currentStages.filter(s => s !== option).join(',')});
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FormField>
-
-            {/* 关联生产批次号 */}
-            <FormField label="关联生产批次号">
-              <Select
-                value={editForm.relatedBatchCode}
-                onChange={(e) => setEditForm({...editForm, relatedBatchCode: e.target.value})}
-                options={[
-                  { value: '', label: '不关联生产批次' },
-                  { value: 'ZZB2026-001', label: 'ZZB2026-001' },
-                  { value: 'ZZB2026-002', label: 'ZZB2026-002' },
-                  { value: 'ZZB2026-003', label: 'ZZB2026-003' },
-                  { value: 'YMB2026-001', label: 'YMB2026-001' },
-                  { value: 'YMB2026-002', label: 'YMB2026-002' },
-                  { value: 'JZB2026-001', label: 'JZB2026-001' },
-                  { value: 'JZB2026-002', label: 'JZB2026-002' },
-                ]}
-              />
-            </FormField>
-
-            {/* 编制人 + 创建日期 */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="编制人">
-                <Input value={selectedTech.author} disabled className="bg-gray-50" />
-              </FormField>
-              <FormField label="创建日期">
-                <Input value={selectedTech.createDate} disabled className="bg-gray-50" />
-              </FormField>
-            </div>
-
-            {/* 备注 */}
-            <FormField label="备注">
-              <Textarea
-                value={editForm.remarks}
-                onChange={(e) => setEditForm({...editForm, remarks: e.target.value})}
-                rows={2}
-              />
-            </FormField>
-
-            {/* 方案是否有效 */}
-            <FormField label="方案是否有效">
-              <Select
-                value={editForm.isValid}
-                onChange={(e) => setEditForm({...editForm, isValid: e.target.value})}
-                options={[
-                  { value: '有效', label: '有效' },
-                  { value: '作废', label: '作废' },
-                ]}
-              />
-              {editForm.isValid === '作废' && (
-                <p className="text-xs text-red-600 mt-1 font-medium">
-                  ⚠️ 选择"作废"后方案将无法使用，提交后将进入审核流程
-                </p>
-              )}
-            </FormField>
-
-            {/* 方案内容 */}
-            <FormField label="方案内容">
-              <Textarea
-                value={editForm.content}
-                onChange={(e) => setEditForm({...editForm, content: e.target.value})}
-                rows={6}
-              />
-            </FormField>
-
-            {/* 方案详细文件上传 */}
-            <FormField label="方案详情文件">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="blue"
-                  size="sm"
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.txt,.md,.docx';
-                    input.onchange = (e) => {
-                      const file = (e.target as HTMLInputElement).files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setEditForm({...editForm, content: event.target?.result as string});
-                          setEditForm({...editForm, planDetailFileName: file.name});
-                        };
-                        reader.readAsText(file);
-                      }
-                    };
-                    input.click();
-                  }}
-                >
-                  <Upload className="w-3 h-3 mr-1" />
-                  导入文件
-                </Button>
-                <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>
-                {editForm.planDetailFileName && (
-                  <span className="text-xs text-emerald-600">{editForm.planDetailFileName}</span>
-                )}
-                {editForm.planDetailFileName && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setEditForm({...editForm, content: '', planDetailFileName: ''});
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    删除
-                  </Button>
-                )}
-              </div>
-            </FormField>
-          </div>
-        )}
-      </Modal>
+        onFormChange={setEditForm}
+        onScopeToggle={() => setScopeExpandedEdit(!scopeExpandedEdit)}
+        onCropChange={handleCropChangeEdit}
+      />
 
       {/* Create Modal */}
-      <Modal
+      <CreateModal
         isOpen={createModalOpen}
+        form={newPlanForm}
+        scopeExpanded={scopeExpanded}
+        selectedCrop={selectedCrop}
+        operatorOptions={operatorOptions}
         onClose={() => setCreateModalOpen(false)}
-        title="新增方案"
-        size="xxxl"
-        showFooter={true}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => handleCreateSubmit('draft')}
-            >
-              存为草稿
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => handleCreateSubmit('submit')}
-            >
-              提交审批
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {/* 第一行：方案编号 + 方案标题 */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="方案编号">
-              <div className="flex gap-2 w-full">
-                <div className="flex-1">
-                  <Input
-                    value={newPlanForm.code}
-                    onChange={(e) => setNewPlanForm({...newPlanForm, code: e.target.value})}
-                    placeholder="请输入方案编号"
-                  />
-                </div>
-                <Button variant="default" size="sm" type="button" onClick={() => setNewPlanForm({...newPlanForm, code: generateCode()})}>
-                  生成
-                </Button>
-              </div>
-            </FormField>
-            <FormField label="方案标题" required>
-              <Input
-                value={newPlanForm.title}
-                onChange={(e) => setNewPlanForm({...newPlanForm, title: e.target.value})}
-                placeholder="请输入方案标题"
-              />
-            </FormField>
-          </div>
+        onFormChange={setNewPlanForm}
+        onScopeToggle={() => setScopeExpanded(!scopeExpanded)}
+        onCropChange={handleCropChange}
+        onGenerateCode={generateCode}
+        onSubmitDraft={() => handleCreateSubmit('draft')}
+        onSubmitApprove={() => handleCreateSubmit('submit')}
+      />
 
-          {/* 第二行：版本 + 创建日期 */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="版本">
-              <Input
-                value={newPlanForm.version}
-                onChange={(e) => setNewPlanForm({...newPlanForm, version: e.target.value})}
-              />
-            </FormField>
-            <FormField label="创建日期">
-              <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
-            </FormField>
-          </div>
-
-          {/* 第三行：作物品种 + 种植模式 */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* 作物品种 - 使用统一的 CropCodeSelector（与种源管理一致） */}
-            <FormField label="作物品种" required>
-              <CropCodeSelector
-                value={newPlanForm.cropCode || ''}
-                onChange={handleCropChange}
-                placeholder="搜索或选择作物品种..."
-                size="md"
-                showFullPath={true}
-              />
-              {/* 显示选中作物的详细信息 */}
-              {selectedCrop && (
-                <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-                  <div className="text-emerald-700 flex items-center gap-1">
-                    <Leaf className="w-3 h-3 flex-shrink-0" />
-                    {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
-                    {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
-                  </div>
-                  <div className="text-emerald-600 mt-0.5">
-                    编码：{selectedCrop.cropCode}
-                  </div>
-                </div>
-              )}
-            </FormField>
-            <FormField label="种植模式">
-              <DictSelect
-                category="planting_mode"
-                value={newPlanForm.plantingMode}
-                onChange={(value) => setNewPlanForm({...newPlanForm, plantingMode: value})}
-                placeholder="选择种植模式"
-              />
-            </FormField>
-          </div>
-
-          {/* 第四行：适用范围（多选Checkbox）+ 关联生产批次号 */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="适用范围（可多选）">
-              <div className="space-y-2">
-                {/* 折叠/展开按钮 */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setScopeExpanded(!scopeExpanded)}
-                  className="flex items-center gap-1 text-gray-600"
-                >
-                  {scopeExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  <span>{scopeExpanded ? '收起' : '展开'}</span>
-                </Button>
-                {/* 选项列表 - 折叠时隐藏 */}
-                {scopeExpanded && (
-                  <div className="flex flex-wrap gap-2">
-                    {scopeOptions.map(option => (
-                      <label key={option} className="flex items-center gap-1 cursor-pointer">
-                        <Checkbox
-                          checked={newPlanForm.stage.split(',').includes(option)}
-                          onCheckedChange={(checked) => {
-                            const currentStages = newPlanForm.stage ? newPlanForm.stage.split(',').filter(s => s) : [];
-                            if (checked) {
-                              setNewPlanForm({...newPlanForm, stage: [...currentStages, option].join(',')});
-                            } else {
-                              setNewPlanForm({...newPlanForm, stage: currentStages.filter(s => s !== option).join(',')});
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FormField>
-            <FormField label="关联生产批次号">
-              <Select
-                value={newPlanForm.relatedBatchCode}
-                onChange={(e) => setNewPlanForm({...newPlanForm, relatedBatchCode: e.target.value})}
-                options={[
-                  { value: '', label: '不关联生产批次' },
-                  { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
-                  { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
-                  { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
-                  { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
-                  { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
-                  { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
-                  { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
-                ]}
-              />
-            </FormField>
-          </div>
-
-          {/* 第五行：编制人 */}
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="编制人">
-              <Select
-                value={newPlanForm.author}
-                onChange={(e) => setNewPlanForm({...newPlanForm, author: e.target.value})}
-                options={operatorOptions}
-              />
-            </FormField>
-          </div>
-
-          {/* 第六行：备注（单独一行） */}
-          <FormField label="备注">
-            <Textarea
-              value={newPlanForm.remarks}
-              onChange={(e) => setNewPlanForm({...newPlanForm, remarks: e.target.value})}
-              placeholder="请输入备注信息"
-              rows={3}
-            />
-          </FormField>
-
-          {/* 第七行：方案详细文件上传（单独一行） */}
-          <FormField label="方案详细">
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="blue"
-                size="sm"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.txt,.md,.docx';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        setNewPlanForm({...newPlanForm, content: event.target?.result as string});
-                        setNewPlanForm({...newPlanForm, planDetailFileName: file.name});
-                      };
-                      reader.readAsText(file);
-                    }
-                  };
-                  input.click();
-                }}
-              >
-                <Upload className="w-3 h-3 mr-1" />
-                导入文件
-              </Button>
-              <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>
-              {newPlanForm.planDetailFileName && (
-                <span className="text-xs text-emerald-600">{newPlanForm.planDetailFileName}</span>
-              )}
-            </div>
-          </FormField>
-        </div>
-      </Modal>
+      {/* Batch Edit Modal */}
+      <BatchEditModal
+        isOpen={showBatchEditModal}
+        techSolutions={techSolutions}
+        selectedRows={selectedRows}
+        selectedTechCode={selectedTechCode}
+        editedTechCodes={editedTechCodes}
+        editedTechs={editedTechs as Record<string, BatchEditData>}
+        onClose={() => {
+          setShowBatchEditModal(false);
+          setBatchEditMode(false);
+          setSelectedRows([]);
+        }}
+        onSelectTechCode={setSelectedTechCode}
+        onEditField={(code, field, value) => {
+          setEditedTechs({
+            ...editedTechs,
+            [code]: { ...editedTechs[code], [field]: value },
+          });
+          if (!editedTechCodes.includes(code)) {
+            setEditedTechCodes([...editedTechCodes, code]);
+          }
+        }}
+        onUploadFile={(code, file) => {
+          setEditedTechs({
+            ...editedTechs,
+            [code]: { ...editedTechs[code], planDetailFileName: file.name },
+          });
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setEditedTechs({
+              ...editedTechs,
+              [code]: {
+                ...editedTechs[code],
+                planDetailFileName: file.name,
+                content: event.target?.result as string,
+              },
+            });
+          };
+          reader.readAsText(file);
+          if (!editedTechCodes.includes(code)) {
+            setEditedTechCodes([...editedTechCodes, code]);
+          }
+        }}
+        onCancel={() => {
+          setShowBatchEditModal(false);
+          setBatchEditMode(false);
+          setSelectedRows([]);
+          setEditedTechCodes([]);
+          setEditedTechs({});
+        }}
+        onSave={async () => {
+          try {
+            if (USE_API) {
+              for (const tech of techSolutions) {
+                const edited = editedTechs[tech.code];
+                if (edited) {
+                  await updateSolution(tech.id, {
+                    solutionTitle: edited.title ?? tech.title,
+                    cropName: edited.crop ?? tech.crop,
+                    plantingMode: edited.plantingMode ?? tech.plantingMode,
+                    stage: edited.stage ?? tech.stage,
+                    version: edited.version ?? tech.version,
+                    content: edited.content ?? tech.content,
+                    relatedBatchCode: tech.relatedBatchCode || '',
+                    planDetailFileName: tech.planDetailFileName || '',
+                    priority: tech.priority || 'normal',
+                    remarks: '',
+                  });
+                }
+              }
+            }
+            setShowBatchEditModal(false);
+            setBatchEditMode(false);
+            setSelectedRows([]);
+            setEditedTechCodes([]);
+            setEditedTechs({});
+            await showAlert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
+          } catch (error) {
+            await showAlert('保存失败，请重试');
+          }
+        }}
+      />
 
       {/* Delete Warning Modal */}
       <DeleteWarningModal
@@ -1282,331 +967,6 @@ export function TechSolutionPage() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
       />
-
-      {/* Batch Edit Modal */}
-      <Modal
-        isOpen={showBatchEditModal}
-        onClose={() => {
-          setShowBatchEditModal(false);
-          setBatchEditMode(false);
-          setSelectedRows([]);
-        }}
-        title="批量编辑技术方案"
-        size="xxl"
-        showFooter={false}
-      >
-        <div className="space-y-4">
-          {/* Info Banner */}
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              已选择 <strong>{selectedRows.length}</strong> 个技术方案进行批量编辑，
-              已编辑 <strong>{editedTechCodes.length}</strong> 个
-            </p>
-          </div>
-
-          {/* Batch Selector */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex-1">
-              <Label>选择技术方案编号</Label>
-              <UISelect value={selectedTechCode} onValueChange={(v) => setSelectedTechCode(v)}>
-                <SelectTrigger><SelectValue placeholder="请选择方案编号" /></SelectTrigger>
-                <SelectContent>
-                  {techSolutions.filter(t => selectedRows.includes(t.id)).map(tech => (
-                    <SelectItem key={tech.id} value={tech.code}>
-                      {tech.code} - {tech.title}{' '}
-                      {editedTechCodes.includes(tech.code) ? '✅ 已编辑' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </UISelect>
-            </div>
-          </div>
-
-          {/* Edit Form */}
-          {selectedTechCode && (() => {
-            const currentTech = techSolutions.find(t => t.code === selectedTechCode);
-            if (!currentTech) return null;
-            const editedData = editedTechs[selectedTechCode] || {};
-            return (
-              <div className="grid grid-cols-4 gap-3">
-                {/* 方案编号 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">方案编号</div>
-                  <div className="text-sm font-medium text-gray-900">{currentTech.code}</div>
-                </div>
-
-                {/* 版本 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">版本</div>
-                  <UIInput
-                    value={editedData.version ?? currentTech.version}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], version: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="h-7 py-0 text-xs"
-                  />
-                </div>
-
-                {/* 方案标题 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-                  <div className="text-xs text-gray-500 mb-1">方案标题</div>
-                  <UIInput
-                    value={editedData.title ?? currentTech.title}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], title: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="h-7 py-0 text-xs"
-                  />
-                </div>
-
-                {/* 作物品种 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">作物品种</div>
-                  <UISelect value={editedData.crop ?? currentTech.crop} onValueChange={(v) => {
-                    const updated = {
-                      ...editedTechs,
-                      [selectedTechCode]: { ...editedTechs[selectedTechCode], crop: v },
-                    };
-                    setEditedTechs(updated);
-                    if (!editedTechCodes.includes(selectedTechCode)) {
-                      setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                    }
-                  }}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {/* 从已加载数据动态提取作物品种，避免硬编码 */}
-                      {Array.from(new Set(techSolutions.map(t => t.crop).filter(Boolean))).map(crop => (
-                        <SelectItem key={crop} value={crop}>{crop}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </UISelect>
-                </div>
-
-                {/* 种植模式 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">种植模式</div>
-                  <DictSelect
-                    category="planting_mode"
-                    value={editedData.plantingMode ?? currentTech.plantingMode}
-                    onChange={(v) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], plantingMode: v },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    placeholder="选择种植模式"
-                  />
-                </div>
-
-                {/* 适用范围 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">适用范围</div>
-                  <UIInput
-                    value={editedData.stage ?? currentTech.stage}
-                    onChange={(e) => {
-                      const updated = {
-                        ...editedTechs,
-                        [selectedTechCode]: { ...editedTechs[selectedTechCode], stage: e.target.value },
-                      };
-                      setEditedTechs(updated);
-                      if (!editedTechCodes.includes(selectedTechCode)) {
-                        setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                      }
-                    }}
-                    className="h-7 py-0 text-xs"
-                  />
-                </div>
-
-                {/* 编制人 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">编制人</div>
-                  <div className="text-sm text-gray-700">{currentTech.author}</div>
-                </div>
-
-                {/* 创建日期 - 不可编辑 */}
-                <div className="bg-gray-100 rounded-lg p-2">
-                  <div className="text-xs text-gray-500 mb-1">创建日期</div>
-                  <div className="text-sm text-gray-700">{currentTech.createDate}</div>
-                </div>
-
-                {/* 方案详情文件 - 可编辑 */}
-                <div className="bg-gray-50 rounded-lg p-2 col-span-4">
-                  <div className="text-xs text-gray-500 mb-1">方案详情文件</div>
-                  <div className="flex items-center gap-4">
-                    {editedData.planDetailFileName ?? currentTech.planDetailFileName ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700">
-                          {editedData.planDetailFileName ?? currentTech.planDetailFileName}
-                        </span>
-                        <Button
-                          variant="blue"
-                          size="sm"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = '.md,.docx,.txt';
-                            input.onchange = (e) => {
-                              const file = (e.target as HTMLInputElement).files?.[0];
-                              if (file) {
-                                // 更新文件名
-                                const updated = {
-                                  ...editedTechs,
-                                  [selectedTechCode]: {
-                                    ...editedTechs[selectedTechCode],
-                                    planDetailFileName: file.name
-                                  },
-                                };
-                                setEditedTechs(updated);
-                                // 读取文件内容
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  const updatedWithContent = {
-                                    ...editedTechs,
-                                    [selectedTechCode]: {
-                                      ...editedTechs[selectedTechCode],
-                                      planDetailFileName: file.name,
-                                      content: event.target?.result as string
-                                    },
-                                  };
-                                  setEditedTechs(updatedWithContent);
-                                };
-                                reader.readAsText(file);
-                                if (!editedTechCodes.includes(selectedTechCode)) {
-                                  setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                                }
-                              }
-                            };
-                            input.click();
-                          }}
-                        >
-                          <Upload className="w-3 h-3" />
-                          重新上传
-                        </Button>
-                        <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = '.md,.docx,.txt';
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0];
-                            if (file) {
-                              const updated = {
-                                ...editedTechs,
-                                [selectedTechCode]: {
-                                  ...editedTechs[selectedTechCode],
-                                  planDetailFileName: file.name
-                                },
-                              };
-                              setEditedTechs(updated);
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const updatedWithContent = {
-                                  ...editedTechs,
-                                  [selectedTechCode]: {
-                                    ...editedTechs[selectedTechCode],
-                                    planDetailFileName: file.name,
-                                    content: event.target?.result as string
-                                  },
-                                };
-                                setEditedTechs(updatedWithContent);
-                              };
-                              reader.readAsText(file);
-                              if (!editedTechCodes.includes(selectedTechCode)) {
-                                setEditedTechCodes([...editedTechCodes, selectedTechCode]);
-                              }
-                            }
-                          };
-                          input.click();
-                        }}
-                      >
-                        <Upload className="w-3 h-3" />
-                        上传方案文件
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Footer Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowBatchEditModal(false);
-                setBatchEditMode(false);
-                setSelectedRows([]);
-                setEditedTechCodes([]);
-                setEditedTechs({});
-              }}
-            >
-              取消
-            </Button>
-            <Button
-              variant="default"
-              onClick={async () => {
-                try {
-                  if (USE_API) {
-                    // 通过 Store 逐条更新技术方案
-                    for (const tech of techSolutions) {
-                      const edited = editedTechs[tech.code];
-                      if (edited) {
-                        await updateSolution(tech.id, {
-                          solutionTitle: edited.title ?? tech.title,
-                          cropName: edited.crop ?? tech.crop,
-                          plantingMode: edited.plantingMode ?? tech.plantingMode,
-                          stage: edited.stage ?? tech.stage,
-                          version: edited.version ?? tech.version,
-                          content: edited.content ?? tech.content,
-                          relatedBatchCode: tech.relatedBatchCode || '',
-                          planDetailFileName: tech.planDetailFileName || '',
-                          priority: tech.priority || 'normal',
-                          remarks: '',
-                        });
-                      }
-                    }
-                  }
-                  setShowBatchEditModal(false);
-                  setBatchEditMode(false);
-                  setSelectedRows([]);
-                  setEditedTechCodes([]);
-                  setEditedTechs({});
-                  await showAlert(`已保存 ${editedTechCodes.length} 个技术方案的修改`);
-                } catch (error) {
-                  // logger.error('批量保存失败:', error);
-                  await showAlert('保存失败，请重试');
-                }
-              }}
-            >
-              保存
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Export Format Modal */}
       <ExportFormatModal

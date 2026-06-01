@@ -1,0 +1,275 @@
+/**
+ * 技术方案新增弹窗
+ * 父组件传：form、setForm、scopeExpanded、selectedCrop、handleCropChange、generateCode、operatorOptions、onSubmitDraft/onSubmitApprove
+ */
+import { Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
+import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
+import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { DictSelect } from '../common/settings/DictSelect';
+import CropCodeSelector from '../farm/common/CropCodeSelector';
+import { CropVariety } from '../../types/cropVariety';
+
+// 适用范围选项（多选）
+const scopeOptions = [
+  '品种选育', '种子生产', '种源采集', '种子加工', '种子检测',
+  '播种育苗', '催芽管理', '苗期管理', '出圃管理', '嫁接育苗', '组培育苗',
+  '土壤准备', '定植移栽', '生长期管理', '开花结果期', '采收期管理',
+  '温室环境调控', '大棚管理', '灌溉管理', '施肥管理', '病虫害防治',
+  '采收管理', '分级包装', '贮藏保鲜', '加工处理',
+  '全周期管理', '综合技术方案', '应急处理', '其他',
+];
+
+export interface NewPlanForm {
+  code: string;
+  title: string;
+  crop: string;
+  cropCode: string;
+  plantingMode: string;
+  stage: string;
+  author: string;
+  version: string;
+  content: string;
+  remarks: string;
+  planDetailFileName: string;
+  relatedBatchCode: string;
+}
+
+export interface CreateModalProps {
+  isOpen: boolean;
+  form: NewPlanForm;
+  scopeExpanded: boolean;
+  selectedCrop: CropVariety | null;
+  operatorOptions: { value: string; label: string }[];
+  onClose: () => void;
+  onFormChange: (form: NewPlanForm) => void;
+  onScopeToggle: () => void;
+  onCropChange: (code: string, varietyInfo: CropVariety | null) => void;
+  onGenerateCode: () => string;
+  onSubmitDraft: () => void;
+  onSubmitApprove: () => void;
+}
+
+export function CreateModal({
+  isOpen,
+  form,
+  scopeExpanded,
+  selectedCrop,
+  operatorOptions,
+  onClose,
+  onFormChange,
+  onScopeToggle,
+  onCropChange,
+  onGenerateCode,
+  onSubmitDraft,
+  onSubmitApprove,
+}: CreateModalProps) {
+  const handleFileUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md,.docx';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          onFormChange({
+            ...form,
+            content: event.target?.result as string,
+            planDetailFileName: file.name,
+          });
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="新增方案"
+      size="xxxl"
+      showFooter={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onSubmitDraft}>
+            存为草稿
+          </Button>
+          <Button type="button" variant="default" onClick={onSubmitApprove}>
+            提交审批
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* 第一行：方案编号 + 方案标题 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="方案编号">
+            <div className="flex gap-2 w-full">
+              <div className="flex-1">
+                <Input
+                  value={form.code}
+                  onChange={(e) => onFormChange({ ...form, code: e.target.value })}
+                  placeholder="请输入方案编号"
+                />
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                type="button"
+                onClick={() => onFormChange({ ...form, code: onGenerateCode() })}
+              >
+                生成
+              </Button>
+            </div>
+          </FormField>
+          <FormField label="方案标题" required>
+            <Input
+              value={form.title}
+              onChange={(e) => onFormChange({ ...form, title: e.target.value })}
+              placeholder="请输入方案标题"
+            />
+          </FormField>
+        </div>
+
+        {/* 第二行：版本 + 创建日期 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="版本">
+            <Input
+              value={form.version}
+              onChange={(e) => onFormChange({ ...form, version: e.target.value })}
+            />
+          </FormField>
+          <FormField label="创建日期">
+            <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
+          </FormField>
+        </div>
+
+        {/* 第三行：作物品种 + 种植模式 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="作物品种" required>
+            <CropCodeSelector
+              value={form.cropCode || ''}
+              onChange={onCropChange}
+              placeholder="搜索或选择作物品种..."
+              size="md"
+              showFullPath={true}
+            />
+            {selectedCrop && (
+              <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                <div className="text-emerald-700 flex items-center gap-1">
+                  <Leaf className="w-3 h-3 flex-shrink-0" />
+                  {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                  {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                </div>
+                <div className="text-emerald-600 mt-0.5">编码：{selectedCrop.cropCode}</div>
+              </div>
+            )}
+          </FormField>
+          <FormField label="种植模式">
+            <DictSelect
+              category="planting_mode"
+              value={form.plantingMode}
+              onChange={(value) => onFormChange({ ...form, plantingMode: value })}
+              placeholder="选择种植模式"
+            />
+          </FormField>
+        </div>
+
+        {/* 第四行：适用范围（多选Checkbox）+ 关联生产批次号 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="适用范围（可多选）">
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onScopeToggle}
+                className="flex items-center gap-1 text-gray-600"
+              >
+                {scopeExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                <span>{scopeExpanded ? '收起' : '展开'}</span>
+              </Button>
+              {scopeExpanded && (
+                <div className="flex flex-wrap gap-2">
+                  {scopeOptions.map((option) => (
+                    <label key={option} className="flex items-center gap-1 cursor-pointer">
+                      <Checkbox
+                        checked={form.stage.split(',').includes(option)}
+                        onCheckedChange={(checked) => {
+                          const currentStages = form.stage ? form.stage.split(',').filter((s) => s) : [];
+                          if (checked) {
+                            onFormChange({ ...form, stage: [...currentStages, option].join(',') });
+                          } else {
+                            onFormChange({
+                              ...form,
+                              stage: currentStages.filter((s) => s !== option).join(','),
+                            });
+                          }
+                        }}
+                      />
+                      <span className="text-sm">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </FormField>
+          <FormField label="关联生产批次号">
+            <Select
+              value={form.relatedBatchCode}
+              onChange={(e) => onFormChange({ ...form, relatedBatchCode: e.target.value })}
+              options={[
+                { value: '', label: '不关联生产批次' },
+                { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
+                { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
+                { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
+                { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
+                { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
+                { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
+                { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
+              ]}
+            />
+          </FormField>
+        </div>
+
+        {/* 第五行：编制人 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="编制人">
+            <Select
+              value={form.author}
+              onChange={(e) => onFormChange({ ...form, author: e.target.value })}
+              options={operatorOptions}
+            />
+          </FormField>
+        </div>
+
+        {/* 第六行：备注（单独一行） */}
+        <FormField label="备注">
+          <Textarea
+            value={form.remarks}
+            onChange={(e) => onFormChange({ ...form, remarks: e.target.value })}
+            placeholder="请输入备注信息"
+            rows={3}
+          />
+        </FormField>
+
+        {/* 第七行：方案详细文件上传（单独一行） */}
+        <FormField label="方案详细">
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="blue" size="sm" onClick={handleFileUpload}>
+              <Upload className="w-3 h-3 mr-1" />
+              导入文件
+            </Button>
+            <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>
+            {form.planDetailFileName && (
+              <span className="text-xs text-emerald-600">{form.planDetailFileName}</span>
+            )}
+          </div>
+        </FormField>
+      </div>
+    </Modal>
+  );
+}
