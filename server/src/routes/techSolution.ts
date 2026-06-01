@@ -150,11 +150,19 @@ router.get('/', (req: Request, res: Response) => {
     const camelItems = mapArrayToFrontend(rawItems);
 
     // 加载所有方案的适用范围（V9.0 关联表）
-    const solutionIds = camelItems.map((it) => it.id as string);
-    const scopesMap = loadScopesBySolutionIds(db, solutionIds);
-    camelItems.forEach((it) => {
-      it.scopes = scopesMap[it.id as string] || [];
-    });
+    // 用 try-catch 保护：scopes 表不存在或加载失败不影响主列表
+    try {
+      const solutionIds = camelItems.map((it) => it.id as string);
+      const scopesMap = loadScopesBySolutionIds(db, solutionIds);
+      camelItems.forEach((it) => {
+        it.scopes = scopesMap[it.id as string] || [];
+      });
+    } catch (scopeErr) {
+      console.warn('[V9.0] 加载 scopes 失败，列表仍返回（兼容模式）:', scopeErr);
+      camelItems.forEach((it) => {
+        it.scopes = [];
+      });
+    }
 
     // 获取总数
     let countSql = 'SELECT COUNT(*) as total FROM tech_solutions WHERE 1=1';
