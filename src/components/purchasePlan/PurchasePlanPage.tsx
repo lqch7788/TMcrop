@@ -10,9 +10,11 @@ import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
-import { calculateOverdueAlert } from '../../types/purchase';
+import { calculateOverdueAlert, canDeletePurchasePlan, canEditPurchasePlan } from '../../types/purchase';
 import { useUserStore, usePurchasePlanStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
+import * as XLSX from 'xlsx';
+import { getNextPurchaseApplicationCode } from '../../services/apiPurchasePlanService';
 
 // 导入子组件
 import { PurchasePlanFilters } from './PurchasePlanFilters';
@@ -56,18 +58,26 @@ export function PurchasePlanPage() {
   const purchasePlansData = getPlansWithStatus();
 
   // 加载采购计划数据
+  // 用 mounted ref 避免组件卸载后 setState 警告（P2-4）
+  const mountedRef = useRef(true);
   useEffect(() => {
+    mountedRef.current = true;
     fetchPlans();
-  }, [fetchPlans]);
+    return () => {
+      mountedRef.current = false;
+    };
+    // fetchPlans 是 zustand 解构的稳定引用，无需加入依赖
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 筛选状态
   const [relatedBatchCode, setRelatedBatchCode] = useState('');
-  const [purchaseType, setPurchaseType] = useState('全部');
-  const [status, setStatus] = useState('全部');
-  const [alertFilter, setAlertFilter] = useState('全部');
+  const [purchaseType, setPurchaseType] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [alertFilter, setAlertFilter] = useState('all');
   const [applicant, setApplicant] = useState('');
   const [applicantDepartment, setApplicantDepartment] = useState('');
-  const [priority, setPriority] = useState('全部');
+  const [priority, setPriority] = useState('all');
   const [requiredStartDate, setRequiredStartDate] = useState('');
   const [requiredEndDate, setRequiredEndDate] = useState('');
 
@@ -103,12 +113,12 @@ export function PurchasePlanPage() {
   const [createForm, setCreateForm] = useState({
     purchaseApplicationCode: '',
     relatedBatchCode: '',
-    purchaseType: '生产物资采购',
-    applicant: localStorage.getItem('username') || '陆启闯',
-    applicantDepartment: '生产部',
+    purchaseType: 'production',
+    applicant: localStorage.getItem('username') || '',
+    applicantDepartment: localStorage.getItem('departmentName') || '生产部',
     applyDate: new Date().toISOString().split('T')[0],
     requiredDate: '',
-    priority: '中',
+    priority: 'normal',
     remark: '',
     otherBatchReason: '',
     approvalPerson: '',
@@ -148,15 +158,20 @@ export function PurchasePlanPage() {
   };
 
   // 监听物料明细变化，标记批次号为已编辑
+  // 性能优化：用 ref 跟踪上次 items 引用，避免 JSON.stringify 全量比较
+  const lastItemsRef = useRef<typeof batchEditItems | null>(null);
   useEffect(() => {
-    if (selectedPlanCode && batchEditItems.length > 0) {
-      const originalItems = currentEditingPlan?.items || [];
-      const isItemsChanged = JSON.stringify(batchEditItems) !== JSON.stringify(originalItems);
-      if (isItemsChanged) {
-        setEditedPlans(prev => ({ ...prev, [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), items: batchEditItems } }));
-      }
+    if (!selectedPlanCode) {
+      lastItemsRef.current = null;
+      return;
     }
-  }, [batchEditItems, selectedPlanCode, currentEditingPlan]);
+    if (lastItemsRef.current === batchEditItems) return; // 引用未变，跳过
+    lastItemsRef.current = batchEditItems;
+    setEditedPlans(prev => ({
+      ...prev,
+      [selectedPlanCode]: { ...(prev[selectedPlanCode] || {}), items: batchEditItems },
+    }));
+  }, [batchEditItems, selectedPlanCode]);
 
   // 排序处理
   const handleSortChange = (field: string) => {
@@ -176,18 +191,18 @@ export function PurchasePlanPage() {
     .filter(plan => {
       // 添加空值保护，防止 relatedBatchCode 为 null/undefined 时崩溃
       if (relatedBatchCode && !(plan.relatedBatchCode || '').toLowerCase().includes(relatedBatchCode.toLowerCase())) return false;
-      if (purchaseType !== '全部' && plan.purchaseTypeName !== purchaseType) return false;
-      if (status !== '全部' && plan.statusText !== status) return false;
+      if (purchaseType !== 'all' && plan.purchaseType !== purchaseType) return false;
+      if (status !== 'all' && plan.status !== status) return false;
       if (applicant && !plan.applicant.toLowerCase().includes(applicant.toLowerCase())) return false;
       if (applicantDepartment && !plan.applicantDepartment.toLowerCase().includes(applicantDepartment.toLowerCase())) return false;
-      if (priority !== '全部' && plan.priorityText !== priority) return false;
+      if (priority !== 'all' && plan.priority !== priority) return false;
       if (requiredStartDate && plan.requiredDate < requiredStartDate) return false;
       if (requiredEndDate && plan.requiredDate > requiredEndDate) return false;
       // 预警筛选
-      if (alertFilter !== '全部') {
+      if (alertFilter !== 'all') {
         const alert = calculateOverdueAlert(plan);
-        if (alertFilter === '已逾期' && alert.level !== 'overdue') return false;
-        if (alertFilter === '即将到期' && alert.level !== 'warning') return false;
+        if (alertFilter === 'overdue' && alert.level !== 'overdue') return false;
+        if (alertFilter === 'warning' && alert.level !== 'warning') return false;
       }
       return true;
     })
@@ -202,22 +217,50 @@ export function PurchasePlanPage() {
     });
 
   // 打开创建弹窗
+  // 优化：弹窗立即显示，编号后台异步获取（避免等待 API 往返延迟）
   const handleOpenCreateModal = () => {
+    // 先生成临时占位编号（兜底规则）
+    const now = new Date();
+    const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const placeholder = `PA${ym}____`; // 占位，下划线提示用户等待
+
     setCreateForm({
-      purchaseApplicationCode: `PA${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+      purchaseApplicationCode: placeholder,
       relatedBatchCode: '',
-      purchaseType: '生产物资采购',
-      applicant: localStorage.getItem('username') || '陆启闯',
-      applicantDepartment: '生产部',
+      purchaseType: 'production',
+      applicant: localStorage.getItem('username') || '',
+      applicantDepartment: localStorage.getItem('departmentName') || '生产部',
       applyDate: new Date().toISOString().split('T')[0],
       requiredDate: '',
-      priority: '中',
+      priority: 'normal',
       remark: '',
       otherBatchReason: '',
       approvalPerson: '',
     });
     setCreateItems([]);
+    // 立即打开弹窗
     setShowCreateModal(true);
+
+    // 后台异步获取真实编号并替换占位
+    void (async () => {
+      try {
+        const realCode = await getNextPurchaseApplicationCode();
+        if (realCode) {
+          setCreateForm(prev => prev.purchaseApplicationCode === placeholder
+            ? { ...prev, purchaseApplicationCode: realCode }
+            : prev
+          );
+        }
+      } catch (err) {
+        // 后端失败时用兜底编号（PA+年月+4位随机）
+        const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        const fallback = `PA${ym}${random}`;
+        setCreateForm(prev => prev.purchaseApplicationCode === placeholder
+          ? { ...prev, purchaseApplicationCode: fallback }
+          : prev
+        );
+      }
+    })();
   };
 
   // 创建表单字段更新
@@ -230,33 +273,17 @@ export function PurchasePlanPage() {
     try {
       const totalAmount = createItems.reduce((sum, item) => sum + (item.estimatedTotalPrice || 0), 0);
 
-      // 显示名称 → 编码映射
-      const priorityMap: Record<string, string> = {
-        '紧急': 'urgent',
-        '高': 'high',
-        '中': 'normal',
-        '低': 'low',
-      };
-      const purchaseTypeReverseMap: Record<string, string> = {
-        '生产物资采购': 'production',
-        '紧急采购': 'urgent',
-        '常规采购': 'routine',
-        '劳保用品': 'safety',
-        '通用物资': 'material',
-        '设备采购': 'equipment',
-        '其他': 'other',
-      };
-
+      // 表单已是英文编码，直接提交无需映射
       const planData = {
         purchaseApplicationCode: createForm.purchaseApplicationCode,
         relatedBatchCode: createForm.relatedBatchCode,
-        purchaseType: purchaseTypeReverseMap[createForm.purchaseType] || 'production',
+        purchaseType: createForm.purchaseType,
         applicant: createForm.applicant,
         applicantId: localStorage.getItem('userId') || '',
         applicantDepartment: createForm.applicantDepartment,
         applyDate: createForm.applyDate,
         requiredDate: createForm.requiredDate,
-        priority: priorityMap[createForm.priority] || 'normal',
+        priority: createForm.priority,
         status: 'pending' as const,
         approvalStatus: 'pending' as const,
         remarks: createForm.remark,
@@ -271,8 +298,6 @@ export function PurchasePlanPage() {
       if (result && result.id) {
         const approvalAmount = totalAmount;
 
-        // logger.info('【创建采购计划】提交审批，金额:', approvalAmount);
-
         const approvalResult = await submitPurchaseApproval({
           purchaseId: result.id,
           purchaseCode: result.purchaseApplicationCode || createForm.purchaseApplicationCode,
@@ -283,18 +308,18 @@ export function PurchasePlanPage() {
           department: result.applicantDepartment,
         });
 
-        // logger.info('【创建采购计划】审批提交结果:', approvalResult);
-
         if (!approvalResult.success) {
           // 审批提交失败，回滚：删除已创建的采购计划
-          // logger.info('【创建采购计划】审批提交失败，执行回滚删除计划:', result.id);
           try {
             await deletePlan(result.id);
-            // logger.info('【创建采购计划】回滚删除成功');
+            await showAlert('审批提交失败: ' + approvalResult.message + '（采购计划已自动删除）');
           } catch (deleteError) {
-            // logger.error('【创建采购计划】回滚删除失败:', deleteError);
+            // 回滚失败：明确告知用户残留数据
+            await showAlert(
+              '审批提交失败: ' + approvalResult.message +
+              '；自动回滚也失败，请手动删除 ID 为 ' + result.id + ' 的采购计划'
+            );
           }
-          await showAlert('审批提交失败: ' + approvalResult.message + '（采购计划已自动删除）');
           return;
         }
 
@@ -305,7 +330,6 @@ export function PurchasePlanPage() {
         }
       }
     } catch (error) {
-      // logger.error('创建采购计划失败:', error);
       await showAlert('创建采购计划失败，请重试');
     } finally {
       setShowCreateModal(false);
@@ -315,12 +339,12 @@ export function PurchasePlanPage() {
   // 重置筛选
   const handleReset = () => {
     setRelatedBatchCode('');
-    setPurchaseType('全部');
-    setStatus('全部');
-    setAlertFilter('全部');
+    setPurchaseType('all');
+    setStatus('all');
+    setAlertFilter('all');
     setApplicant('');
     setApplicantDepartment('');
-    setPriority('全部');
+    setPriority('all');
     setRequiredStartDate('');
     setRequiredEndDate('');
     setCurrentPage(1);
@@ -364,95 +388,89 @@ export function PurchasePlanPage() {
     setShowExportModal(true);
   };
 
-  // 执行导出（修复 XSS 漏洞，使用文本转义）
+  // 执行导出（使用 xlsx 库真正生成 Excel；Word 仍走 HTML 兼容方案；CSV 用 RFC4180）
   const handleDoExport = async () => {
-    // 统一使用 purchaseApplicationCode 作为选择键
     const selectedData = purchasePlansData.filter(p => selectedRows.includes(p.purchaseApplicationCode));
-    const headers = ['计划编号', '计划名称', '类型', '申请人', '申请日期', '总金额', '供应商', '交货日期', '优先级', '状态'];
+    const headers = [
+      { key: 'purchaseApplicationCode', label: '计划编号' },
+      { key: 'planTitle', label: '计划名称' },
+      { key: 'purchaseTypeName', label: '类型' },
+      { key: 'applicant', label: '申请人' },
+      { key: 'applyDate', label: '申请日期' },
+      { key: 'totalAmount', label: '总金额' },
+      { key: 'supplierName', label: '供应商' },
+      { key: 'requiredDate', label: '交货日期' },
+      { key: 'priorityText', label: '优先级' },
+      { key: 'statusText', label: '状态' },
+    ];
 
-    // HTML 转义函数，防止 XSS 攻击
-    const escapeHtml = (str: string | number | undefined | null): string => {
-      if (str === undefined || str === null) return '';
-      const text = String(str);
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;');
+    // RFC4180 CSV 转义：包含 , " \n 的字段用双引号包裹并把 " 替换为 ""
+    const csvEscape = (v: unknown): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
 
-    const exportData = selectedData.map(row => ({
-      '计划编号': row.purchaseApplicationCode,
-      '计划名称': row.planTitle,
-      '类型': row.purchaseTypeName,
-      '申请人': row.applicant,
-      '申请日期': row.applyDate,
-      '总金额': row.totalAmount,
-      '供应商': row.supplierName,
-      '交货日期': row.requiredDate,
-      '优先级': row.priorityText,
-      '状态': row.statusText
-    }));
-
-    let content = '';
-    let mimeType = '';
-    let extension = '';
-
-    if (exportFormat === 'csv') {
-      content = headers.join(',') + '\n' + exportData.map(row =>
-        headers.map(h => `"${escapeHtml(row[h]).replace(/"/g, '""')}"`).join(',')
-      ).join('\n');
-      mimeType = 'text/csv;charset=utf-8';
-      extension = 'csv';
-    } else if (exportFormat === 'excel') {
-      content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-excel;charset=utf-8';
-      extension = 'xls';
-    } else if (exportFormat === 'word') {
-      content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-      mimeType = 'application/vnd.ms-word;charset=utf-8';
-      extension = 'doc';
-    }
-
-    // 使用 dayjs 格式化日期
-    const fileName = `采购计划_${dayjs().format('YYYY-MM-DD')}.${extension}`;
+    const fileNameBase = `采购计划_${dayjs().format('YYYY-MM-DD')}`;
 
     try {
-      if (window.showSaveFilePicker) {
+      if (exportFormat === 'csv') {
+        const lines = [
+          headers.map(h => h.label).join(','),
+          ...selectedData.map(row => headers.map(h => csvEscape((row as any)[h.key])).join(',')),
+        ];
+        const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+        downloadBlob(blob, `${fileNameBase}.csv`);
+      } else if (exportFormat === 'excel') {
+        // 真正用 xlsx 库生成 .xlsx
+        const wsData = [
+          headers.map(h => h.label),
+          ...selectedData.map(row => headers.map(h => (row as any)[h.key] ?? '')),
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        // 设置列宽
+        ws['!cols'] = headers.map(h => ({ wch: Math.max(12, h.label.length * 2) }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '采购计划');
+        XLSX.writeFile(wb, `${fileNameBase}.xlsx`);
+      } else if (exportFormat === 'word') {
+        // Word 走 HTML 兼容方案（无 xlsx 替代品）
+        const escapeHtml = (s: unknown): string => String(s ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${escapeHtml(h.label)}</th>`).join('')}</tr>${selectedData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml((row as any)[h.key])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-word;charset=utf-8' });
+        downloadBlob(blob, `${fileNameBase}.doc`);
+      }
+
+      setExportMode(false);
+      setSelectedRows([]);
+      setShowExportModal(false);
+    } catch (err) {
+      await showAlert('导出失败：' + (err instanceof Error ? err.message : '未知错误'));
+    }
+  };
+
+  /** 通用下载方法：尝试用 showSaveFilePicker，否则降级到 a[download] */
+  const downloadBlob = async (blob: Blob, fileName: string) => {
+    if (window.showSaveFilePicker) {
+      try {
         const handle = await window.showSaveFilePicker({
           suggestedName: fileName,
-          types: [{
-            description: exportFormat.toUpperCase() + ' Files',
-            accept: { [mimeType]: ['.' + extension] }
-          }]
+          types: [{ description: fileName.split('.').pop()?.toUpperCase() || 'File', accept: { [blob.type]: [`.${fileName.split('.').pop()}`] } }],
         });
         const writable = await handle.createWritable();
-        await writable.write(content);
+        await writable.write(blob);
         await writable.close();
-      } else {
-        const blob = new Blob([content], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        return;
+      } catch {
+        // 用户取消或不支持，回退
       }
-    } catch (err) {
-      // logger.error('Export failed:', err);
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
     }
-
-    setExportMode(false);
-    setSelectedRows([]);
-    setShowExportModal(false);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // 取消导出
@@ -483,26 +501,27 @@ export function PurchasePlanPage() {
   // 删除确认
   const handleDeleteConfirm = async () => {
     try {
-      // 只删除草稿、待审批和审批被拒绝状态的采购计划
+      // 统一使用 canDeletePurchasePlan 规则
       const deletablePlans = purchasePlansData
         .filter(p => selectedRows.includes(p.purchaseApplicationCode))
-        .filter(p => p.status === 'draft' || p.status === 'pending' || p.approvalStatus === 'rejected');
+        .filter(p => canDeletePurchasePlan(p));
 
       if (deletablePlans.length === 0) {
-        await showAlert('没有可删除的采购计划（只能删除草稿、待审批和审批被拒绝状态）');
+        await showAlert('没有可删除的采购计划（只能删除草稿、待审批和已拒绝状态）');
         return;
       }
 
       const selectedIds = deletablePlans.map(p => p.id);
 
-      await deletePlans(selectedIds);
+      const result = await deletePlans(selectedIds);
 
       setShowDeleteModal(false);
       setBatchDeleteMode(false);
       setSelectedRows([]);
-      await showAlert(`已删除 ${selectedIds.length} 个采购计划`);
+
+      const skipMsg = result.skipped.length > 0 ? `，${result.skipped.length} 个被跳过` : '';
+      await showAlert(`已删除 ${result.deleted} 个采购计划${skipMsg}`);
     } catch (error) {
-      // logger.error('删除采购计划失败:', error);
       await showAlert('删除失败，请重试');
     }
   };
@@ -515,8 +534,8 @@ export function PurchasePlanPage() {
 
   // 单条编辑处理
   const handleSingleEdit = (plan: PurchasePlan) => {
-    // 已完成或采购中状态不可编辑
-    if (plan.status === 'completed' || plan.status === 'purchasing') {
+    // 统一使用 canEditPurchasePlan 规则
+    if (!canEditPurchasePlan(plan)) {
       showAlert('该采购计划已归档，无法编辑');
       return;
     }
@@ -538,17 +557,15 @@ export function PurchasePlanPage() {
 
   // 单条删除处理
   const handleSingleDelete = async (plan: PurchasePlan) => {
-    // logger.info('【删除采购计划】开始删除, plan:', plan.id, plan.purchaseApplicationCode, 'status:', plan.status, 'approvalStatus:', plan.approvalStatus);
-    // 草稿、待审批或审批被拒绝的计划可以删除
-    if (plan.status !== 'draft' && plan.status !== 'pending' && plan.approvalStatus !== 'rejected') {
-      await showAlert('只有草稿、待审批和审批被拒绝的采购计划才能删除');
+    // 统一使用 canDeletePurchasePlan 规则
+    if (!canDeletePurchasePlan(plan)) {
+      await showAlert('只有草稿、待审批和已拒绝的采购计划才能删除');
       return;
     }
     try {
       await deletePlan(plan.id);
       await showAlert('删除成功');
     } catch (error) {
-      // logger.error('删除采购计划失败:', error);
       await showAlert('删除失败: ' + (error as Error).message);
     }
   };
@@ -588,16 +605,69 @@ export function PurchasePlanPage() {
     setSelectedRows([]);
   };
 
-  // 批量编辑下一步/确认
-  const handleBatchEditNext = () => {
-    setShowBatchEditModal(false);
-    setBatchEditMode(false);
-    setSelectedRows([]);
-    setEditedPlanCodes([]);
-    setEditedPlans({});
-    setSelectedPlanCode('');
-    setCurrentEditingPlan(null);
-    setBatchEditItems([]);
+  // 批量编辑"下一个"：保存当前编辑 → 自动切到下一个未编辑的 plan
+  // 若已是最后一个，则关闭弹窗
+  const handleBatchEditNext = async () => {
+    if (!currentEditingPlan) {
+      // 没有正在编辑的，直接关闭
+      handleBatchEditCancel();
+      return;
+    }
+
+    try {
+      // 1. 保存当前编辑
+      const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
+      const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
+      await updatePlan(currentEditingPlan.id, {
+        relatedBatchCode: currentEditingPlan.relatedBatchCode,
+        purchaseType: batchEditData.purchaseType,
+        priority: batchEditData.priority,
+        requiredDate: batchEditData.requiredDate,
+        remark: batchEditData.remark,
+        applicantId: currentEditingPlan.applicantId,
+        applicantName,
+        applicantDepartment: currentEditingPlan.applicantDepartment,
+        items: batchEditItems,
+      });
+
+      // 2. 把当前 planCode 标记为已编辑
+      const currentCode = currentEditingPlan.purchaseApplicationCode;
+      const remainingCodes = selectedRows.filter(code => code !== currentCode);
+
+      if (remainingCodes.length === 0) {
+        // 已是最后一个，关闭弹窗
+        await showAlert('所有计划已保存');
+        setShowBatchEditModal(false);
+        setBatchEditMode(false);
+        setSelectedRows([]);
+        setEditedPlanCodes([]);
+        setEditedPlans({});
+        setSelectedPlanCode('');
+        setCurrentEditingPlan(null);
+        setBatchEditItems([]);
+        return;
+      }
+
+      // 3. 切到下一个未编辑的
+      const nextCode = remainingCodes[0];
+      const nextPlan = purchasePlansData.find(p => p.purchaseApplicationCode === nextCode);
+      if (!nextPlan) {
+        await showAlert('未找到下一个计划');
+        return;
+      }
+      setSelectedPlanCode(nextCode);
+      setCurrentEditingPlan(nextPlan);
+      setBatchEditData({
+        purchaseType: nextPlan.purchaseType,
+        priority: nextPlan.priority,
+        requiredDate: nextPlan.requiredDate || '',
+        remark: nextPlan.remark || '',
+      });
+      setBatchEditItems(nextPlan.items || []);
+      await showAlert(`已保存 ${currentCode}，已切到 ${nextCode}`);
+    } catch (error) {
+      await showAlert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    }
   };
 
   // 批量编辑保存
