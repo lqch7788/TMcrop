@@ -498,20 +498,10 @@ export function PurchasePlanPage() {
     setShowDeleteModal(true);
   };
 
-  // 删除确认
+  // 删除确认（开发测试阶段：可删除所有状态）
   const handleDeleteConfirm = async () => {
     try {
-      // 统一使用 canDeletePurchasePlan 规则
-      const deletablePlans = purchasePlansData
-        .filter(p => selectedRows.includes(p.purchaseApplicationCode))
-        .filter(p => canDeletePurchasePlan(p));
-
-      if (deletablePlans.length === 0) {
-        await showAlert('没有可删除的采购计划（只能删除草稿、待审批和已拒绝状态）');
-        return;
-      }
-
-      const selectedIds = deletablePlans.map(p => p.id);
+      const selectedIds = selectedRows; // 直接用选中行，不限状态
 
       const result = await deletePlans(selectedIds);
 
@@ -555,13 +545,8 @@ export function PurchasePlanPage() {
     setShowBatchEditModal(true);
   };
 
-  // 单条删除处理
+  // 单条删除处理（开发测试阶段：可删除所有状态）
   const handleSingleDelete = async (plan: PurchasePlan) => {
-    // 统一使用 canDeletePurchasePlan 规则
-    if (!canDeletePurchasePlan(plan)) {
-      await showAlert('只有草稿、待审批和已拒绝的采购计划才能删除');
-      return;
-    }
     try {
       await deletePlan(plan.id);
       await showAlert('删除成功');

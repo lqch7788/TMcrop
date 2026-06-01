@@ -265,7 +265,6 @@ export function PurchasePlanTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('requiredDate')}>需求日期{sortConfig?.field === 'requiredDate' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('priority')}>优先级{sortConfig?.field === 'priority' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('status')}>状态{sortConfig?.field === 'status' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
             </tr>
           </thead>
@@ -327,7 +326,6 @@ export function PurchasePlanTable({
                   <td className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={plan.status} statusText={plan.statusText} plan={plan} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{plan.approvalPerson || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       {plan.status !== 'completed' && plan.status !== 'purchasing' && (

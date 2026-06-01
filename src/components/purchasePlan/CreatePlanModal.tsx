@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
-import { useDictionaryStore, usePlantingStore, useUserStore } from '../../stores';
+import { usePlantingStore } from '../../stores';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
 
@@ -81,16 +81,10 @@ export function CreatePlanModal({
   // 字典：从 store 动态加载（字段名以实际 store 定义为准）
   const plantingItems = safeArray(usePlantingStore((s: any) => s.items));
   const loadPlantings = usePlantingStore((s: any) => s.loadItems);
-  const approvalPersons = safeArray(useUserStore((s: any) => s.users));
-  const loadUsers = useUserStore((s: any) => s.loadUsers);
-  const dictionaries = safeArray(useDictionaryStore((s: any) => s.dictionaries));
-  const loadDictionaries = useDictionaryStore((s: any) => s.loadDictionaries);
 
   React.useEffect(() => {
     if (plantingItems.length === 0 && loadPlantings) loadPlantings();
-    if (approvalPersons.length === 0 && loadUsers) loadUsers();
-    if (dictionaries.length === 0 && loadDictionaries) loadDictionaries();
-  }, [plantingItems.length, approvalPersons.length, dictionaries.length, loadPlantings, loadUsers, loadDictionaries]);
+  }, [plantingItems.length, loadPlantings]);
 
   // 关联批次选项：usePlantingStore.items 字段为 plantCode / cropName
   const batchOptions = React.useMemo(() => {
@@ -102,19 +96,13 @@ export function CreatePlanModal({
     return opts;
   }, [plantingItems]);
 
-  // 部门选项：useDictionaryStore.dictionaries 过滤 categoryCode === 'department'
-  const departmentOptions = React.useMemo(() => {
-    const depts = dictionaries
-      .filter((d: any) => (d.categoryCode || d.category_code || d.category) === 'department')
-      .map((d: any) => ({ value: d.dictLabel || d.name, label: d.dictLabel || d.name }));
-    return depts;
-  }, [dictionaries]);
-
-  // 审批人选项（从用户列表取）
-  const approvalPersonOptions = React.useMemo(
-    () => approvalPersons.map((u: any) => ({ value: u.realName || u.name, label: u.realName || u.name })),
-    [approvalPersons]
-  );
+  // 部门选项：硬编码（字典表无 department 分类，现有数据使用"生产部/后勤部/办公室/技术部"）
+  const departmentOptions = [
+    { value: '生产部', label: '生产部' },
+    { value: '后勤部', label: '后勤部' },
+    { value: '办公室', label: '办公室' },
+    { value: '技术部', label: '技术部' },
+  ];
 
   // 导入物料处理
   const handleImportClick = () => {
@@ -310,8 +298,8 @@ export function CreatePlanModal({
           <FormField label="申请人">
             <Input
               value={createForm.applicant}
-              disabled
-              className="bg-gray-100 cursor-not-allowed"
+              onChange={(e) => onFormChange('applicant', e.target.value)}
+              className={deepInputClass}
             />
           </FormField>
           <FormField label="申请部门">
@@ -364,19 +352,6 @@ export function CreatePlanModal({
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <FormField label="审批人">
-            <Select
-              value={createForm.approvalPerson || ''}
-              onValueChange={(v) => onFormChange('approvalPerson', v)}
-            >
-              <SelectTrigger className={deepInputClass}><SelectValue placeholder="请选择" /></SelectTrigger>
-              <SelectContent>
-                {approvalPersonOptions.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
           <FormField label="备注">
             <Input
               value={createForm.remark || ''}
