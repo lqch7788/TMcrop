@@ -2,7 +2,6 @@
  * 采购计划筛选表单组件
  */
 import { Search } from 'lucide-react';
-import type { PurchasePlan } from '../../types/purchase';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -91,11 +90,11 @@ export function PurchasePlanFilters({
           <Select value={priority} onValueChange={(v) => onPriorityChange(v)}>
             <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="全部">全部</SelectItem>
-              <SelectItem value="紧急">紧急</SelectItem>
-              <SelectItem value="高">高</SelectItem>
-              <SelectItem value="中">中</SelectItem>
-              <SelectItem value="低">低</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="urgent">紧急</SelectItem>
+              <SelectItem value="high">高</SelectItem>
+              <SelectItem value="normal">中</SelectItem>
+              <SelectItem value="low">低</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -104,13 +103,13 @@ export function PurchasePlanFilters({
           <Select value={status} onValueChange={(v) => onStatusChange(v)}>
             <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="全部">全部</SelectItem>
-              <SelectItem value="草稿">草稿</SelectItem>
-              <SelectItem value="待审批">待审批</SelectItem>
-              <SelectItem value="已通过">已通过</SelectItem>
-              <SelectItem value="采购中">采购中</SelectItem>
-              <SelectItem value="已完成">已完成</SelectItem>
-              <SelectItem value="已取消">已取消</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="draft">草稿</SelectItem>
+              <SelectItem value="pending">待审批</SelectItem>
+              <SelectItem value="approved">已通过</SelectItem>
+              <SelectItem value="purchasing">采购中</SelectItem>
+              <SelectItem value="completed">已完成</SelectItem>
+              <SelectItem value="cancelled">已取消</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -119,9 +118,9 @@ export function PurchasePlanFilters({
           <Select value={alertFilter} onValueChange={(v) => onAlertFilterChange(v)}>
             <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="全部">全部</SelectItem>
-              <SelectItem value="已逾期">已逾期</SelectItem>
-              <SelectItem value="即将到期">即将到期</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="overdue">已逾期</SelectItem>
+              <SelectItem value="warning">即将到期</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -6,56 +6,13 @@
 import React from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
-import type { PurchasePlan, PurchasePlanItem } from '@/types/purchase';
+import type { PurchasePlan } from '@/types/purchase';
+import { MaterialItemsTable } from './MaterialItemsTable';
 
 interface PlanDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedPlanDetail: PurchasePlan | null;
-}
-
-/**
- * 物料明细表格组件
- */
-function MaterialItemsTable({ items }: { items: PurchasePlanItem[] }) {
-  return (
-    <div className="overflow-auto max-h-80 rounded-lg border border-gray-300 bg-white">
-      <table className="text-sm" style={{ minWidth: '1600px' }}>
-        <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white sticky top-0">
-          <tr>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">物料编码</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">物料名称</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">分类</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">规格型号</th>
-            <th className="px-4 py-2.5 text-center font-semibold whitespace-nowrap">单位</th>
-            <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">数量</th>
-            <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">预估单价</th>
-            <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">预估总价</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">供应商</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">用途说明</th>
-            <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">备注</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {items.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2.5 text-gray-600 font-mono whitespace-nowrap">{item.materialCode || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-900 font-medium whitespace-nowrap">{item.materialName || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{item.category || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{item.specification || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-600 text-center whitespace-nowrap">{item.unit || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-900 text-right font-medium whitespace-nowrap">{item.quantity || 0}</td>
-              <td className="px-4 py-2.5 text-gray-600 text-right whitespace-nowrap">¥{(item.estimatedPrice || 0).toFixed(2)}</td>
-              <td className="px-4 py-2.5 text-gray-900 text-right font-medium whitespace-nowrap">¥{(item.estimatedTotalPrice || 0).toLocaleString()}</td>
-              <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{item.supplier || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{item.purpose || '-'}</td>
-              <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{item.remark || '-'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 /**
@@ -128,8 +85,10 @@ export function PlanDetailModal({
       { label: '物料明细', value: (
         <div className="w-full">
           {selectedPlanDetail.items && selectedPlanDetail.items.length > 0 ? (
-            <div className="mt-1">
-              <MaterialItemsTable items={selectedPlanDetail.items} />
+            <div className="mt-1 overflow-auto max-h-80 rounded-lg border border-gray-300 bg-white">
+              <div style={{ minWidth: '1600px' }}>
+                <MaterialItemsTable items={selectedPlanDetail.items} />
+              </div>
             </div>
           ) : (
             <span className="text-gray-400">暂无物料明细</span>
