@@ -360,6 +360,20 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 7.0 为 dictionaries 表添加 display_name 字段（与 dict_label 分离，用于显示描述）
+  try {
+    db.run(`ALTER TABLE dictionaries ADD COLUMN display_name TEXT`);
+    console.log('✓ dictionaries 表添加 display_name 列');
+    // 同步已有数据：display_name 初始值 = dict_label
+    db.run(`UPDATE dictionaries SET display_name = dict_label WHERE display_name IS NULL OR display_name = ''`);
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• dictionaries.display_name 列已存在');
+    } else {
+      console.log('• dictionaries.display_name:', e.message);
+    }
+  }
+
   // 7.1 为 notification_rules 表添加 conditions 列（basicData.ts 查询需要）
   try {
     db.run(`ALTER TABLE notification_rules ADD COLUMN conditions TEXT`);

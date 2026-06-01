@@ -420,6 +420,7 @@ export default function DictionaryManagement() {
                                       <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-left text-white">
                                         <th className="py-1.5 pl-3 font-medium">编码</th>
                                         <th className="py-1.5 text-center font-medium">名称</th>
+                                        <th className="py-1.5 text-center font-medium">显示名称</th>
                                         <th className="py-1.5 text-center font-medium">排序</th>
                                         <th className="py-1.5 text-center font-medium">状态</th>
                                         <th className="py-1.5 pr-2 text-right font-medium">操作</th>
@@ -433,6 +434,9 @@ export default function DictionaryManagement() {
                                           </td>
                                           <td className="py-1 text-center">
                                             <span className="text-gray-900 truncate block font-bold">{item.name}</span>
+                                          </td>
+                                          <td className="py-1 text-center">
+                                            <span className="text-gray-600 truncate block">{(item as any).displayName || item.name}</span>
                                           </td>
                                           <td className="py-1 text-center text-gray-500">
                                             {item.sortNumber || 0}
@@ -528,23 +532,39 @@ export default function DictionaryManagement() {
                   value={editingItem.code || ''}
                   onChange={(e) => setEditingItem({ ...editingItem, code: e.target.value })}
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：active"
-                  disabled={!isNewItem || !!editingItem.id}
+                  placeholder="例如：exempt / quick / standard"
                 />
               </div>
 
-              {/* 名称 */}
+              {/* 名称 - 阈值分类下显示为"金额值(元)" */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  名称 <span className="text-red-500">*</span>
+                  {editingItem.category === 'amount_threshold' ? '金额值(元)' : '名称'} <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
+                  type={editingItem.category === 'amount_threshold' ? 'number' : 'text'}
                   value={editingItem.name || ''}
                   onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                   className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="例如：启用"
+                  placeholder={editingItem.category === 'amount_threshold' ? '例如：500（仅填数字）' : '例如：启用'}
                   autoFocus
+                />
+                {editingItem.category === 'amount_threshold' && (
+                  <p className="text-xs text-amber-600 mt-1">⚠ 这是审批金额阈值，填数字（元）</p>
+                )}
+              </div>
+
+              {/* 显示名称（含义说明） */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  显示名称 <span className="text-gray-400 text-xs">（含义说明，不影响功能）</span>
+                </label>
+                <input
+                  type="text"
+                  value={(editingItem as any).displayName || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, displayName: e.target.value } as any)}
+                  className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="例如：500元以下自动通过"
                 />
               </div>
 
