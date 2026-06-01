@@ -21,6 +21,10 @@ import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { getVarietyByCode } from '../../services/cropVarietyService';
 // 使用 import type 确保类型导入在编译时被擦除
 import type { TechSolution } from '../../types/techSolution';
+import { TechSolutionHeader } from './Header';
+import { TechSolutionFilters, type TechSolutionFiltersValue } from './TechSolutionFilters';
+import { TechSolutionTable, type TechSolutionTableHandlers } from './TechSolutionTable';
+import { ExportFormatModal } from './ExportFormatModal';
 
 // re-export 保持向后兼容（type-only re-export 编译时被擦除）
 export type { TechSolution };
@@ -596,90 +600,131 @@ export function TechSolutionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <FileCode className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">技术方案列表</h1>
-            <p className="text-gray-500">种植技术方案的管理与发布</p>
-          </div>
-        </div>
-      </div>
+      <TechSolutionHeader />
 
-      <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[180px]">
-            <Label>方案编号</Label>
-            <UIInput
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="请输入方案编号"
-            />
-          </div>
-          <div className="min-w-[150px]">
-            <Label>作物</Label>
-            <UISelect value={cropFilter} onValueChange={(v) => setCropFilter(v)}>
-              <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="全部">全部</SelectItem>
-                {/* 从已加载数据动态提取作物品种，避免硬编码 */}
-                {Array.from(new Set(techSolutions.map(t => t.crop).filter(Boolean))).map(crop => (
-                  <SelectItem key={crop} value={crop}>{crop}</SelectItem>
-                ))}
-              </SelectContent>
-            </UISelect>
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <Label>编制人</Label>
-            <UIInput
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="请输入编制人"
-            />
-          </div>
-          <div className="min-w-[150px]">
-            <Label>状态</Label>
-            <UISelect value={status} onValueChange={(v) => setStatus(v)}>
-              <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="全部">全部</SelectItem>
-                <SelectItem value="已发布">已发布</SelectItem>
-                <SelectItem value="草稿">草稿</SelectItem>
-                <SelectItem value="审核中">审核中</SelectItem>
-              </SelectContent>
-            </UISelect>
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <Label>开始日期</Label>
-            <UIInput
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <Label>结束日期</Label>
-            <UIInput
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="default" size="sm" onClick={handleSearch}>
-              <Search className="w-4 h-4" />
-              搜索
-            </Button>
-            <Button variant="default" size="sm" onClick={handleReset}>
-              重置
-            </Button>
-          </div>
-        </div>
-      </div>
+      <TechSolutionFilters
+        value={{
+          code,
+          crop: cropFilter,
+          author,
+          status,
+          startDate,
+          endDate,
+        }}
+        crops={Array.from(new Set(techSolutions.map((t) => t.crop).filter(Boolean)))}
+        onChange={(field, value) => {
+          switch (field) {
+            case 'code': setCode(value); break;
+            case 'crop': setCropFilter(value); break;
+            case 'author': setAuthor(value); break;
+            case 'status': setStatus(value); break;
+            case 'startDate': setStartDate(value); break;
+            case 'endDate': setEndDate(value); break;
+          }
+        }}
+        onSearch={handleSearch}
+        onReset={handleReset}
+      />
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <TechSolutionTable
+        techSolutions={filteredTechSolutions.slice(
+          (currentPage - 1) * pageSize,
+          currentPage * pageSize
+        )}
+        selectedRows={selectedRows}
+        exportMode={exportMode}
+        batchEditMode={batchEditMode}
+        batchDeleteMode={batchDeleteMode}
+        canCreate={canCreate}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canExport={canExport}
+        getDictItemName={getDictItemName}
+        handlers={{
+          onViewClick: handleViewClick,
+          onTitleClick: handleTitleClick,
+          onEditClick: handleEditClick,
+          onDeleteClick: (tech) => {
+            setSelectedRows([tech.id]);
+            setShowDeleteModal(true);
+          },
+          onSelectAll: handleSelectAll,
+          onSelectRow: handleSelectRow,
+          onOpenCreate: handleOpenCreateModal,
+          onEnterBatchEdit: () => {
+            setBatchEditMode(true);
+            setSelectedRows([]);
+          },
+          onEnterBatchDelete: () => {
+            setBatchDeleteMode(true);
+            setSelectedRows([]);
+          },
+          onEnterExport: handleExportClick,
+          onConfirmExport: () => setShowExportModal(true),
+          onCancelExport: handleCancelExport,
+          onConfirmBatchEdit: () => {
+            if (selectedRows.length === 0) {
+              showAlert('请先选择要编辑的数据');
+              return;
+            }
+            const selectedTechsData = techSolutions.filter((t) => selectedRows.includes(t.id));
+            if (selectedTechsData.length > 0) {
+              setSelectedTechCode(selectedTechsData[0].code);
+            }
+            setEditedTechCodes([]);
+            setEditedTechs({});
+            setShowBatchEditModal(true);
+          },
+          onCancelBatchEdit: () => {
+            setBatchEditMode(false);
+            setSelectedRows([]);
+          },
+          onConfirmBatchDelete: () => {
+            if (selectedRows.length === 0) {
+              showAlert('请先选择要删除的数据');
+              return;
+            }
+            setShowDeleteModal(true);
+          },
+          onCancelBatchDelete: () => {
+            setBatchDeleteMode(false);
+            setSelectedRows([]);
+          },
+          onDownloadDetail: (tech) => {
+            const fileName = tech.planDetailFileName!;
+            const isDocx = fileName.endsWith('.docx');
+            const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${getDictItemName('planting_mode', tech.plantingMode)}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
+            const blob = new Blob([content], {
+              type: isDocx
+                ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                : 'text/markdown',
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          },
+        }}
+      />
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredTechSolutions.length / pageSize) || 1}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+          showPageSize={true}
+        />
+      </div>
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">技术方案列表</h3>
           {exportMode || batchEditMode || batchDeleteMode ? (
@@ -778,149 +823,6 @@ export function TechSolutionPage() {
             </div>
           )}
         </div>
-        {!dictReady ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-500">正在加载字典数据...</div>
-          </div>
-        ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <tr>
-                {(exportMode || batchEditMode || batchDeleteMode) && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
-                  <Checkbox
-                    checked={selectedRows.length === filteredTechSolutions.length && filteredTechSolutions.length > 0}
-                    onCheckedChange={() => handleSelectAll()}
-                  />
-                </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">关联生产计划批次</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案标题</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">适用范围</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">版本</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">编制人</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案是否有效</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">备注</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">方案详情文件</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
-              {filteredTechSolutions.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tech) => (
-                <tr key={tech.id} className="hover:bg-blue-100 transition-colors">
-                  {(exportMode || batchEditMode || batchDeleteMode) && (
-                    <td className="px-4 py-3">
-                      <Checkbox
-                        checked={selectedRows.includes(tech.id)}
-                        onCheckedChange={() => handleSelectRow(tech.id)}
-                      />
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap">
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" onClick={() => handleViewClick(tech)}>{tech.code}</Button>
-                </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{tech.relatedBatchCode || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap">
-                  <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-900" onClick={() => handleTitleClick(tech)}>{tech.title}</Button>
-                </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.crop}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getDictItemName('planting_mode', tech.plantingMode)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.stage}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.createDate}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      tech.status === '已发布' ? 'bg-green-100 text-green-700' :
-                      tech.status === '待审批' ? 'bg-amber-100 text-amber-700' :
-                      tech.status === '已拒绝' ? 'bg-red-100 text-red-700' :
-                      tech.status === '已作废' ? 'bg-gray-300 text-gray-600' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {tech.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      tech.isValid === '作废' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {tech.isValid || '有效'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={tech.remarks}>
-                    {tech.remarks || '-'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center gap-1">
-                      {tech.isValid !== '作废' && (
-                        <>
-                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 p-1" title="编辑" onClick={() => handleEditClick(tech)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 p-1" title="删除" onClick={() => {
-                            setSelectedRows([tech.id]);
-                            setShowDeleteModal(true);
-                          }}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                      {tech.isValid === '作废' && (
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 p-1" title="删除" onClick={() => {
-                          setSelectedRows([tech.id]);
-                          setShowDeleteModal(true);
-                        }}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    {tech.planDetailFileName ? (
-                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载方案详情" onClick={() => {
-                        // 下载方案详情文件
-                        const fileName = tech.planDetailFileName!;
-                        const isDocx = fileName.endsWith('.docx');
-                        const content = `# ${tech.title}\n\n方案编号：${tech.code}\n作物品种：${tech.crop}\n种植模式：${getDictItemName('planting_mode', tech.plantingMode)}\n适用范围：${tech.stage}\n版本：${tech.version}\n编制人：${tech.author}\n创建日期：${tech.createDate}\n\n---方案内容---\n${tech.content}`;
-                        const blob = new Blob([content], {
-                          type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
-                        });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                      }}>
-                        {tech.planDetailFileName}
-                      </Button>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {exportMode && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                  {selectedRows.length === techSolutions.length ? '全不选' : '全选'}
-                </Button>
-                <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              </div>
-            </div>
-          )}
-        </div>
-        )}
-      </div>
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100 rounded-b-xl">
@@ -1707,50 +1609,14 @@ export function TechSolutionPage() {
       </Modal>
 
       {/* Export Format Modal */}
-      <Modal
+      <ExportFormatModal
         isOpen={showExportModal}
+        selectedCount={selectedRows.length}
+        selectedFormat={exportFormat}
         onClose={() => setShowExportModal(false)}
-        title="选择导出格式"
-        size="sm"
-        onSubmit={handleConfirmExport}
-        submitText="导出"
-        cancelText="取消"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">已选择 {selectedRows.length} 条数据</p>
-          <div className="space-y-3">
-            {[
-              { value: 'excel', label: 'Excel (.xlsx)', desc: '适用于数据分析和处理' },
-              { value: 'csv', label: 'CSV (.csv)', desc: '适用于数据交换' },
-              { value: 'word', label: 'Word (.docx)', desc: '适用于文档编辑和分享' },
-            ].map((format) => (
-              <div
-                key={format.value}
-                onClick={() => setExportFormat(format.value)}
-                className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                  exportFormat === format.value
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  exportFormat === format.value
-                    ? 'border-emerald-500'
-                    : 'border-gray-400'
-                }`}>
-                  {exportFormat === format.value && (
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  )}
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">{format.label}</p>
-                  <p className="text-xs text-gray-500">{format.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Modal>
+        onFormatChange={setExportFormat}
+        onConfirm={handleConfirmExport}
+      />
     </div>
   );
 }
