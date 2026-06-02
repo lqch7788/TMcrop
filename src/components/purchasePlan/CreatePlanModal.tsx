@@ -1,15 +1,15 @@
 /**
  * 采购计划创建弹窗组件
  */
-import React, { useRef } from 'react';
-import { Plus, Trash2, Upload, RefreshCw } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Plus, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Modal, FormField } from '../ui/Modal';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
-import { usePlantingStore } from '../../stores';
+import { usePlantingStore, useDictionaryStore } from '../../stores';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
 
@@ -77,6 +77,9 @@ export function CreatePlanModal({
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 审批规则说明折叠状态（默认折叠）
+  const [showApprovalRules, setShowApprovalRules] = useState(false);
 
   // 字典：从 store 动态加载（字段名以实际 store 定义为准）
   const plantingItems = safeArray(usePlantingStore((s: any) => s.items));
@@ -214,6 +217,73 @@ export function CreatePlanModal({
     }
   };
 
+  // 动态读取字典 amount_threshold（数据源：基础数据→字典管理→amount_threshold）
+  // 直接绕过 store 缓存，每次弹窗打开都从 API 拉最新数据
+  const loadDictionaries = useDictionaryStore((s: any) => s.loadDictionaries);
+  const [amountThresholdsRaw, setAmountThresholdsRaw] = React.useState<any[]>([]);
+  const [thresholdsLoading, setThresholdsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    setThresholdsLoading(true);
+    (async () => {
+      try {
+        const { getDictionaries } = await import('../../services/dictionaryService');
+        const all = await getDictionaries('amount_threshold');
+        setAmountThresholdsRaw(all);
+      } catch (err) {
+        console.error('读取金额阈值字典失败:', err);
+        if (loadDictionaries) await loadDictionaries();
+      } finally {
+        setThresholdsLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // 按 sortOrder 升序排列阈值，映射为 {maxAmount, displayName, level}
+  const amountThresholds = React.useMemo(() => {
+    const items = amountThresholdsRaw
+      .filter((d: any) => (d.status === 'active' || !d.status))
+      .sort((a: any, b: any) => (a.sortNumber || 0) - (b.sortNumber || 0));
+    return items.map((d: any, idx: number) => {
+      const maxAmount = Number(d.name) || 0;
+      // 优先用 displayName（后端 display_name 映射）
+      const displayName = d.displayName || d.name || '';
+      return { maxAmount, displayName, sortOrder: idx };
+    });
+  }, [amountThresholdsRaw]);
+
+  // 阈值列表（语义：每档 = 金额 ≥ 本档 maxAmount，区间叠加到下一档）
+  // 例：1000/5000/10000/50000 → 4 档分别匹配 [0,1000)/[1000,5000)/[5000,10000)/[10000,∞)
+  const thresholdDisplay = React.useMemo(() => {
+    const list: { max: string; label: string; color: string }[] = [];
+    const colorMap = ['green', 'amber', 'orange', 'red']; // exempt/quick/standard/strict
+    if (amountThresholds.length === 0) return list;
+    amountThresholds.forEach((t, i) => {
+      const isLast = i === amountThresholds.length - 1;
+      const range = isLast
+        ? `金额 ≥ ${t.maxAmount.toLocaleString()} 元`
+        : i === 0
+          ? `金额 < ${t.maxAmount.toLocaleString()} 元`
+          : `金额 ${amountThresholds[i - 1].maxAmount.toLocaleString()} ~ ${t.maxAmount.toLocaleString()} 元`;
+      const color = colorMap[i] || 'gray';
+      const colorClass = {
+        green: 'text-green-700',
+        amber: 'text-amber-700',
+        orange: 'text-orange-700',
+        red: 'text-red-700',
+        gray: 'text-gray-700',
+      }[color];
+      // 优先使用字典里配置的 displayName，否则兜底为"需相应审批"
+      const label = t.displayName && t.displayName.trim() && t.displayName !== String(t.maxAmount)
+        ? t.displayName
+        : '需相应审批';
+      list.push({ max: range, label, color: colorClass });
+    });
+    return list;
+  }, [amountThresholds]);
+
   return (
     <Modal
       isOpen={isOpen}
@@ -350,8 +420,6 @@ export function CreatePlanModal({
               </SelectContent>
             </Select>
           </FormField>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
           <FormField label="备注">
             <Input
               value={createForm.remark || ''}
@@ -364,6 +432,37 @@ export function CreatePlanModal({
 
         {/* 物料明细区域 */}
         <div className="border-t border-gray-300 pt-4 mt-4">
+          {/* 审批规则提示：金额阈值说明（数据源：基础数据→字典→amount_threshold，动态读取） */}
+          <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 leading-relaxed overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowApprovalRules(v => !v)}
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-blue-100/50 transition-colors"
+            >
+              <span className="flex items-center gap-1 font-medium">
+                <span>📋</span>
+                <span>采购金额审批规则</span>
+              </span>
+              {showApprovalRules
+                ? <ChevronUp className="w-4 h-4 text-blue-600" />
+                : <ChevronDown className="w-4 h-4 text-blue-600" />}
+            </button>
+            {showApprovalRules && (
+              <div className="px-3 pb-3 border-t border-blue-200/60">
+                <div className="pt-2">总金额 = 物料明细「数量 × 单价」之和。规则如下：</div>
+                {thresholdDisplay.length > 0 ? (
+                  <ul className="mt-1 ml-3 space-y-0.5">
+                    {thresholdDisplay.map((t, i) => (
+                      <li key={i}>• {t.max} → <span className={`font-semibold ${t.color}`}>{t.label}</span></li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-1 text-blue-600">阈值未配置，请联系管理员</div>
+                )}
+                <div className="mt-1 text-blue-600">阈值可在「基础数据 → 字典管理 → amount_threshold」分类下调整</div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-gray-800">物料明细（{createItems.length}种物料）</h4>
             <div className="flex items-center gap-2">
