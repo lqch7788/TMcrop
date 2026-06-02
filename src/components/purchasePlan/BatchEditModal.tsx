@@ -12,7 +12,7 @@ import { UserSelect } from '../common/settings/UserSelect';
 import { useUserStore, useDictionaryStore, usePlantingStore } from '../../stores';
 import { MaterialItemsTable } from './MaterialItemsTable';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
-import { PURCHASE_EXECUTION_STATUS_OPTIONS } from '../../types/purchase';
+import { PURCHASE_EXECUTION_STATUS_OPTIONS, PURCHASE_TYPE_TEXT } from '../../types/purchase';
 
 const safeArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : [];
 
@@ -24,11 +24,16 @@ interface BatchEditModalProps {
   selectedRows: string[];
   selectedPlanCode: string;
   currentEditingPlan: PurchasePlan | null;
-  // 编辑数据
+  // 编辑数据（与 CreatePlanModal 字段保持一致）
   batchEditData: {
     purchaseType: string;
-    priority: string;
+    relatedBatchCode: string;
+    otherBatchReason: string;
+    applicant: string;
+    applicantDepartment: string;
+    applyDate: string;
     requiredDate: string;
+    priority: string;
     remark: string;
     executionStatus: string;
   };
@@ -194,13 +199,25 @@ export function BatchEditModal({
     [plantingItems]
   );
 
+  // 采购类型选项（与 CreatePlanModal 完全一致）
+  const purchaseTypeOptions = React.useMemo(
+    () => Object.entries(PURCHASE_TYPE_TEXT).map(([value, label]) => ({ value, label })),
+    []
+  );
+
   // 选择采购计划时的处理
   const handlePlanSelect = (plan: PurchasePlan) => {
     onSelectedPlanCodeChange(plan.purchaseApplicationCode);
     onCurrentEditingPlanChange(plan);
+    // 同步所有字段（与 CreatePlanModal 保持一致）
     onBatchEditDataChange('purchaseType', plan.purchaseType);
-    onBatchEditDataChange('priority', plan.priority);
+    onBatchEditDataChange('relatedBatchCode', plan.relatedBatchCode || '');
+    onBatchEditDataChange('otherBatchReason', (plan as any).otherBatchReason || '');
+    onBatchEditDataChange('applicant', plan.applicant || '');
+    onBatchEditDataChange('applicantDepartment', plan.applicantDepartment || '');
+    onBatchEditDataChange('applyDate', plan.applyDate || '');
     onBatchEditDataChange('requiredDate', plan.requiredDate || '');
+    onBatchEditDataChange('priority', plan.priority);
     onBatchEditDataChange('remark', plan.remark || '');
     onBatchEditDataChange('executionStatus', plan.executionStatus || 'pending_execution');
     onBatchEditItemsChange(plan.items || []);
@@ -252,7 +269,7 @@ export function BatchEditModal({
             />
           </div>
 
-          {/* 编辑表单 - 紧凑布局 2-3列 */}
+          {/* 编辑表单 - 紧凑布局 2-3列，字段与 CreatePlanModal 完全一致 */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {/* 第1行：采购申请批次号（只读）+ 采购类型 + 关联生产批次号 */}
             <div className="bg-gray-50 rounded-lg p-3">
@@ -267,23 +284,20 @@ export function BatchEditModal({
               >
                 <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="production">生产物资采购</SelectItem>
-                  <SelectItem value="urgent">紧急采购</SelectItem>
-                  <SelectItem value="routine">常规采购</SelectItem>
-                  <SelectItem value="material">通用物资</SelectItem>
-                  <SelectItem value="safety">劳保用品</SelectItem>
-                  <SelectItem value="equipment">设备采购</SelectItem>
-                  <SelectItem value="other">其他</SelectItem>
+                  {purchaseTypeOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-xs text-gray-700">关联生产批次号</Label>
               <Select
-                value={currentEditingPlan?.relatedBatchCode || ''}
+                value={batchEditData.relatedBatchCode || ''}
                 onValueChange={(v) => {
-                  if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, relatedBatchCode: v });
+                  onBatchEditDataChange('relatedBatchCode', v);
+                  if (v !== 'other') {
+                    onBatchEditDataChange('otherBatchReason', '');
                   }
                 }}
               >
@@ -293,9 +307,23 @@ export function BatchEditModal({
                   {batchOptions.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
+                  <SelectItem value="other">其他</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 第1.5行：其他说明（仅当关联批次=其他时显示） */}
+            {batchEditData.relatedBatchCode === 'other' && (
+              <div className="md:col-span-3">
+                <Label className="text-xs text-gray-700">其他说明</Label>
+                <Input
+                  value={batchEditData.otherBatchReason || ''}
+                  onChange={(e) => onBatchEditDataChange('otherBatchReason', e.target.value)}
+                  placeholder="请说明采购原因，如：日常用具、劳保用品等"
+                  className={deepInputClass}
+                />
+              </div>
+            )}
 
             {/* 第2行：申请人 + 申请部门 + 需求日期 */}
             <div>
@@ -320,12 +348,8 @@ export function BatchEditModal({
             <div>
               <Label className="text-xs text-gray-700">申请部门</Label>
               <Select
-                value={currentEditingPlan?.applicantDepartment || ''}
-                onValueChange={(v) => {
-                  if (currentEditingPlan) {
-                    onCurrentEditingPlanChange({ ...currentEditingPlan, applicantDepartment: v });
-                  }
-                }}
+                value={batchEditData.applicantDepartment || ''}
+                onValueChange={(v) => onBatchEditDataChange('applicantDepartment', v)}
               >
                 <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
                 <SelectContent>
@@ -335,6 +359,17 @@ export function BatchEditModal({
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label className="text-xs text-gray-700">申请日期</Label>
+              <Input
+                type="date"
+                value={batchEditData.applyDate}
+                onChange={(e) => onBatchEditDataChange('applyDate', e.target.value)}
+                className={deepInputClass}
+              />
+            </div>
+
+            {/* 第3行：需求日期（独占一行更突出） */}
             <div>
               <Label className="text-xs text-gray-700">需求日期</Label>
               <Input
@@ -378,11 +413,9 @@ export function BatchEditModal({
             <div className="bg-gray-50 rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1">状态</div>
               <div className={`text-sm font-medium ${
-                currentEditingPlan?.status === 'completed' ? 'text-green-600' :
-                currentEditingPlan?.status === 'purchasing' ? 'text-purple-600' :
+                currentEditingPlan?.status === 'rejected' ? 'text-red-600' :
                 currentEditingPlan?.status === 'pending' ? 'text-amber-600' :
                 currentEditingPlan?.status === 'approved' ? 'text-blue-600' :
-                currentEditingPlan?.status === 'cancelled' ? 'text-red-600' :
                 'text-gray-600'
               }`}>
                 {currentEditingPlan?.statusText || '-'}

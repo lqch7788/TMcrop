@@ -77,6 +77,7 @@ export interface CreatePurchasePlanInput {
   items?: PurchasePlanItemInput[];
   totalAmount?: number;
   executionStatus?: string; // 采购执行状态（4 档白名单校验在 updateExecutionStatus）
+  otherBatchReason?: string; // 关联批次=其他时的说明
 }
 
 /** 更新采购计划入参（部分字段） */
@@ -174,8 +175,10 @@ const FIELD_MAP: Record<string, string> = {
   executionStatus: 'execution_status',
   remarks: 'remarks',
   remark: 'remarks',
-  relatedBatchCode: 'related_batch_code',
+  otherBatchReason: 'otherBatchReason',
+  applicant: 'applicant_name',  // 前端字段名 applicant → 实际列 applicant_name
   approvalPerson: 'approval_person',
+  relatedBatchCode: 'related_batch_code',
   createBy: 'create_by',
   createTime: 'create_time',
   updateTime: 'update_time',
@@ -513,8 +516,9 @@ export class PurchasePlanService {
           supplier_id, supplier_name, total_amount,
           priority, status, approval_status,
           remarks, attachments, items, related_batch_code, approval_person, create_by,
+          execution_status, otherBatchReason,
           create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           newId,
           planCode,
@@ -538,6 +542,8 @@ export class PurchasePlanService {
           input.relatedBatchCode || '',
           input.approvalPerson || '',
           input.applicant,
+          input.executionStatus || 'pending_execution',
+          input.otherBatchReason || '',
           nowIso,
           nowIso,
         ]
