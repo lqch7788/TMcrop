@@ -162,6 +162,7 @@ export function PurchasePlanPage() {
     priority: '',
     requiredDate: '',
     remark: '',
+    executionStatus: '',
   });
   const [batchEditItems, setBatchEditItems] = useState<PurchasePlanItem[]>([]);
 
@@ -642,6 +643,7 @@ export function PurchasePlanPage() {
       priority: plan.priority,
       requiredDate: plan.requiredDate || '',
       remark: plan.remark || '',
+      executionStatus: plan.executionStatus || 'pending_execution',
     });
     setBatchEditItems(plan.items || []);
     setEditedPlanCodes([]);
@@ -714,6 +716,7 @@ export function PurchasePlanPage() {
         priority: batchEditData.priority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
+        executionStatus: batchEditData.executionStatus,
         applicantId: currentEditingPlan.applicantId,
         applicantName,
         applicantDepartment: currentEditingPlan.applicantDepartment,
@@ -752,6 +755,7 @@ export function PurchasePlanPage() {
         priority: nextPlan.priority,
         requiredDate: nextPlan.requiredDate || '',
         remark: nextPlan.remark || '',
+        executionStatus: nextPlan.executionStatus || 'pending_execution',
       });
       setBatchEditItems(nextPlan.items || []);
       await showAlert(`已保存 ${currentCode}，已切到 ${nextCode}`);
@@ -783,6 +787,7 @@ export function PurchasePlanPage() {
         priority: batchEditData.priority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
+        executionStatus: batchEditData.executionStatus,
         applicantId: currentEditingPlan.applicantId,
         applicantName: applicantName,
         applicantDepartment: currentEditingPlan.applicantDepartment,

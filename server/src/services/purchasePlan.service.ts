@@ -76,6 +76,7 @@ export interface CreatePurchasePlanInput {
   attachments?: unknown[];
   items?: PurchasePlanItemInput[];
   totalAmount?: number;
+  executionStatus?: string; // 采购执行状态（4 档白名单校验在 updateExecutionStatus）
 }
 
 /** 更新采购计划入参（部分字段） */
