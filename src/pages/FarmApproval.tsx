@@ -200,20 +200,21 @@ export default function FarmApproval() {
       {/* Tab切换 */}
       <div className="bg-white rounded-xl p-1 inline-flex shadow-sm">
         {tabs.map(tab => (
-          <Button
+          <button
             key={tab.key}
-            onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
-            variant={activeTab === tab.key ? 'default' : 'ghost'}
-            size="sm"
-            className={`flex items-center gap-2 ${
-              activeTab !== tab.key
-                ? 'text-gray-600'
-                : ''
+            onClick={() => {
+              setActiveTab(tab.key);
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              activeTab === tab.key
+                ? 'bg-emerald-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
-          </Button>
+          </button>
         ))}
       </div>
 

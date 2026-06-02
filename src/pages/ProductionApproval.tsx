@@ -39,7 +39,7 @@ export default function ProductionApproval() {
   }, []); // 只在挂载时加载一次
 
   const [activeTab, setActiveTab] = useState<
-    'tech' | 'plan' | 'purchase' | 'batch' | 'batch_change' | 'batch_void' | 'harvest'
+    'tech' | 'plan' | 'purchase' | 'harvest'
   >('plan');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('全部');
@@ -142,9 +142,6 @@ export default function ProductionApproval() {
     { key: 'plan', label: '生产计划审批', icon: Calendar, path: '/production', types: [ApprovalType.PRODUCTION_PLAN] },
     { key: 'tech', label: '技术方案审批', icon: FileText, path: '/tech-solution', types: [ApprovalType.TECH_SOLUTION] },
     { key: 'purchase', label: '采购计划审批', icon: ShoppingCart, path: '/purchase-plan', types: [ApprovalType.PURCHASE_REQUEST] },
-    { key: 'batch', label: '生产批次审批', icon: Package, path: '/production', types: [ApprovalType.PRODUCTION_BATCH] },
-    { key: 'batch_change', label: '批次变更审批', icon: RefreshCw, path: '/production', types: [ApprovalType.BATCH_CHANGE] },
-    { key: 'batch_void', label: '批次作废审批', icon: XCircle, path: '/production', types: [ApprovalType.BATCH_VOID] },
     { key: 'harvest', label: '采收申请审批', icon: Warehouse, path: '/harvest', types: [ApprovalType.HARVEST_REQUEST] },
   ] as const;
 
