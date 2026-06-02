@@ -352,7 +352,8 @@ export function PurchasePlanTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      {plan.status !== 'completed' && plan.status !== 'purchasing' && (
+                      {/* 只在执行状态为"已完成"或"已取消"时禁用编辑/删除（视为归档） */}
+                      {plan.executionStatus !== 'completed' && plan.executionStatus !== 'cancelled' && (
                         <>
                           <Button
                             variant="ghost"
@@ -376,7 +377,7 @@ export function PurchasePlanTable({
                           </Button>
                         </>
                       )}
-                      {(plan.status === 'completed' || plan.status === 'purchasing') && (
+                      {(plan.executionStatus === 'completed' || plan.executionStatus === 'cancelled') && (
                         <span className="text-xs text-gray-400">已归档</span>
                       )}
                     </div>

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/Pagination';
 import type { Department } from '../services/apiBasicDataService';
 
@@ -70,7 +70,7 @@ function DepartmentModal({
   const parentOptions = departmentOptions.filter((d) => d.id !== editItem?.id && d.oid !== editItem?.oid);
 
   return (
-    <Modal isOpen={open} onClose={onClose} title={editItem ? '编辑部门' : '新增部门'}>
+    <Modal isOpen={open} onClose={onClose} title={editItem ? '编辑部门' : '新增部门'} size="xxxl">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -93,14 +93,19 @@ function DepartmentModal({
             <Label>上级部门</Label>
             <Select
               value={form.parentOid}
-              onChange={(e) => setForm((f) => ({ ...f, parentOid: e.target.value || '' }))}
+              onValueChange={(val) => setForm((f) => ({ ...f, parentOid: val || '' }))}
             >
-              <option value="">-- 无（顶级部门）--</option>
-              {parentOptions.map((d) => (
-                <option key={d.oid || d.id} value={d.oid}>
-                  {d.code} {d.name}
-                </option>
-              ))}
+              <SelectTrigger>
+                <SelectValue placeholder="-- 无（顶级部门）--" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">-- 无（顶级部门）--</SelectItem>
+                {parentOptions.map((d) => (
+                  <SelectItem key={d.oid || d.id} value={d.oid}>
+                    {d.code} {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div>
@@ -123,10 +128,15 @@ function DepartmentModal({
             <Label>状态</Label>
             <Select
               value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value || 'active' }))}
+              onValueChange={(val) => setForm((f) => ({ ...f, status: val || 'active' }))}
             >
-              <option value="active">启用</option>
-              <option value="inactive">停用</option>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">启用</SelectItem>
+                <SelectItem value="inactive">停用</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>

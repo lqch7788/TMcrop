@@ -629,8 +629,8 @@ export function PurchasePlanPage() {
 
   // 单条编辑处理
   const handleSingleEdit = (plan: PurchasePlan) => {
-    // 统一使用 canEditPurchasePlan 规则
-    if (!canEditPurchasePlan(plan)) {
+    // 按执行状态判断：completed/cancelled 视为归档
+    if (plan.executionStatus === 'completed' || plan.executionStatus === 'cancelled') {
       showAlert('该采购计划已归档，无法编辑');
       return;
     }
