@@ -350,6 +350,7 @@ export class PurchasePlanService {
       remarks: record.remarks || '',
       approvalPerson: record.approvalPerson || record.approval_person || '',
       approvalStatus: record.approvalStatus || record.approval_status || '',
+      executionStatus: record.executionStatus || record.execution_status || 'pending_execution',
       createdAt: record.createTime || record.create_time || '',
       updatedAt: record.updateTime || record.update_time || '',
       planCode: record.planCode || record.plan_code || '',
@@ -645,10 +646,10 @@ export class PurchasePlanService {
       }
 
       values.push(nowIso, id);
-      const sql = `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`;
-      console.log(`[DEBUG update] SQL: ${sql}`);
-      console.log(`[DEBUG update] VALUES: ${JSON.stringify(values)}`);
-      db.run(sql, values);
+      db.run(
+        `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`,
+        values
+      );
       saveDatabase();
 
       return this.getById(id);

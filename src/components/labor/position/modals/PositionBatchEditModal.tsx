@@ -1,4 +1,4 @@
-import type { Position } from '../PositionManagementPage';
+import type { Position } from '@/types';
 import { Button, UnifiedModal, NumberInput, Label } from '@/components/ui';
 import { useDepartmentStore } from '../../../../stores';
 
