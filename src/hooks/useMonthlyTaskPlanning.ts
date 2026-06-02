@@ -15,7 +15,9 @@ import { useCallback, useEffect } from 'react';
 import { CropBatch } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 import { useProductionPlanStore, useMonthlyPlanStore } from '../stores';
-import { COST_CONFIG } from '../data/costConfig';
+// 成本配置常量（从 costConfig 迁移）
+const TOOL_COST_RATIO = 0.15;
+const LABOR_RATE_PER_HOUR = 50;
 import { CROP_STAGE_TASK_CONFIG, DEFAULT_TASK_CONFIG } from '../data/cropStageTaskConfig';
 
 // ============================================
@@ -772,10 +774,10 @@ export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
     const materialCost = materialRequirements.reduce((sum, m) => sum + m.estimatedTotalPrice, 0);
 
     // 工具成本（按物资成本的比例估算磨损）
-    const toolCost = materialCost * COST_CONFIG.TOOL_COST_RATIO;
+    const toolCost = materialCost * TOOL_COST_RATIO;
 
     // 人工成本（按配置的人工费率计算）
-    const laborCost = tasks.reduce((sum, t) => sum + t.estimatedHours * COST_CONFIG.LABOR_RATE_PER_HOUR, 0);
+    const laborCost = tasks.reduce((sum, t) => sum + t.estimatedHours * LABOR_RATE_PER_HOUR, 0);
 
     return {
       materialCost: Math.round(materialCost * 100) / 100,
