@@ -3,13 +3,22 @@
  * 使用通用DetailModal组件统一样式
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
-import { Clock } from 'lucide-react';
+import { Clock, Edit2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { PurchasePlan } from '@/types/purchase';
+import {
+  PURCHASE_EXECUTION_STATUS_OPTIONS,
+  PURCHASE_EXECUTION_STATUS_STYLE,
+  PURCHASE_EXECUTION_STATUS_TEXT,
+  type PurchaseExecutionStatus,
+} from '@/types/purchase';
 import type { Approval } from '@/types/approval';
 import { MaterialItemsTable } from './MaterialItemsTable';
+import { showAlert } from '@/lib/dialogService';
+import { updateExecutionStatus as apiUpdateExecutionStatus } from '@/services/apiPurchasePlanService';
 
 interface PlanDetailModalProps {
   isOpen: boolean;
@@ -17,6 +26,8 @@ interface PlanDetailModalProps {
   selectedPlanDetail: PurchasePlan | null;
   /** 审批记录（可选） */
   approvalRecords?: Approval['records'];
+  /** 执行状态更新后回调（让列表刷新） */
+  onExecutionStatusChanged?: (updated: PurchasePlan) => void;
 }
 
 /**
@@ -61,8 +72,40 @@ export function PlanDetailModal({
   onClose,
   selectedPlanDetail,
   approvalRecords,
+  onExecutionStatusChanged,
 }: PlanDetailModalProps) {
+  const [editingExecStatus, setEditingExecStatus] = useState(false);
+  const [newExecStatus, setNewExecStatus] = useState<PurchaseExecutionStatus>('pending_execution');
+  const [saving, setSaving] = useState(false);
+
   if (!selectedPlanDetail) return null;
+
+  const currentExecStatus = (selectedPlanDetail.executionStatus || 'pending_execution') as PurchaseExecutionStatus;
+  const execStyle = PURCHASE_EXECUTION_STATUS_STYLE[currentExecStatus] || PURCHASE_EXECUTION_STATUS_STYLE.pending_execution;
+
+  const handleStartEditExec = () => {
+    setNewExecStatus(currentExecStatus);
+    setEditingExecStatus(true);
+  };
+
+  const handleSaveExecStatus = async () => {
+    if (newExecStatus === currentExecStatus) {
+      setEditingExecStatus(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await apiUpdateExecutionStatus(selectedPlanDetail.id, newExecStatus);
+      if (updated && onExecutionStatusChanged) {
+        onExecutionStatusChanged(updated);
+      }
+      setEditingExecStatus(false);
+    } catch (err) {
+      showAlert('更新执行状态失败: ' + (err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // 字段配置
   const fields: DetailField[][] = [
@@ -85,6 +128,49 @@ export function PlanDetailModal({
     [
       { label: '状态', value: <StatusBadge status={selectedPlanDetail.status} statusText={selectedPlanDetail.statusText} /> },
       { label: '备注', value: selectedPlanDetail.remark || '-' },
+    ],
+    [
+      {
+        label: '执行状态',
+        value: editingExecStatus ? (
+          <div className="flex items-center gap-2">
+            <Select
+              value={newExecStatus}
+              onValueChange={(v) => setNewExecStatus(v as PurchaseExecutionStatus)}
+              disabled={saving}
+            >
+              <SelectTrigger className="h-9 text-sm flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PURCHASE_EXECUTION_STATUS_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={handleSaveExecStatus} disabled={saving}>
+              {saving ? '保存中…' : '保存'}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setEditingExecStatus(false)} disabled={saving}>
+              取消
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${execStyle.bg} ${execStyle.text}`}>
+              {PURCHASE_EXECUTION_STATUS_TEXT[currentExecStatus] || '待执行'}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleStartEditExec}
+              title="修改执行状态"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ),
+      },
     ],
     [
       { label: '物料明细', value: (

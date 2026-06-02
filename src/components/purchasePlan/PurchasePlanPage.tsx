@@ -927,6 +927,11 @@ export function PurchasePlanPage() {
         }}
         selectedPlanDetail={selectedPlanDetail}
         approvalRecords={extractAllRecords(selectedPlanApprovals)}
+        onExecutionStatusChanged={(updated) => {
+          // 详情里改了执行状态 → 同步更新列表里的 selectedPlanDetail + 触发 fetchPlans
+          setSelectedPlanDetail(updated);
+          fetchPlans();
+        }}
       />
 
       {/* 删除确认弹窗 */}

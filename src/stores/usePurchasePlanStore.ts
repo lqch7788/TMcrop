@@ -38,6 +38,7 @@ interface PurchasePlanState {
   addPlan: (data: CreatePurchasePlanInput) => Promise<PurchasePlan>;
   updatePlan: (id: string, updates: UpdatePurchasePlanInput) => Promise<PurchasePlan | null>;
   deletePlan: (id: string) => Promise<boolean>;
+  updateExecutionStatus: (id: string, executionStatus: string) => Promise<PurchasePlan | null>;
   deletePlans: (ids: string[]) => Promise<{ deleted: number; skipped: { id: string; reason: string }[] }>;
 
   // 状态 Actions
@@ -88,6 +89,17 @@ export const usePurchasePlanStore = create<PurchasePlanState>()(
         set((state) => ({ plans: state.plans.filter((p) => p.id !== id) }));
       }
       return result;
+    },
+
+    updateExecutionStatus: async (id, executionStatus) => {
+      const { updateExecutionStatus: apiUpdate } = await import('../services/apiPurchasePlanService');
+      const updated = await apiUpdate(id, executionStatus);
+      if (updated) {
+        set((state) => ({
+          plans: state.plans.map((p) => (p.id === id ? updated : p)),
+        }));
+      }
+      return updated;
     },
 
     deletePlans: async (ids) => {
