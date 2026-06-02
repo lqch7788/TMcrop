@@ -25,11 +25,10 @@ const productionSections = [
   { icon: Package, label: '肥料库', path: '/settings/fertilizer-library', desc: '管理肥料信息、规格参数和供应商' },
 ];
 
-// 组3: 运营管理 — 仓库、班组、人事与权限
+// 组3: 运营管理 — 仓库、班组与权限
 const operationSections = [
   { icon: Warehouse, label: '仓库管理', path: '/settings/warehouse', desc: '仓库信息配置' },
   { icon: Users, label: '班组管理', path: '/settings/team', desc: '班组和班次管理' },
-  { icon: Users, label: '人事管理', path: '/settings/personnel', desc: '管理员工和职务' },
   { icon: Shield, label: '用户权限管理', path: '/settings/user-permission', desc: '组织架构 · 角色定义 · 权限矩阵 · 用户管理 · 权限覆盖' },
   { icon: GitBranch, label: '审批流程', path: '/settings/approval-workflow', desc: '审批流程配置' },
   { icon: Shield, label: '分级审批', path: '/settings/approval-level-config', desc: '金额阈值和审批级别配置' },
@@ -66,7 +65,7 @@ export default function Settings() {
       <SectionGroup title="生产配置" subtitle="作物与成本" sections={productionSections} />
 
       {/* 组3: 运营管理 */}
-      <SectionGroup title="运营管理" subtitle="仓库、班组、人事与权限" sections={operationSections} />
+      <SectionGroup title="运营管理" subtitle="仓库、班组与权限" sections={operationSections} />
 
       <div className="bg-white rounded-xl p-6 shadow-none border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-4">系统信息</h3>

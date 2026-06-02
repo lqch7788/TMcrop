@@ -88,13 +88,9 @@ import PesticideLibraryPage from './components/settings/pesticide-library/Pestic
 import PestDiseaseDictPage from './components/settings/pest-disease-dict/PestDiseaseDictPage';
 import FertilizerLibraryPage from './components/settings/fertilizer-library/FertilizerLibraryPage';
 
-import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
 import { StaffManagementPage } from './components/labor/personnel/StaffManagementPage';
 import PersonnelPage from './pages/labor/PersonnelPage';
-import PositionManagement from './pages/PositionManagement';
-import HrAttendance from './pages/HrAttendance';
-import HrApprovalDocuments from './pages/HrApprovalDocuments';
 import ParkArchive from './pages/ParkArchive';
 import Profile from './pages/Profile';
 import Leave from './pages/Leave';
@@ -252,12 +248,6 @@ function AppContent() {
             <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
           </Route>
-          <Route path="/settings/personnel" element={<PersonnelManagement />} />
-          <Route path="/settings/personnel/staff" element={<StaffManagementPage />} />
-          <Route path="/settings/personnel/position" element={<PositionManagement />} />
-          <Route path="/settings/personnel/attendance" element={<HrAttendance />} />
-          <Route path="/settings/personnel/hr-approval" element={<HrApproval />} />
-          <Route path="/settings/personnel/hr-documents" element={<HrApprovalDocuments />} />
         </Routes>
       </SimpleLayout>
     );
