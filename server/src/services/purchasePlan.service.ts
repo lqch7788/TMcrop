@@ -136,6 +136,14 @@ const PURCHASE_TYPE_TEXT: Record<string, string> = {
 /** 允许删除的状态集合（草稿/待审批/已拒绝） */
 const DELETABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'pending', 'rejected']);
 
+/** 采购执行状态白名单 */
+const EXECUTION_STATUSES: ReadonlySet<string> = new Set([
+  'pending_execution',  // 待执行
+  'purchasing',         // 采购中
+  'completed',          // 已完成
+  'cancelled',          // 已取消
+]);
+
 /** 允许编辑的状态集合（排除已审批、采购中、已完成、已取消） */
 const EDITABLE_STATUSES: ReadonlySet<string> = new Set(['draft', 'pending', 'rejected']);
 
@@ -162,6 +170,7 @@ const FIELD_MAP: Record<string, string> = {
   priority: 'priority',
   status: 'status',
   approvalStatus: 'approval_status',
+  executionStatus: 'execution_status',
   remarks: 'remarks',
   remark: 'remarks',
   relatedBatchCode: 'related_batch_code',
@@ -630,6 +639,35 @@ export class PurchasePlanService {
       return this.getById(id);
     } catch (error) {
       return { success: false, error: `更新采购计划失败: ${(error as Error).message}` };
+    }
+  }
+
+  /**
+   * 更新采购执行状态（4 档白名单校验）
+   */
+  async updateExecutionStatus(
+    id: string,
+    executionStatus: string
+  ): Promise<ServiceResult<Record<string, unknown>>> {
+    try {
+      if (!EXECUTION_STATUSES.has(executionStatus)) {
+        return { success: false, error: `无效的执行状态: ${executionStatus}` };
+      }
+      const db = getDatabase();
+      const existing = queryToObjects(db, 'SELECT id FROM purchase_plans WHERE id = ?', [id]);
+      if (existing.length === 0) {
+        return { success: false, error: '采购计划不存在' };
+      }
+      const now = new Date();
+      const nowIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
+      db.run(
+        'UPDATE purchase_plans SET execution_status = ?, update_time = ? WHERE id = ?',
+        [executionStatus, nowIso, id]
+      );
+      saveDatabase();
+      return this.getById(id);
+    } catch (error) {
+      return { success: false, error: `更新执行状态失败: ${(error as Error).message}` };
     }
   }
 

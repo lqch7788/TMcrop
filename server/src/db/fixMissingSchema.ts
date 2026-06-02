@@ -372,6 +372,17 @@ export async function fixMissingSchema(): Promise<void> {
       console.log('• purchase_plans 列添加失败:', e.message);
     }
   }
+  // 7.0.1 为 purchase_plans 表添加 execution_status 列（采购执行状态：待执行/采购中/已完成/已取消）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN execution_status TEXT DEFAULT 'pending_execution'`);
+    console.log('✓ purchase_plans 表添加 execution_status 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• purchase_plans.execution_status 列已存在');
+    } else {
+      console.log('• purchase_plans.execution_status:', e.message);
+    }
+  }
   try {
     db.run(`ALTER TABLE dictionaries ADD COLUMN display_name TEXT`);
     console.log('✓ dictionaries 表添加 display_name 列');

@@ -99,11 +99,13 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
   try {
     const now = new Date().toISOString();
     // 三重匹配：id / plan_code / requestCode
-    // 部分历史数据 requestId 跟 id/plan_code 都对不上，所以加一个最后的兜底：
-    // 如果 id 以 PA 开头，直接当 plan_code 用
     const matchIds: string[] = [id];
     if ((extra as any)?.requestCode) matchIds.push((extra as any).requestCode);
-    if (id.startsWith('PA')) matchIds.push(id); // requestId 本身就是 plan_code
+    if (id.startsWith('PA')) matchIds.push(id);
+
+    // 审批通过时，联动设置 execution_status = 'pending_execution'（待执行）
+    // 其它 action 不动 execution_status
+    const executionStatus = status === 'approved' ? 'pending_execution' : null;
 
     const stmt = db.prepare(`
       UPDATE purchase_plans SET
@@ -118,12 +120,16 @@ function updatePurchasePlan(db: any, id: string, status: string, approvalCode: s
     }
     stmt.free();
 
-    // 验证：SELECT 回查最近一次更新结果
-    const verifyStmt = db.prepare(`SELECT id, plan_code, status FROM purchase_plans WHERE id = ? OR plan_code = ? LIMIT 3`);
-    const verify = verifyStmt.getAsObject([id, id]) as any;
-    verifyStmt.free();
-    console.log(`[ApprovalLinkage] updatePurchasePlan: id=${id}, status=${status}, matchIds=${JSON.stringify(matchIds)}, extra=${JSON.stringify(extra)}`);
-    console.log(`[ApprovalLinkage] verify:`, JSON.stringify(verify));
+    // 单独 UPDATE execution_status（仅 approved 时）
+    if (executionStatus) {
+      const execStmt = db.prepare(`
+        UPDATE purchase_plans SET execution_status = ? WHERE id = ? OR plan_code = ?
+      `);
+      for (const matchId of matchIds) {
+        execStmt.run([executionStatus, matchId, matchId]);
+      }
+      execStmt.free();
+    }
 
     return true;
   } catch (e) {

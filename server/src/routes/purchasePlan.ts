@@ -131,6 +131,25 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /api/purchase-plans/:id/execution-status
+ * 更新采购执行状态（4 档：pending_execution / purchasing / completed / cancelled）
+ */
+router.patch('/:id/execution-status', async (req: Request, res: Response) => {
+  const { executionStatus } = req.body || {};
+  if (!executionStatus || typeof executionStatus !== 'string') {
+    return res.status(400).json({ success: false, error: '执行状态不能为空' });
+  }
+  const result = await purchasePlanService.updateExecutionStatus(req.params.id, executionStatus);
+  if (!result.success) {
+    const status = result.error?.includes('不存在') ? 404
+      : result.error?.includes('无效') ? 400
+      : 500;
+    return res.status(status).json({ success: false, error: result.error });
+  }
+  res.json({ success: true, data: result.data });
+});
+
+/**
  * POST /api/purchase-plans/batch-delete
  * 批量删除（每条单独校验状态）
  * 路径是 /batch-delete（具体路径），与 /:id 不冲突；但建议放在 :id 之后以保持代码组织清晰
