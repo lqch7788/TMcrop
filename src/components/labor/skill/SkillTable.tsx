@@ -346,7 +346,7 @@ export function SkillTable({
                 </TableRow>
               ) : (
                 paginatedData.map((skill) => (
-                  <TableRow key={skill.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={skill.id} className="hover:bg-emerald-50 transition-colors">
                     {showCheckbox && (
                       <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <Checkbox

@@ -90,10 +90,6 @@ export { useSeedSourceStore } from './useSeedSourceStore';
 export { useSeedlingStore } from './useSeedlingStore';
 
 export { usePlantingStore } from './usePlantingStore';
-export { useFarmPartitionStore } from './useFarmPartitionStore';
-export type { FarmPartition } from './useFarmPartitionStore';
-export { useAreaSystemStore } from './useAreaSystemStore';
-export type { AreaSystemMapping } from './useAreaSystemStore';
 export { usePlantLabelStore } from './usePlantLabelStore';
 export type { PlantLabel, PlantLabelResume, PlantMark, MoveFormData } from './usePlantLabelStore';
 
@@ -195,9 +191,6 @@ export type { SalaryBudgetData } from './useSalaryBudgetStore';
 export { useShiftStore } from './useShiftStore';
 export type { Shift } from '../services/apiBasicDataService';
 
-// ==================== 成本核算 Store ====================
-export { useCostStore } from './useCostStore';
-export type { CostCategoryItem, CostBudgetItem } from '../services/apiBasicDataService';
 
 // ==================== 系统配置 Store ====================
 export { useSystemConfigStore } from './useSystemConfigStore';
@@ -312,37 +305,6 @@ export type { Base } from '../services/apiBasicDataService';
 
 export { usePlantingRecordStore, getRecordByOid, getRecordsByFacility, getRecordsByStatus, getActivePlantingRecords } from './usePlantingRecordStore';
 export type { PlantingRecord } from '../services/apiPlantingRecordService';
-
-// iAGS 设备系统管理 V1.0
-export { useDeviceSystemStore } from './useDeviceSystemStore';
-export type { DeviceSystem } from './useDeviceSystemStore';
-
-// iAGS 视频管理 V1.0
-export { useCameraStore } from './useCameraStore';
-export type { Camera } from './useCameraStore';
-
-// iAGS 能耗管理 V1.0
-export { useEnergyConfigStore } from './useEnergyConfigStore';
-export type { EnergyConfig } from './useEnergyConfigStore';
-export { ENERGY_TYPES } from './useEnergyConfigStore';
-
-// iAGS 警报管理 V1.0
-export { useAlarmConfigStore } from './useAlarmConfigStore';
-export type { AlarmLevel, AlarmContact } from './useAlarmConfigStore';
-export { LEVEL_DEFAULTS, LEVEL_LABELS, LEVEL_COLORS } from './useAlarmConfigStore';
-
-// iAGS 水肥一体机 V1.0
-export { useWaterFertilizerStore } from './useWaterFertilizerStore';
-export type { WaterFertilizerConfig } from './useWaterFertilizerStore';
-export { INTERVAL_UNITS } from './useWaterFertilizerStore';
-
-// iAGS 种植设置 V1.0
-export { usePlantSettingStore } from './usePlantSettingStore';
-export type { PlantSetting } from './usePlantSettingStore';
-
-// iAGS 设备分配 V1.0
-export { useDeviceDistributionStore } from './useDeviceDistributionStore';
-export type { DeviceDistribution } from '../services/apiDeviceDistributionService';
 
 // V12.0: 病虫害防治管理 Stores
 export { usePestControlStore } from './usePestControlStore';

@@ -3,7 +3,8 @@
  * 架构：useWorkerStore (Zustand Store → API) + useWorkerPersonnel (筛选Hook)
  */
 import { useState, useEffect } from 'react';
-import { Users, Plus, Download, Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Plus, Download, Pencil, Trash2, ChevronLeft } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
@@ -259,6 +260,26 @@ export function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
+      {/* 页面头部 */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/settings/personnel"
+            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
+            title="返回人事管理"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </Link>
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <Users className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">人员管理</h1>
+            <p className="text-gray-500">员工信息管理</p>
+          </div>
+        </div>
+      </div>
+
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <div className="bg-blue-50 rounded-lg p-2">

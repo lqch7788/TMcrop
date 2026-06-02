@@ -246,7 +246,7 @@ export function TempWorkerTable({
               data.map((record) => (
                 <TableRow
                   key={record.id}
-                  className="hover:bg-blue-100 transition-colors"
+                  className="hover:bg-emerald-50 transition-colors"
                 >
                   {(exportMode || batchEditMode || batchDeleteMode) && (
                     <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
