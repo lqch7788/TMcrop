@@ -91,6 +91,7 @@ import FertilizerLibraryPage from './components/settings/fertilizer-library/Fert
 import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
 import { StaffManagementPage } from './components/labor/personnel/StaffManagementPage';
+import PersonnelPage from './pages/labor/PersonnelPage';
 import PositionManagement from './pages/PositionManagement';
 import HrAttendance from './pages/HrAttendance';
 import HrApprovalDocuments from './pages/HrApprovalDocuments';
@@ -122,10 +123,8 @@ const TempTask = lazy(() => import('./pages/TempTask'));
 const TaskCenterPage = lazy(() => import('./pages/farm/TaskCenterPage'));
 const FarmTaskHub = lazy(() => import('./pages/farm/FarmTaskHub'));
 const AttendancePage = lazy(() => import('./pages/labor/AttendancePage'));
-const PersonnelPage = lazy(() => import('./pages/labor/PersonnelPage'));
 const CompensationPage = lazy(() => import('./pages/labor/CompensationPage'));
 const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
-const HrApprovalDetail = lazy(() => import('./pages/hr/HrApprovalDetail'));
 const DispatchPage = lazy(() => import('./components/dispatch').then(module => ({ default: module.DispatchPage })));
 const MyTasksPage = lazy(() => import('./components/labor/myTasks/MyTasksPage'));
 const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
@@ -288,12 +287,9 @@ function AppContent() {
 
           {/* 人工管理聚合页面 */}
           <Route path="/labor/attendance" element={<AttendancePage />} />
-          <Route path="/labor/personnel" element={<PersonnelPage />} />
           <Route path="/labor/compensation" element={<CompensationPage />} />
           <Route path="/labor/analytics" element={<AnalyticsPage />} />
           <Route path="/my-tasks" element={<MyTasksPage />} />
-          <Route path="/hr-approval-detail/:id" element={<HrApprovalDetail />} />
-
           {/* 农事管理 - 任务中心(从人工管理移入)、排班调度(从考勤管理移入)、班组分配(从人事管理移入)、每日工单汇总(从生产汇总表移入) */}
           <Route path="/task-center" element={<TaskCenterPage />} />
           <Route path="/farm-hub" element={<FarmTaskHub />} />
@@ -319,6 +315,7 @@ function AppContent() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/temp-task" element={<TempTask />} />
           <Route path="/personnel/staff" element={<StaffManagementPage />} />
+          <Route path="/labor/personnel" element={<PersonnelPage />} />
           <Route path="/leave" element={<Leave />} />
           <Route path="/temp-worker" element={<TempWorker />} />
           <Route path="/salary" element={<Salary />} />

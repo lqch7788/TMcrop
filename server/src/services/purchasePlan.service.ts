@@ -605,6 +605,16 @@ export class PurchasePlanService {
           continue;
         }
 
+        // 跳过空字符串：保留 DB 原值（防止覆盖）
+        if (value === '' || value === null || value === undefined) {
+          continue;
+        }
+
+        // executionStatus 4 档白名单校验
+        if (camelKey === 'executionStatus' && !EXECUTION_STATUSES.has(value as string)) {
+          return { success: false, error: `无效的执行状态: ${value}` };
+        }
+
         if (camelKey === 'items') {
           newItems = Array.isArray(value) ? value : [];
           updateFields.push('items = ?');
@@ -635,10 +645,10 @@ export class PurchasePlanService {
       }
 
       values.push(nowIso, id);
-      db.run(
-        `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`,
-        values
-      );
+      const sql = `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`;
+      console.log(`[DEBUG update] SQL: ${sql}`);
+      console.log(`[DEBUG update] VALUES: ${JSON.stringify(values)}`);
+      db.run(sql, values);
       saveDatabase();
 
       return this.getById(id);
