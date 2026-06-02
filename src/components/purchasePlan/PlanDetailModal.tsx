@@ -157,7 +157,7 @@ export function PlanDetailModal({
       footer={footer}
       width={900}
       height={600}
-      customFooter={renderApprovalRecords()}
+      bottom={renderApprovalRecords()}
     />
   );
 }

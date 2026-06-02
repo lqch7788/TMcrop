@@ -9,9 +9,10 @@ import { Modal } from '../ui/Modal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { ExportFormatModal } from '../common/ExportFormatModal';
 import { submitPurchaseApproval } from '../../services/approvalSubmitService';
+import type { Approval } from '../../types/approval';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert, canDeletePurchasePlan, canEditPurchasePlan } from '../../types/purchase';
-import { useUserStore, usePurchasePlanStore } from '../../stores';
+import { useUserStore, usePurchasePlanStore, useApprovalStore } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import * as XLSX from 'xlsx';
 import { getNextPurchaseApplicationCode } from '../../services/apiPurchasePlanService';
@@ -70,6 +71,25 @@ export function PurchasePlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 监听审批状态变化，自动重拉采购计划（确保审批通过/拒绝后采购列表状态即时更新）
+  const approvalVersion = useApprovalStore((s: any) => s.approvals?.length ?? 0);
+  const lastApprovalStatusSum = useApprovalStore((s: any) => {
+    const arr = s.approvals || [];
+    return arr.reduce((sum: number, a: any) => sum + (a.status === 'approved' ? 1 : 0) + (a.status === 'rejected' ? 1 : 0), 0);
+  });
+  useEffect(() => {
+    // 跳过首次挂载（已有 useEffect 加载）
+    if (approvalVersion === 0) return;
+    fetchPlans();
+  }, [approvalVersion, lastApprovalStatusSum]);
+
+  // 进入采购计划页面时主动加载审批列表（用于详情弹窗显示审批记录）
+  const fetchApprovals = useApprovalStore((s: any) => s.fetchApprovals);
+  useEffect(() => {
+    if (fetchApprovals) fetchApprovals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 筛选状态
   const [relatedBatchCode, setRelatedBatchCode] = useState('');
   const [purchaseType, setPurchaseType] = useState('all');
@@ -105,6 +125,13 @@ export function PurchasePlanPage() {
 
   // 详情选中
   const [selectedPlanDetail, setSelectedPlanDetail] = useState<PurchasePlan | null>(null);
+  const [selectedPlanApprovals, setSelectedPlanApprovals] = useState<Approval[]>([]);
+
+  // 本地时间生成 YYYY-MM-DD（避免 UTC 跨天导致日期错位）
+  const todayLocal = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
 
   // 批次号下拉框ref
   const batchSelectRef = useRef<HTMLDivElement>(null);
@@ -116,7 +143,7 @@ export function PurchasePlanPage() {
     purchaseType: 'production',
     applicant: localStorage.getItem('username') || '',
     applicantDepartment: localStorage.getItem('departmentName') || '生产部',
-    applyDate: new Date().toISOString().split('T')[0],
+    applyDate: todayLocal(),
     requiredDate: '',
     priority: 'normal',
     remark: '',
@@ -230,7 +257,7 @@ export function PurchasePlanPage() {
       purchaseType: 'production',
       applicant: localStorage.getItem('username') || '',
       applicantDepartment: localStorage.getItem('departmentName') || '生产部',
-      applyDate: new Date().toISOString().split('T')[0],
+      applyDate: todayLocal(),
       requiredDate: '',
       priority: 'normal',
       remark: '',
@@ -328,6 +355,9 @@ export function PurchasePlanPage() {
         } else {
           await showAlert('采购计划已创建并提交审批');
         }
+
+        // 创建后重新拉取列表（确保自动审批/普通审批的状态即时反映）
+        await fetchPlans();
       }
     } catch (error) {
       await showAlert('创建采购计划失败，请重试');
@@ -366,7 +396,7 @@ export function PurchasePlanPage() {
     if (selectedRows.length === filteredAndSortedData.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(filteredAndSortedData.map(p => p.purchaseApplicationCode));
+      setSelectedRows(filteredAndSortedData.map(p => p.id));
     }
   };
 
@@ -501,7 +531,12 @@ export function PurchasePlanPage() {
   // 删除确认（开发测试阶段：可删除所有状态）
   const handleDeleteConfirm = async () => {
     try {
-      const selectedIds = selectedRows; // 直接用选中行，不限状态
+      // selectedRows 存的是 plan.id（统一后端主键）
+      // 防御：万一历史值是 purchaseApplicationCode，做一次映射
+      const codeSet = new Set(purchasePlansData.map(p => p.purchaseApplicationCode));
+      const selectedIds = selectedRows.map(v => (codeSet.has(v)
+        ? (purchasePlansData.find(p => p.purchaseApplicationCode === v)?.id ?? v)
+        : v));
 
       const result = await deletePlans(selectedIds);
 
@@ -516,10 +551,80 @@ export function PurchasePlanPage() {
     }
   };
 
-  // 查看详情
-  const handleViewDetail = (plan: PurchasePlan) => {
+  // 查看详情：异步拉取关联的审批单 + 自动审批的占位记录
+  // 合并多个审批单的 records，按 actionTime 升序排序
+  const extractAllRecords = (approvals: Approval[]) => {
+    const all: any[] = [];
+    approvals.forEach(a => {
+      const records = (a as any).records || [];
+      if (Array.isArray(records)) {
+        all.push(...records);
+      }
+    });
+    return all.sort((x, y) => String(x.actionTime || '').localeCompare(String(y.actionTime || '')));
+  };
+
+  const handleViewDetail = async (plan: PurchasePlan) => {
     setSelectedPlanDetail(plan);
     setShowDetailModal(true);
+    setSelectedPlanApprovals([]);
+
+    try {
+      // 1. 先尝试从 store 缓存拿
+      let matched: Approval[] = useApprovalStore.getState().approvals.filter((a: Approval) => {
+        const link = a.businessLink as any;
+        if (!link) return false;
+        return link.type === 'purchase' && (
+          link.requestId === plan.id ||
+          link.requestCode === plan.purchaseApplicationCode ||
+          link.requestId === plan.planCode
+        );
+      });
+
+      // 2. 缓存里没有 → 直接从 API 拉取所有审批单
+      if (matched.length === 0) {
+        try {
+          const { enhancedApiClient } = await import('../../lib/apiClient');
+          const allApprovals = await enhancedApiClient.get<any[]>('/approvals');
+          if (Array.isArray(allApprovals)) {
+            matched = allApprovals.filter((a: any) => {
+              const link = a.businessLink || a.business_link;
+              if (!link) return false;
+              const linkObj = typeof link === 'string' ? JSON.parse(link) : link;
+              return linkObj.type === 'purchase' && (
+                linkObj.requestId === plan.id ||
+                linkObj.requestCode === plan.purchaseApplicationCode ||
+                linkObj.requestId === plan.planCode
+              );
+            });
+            // 规范化 businessLink 字段
+            matched = matched.map((a: any) => ({
+              ...a,
+              businessLink: typeof a.businessLink === 'string' ? JSON.parse(a.businessLink) : a.businessLink,
+              records: typeof a.records === 'string' ? JSON.parse(a.records) : a.records,
+            }));
+          }
+        } catch (apiErr) {
+          console.warn('API 拉取审批单失败:', apiErr);
+        }
+      }
+
+      // 3. 如果还是没审批单，但 plan.status 已是 approved（说明自动通过的）
+      if (matched.length === 0 && (plan.status === 'approved' || plan.status === 'completed' || plan.status === 'purchasing')) {
+        const syntheticRecord: any = {
+          approverId: 'system',
+          approverName: '系统',
+          action: 'approve',
+          comment: '金额在免审批阈值内，已自动通过',
+          actionTime: (plan as any).updatedAt || (plan as any).createdAt || new Date().toISOString(),
+        };
+        setSelectedPlanApprovals([{ records: [syntheticRecord] } as any]);
+      } else {
+        setSelectedPlanApprovals(matched);
+      }
+    } catch (err) {
+      console.error('加载采购计划审批记录失败:', err);
+    }
   };
 
   // 单条编辑处理
@@ -818,8 +923,10 @@ export function PurchasePlanPage() {
         onClose={() => {
           setShowDetailModal(false);
           setSelectedPlanDetail(null);
+          setSelectedPlanApprovals([]);
         }}
         selectedPlanDetail={selectedPlanDetail}
+        approvalRecords={extractAllRecords(selectedPlanApprovals)}
       />
 
       {/* 删除确认弹窗 */}
