@@ -16,6 +16,7 @@ export interface Dictionary {
   category: string;
   code: string;
   name: string;
+  displayName?: string; // 显示名称（含义说明，amount_threshold 等分类使用）
   sortNumber?: number;
   status?: string;
   createdAt?: string;
