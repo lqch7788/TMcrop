@@ -683,17 +683,18 @@ router.patch('/:id/action', (req, res) => {
       ? approvers.findIndex((a: Approver) => a.order === newCurrentStep && a.status === 'pending')
       : -1;
 
-    // 如果有预设审批人但找不到，返错
-    if (approvers.length > 0 && currentApproverIndex === -1) {
-      return res.status(400).json({ success: false, error: '未找到当前待审批人' });
-    }
+    // 如果有预设审批人但找不到 — 已禁用（开发测试阶段允许任意步骤通过）
+    // if (approvers.length > 0 && currentApproverIndex === -1) {
+    //   return res.status(400).json({ success: false, error: '未找到当前待审批人' });
+    // }
 
     const currentApprover = approvers.length > 0 ? approvers[currentApproverIndex] : null;
 
-    // 验证审批人匹配（只有预设了审批人才验证）
-    if (currentApprover && currentApprover.userId !== finalApproverId && currentApprover.role !== finalApproverId) {
-      return res.status(403).json({ success: false, error: '您不是当前待审批人' });
-    }
+    // 验证审批人匹配 — 已禁用（开发测试阶段，陆启闯拥有最大权限可审批所有单据）
+    // 系统稳定后恢复：
+    //   if (currentApprover && currentApprover.userId !== finalApproverId && currentApprover.role !== finalApproverId) {
+    //     return res.status(403).json({ success: false, error: '您不是当前待审批人' });
+    //   }
 
     // 添加审批记录
     const record: ApprovalRecord = {
@@ -727,15 +728,17 @@ router.patch('/:id/action', (req, res) => {
     // 处理审批结果
     switch (action) {
       case 'approve':
-        if (newCurrentStep >= (approval.total_steps as number)) {
-          // 所有步骤完成，审批通过
-          newStatus = 'approved';
-        } else {
-          // 进入下一步
-          newCurrentStep += 1;
-          // 如果下一步是并行审批，需要更新所有同级审批人的状态
-          // 这里简化处理，逐步审批
-        }
+        // 开发测试阶段：一次审批直接通过，跳过多步骤判断
+        newStatus = 'approved';
+        newCurrentStep = approval.total_steps as number; // 标记为最后一步
+        // 标记所有未完成的审批人为已通过
+        approvers.forEach((a: Approver) => {
+          if (a.status === 'pending') {
+            a.status = 'approved';
+            a.comment = a.comment || '审批通过（开发模式）';
+            a.actionTime = now;
+          }
+        });
         break;
 
       case 'reject':
