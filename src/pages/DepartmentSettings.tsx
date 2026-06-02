@@ -70,7 +70,7 @@ function DepartmentModal({
   const parentOptions = departmentOptions.filter((d) => d.id !== editItem?.id && d.oid !== editItem?.oid);
 
   return (
-    <Modal open={open} onClose={onClose} title={editItem ? '编辑部门' : '新增部门'}>
+    <Modal isOpen={open} onClose={onClose} title={editItem ? '编辑部门' : '新增部门'}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -162,7 +162,7 @@ function DeleteConfirmModal({
   itemName: string;
 }) {
   return (
-    <Modal open={open} onClose={onClose} title="确认删除">
+    <Modal isOpen={open} onClose={onClose} title="确认删除">
       <div className="space-y-4">
         <p className="text-gray-600">
           确定要删除部门 <span className="font-semibold text-gray-900">{itemName}</span> 吗？如果存在子部门，请先删除子部门。

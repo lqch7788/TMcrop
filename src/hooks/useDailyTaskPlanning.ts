@@ -438,9 +438,15 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
       return storedPlan;
     }
 
-    // 否则生成新计划
-    return generateDailyPlan(today);
-  }, [dailyPlanStore, generateDailyPlan]);
+    // 无计划时返回空计划而非 Promise（generateDailyPlan 是 async）
+    return {
+      date: today,
+      tasks: [],
+      totalTasks: 0,
+      totalHours: 0,
+      requiredWorkers: 0,
+    };
+  }, [dailyPlanStore]);
 
   return {
     generateDailyPlan,
