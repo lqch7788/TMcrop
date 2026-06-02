@@ -84,7 +84,8 @@ export function DetailModal({
             className={`${deepInputClass} bg-gray-50 text-gray-600 ${field.className || ''}`}
           />
         ) : (
-          <div className={`h-10 px-3 border border-gray-300 bg-gray-50 rounded-lg flex items-center ${field.className || ''}`}>
+          // 自定义 ReactNode 不用固定高度（避免与宽表重叠）
+          <div className={`min-h-10 px-3 py-2 border border-gray-300 bg-gray-50 rounded-lg ${field.className || ''}`}>
             {field.value}
           </div>
         )}
