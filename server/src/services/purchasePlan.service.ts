@@ -463,7 +463,10 @@ export class PurchasePlanService {
       }
 
       const db = getDatabase();
-      const now = new Date().toISOString();
+      // 本地时间生成 ISO 字符串（避免 UTC 跨天导致日期错位）
+      const now = new Date();
+      const nowIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
+      const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const newId = input.id || `PP${Date.now()}`;
 
       // 编号唯一性处理：前端传入时校验，缺失时生成并重试
@@ -511,7 +514,7 @@ export class PurchasePlanService {
           input.applicantDepartment || '',
           input.applicantId || '',
           input.applicant,
-          input.applyDate || now.substring(0, 10),
+          input.applyDate || todayLocal,
           input.requiredDate || null,
           '',
           '',
@@ -525,8 +528,8 @@ export class PurchasePlanService {
           input.relatedBatchCode || '',
           input.approvalPerson || '',
           input.applicant,
-          now,
-          now,
+          nowIso,
+          nowIso,
         ]
       );
       // applicantId 已在上面保存；保留此注释以提醒维护者
@@ -543,7 +546,8 @@ export class PurchasePlanService {
   async update(id: string, input: UpdatePurchasePlanInput): Promise<ServiceResult<Record<string, unknown>>> {
     try {
       const db = getDatabase();
-      const now = new Date().toISOString();
+      const now = new Date();
+      const nowIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
 
       // 状态白名单校验
       const statusError = this.validateStatusValues({
@@ -616,7 +620,7 @@ export class PurchasePlanService {
         return { success: false, error: '没有需要更新的字段' };
       }
 
-      values.push(now, id);
+      values.push(nowIso, id);
       db.run(
         `UPDATE purchase_plans SET ${updateFields.join(', ')}, update_time = ? WHERE id = ?`,
         values
@@ -630,20 +634,14 @@ export class PurchasePlanService {
   }
 
   /**
-   * 单条删除（带状态校验）
+   * 单条删除（开发测试阶段：允许删除所有状态）
    */
   async deleteById(id: string): Promise<ServiceResult<{ id: string }>> {
     try {
       const db = getDatabase();
-      const current = queryToObjects(db, 'SELECT status, approval_status FROM purchase_plans WHERE id = ?', [id]);
+      const current = queryToObjects(db, 'SELECT id FROM purchase_plans WHERE id = ?', [id]);
       if (current.length === 0) {
         return { success: false, error: '采购计划不存在' };
-      }
-      if (!this.canDelete(current[0])) {
-        return {
-          success: false,
-          error: `当前状态不允许删除（仅草稿/待审批/已拒绝可删除）`,
-        };
       }
       db.run('DELETE FROM purchase_plans WHERE id = ?', [id]);
       saveDatabase();
@@ -654,7 +652,7 @@ export class PurchasePlanService {
   }
 
   /**
-   * 批量删除（每条单独校验状态）
+   * 批量删除（开发测试阶段：允许删除所有状态）
    */
   async deleteMany(ids: string[]): Promise<ServiceResult<{ deleted: number; skipped: { id: string; reason: string }[] }>> {
     try {
@@ -666,16 +664,9 @@ export class PurchasePlanService {
       const skipped: { id: string; reason: string }[] = [];
 
       for (const id of ids) {
-        const current = queryToObjects(db, 'SELECT status, approval_status FROM purchase_plans WHERE id = ?', [id]);
+        const current = queryToObjects(db, 'SELECT id FROM purchase_plans WHERE id = ?', [id]);
         if (current.length === 0) {
           skipped.push({ id, reason: '记录不存在' });
-          continue;
-        }
-        if (!this.canDelete(current[0])) {
-          skipped.push({
-            id,
-            reason: `状态 ${current[0].status || 'unknown'} 不允许删除`,
-          });
           continue;
         }
         db.run('DELETE FROM purchase_plans WHERE id = ?', [id]);
