@@ -103,20 +103,27 @@ export default function ProductionApproval() {
     setApprovalComment('');
   };
 
-  // 确认审批操作（参照 HrApproval.tsx：立即关闭弹窗，异步执行审批）
-  const confirmApproval = () => {
-    console.log('[DEBUG] confirmApproval 被调用', { action: approvalModal.action, id: approvalModal.approval?.id });
-    if (!approvalModal.approval || !approvalModal.action) return;
-
-    if (approvalModal.action === 'approve') {
-      console.log('[DEBUG] 调用 approve', approvalModal.approval.id);
-      approve(approvalModal.approval.id, approvalComment);
-    } else {
-      console.log('[DEBUG] 调用 reject', approvalModal.approval.id);
-      reject(approvalModal.approval.id, approvalComment || '审批拒绝');
+  // 确认审批操作（await 等响应后关闭弹窗，避免 UI 短暂显示旧状态）
+  const [confirming, setConfirming] = useState(false);
+  const confirmApproval = async () => {
+    if (!approvalModal.approval || !approvalModal.action || confirming) return;
+    setConfirming(true);
+    try {
+      if (approvalModal.action === 'approve') {
+        await approve(approvalModal.approval.id, approvalComment);
+      } else {
+        await reject(approvalModal.approval.id, approvalComment || '审批拒绝');
+      }
+      // 成功后关闭弹窗
+      setApprovalModal({ show: false, approval: null, action: null });
+      setApprovalComment('');
+      // 重拉列表，确保 UI 状态与服务端一致
+      await refreshApprovals();
+    } catch (error) {
+      console.error('[ProductionApproval] 审批操作失败:', error);
+    } finally {
+      setConfirming(false);
     }
-    setApprovalModal({ show: false, approval: null, action: null });
-    setApprovalComment('');
   };
 
   // 取消审批
@@ -800,8 +807,9 @@ export default function ProductionApproval() {
             <Button
               variant={approvalModal.action === 'approve' ? 'default' : 'destructive'}
               onClick={confirmApproval}
+              disabled={confirming}
             >
-              {approvalModal.action === 'approve' ? '确认通过' : '确认拒绝'}
+              {confirming ? '处理中...' : (approvalModal.action === 'approve' ? '确认通过' : '确认拒绝')}
             </Button>
           </div>
         }
