@@ -16,6 +16,16 @@ export type PurchaseStatus =
   | 'cancelled';    // 已取消
 
 /**
+ * 采购执行状态（审批通过后由人工推进）
+ * 与生产计划 execution_status 对齐：pending_execution / purchasing / completed / cancelled
+ */
+export type PurchaseExecutionStatus =
+  | 'pending_execution'  // 待执行（审批通过后的初始状态）
+  | 'purchasing'         // 采购中
+  | 'completed'          // 已完成
+  | 'cancelled';         // 已取消
+
+/**
  * 采购申请单优先级
  */
 export type PurchasePriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -92,6 +102,7 @@ export interface PurchaseApplication {
   priorityText: string;                // 优先级显示文本
   status: PurchaseStatus;              // 状态
   statusText: string;                  // 状态显示文本
+  executionStatus?: PurchaseExecutionStatus; // 采购执行状态（审批通过后人工推进）
 
   // 物料明细
   items: PurchaseItem[];               // 物料明细数组
@@ -313,6 +324,30 @@ export const PURCHASE_PRIORITY_STYLE: Record<PurchasePriority, { bg: string; tex
 // ============================================================
 export const PURCHASE_PLAN_STATUS_TEXT = PURCHASE_STATUS_TEXT;
 export const PURCHASE_PLAN_PRIORITY_TEXT = PURCHASE_PRIORITY_TEXT;
+
+/** 采购执行状态显示文本 */
+export const PURCHASE_EXECUTION_STATUS_TEXT: Record<PurchaseExecutionStatus, string> = {
+  pending_execution: '待执行',
+  purchasing: '采购中',
+  completed: '已完成',
+  cancelled: '已取消',
+};
+
+/** 采购执行状态 badge 样式 */
+export const PURCHASE_EXECUTION_STATUS_STYLE: Record<PurchaseExecutionStatus, { bg: string; text: string }> = {
+  pending_execution: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  purchasing: { bg: 'bg-purple-100', text: 'text-purple-700' },
+  completed: { bg: 'bg-green-100', text: 'text-green-700' },
+  cancelled: { bg: 'bg-gray-100', text: 'text-gray-600' },
+};
+
+/** 4 档下拉选项（用于详情弹窗编辑） */
+export const PURCHASE_EXECUTION_STATUS_OPTIONS: { value: PurchaseExecutionStatus; label: string }[] = [
+  { value: 'pending_execution', label: '待执行' },
+  { value: 'purchasing', label: '采购中' },
+  { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' },
+];
 export const PURCHASE_PLAN_TYPE_TEXT = PURCHASE_TYPE_TEXT;
 export const PURCHASE_PLAN_STATUS_STYLE = PURCHASE_STATUS_STYLE;
 export const PURCHASE_PLAN_PRIORITY_STYLE = PURCHASE_PRIORITY_STYLE;

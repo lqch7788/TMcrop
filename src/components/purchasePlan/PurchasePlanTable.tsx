@@ -4,7 +4,13 @@
 import React from 'react';
 import { ChevronDown, ChevronRightIcon, Plus, Edit, Trash2, Download, Pencil } from 'lucide-react';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
-import { calculateOverdueAlert, OVERDUE_ALERT_STYLE } from '../../types/purchase';
+import {
+  calculateOverdueAlert,
+  OVERDUE_ALERT_STYLE,
+  PURCHASE_EXECUTION_STATUS_TEXT,
+  PURCHASE_EXECUTION_STATUS_STYLE,
+  type PurchaseExecutionStatus,
+} from '../../types/purchase';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -97,6 +103,20 @@ function StatusBadge({ status, statusText, plan }: { status: string; statusText:
         </span>
       )}
     </>
+  );
+}
+
+/**
+ * 采购执行状态 Badge（4 档）
+ */
+function ExecutionStatusBadge({ executionStatus }: { executionStatus?: string }) {
+  const status = (executionStatus || 'pending_execution') as PurchaseExecutionStatus;
+  const style = PURCHASE_EXECUTION_STATUS_STYLE[status] || PURCHASE_EXECUTION_STATUS_STYLE.pending_execution;
+  const text = PURCHASE_EXECUTION_STATUS_TEXT[status] || '待执行';
+  return (
+    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+      {text}
+    </span>
   );
 }
 
@@ -265,6 +285,7 @@ export function PurchasePlanTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('requiredDate')}>需求日期{sortConfig?.field === 'requiredDate' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('priority')}>优先级{sortConfig?.field === 'priority' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap cursor-pointer hover:bg-blue-600/10" onClick={() => onSortChange('status')}>状态{sortConfig?.field === 'status' && <span className="ml-1">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">执行状态</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-24">操作</th>
             </tr>
           </thead>
@@ -325,6 +346,9 @@ export function PurchasePlanTable({
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <StatusBadge status={plan.status} statusText={plan.statusText} plan={plan} />
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <ExecutionStatusBadge executionStatus={plan.executionStatus} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">

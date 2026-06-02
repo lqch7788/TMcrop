@@ -116,6 +116,7 @@ function transformSingle(item: BackendPurchasePlan): PurchasePlan {
     priorityText: item.priorityText || '中',
     status: item.status || 'draft',
     statusText: item.statusText || '草稿',
+    executionStatus: (item.executionStatus || item.execution_status || 'pending_execution') as any,
     itemCount: item.itemCount || 0,
     items: Array.isArray(item.items) ? item.items.map(transformItem) : [],
     remarks: item.remarks || '',
@@ -213,4 +214,18 @@ export async function resetPurchasePlans(): Promise<void> {
 export async function getNextPurchaseApplicationCode(): Promise<string> {
   const result = await enhancedApiClient.get<{ code: string }>('/purchase-plans/next-code');
   return result?.code || '';
+}
+
+/**
+ * 更新采购执行状态（4 档白名单校验在后端）
+ */
+export async function updateExecutionStatus(
+  id: string,
+  executionStatus: string
+): Promise<PurchasePlan | null> {
+  const result = await enhancedApiClient.patch<{ data: PurchasePlan }>(
+    `/purchase-plans/${id}/execution-status`,
+    { executionStatus }
+  );
+  return result?.data ? transformPurchasePlan(result.data) as PurchasePlan : null;
 }
