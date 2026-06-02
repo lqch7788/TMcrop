@@ -159,8 +159,13 @@ export function PurchasePlanPage() {
   const [currentEditingPlan, setCurrentEditingPlan] = useState<PurchasePlan | null>(null);
   const [batchEditData, setBatchEditData] = useState({
     purchaseType: '',
-    priority: '',
+    relatedBatchCode: '',
+    otherBatchReason: '',
+    applicant: '',
+    applicantDepartment: '',
+    applyDate: '',
     requiredDate: '',
+    priority: '',
     remark: '',
     executionStatus: '',
   });
@@ -611,7 +616,7 @@ export function PurchasePlanPage() {
       }
 
       // 3. 如果还是没审批单，但 plan.status 已是 approved（说明自动通过的）
-      if (matched.length === 0 && (plan.status === 'approved' || plan.status === 'completed' || plan.status === 'purchasing')) {
+      if (matched.length === 0 && plan.status === 'approved') {
         const syntheticRecord: any = {
           approverId: 'system',
           approverName: '系统',
@@ -640,8 +645,13 @@ export function PurchasePlanPage() {
     setCurrentEditingPlan(plan);
     setBatchEditData({
       purchaseType: plan.purchaseType,
-      priority: plan.priority,
+      relatedBatchCode: plan.relatedBatchCode || '',
+      otherBatchReason: (plan as any).otherBatchReason || '',
+      applicant: plan.applicant || '',
+      applicantDepartment: plan.applicantDepartment || '',
+      applyDate: plan.applyDate || '',
       requiredDate: plan.requiredDate || '',
+      priority: plan.priority,
       remark: plan.remark || '',
       executionStatus: plan.executionStatus || 'pending_execution',
     });
@@ -711,15 +721,16 @@ export function PurchasePlanPage() {
       const selectedUser = users.find(u => u.id === currentEditingPlan.applicantId);
       const applicantName = selectedUser?.realName || selectedUser?.name || currentEditingPlan.applicant || '';
       await updatePlan(currentEditingPlan.id, {
-        relatedBatchCode: currentEditingPlan.relatedBatchCode,
+        relatedBatchCode: batchEditData.relatedBatchCode || currentEditingPlan.relatedBatchCode,
         purchaseType: batchEditData.purchaseType,
         priority: batchEditData.priority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
         executionStatus: batchEditData.executionStatus,
         applicantId: currentEditingPlan.applicantId,
-        applicantName,
-        applicantDepartment: currentEditingPlan.applicantDepartment,
+        applicantName: batchEditData.applicant || applicantName,
+        applicantDepartment: batchEditData.applicantDepartment || currentEditingPlan.applicantDepartment,
+        applyDate: batchEditData.applyDate,
         items: batchEditItems,
       });
 
@@ -752,8 +763,13 @@ export function PurchasePlanPage() {
       setCurrentEditingPlan(nextPlan);
       setBatchEditData({
         purchaseType: nextPlan.purchaseType,
-        priority: nextPlan.priority,
+        relatedBatchCode: nextPlan.relatedBatchCode || '',
+        otherBatchReason: (nextPlan as any).otherBatchReason || '',
+        applicant: nextPlan.applicant || '',
+        applicantDepartment: nextPlan.applicantDepartment || '',
+        applyDate: nextPlan.applyDate || '',
         requiredDate: nextPlan.requiredDate || '',
+        priority: nextPlan.priority,
         remark: nextPlan.remark || '',
         executionStatus: nextPlan.executionStatus || 'pending_execution',
       });
@@ -782,15 +798,16 @@ export function PurchasePlanPage() {
       // logger.info('[保存采购计划] batchEditItems:', batchEditItems);
 
       await updatePlan(currentEditingPlan.id, {
-        relatedBatchCode: currentEditingPlan.relatedBatchCode,
+        relatedBatchCode: batchEditData.relatedBatchCode || currentEditingPlan.relatedBatchCode,
         purchaseType: batchEditData.purchaseType,
         priority: batchEditData.priority,
         requiredDate: batchEditData.requiredDate,
         remark: batchEditData.remark,
         executionStatus: batchEditData.executionStatus,
         applicantId: currentEditingPlan.applicantId,
-        applicantName: applicantName,
-        applicantDepartment: currentEditingPlan.applicantDepartment,
+        applicantName: batchEditData.applicant || applicantName,
+        applicantDepartment: batchEditData.applicantDepartment || currentEditingPlan.applicantDepartment,
+        applyDate: batchEditData.applyDate,
         items: batchEditItems,
       });
       savedCount++;

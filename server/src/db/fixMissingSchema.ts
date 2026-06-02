@@ -383,6 +383,17 @@ export async function fixMissingSchema(): Promise<void> {
       console.log('• purchase_plans.execution_status:', e.message);
     }
   }
+  // 7.0.2 为 purchase_plans 表添加 otherBatchReason 列（关联批次=其他时的说明）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN otherBatchReason TEXT`);
+    console.log('✓ purchase_plans 表添加 otherBatchReason 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• purchase_plans.otherBatchReason 列已存在');
+    } else {
+      console.log('• purchase_plans.otherBatchReason:', e.message);
+    }
+  }
   try {
     db.run(`ALTER TABLE dictionaries ADD COLUMN display_name TEXT`);
     console.log('✓ dictionaries 表添加 display_name 列');
