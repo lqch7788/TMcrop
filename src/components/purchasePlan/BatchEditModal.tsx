@@ -184,11 +184,15 @@ export function BatchEditModal({
     if (plantingItems.length === 0) loadPlantings();
   }, [users.length, dictionaries.length, plantingItems.length, loadUsers, loadDictionaries, loadPlantings]);
 
+  // 部门选项：与 CreatePlanModal 保持一致（硬编码 4 项，DB 字典无 department 分类）
   const departmentOptions = React.useMemo(
-    () => dictionaries
-      .filter((d: any) => (d.categoryCode || d.category_code || d.category) === 'department')
-      .map((d: any) => ({ value: d.dictLabel || d.name, label: d.dictLabel || d.name })),
-    [dictionaries]
+    () => [
+      { value: '生产部', label: '生产部' },
+      { value: '后勤部', label: '后勤部' },
+      { value: '办公室', label: '办公室' },
+      { value: '技术部', label: '技术部' },
+    ],
+    []
   );
 
   const batchOptions = React.useMemo(

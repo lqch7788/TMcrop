@@ -581,13 +581,11 @@ export class PurchasePlanService {
       }
       const currentRecord = current[0];
 
-      // 2. 状态机保护：仅允许编辑草稿/待审批/已拒绝
-      if (!this.canEdit(currentRecord)) {
-        return {
-          success: false,
-          error: `当前状态（${currentRecord.status}）不允许修改`,
-        };
-      }
+      // 2. 状态机保护：开发测试阶段允许编辑所有状态
+      // 系统稳定后可恢复为：
+      //   if (!this.canEdit(currentRecord)) {
+      //     return { success: false, error: `当前状态（${currentRecord.status}）不允许修改` };
+      //   }
 
       // 3. 编号冲突校验
       if (input.purchaseApplicationCode && input.purchaseApplicationCode !== currentRecord.planCode) {
