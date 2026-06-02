@@ -228,7 +228,7 @@ export function RecruitmentTable({
               </TableRow>
             ) : (
               paginatedData.map((rec) => (
-                <TableRow key={rec.id} className="hover:bg-blue-100 transition-colors">
+                <TableRow key={rec.id} className="hover:bg-emerald-50 transition-colors">
                   {(exportMode || batchEditMode || batchDeleteMode) && (
                     <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Checkbox

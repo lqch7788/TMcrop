@@ -3,9 +3,11 @@
  * 功能：班组和班次的新增、编辑、删除、查询
  * 数据流：组件 → useTeamStore/useShiftStore → API → SQLite
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Users, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2, AlertTriangle, Clock, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Pagination } from '../components/ui/Pagination';
 import { useTeamStore, useShiftStore } from '../stores';
 import type { Team } from '../services/apiBasicDataService';
 import type { Shift } from '../stores';
@@ -20,6 +22,9 @@ export default function TeamManagement() {
   const [newTeam, setNewTeam] = useState<Partial<Team>>({ status: 'active' });
   const [newShift, setNewShift] = useState<Partial<Shift>>({ status: 'active', shiftType: '早班' });
   const [activeTab, setActiveTab] = useState<'teams' | 'shifts'>('teams');
+  const [teamCurrentPage, setTeamCurrentPage] = useState(1);
+  const [shiftCurrentPage, setShiftCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // 班组 Store
   const {
@@ -37,9 +42,25 @@ export default function TeamManagement() {
     if (activeTab === 'shifts') loadShifts();
   }, [activeTab, loadShifts]);
 
-  const filteredTeams = teams.filter(t =>
-    t.teamName?.includes(searchTerm) || t.teamCode?.includes(searchTerm) || t.leaderName?.includes(searchTerm)
-  );
+  const filteredTeams = useMemo(() => {
+    if (!searchTerm) return teams;
+    const term = searchTerm.toLowerCase();
+    return teams.filter(t =>
+      t.teamName?.toLowerCase().includes(term) ||
+      t.teamCode?.toLowerCase().includes(term) ||
+      t.leaderName?.toLowerCase().includes(term)
+    );
+  }, [teams, searchTerm]);
+
+  const paginatedTeams = useMemo(() => {
+    const start = (teamCurrentPage - 1) * pageSize;
+    return filteredTeams.slice(start, start + pageSize);
+  }, [filteredTeams, teamCurrentPage]);
+
+  const paginatedShifts = useMemo(() => {
+    const start = (shiftCurrentPage - 1) * pageSize;
+    return shifts.slice(start, start + pageSize);
+  }, [shifts, shiftCurrentPage]);
 
   // ==================== 班组操作 ====================
 
@@ -163,114 +184,177 @@ export default function TeamManagement() {
         ))}
       </div>
 
-      {/* 班组管理 TAB */}
+      {/* 班组管理 TAB - 表格形式 */}
       {activeTab === 'teams' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          {/* 工具栏 */}
+          <div className="flex justify-between items-center">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                className="pl-10"
+                placeholder="搜索班组..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setTeamCurrentPage(1); }}
+              />
+            </div>
             <Button variant="default" onClick={() => { setEditingTeam(null); setNewTeam({ status: 'active' }); setShowTeamModal(true); }}>
               <Plus className="w-4 h-4" />
               新增班组
             </Button>
           </div>
-          <div className="grid gap-4">
-            {filteredTeams.map(team => (
-              <div key={team.id} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-50 rounded-lg">
-                      <Users className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{team.teamName}</h3>
-                      <p className="text-xs text-gray-500">{team.teamCode}</p>
-                    </div>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    team.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {team.status === 'active' ? '启用' : '停用'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
-                  <div><p className="text-gray-500">班长</p><p className="text-gray-900 font-medium">{team.leaderName || '-'}</p></div>
-                  <div><p className="text-gray-500">部门</p><p className="text-gray-900 font-medium">{team.departmentName || '-'}</p></div>
-                  <div><p className="text-gray-500">成员数</p><p className="text-gray-900 font-medium">{team.memberCount || 0}人</p></div>
-                  <div><p className="text-gray-500">创建时间</p><p className="text-gray-900 font-medium">{team.createdAt?.split('T')[0] || '-'}</p></div>
-                </div>
-                {team.description && <p className="text-xs text-gray-500 mb-3">{team.description}</p>}
-                <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
-                  <Button size="icon" variant="ghost" onClick={() => editTeam(team)}>
-                    <Edit2 className="w-4 h-4 text-gray-600" />
-                  </Button>
-                  <Button size="icon" variant="destructive" onClick={() => handleDeleteTeam(team.id)}>
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+
+          {/* 表格 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-auto max-h-[calc(100vh-380px)]">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班组编码</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班组名称</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班长</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">成员数</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">创建时间</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {paginatedTeams.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                        {searchTerm ? '没有匹配的班组' : '暂无班组数据'}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedTeams.map(team => (
+                      <tr key={team.id} className="hover:bg-emerald-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">{team.teamCode}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">{team.teamName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{team.leaderName || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{team.departmentName || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{team.memberCount || 0}人</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{team.createdAt?.split('T')[0] || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            team.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {team.status === 'active' ? '启用' : '停用'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => editTeam(team)} title="编辑">
+                              <Edit2 className="w-4 h-4 text-blue-600" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDeleteTeam(team.id)} title="删除">
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* 分页 */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+              <div className="text-sm text-gray-500">共 {filteredTeams.length} 条</div>
+              <Pagination
+                currentPage={teamCurrentPage}
+                totalPages={Math.ceil(filteredTeams.length / pageSize) || 1}
+                onPageChange={(page) => setTeamCurrentPage(page)}
+                pageSize={pageSize}
+                onPageSizeChange={(size) => { setTeamCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* 班次管理 TAB */}
+      {/* 班次管理 TAB - 表格形式 */}
       {activeTab === 'shifts' && (
         <div className="space-y-4">
+          {/* 工具栏 */}
           <div className="flex justify-end">
             <Button variant="default" onClick={() => { setEditingShift(null); setNewShift({ status: 'active', shiftType: '早班' }); setShowShiftModal(true); }}>
               <Plus className="w-4 h-4" />
               新增班次
             </Button>
           </div>
+
+          {/* 表格 */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班次编码</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">班次名称</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">开始时间</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">结束时间</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {shifts.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">暂无班次数据</td></tr>
-                ) : (
-                  shifts.map(shift => (
-                    <tr key={shift.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-blue-600">{shift.shiftCode}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{shift.shiftName}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{shift.startTime}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{shift.endTime}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${shiftTypeColors[shift.shiftType || ''] || 'bg-gray-100 text-gray-600'}`}>
-                          {shift.shiftType || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          shift.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {shift.status === 'active' ? '启用' : '停用'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => editShift(shift)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="编辑">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDeleteShift(shift.id)} className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors" title="删除">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+            <div className="overflow-auto max-h-[calc(100vh-380px)]">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班次编码</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">班次名称</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">结束时间</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {paginatedShifts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">暂无班次数据</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paginatedShifts.map(shift => (
+                      <tr key={shift.id} className="hover:bg-emerald-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">{shift.shiftCode}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium whitespace-nowrap">{shift.shiftName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{shift.startTime}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{shift.endTime}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${shiftTypeColors[shift.shiftType || ''] || 'bg-gray-100 text-gray-600'}`}>
+                            {shift.shiftType || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            shift.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {shift.status === 'active' ? '启用' : '停用'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => editShift(shift)} title="编辑">
+                              <Edit2 className="w-4 h-4 text-blue-600" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDeleteShift(shift.id)} title="删除">
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* 分页 */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+              <div className="text-sm text-gray-500">共 {shifts.length} 条</div>
+              <Pagination
+                currentPage={shiftCurrentPage}
+                totalPages={Math.ceil(shifts.length / pageSize) || 1}
+                onPageChange={(page) => setShiftCurrentPage(page)}
+                pageSize={pageSize}
+                onPageSizeChange={(size) => { setShiftCurrentPage(1); }}
+                pageSizeOptions={[10, 20, 50]}
+                showPageSize
+              />
+            </div>
           </div>
         </div>
       )}

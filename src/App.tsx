@@ -46,24 +46,9 @@ import {
 import ApprovalWorkflowConfig from './pages/ApprovalWorkflowConfig';
 import ApprovalLevelConfig from './pages/ApprovalLevelConfig';
 import NotificationSettings from './pages/NotificationSettings';
-import DeviceManagement from './pages/DeviceManagement';
 import WarehouseManagement from './pages/WarehouseManagement';
 import TeamManagement from './pages/TeamManagement';
-import CostAccounting from './pages/CostAccounting';
 import AuditLog from './pages/AuditLog';
-import BackupRecovery from './pages/system/BackupRecovery';
-import SystemMonitorPage from './pages/system/SystemMonitor';
-// iAGS 集成新增页面（Phase 0 占位）
-import FarmPartitionManagement from './pages/system/FarmPartitionManagement';
-import AreaSystemManagement from './pages/system/AreaSystemManagement';
-import DeviceSystemManagement from './pages/system/DeviceSystemManagement';
-import CameraManagement from './pages/system/CameraManagement';
-import EnergyConfigManagement from './pages/system/EnergyConfigManagement';
-import AlarmConfigManagement from './pages/system/AlarmConfigManagement';
-import WaterFertilizerManagement from './pages/system/WaterFertilizerManagement';
-import ProjectDebugManagement from './pages/system/ProjectDebugManagement';
-import PlantSettingManagement from './pages/system/PlantSettingManagement';
-import DeviceDistributionManagement from './pages/system/DeviceDistributionManagement';
 import DataMigration from './pages/system/DataMigration';
 
 import DeviceMonitor from './pages/DeviceMonitor';
@@ -103,7 +88,6 @@ import PesticideLibraryPage from './components/settings/pesticide-library/Pestic
 import PestDiseaseDictPage from './components/settings/pest-disease-dict/PestDiseaseDictPage';
 import FertilizerLibraryPage from './components/settings/fertilizer-library/FertilizerLibraryPage';
 
-import ProcessManagement from './pages/ProcessManagement';
 import PersonnelManagement from './pages/PersonnelManagement';
 import DepartmentSettings from './pages/DepartmentSettings';
 import { StaffManagementPage } from './components/labor/personnel/StaffManagementPage';
@@ -255,10 +239,8 @@ function AppContent() {
             <Route path="approval-workflow" element={<ApprovalWorkflowConfig />} />
             <Route path="approval-level-config" element={<ApprovalLevelConfig />} />
             <Route path="notification" element={<NotificationSettings />} />
-            <Route path="device" element={<DeviceManagement />} />
             <Route path="warehouse" element={<WarehouseManagement />} />
             <Route path="team" element={<TeamManagement />} />
-            <Route path="cost-accounting" element={<CostAccounting />} />
             <Route path="audit-log" element={<AuditLog />} />
             <Route path="crop-variety" element={<CropVarietyManagement />} />
             {/* 病虫害防治管理 */}
@@ -266,25 +248,10 @@ function AppContent() {
             <Route path="pest-disease-dict" element={<PestDiseaseDictPage />} />
             <Route path="fertilizer-library" element={<FertilizerLibraryPage />} />
 
-            <Route path="processes" element={<ProcessManagement />} />
             <Route path="departments" element={<DepartmentSettings />} />
             <Route path="bases" element={<FarmStructureManagement />} />
             <Route path="farm-structure" element={<FarmStructureManagement />} />
             <Route path="base-operations" element={<BaseOperationsCenterV2 />} />
-            <Route path="monitor" element={<SystemMonitorPage />} />
-            <Route path="backup" element={<BackupRecovery />} />
-            {/* iAGS 集成新增路由（Phase 0 占位） */}
-            <Route path="partitions" element={<FarmPartitionManagement />} />
-            <Route path="area-systems" element={<AreaSystemManagement />} />
-            <Route path="device-systems" element={<DeviceSystemManagement />} />
-            <Route path="cameras" element={<CameraManagement />} />
-            <Route path="energy-configs" element={<EnergyConfigManagement />} />
-            <Route path="alarm-configs" element={<AlarmConfigManagement />} />
-            <Route path="water-fertilizer" element={<WaterFertilizerManagement />} />
-            <Route path="project-debug" element={<ProjectDebugManagement />} />
-            <Route path="plant-settings" element={<PlantSettingManagement />} />
-            <Route path="device-distribution" element={<DeviceDistributionManagement />} />
-
           </Route>
           <Route path="/settings/personnel" element={<PersonnelManagement />} />
           <Route path="/settings/personnel/staff" element={<StaffManagementPage />} />

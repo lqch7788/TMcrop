@@ -70,29 +70,26 @@ export default function PositionManagement() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">职务列表</h3>
-        </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-380px)]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">所属部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务级别</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">基本工资(元)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">岗位人数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职责描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务级别</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">基本工资(元)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位人数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职责描述</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {paginatedPositions.map((pos) => (
-                <tr key={pos.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{pos.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.name}</td>
+                <tr key={pos.id} className="hover:bg-emerald-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600">{pos.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 font-medium">{pos.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{pos.dept}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{pos.level}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{pos.salary}</td>
@@ -108,10 +105,10 @@ export default function PositionManagement() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" title="编辑">
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 text-blue-600" />
                       </Button>
                       <Button size="icon" variant="ghost" title="查看">
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 text-gray-600" />
                       </Button>
                     </div>
                   </td>

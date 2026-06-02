@@ -582,7 +582,7 @@ export function ContractTable() {
               contracts.map((contract) => {
                 const computedStatus = getComputedStatus(contract);
                 return (
-                  <TableRow key={contract.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={contract.id} className="hover:bg-emerald-50 transition-colors">
                     {(exportMode || batchEditMode || batchDeleteMode) && (
                       <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <Checkbox

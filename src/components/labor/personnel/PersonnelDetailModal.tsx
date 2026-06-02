@@ -110,8 +110,8 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">技能等级</p>
-            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${SKILL_LEVEL_CONFIG[worker.skillLevel].badge}`}>
-              {SKILL_LEVEL_CONFIG[worker.skillLevel].label}
+            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${SKILL_LEVEL_CONFIG[worker.skillLevel]?.badge || 'bg-gray-100 text-gray-600'}`}>
+              {SKILL_LEVEL_CONFIG[worker.skillLevel]?.label || worker.skillLevel || '-'}
             </span>
           </div>
           <div>
@@ -289,8 +289,8 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
       {/* 状态 */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <div className="flex items-center gap-4">
-          <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${WORKER_STATUS_CONFIG[worker.status].badge}`}>
-            {WORKER_STATUS_CONFIG[worker.status].label}
+          <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${WORKER_STATUS_CONFIG[worker.status]?.badge || 'bg-gray-100 text-gray-600'}`}>
+            {WORKER_STATUS_CONFIG[worker.status]?.label || worker.status || '-'}
           </span>
         </div>
         <Button

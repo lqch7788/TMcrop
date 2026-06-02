@@ -128,44 +128,45 @@ export default function PersonnelManagement() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">职务列表</h3>
-        </div>
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-auto max-h-[calc(100vh-380px)]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务编号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务名称</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">所属部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职务级别</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">基本工资(元)</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">岗位人数</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">职责描述</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">操作</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务编号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务名称</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职务级别</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">基本工资(元)</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">岗位人数</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">职责描述</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold whitespace-nowrap">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {paginatedPositions.map((pos) => (
-                <tr key={pos.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{pos.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.dept}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.level}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.salary}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{pos.staffCount}人</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{pos.description}</td>
-                  <td className="px-4 py-3">
+            <tbody className="divide-y divide-gray-300">
+              {paginatedPositions.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">暂无数据</td>
+                </tr>
+              ) : paginatedPositions.map((pos) => (
+                <tr key={pos.id} className="hover:bg-emerald-50 transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">{pos.code}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{pos.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.dept}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.level}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.salary || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{pos.staffCount ? `${pos.staffCount}人` : '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate whitespace-nowrap">{pos.description || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       pos.statusClass === 'normal' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {pos.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1">
                       <Button size="icon" variant="ghost" title="编辑">
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -180,14 +181,16 @@ export default function PersonnelManagement() {
           </table>
         </div>
         {/* 分页组件 */}
-        <div className="px-4 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <div className="text-sm text-gray-500">共 {transformedPositions.length} 条</div>
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
             pageSize={pageSize}
             onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
-            showPageSize={true}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
           />
         </div>
       </div>

@@ -121,35 +121,32 @@ export default function HrApprovalDocuments() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">考勤单据列表</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <div className="overflow-auto max-h-[calc(100vh-380px)]">
+          <Table className="w-full">
+            <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <TableRow>
-                <TableHead>单据编号</TableHead>
-                <TableHead>单据类型</TableHead>
-                <TableHead>申请人</TableHead>
-                <TableHead>所属部门</TableHead>
-                <TableHead>申请日期</TableHead>
-                <TableHead>补录时间</TableHead>
-                <TableHead>补录原因</TableHead>
-                <TableHead>审批状态</TableHead>
-                <TableHead>操作</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单据编号</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单据类型</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请人</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">所属部门</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">申请日期</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">补录时间</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">补录原因</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">审批状态</TableHead>
+                <TableHead className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="divide-y divide-gray-300">
               {paginatedDocuments.map((doc) => (
-                <TableRow key={doc.id}>
-                  <TableCell className="font-medium text-gray-900">{doc.code}</TableCell>
-                  <TableCell className="text-gray-600">{doc.type}</TableCell>
-                  <TableCell className="text-gray-600">{doc.applicant}</TableCell>
-                  <TableCell className="text-gray-600">{doc.dept}</TableCell>
-                  <TableCell className="text-gray-600">{doc.applyDate}</TableCell>
-                  <TableCell className="text-gray-600">{doc.targetTime}</TableCell>
-                  <TableCell className="text-gray-600 max-w-[150px] truncate">{doc.reason}</TableCell>
-                  <TableCell>
+                <TableRow key={doc.id} className="hover:bg-emerald-50 transition-colors">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-blue-600">{doc.code}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600">{doc.type}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600">{doc.applicant}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600">{doc.dept}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600">{doc.applyDate}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600">{doc.targetTime}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">{doc.reason}</TableCell>
+                  <TableCell className="px-4 py-3">
                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                       doc.statusClass === 'success' ? 'bg-green-100 text-green-700' :
                       doc.statusClass === 'danger' ? 'bg-red-100 text-red-700' :
@@ -158,13 +155,13 @@ export default function HrApprovalDocuments() {
                       {doc.status}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="ghost" title="编辑">
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-4 h-4 text-blue-600" />
                       </Button>
                       <Button size="icon" variant="ghost" title="查看">
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 text-gray-600" />
                       </Button>
                     </div>
                   </TableCell>

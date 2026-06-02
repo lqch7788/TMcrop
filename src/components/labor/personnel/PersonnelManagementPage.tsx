@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck, Search, RotateCw } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
 import { Button } from '@/components/ui/button';
@@ -480,7 +481,7 @@ export function PersonnelManagementPage() {
       </div>
 
       {/* 职务列表表格 */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">职务列表</h3>
           <div className="flex gap-2">
@@ -584,7 +585,7 @@ export function PersonnelManagementPage() {
             <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-280px)]">
           <Table className="w-full">
             <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
               <TableRow>
@@ -618,7 +619,7 @@ export function PersonnelManagementPage() {
                 </TableRow>
               ) : (
                 paginatedFilteredPositions.map((pos) => (
-                  <TableRow key={pos.id} className="hover:bg-blue-100 transition-colors">
+                  <TableRow key={pos.id} className="hover:bg-emerald-50 transition-colors">
                     {(batchEditMode || batchDeleteMode || exportMode) && (
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <Checkbox
@@ -665,50 +666,17 @@ export function PersonnelManagementPage() {
           </Table>
         </div>
         {/* 分页 */}
-        <div className="flex items-center justify-between mt-4 px-4 pb-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>每页</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="h-8 px-2 border border-gray-200 rounded text-sm focus:outline-none focus:border-emerald-500"
-            >
-              <option value={10}>10条</option>
-              <option value={20}>20条</option>
-              <option value={50}>50条</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            {[...Array(totalPages)].map((_, i) => (
-              <Button
-                key={i + 1}
-                variant={currentPage === i + 1 ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentPage(p => Math.min(filteredTotalPages, p + 1))}
-              disabled={currentPage === filteredTotalPages}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+          <div className="text-sm text-gray-500">共 {filteredPositions.length} 条</div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={filteredTotalPages}
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[10, 20, 50]}
+            showPageSize
+          />
         </div>
       </div>
 

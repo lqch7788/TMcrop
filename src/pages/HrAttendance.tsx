@@ -236,34 +236,31 @@ export default function HrAttendance() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">考勤记录</h3>
-        </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-380px)]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
               <tr>
-                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 w-12">
+                {exportMode && <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap w-12">
                   <input
                     type="checkbox"
                     checked={selectedRows.length === attendanceData.length && attendanceData.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded border-white text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>}
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工号</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">姓名</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">部门</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">日期</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">签到时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">签退时间</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">工作时长</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">状态</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工号</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">姓名</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">部门</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">日期</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">签到时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">签退时间</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">工作时长</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-300">
               {paginatedData.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
+                <tr key={record.id} className="hover:bg-emerald-50 transition-colors">
                   {exportMode && (
                     <td className="px-4 py-3">
                       <input
@@ -274,8 +271,8 @@ export default function HrAttendance() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.workerId}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{record.name}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-blue-600">{record.workerId}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 font-medium">{record.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{record.dept}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{record.date}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">{record.checkIn}</td>
@@ -294,19 +291,6 @@ export default function HrAttendance() {
               ))}
             </tbody>
           </table>
-          {exportMode && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleSelectAll}
-                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                >
-                  {selectedRows.length === attendanceData.length ? '全不选' : '全选'}
-                </button>
-                <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-              </div>
-            </div>
-          )}
         </div>
         {/* 分页组件 */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">

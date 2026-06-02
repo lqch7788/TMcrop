@@ -81,18 +81,18 @@ function PriorityBadge({ priority, priorityText }: { priority: string; priorityT
 }
 
 /**
- * 状态Badge组件
+ * 状态Badge组件（仅展示审批状态）
+ * 业务执行进度（采购中/已完成/已取消）由独立的"执行状态"列展示
  */
 function StatusBadge({ status, statusText, plan }: { status: string; statusText: string; plan: PurchasePlan }) {
   const alert = calculateOverdueAlert(plan);
   return (
     <>
       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-        status === 'completed' ? 'bg-green-100 text-green-700' :
-        status === 'purchasing' ? 'bg-purple-100 text-purple-700' :
+        status === 'rejected' ? 'bg-red-100 text-red-700' :
         status === 'pending' ? 'bg-amber-100 text-amber-700' :
         status === 'approved' ? 'bg-blue-100 text-blue-700' :
-        'bg-gray-100 text-gray-600'
+        'bg-gray-100 text-gray-600'  // draft / 其它
       }`}>
         {statusText}
       </span>
@@ -293,7 +293,7 @@ export function PurchasePlanTable({
             {data.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((plan) => (
               <React.Fragment key={plan.id}>
                 <tr className={`transition-colors ${
-                  (batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')
+                  (batchEditMode || batchDeleteMode) && (plan.executionStatus === 'completed' || plan.executionStatus === 'cancelled')
                     ? 'bg-gray-100 hover:bg-gray-100'
                     : 'hover:bg-blue-50'
                 }`}>
@@ -320,7 +320,7 @@ export function PurchasePlanTable({
                       <Checkbox
                         checked={selectedRows.includes(plan.purchaseApplicationCode)}
                         onCheckedChange={() => onSelectRow(plan.purchaseApplicationCode)}
-                        disabled={(batchEditMode || batchDeleteMode) && (plan.status === 'completed' || plan.status === 'purchasing')}
+                        disabled={(batchEditMode || batchDeleteMode) && (plan.executionStatus === 'completed' || plan.executionStatus === 'cancelled')}
                       />
                     </td>
                   )}

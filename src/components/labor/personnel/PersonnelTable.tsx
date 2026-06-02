@@ -120,8 +120,8 @@ export function PersonnelTable({
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.team}</TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.position}</TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${SKILL_LEVEL_CONFIG[worker.skillLevel].badge}`}>
-                    {SKILL_LEVEL_CONFIG[worker.skillLevel].label}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${SKILL_LEVEL_CONFIG[worker.skillLevel]?.badge || 'bg-gray-100 text-gray-600'}`}>
+                    {SKILL_LEVEL_CONFIG[worker.skillLevel]?.label || worker.skillLevel || '-'}
                   </span>
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.phone}</TableCell>
@@ -137,8 +137,8 @@ export function PersonnelTable({
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{worker.hireDate}</TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${WORKER_STATUS_CONFIG[worker.status].badge}`}>
-                    {WORKER_STATUS_CONFIG[worker.status].label}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${WORKER_STATUS_CONFIG[worker.status]?.badge || 'bg-gray-100 text-gray-600'}`}>
+                    {WORKER_STATUS_CONFIG[worker.status]?.label || worker.status || '-'}
                   </span>
                 </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
