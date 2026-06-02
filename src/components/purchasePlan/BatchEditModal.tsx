@@ -12,6 +12,7 @@ import { UserSelect } from '../common/settings/UserSelect';
 import { useUserStore, useDictionaryStore, usePlantingStore } from '../../stores';
 import { MaterialItemsTable } from './MaterialItemsTable';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
+import { PURCHASE_EXECUTION_STATUS_OPTIONS } from '../../types/purchase';
 
 const safeArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : [];
 
@@ -29,6 +30,7 @@ interface BatchEditModalProps {
     priority: string;
     requiredDate: string;
     remark: string;
+    executionStatus: string;
   };
   batchEditItems: PurchasePlanItem[];
   // 下拉状态
@@ -200,6 +202,7 @@ export function BatchEditModal({
     onBatchEditDataChange('priority', plan.priority);
     onBatchEditDataChange('requiredDate', plan.requiredDate || '');
     onBatchEditDataChange('remark', plan.remark || '');
+    onBatchEditDataChange('executionStatus', plan.executionStatus || 'pending_execution');
     onBatchEditItemsChange(plan.items || []);
     onBatchSelectOpenChange(false);
   };
@@ -355,6 +358,20 @@ export function BatchEditModal({
                   <SelectItem value="high">高</SelectItem>
                   <SelectItem value="normal">中</SelectItem>
                   <SelectItem value="low">低</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-700">执行状态</Label>
+              <Select
+                value={batchEditData.executionStatus || 'pending_execution'}
+                onValueChange={(v) => onBatchEditDataChange('executionStatus', v)}
+              >
+                <SelectTrigger className={`h-9 text-xs ${deepInputClass}`}><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectContent>
+                  {PURCHASE_EXECUTION_STATUS_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
