@@ -360,7 +360,18 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
-  // 7.0 为 dictionaries 表添加 display_name 字段（与 dict_label 分离，用于显示描述）
+  // 7.0 为 purchase_plans 表添加 approval_code / approved_at 列（审批联动需要）
+  try {
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN approval_code TEXT`);
+    db.run(`ALTER TABLE purchase_plans ADD COLUMN approved_at TEXT`);
+    console.log('✓ purchase_plans 表添加 approval_code / approved_at 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      console.log('• purchase_plans.approval_code / approved_at 列已存在');
+    } else {
+      console.log('• purchase_plans 列添加失败:', e.message);
+    }
+  }
   try {
     db.run(`ALTER TABLE dictionaries ADD COLUMN display_name TEXT`);
     console.log('✓ dictionaries 表添加 display_name 列');
