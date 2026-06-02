@@ -133,12 +133,15 @@ export function CreatePlanModal({
           category: row['分类'] || row['category'] || '',
           specification: row['规格型号'] || row['specification'] || '',
           unit: row['单位'] || row['unit'] || '袋',
-          quantity: Number(row['数量'] || row['quantity'] || 0),
-          estimatedPrice: Number(row['预估单价'] || row['estimatedPrice'] || 0),
-          estimatedTotalPrice: Number(row['数量'] || row['quantity'] || 0) * Number(row['预估单价'] || row['estimatedPrice'] || 0),
+          quantity: Math.max(0, Math.round(Number(row['数量'] || row['quantity'] || 0) * 100) / 100),
+          estimatedPrice: Math.max(0, Math.round(Number(row['预估单价'] || row['estimatedPrice'] || 0) * 100) / 100),
+          estimatedTotalPrice: 0, // 下面统一计算
           supplier: row['供应商'] || row['supplier'] || '',
           purpose: row['用途说明'] || row['purpose'] || '',
           remark: row['备注'] || row['remark'] || '',
+        })).map((item) => ({
+          ...item,
+          estimatedTotalPrice: Math.round(item.quantity * item.estimatedPrice * 100) / 100,
         })).filter((item) => item.materialCode || item.materialName);
 
         if (importedItems.length > 0) {
@@ -189,13 +192,23 @@ export function CreatePlanModal({
   };
 
   // 更新物料明细字段
+  // 数量/单价：限制为正数，最多 2 位小数
+  const sanitizePositive = (raw: number, maxDecimals = 2): number => {
+    if (isNaN(raw) || raw < 0) return 0;
+    // 保留 2 位小数（不四舍五入到整数）
+    return Math.round(raw * Math.pow(10, maxDecimals)) / Math.pow(10, maxDecimals);
+  };
   const handleUpdateItem = (id: string, field: keyof PurchasePlanItem, value: string | number) => {
     onItemsChange(createItems.map(item => {
       if (item.id === id) {
-        const updated = { ...item, [field]: value };
+        let v = value as any;
+        if (field === 'quantity' || field === 'estimatedPrice') {
+          v = sanitizePositive(Number(value));
+        }
+        const updated = { ...item, [field]: v };
         // 自动计算预估总价
         if (field === 'quantity' || field === 'estimatedPrice') {
-          updated.estimatedTotalPrice = Number(updated.quantity) * Number(updated.estimatedPrice);
+          updated.estimatedTotalPrice = Math.round(updated.quantity * updated.estimatedPrice * 100) / 100;
         }
         return updated;
       }
@@ -568,6 +581,8 @@ export function CreatePlanModal({
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
                         <Input
                           type="number"
+                          min={0}
+                          step={0.01}
                           value={item.quantity || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'quantity', Number(e.target.value))}
                           placeholder="0"
@@ -577,6 +592,8 @@ export function CreatePlanModal({
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
                         <Input
                           type="number"
+                          min={0}
+                          step={0.01}
                           value={item.estimatedPrice || ''}
                           onChange={(e) => handleUpdateItem(item.id, 'estimatedPrice', Number(e.target.value))}
                           placeholder="0"
@@ -585,7 +602,7 @@ export function CreatePlanModal({
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap text-right">
                         <span className="text-xs text-gray-900 font-medium">
-                          ¥{item.estimatedTotalPrice.toLocaleString()}
+                          ¥{item.estimatedTotalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
