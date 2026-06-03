@@ -564,7 +564,11 @@ export function initializeDatabase() {
       harvester_ids TEXT,
       harvester_names TEXT,
       inbound_type TEXT,
-      batch_code TEXT
+      batch_code TEXT,
+      planting_mode TEXT,
+      target_yield REAL DEFAULT 0,
+      harvest_area REAL DEFAULT 0,
+      products TEXT
     )
   `);
 

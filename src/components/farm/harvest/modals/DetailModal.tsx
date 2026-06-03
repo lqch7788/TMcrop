@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { X, History } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import TraceChain from '../../trace/TraceChain';
-import { QUALITY_GRADE_MAP } from '../../../../constants/cropConstants';
+import { QUALITY_GRADE_MAP, parseHarvesterNames } from '../../../../constants/cropConstants';
 
 interface HarvestRecord {
   id: number;
@@ -197,7 +197,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-xs text-gray-500">采收人员</span>
-                    <span className="text-sm text-gray-900">{record.harvesterNames?.join(', ') || '-'}</span>
+                    <span className="text-sm text-gray-900">{parseHarvesterNames(record.harvesterNames).join(', ') || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-xs text-gray-500">审核人员</span>

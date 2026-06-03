@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Modal, FormField } from '@/components/ui';
 import { Input, Select } from '../../../ui/Modal';
 import { useDictionaryStore, getDictItems } from '../../../../stores';
+import { parseHarvesterNames } from '../../../../constants/cropConstants';
 
 interface HarvestRecord {
   id: number;
@@ -226,7 +227,7 @@ export function BatchEditModal({
             {/* 采收人员 - 不可编辑 */}
             <div className="bg-gray-100 rounded-lg p-3 md:col-span-2">
               <div className="text-xs text-gray-500 mb-1">采收人员</div>
-              <div className="text-sm font-medium text-gray-900">{currentRecord.harvesterNames?.join(', ') || '-'}</div>
+              <div className="text-sm font-medium text-gray-900">{parseHarvesterNames(currentRecord.harvesterNames).join(', ') || '-'}</div>
             </div>
 
             {/* 审核人员 - 可编辑 */}

@@ -604,13 +604,20 @@ export default function HarvestPage() {
       : [];
     const cropVarietyInfo = searchResults.length > 0 ? searchResults[0].variety : undefined;
 
+    // 种植模式默认值链：批次自带的 → 兜底 'greenhouse'（温室种植）
+    // 原因：很多老批次没填 plantingMode（老生产计划表单是 free text 录入），默认温室是
+    //      中国种植最常见场景，且字典里有这个 code，避免产品明细空值导致列表显示 -
+    const defaultPlantingMode = selectedBatchForProduct?.plantingMode
+      || (selectedBatchForProduct?.greenhouseId ? 'greenhouse' : '')
+      || '';
+
     setNewRecord(prev => ({
       ...prev,
       products: [...prev.products, {
         cropCode: cropVarietyInfo?.cropCode || '',  // 作物编码（11位）
         variety: selectedBatchForProduct?.cropName || '',  // 作物品种（最细化名，如"黑美人西瓜"）
         cropName: selectedBatchForProduct?.variety || '',  // 品种（类型名，如"西瓜"）
-        plantingMode: selectedBatchForProduct?.plantingMode || '',
+        plantingMode: defaultPlantingMode,  // ← 修复：批次没值时按关联温室默认
         harvestQuantity: 0,
         unit: prev.unit || '公斤',
         targetYield: selectedBatchForProduct?.targetYield || 0,
@@ -713,7 +720,6 @@ export default function HarvestPage() {
 
     try {
     const selectedBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
-    // 多个采收区域：主区域取第一个，所有区域名追加到备注
     const primaryGreenhouseId = newRecord.greenhouseIds[0];
     const selectedGreenhouse = greenhouses.find(g => g.id === primaryGreenhouseId);
     const allGreenhouseNames = newRecord.greenhouseIds
@@ -722,97 +728,121 @@ export default function HarvestPage() {
     const areaSummary = newRecord.greenhouseIds.length > 1
       ? `[采收区域：${allGreenhouseNames}] `
       : '';
-    const selectedHarvesters = users.filter(u => newRecord.harvesterIds.includes(u.id));
 
-    // 计算总采收量
-    const totalHarvestQuantity = newRecord.products.reduce((sum, p) => sum + (p.harvestQuantity || 0), 0);
+    // V3.1: 1 条采收事件 = 1 条主单，N 个产品存到主单的 products JSON 字段
+    // 库存按产品拆分成 N 条 inventory_stock（每个产品 1 条），businessId 都指向主单 id
+    const productList = newRecord.products.length > 0 ? newRecord.products : [];
+    const firstProduct = productList[0];
+    const totalHarvestQuantity = productList.reduce((sum, p) => sum + (p.harvestQuantity || 0), 0);
 
-    // 为每个产品创建记录（目前一条采收单对应一个产品）
-    const productRecords = newRecord.products.length > 0 ? newRecord.products : [{
-      productCode: '',
-      cropName: selectedBatch?.cropName || '',
-      variety: selectedBatch?.variety || '',
+    // 生成采收单号（一个采收事件 = 1 个单号）
+    const harvestCode = newRecord.harvestCode || await genHarvestCode();
+    const unitPrice = newRecord.unitPrice || 0;
+    const selectedWarehouse = safeWarehouses.find(w => w.oid === newRecord.warehouseId);
+
+    // 主档 cropName/grade/plantingMode/variety/targetYield 取第一个产品（兼容无产品场景回落 batch）
+    const mainCropName = firstProduct?.cropName || selectedBatch?.cropName || '';
+    const mainGrade = firstProduct?.grade || 'good';
+    const mainVariety = firstProduct?.variety || selectedBatch?.variety || '';
+    const mainPlantingMode = firstProduct?.plantingMode || selectedBatch?.plantingMode || '';
+    const mainTargetYield = firstProduct?.targetYield ?? selectedBatch?.targetYield ?? 0;
+
+    // 1 条主单（products 字段存 JSON 数组）
+    const record = {
+      harvestCode,
       batchCode: newRecord.batchCode,
-      plantingMode: selectedBatch?.plantingMode || '',
-      harvestQuantity: totalHarvestQuantity || 0,
-      targetYield: selectedBatch?.targetYield || 0,
-      grade: 'A',
+      cropName: mainCropName,
+      greenhouseId: primaryGreenhouseId,
+      greenhouseName: allGreenhouseNames,
+      harvestDate: newRecord.harvestDate,
+      harvestQuantity: totalHarvestQuantity,
+      unit: newRecord.unit,
+      grade: mainGrade,
+      harvesterIds: newRecord.harvesterIds,
+      harvesterNames: newRecord.harvesterNames || [],
+      warehouseId: newRecord.warehouseId,
+      warehouseName: selectedWarehouse?.name || '',
+      status: 'harvested' as const,
+      remarks: `${areaSummary}${newRecord.remarks}`.trim(),
+      auditor: newRecord.auditor,
+      variety: mainVariety,
+      plantingMode: mainPlantingMode,
+      targetYield: mainTargetYield,
+      quality: 'good' as const,
+      unitPrice,
+      totalAmount: totalHarvestQuantity * unitPrice,
+      // V3.1 关键：1:N 产品明细数组（前端直接传数组，后端 Repository 序列化）
+      products: productList.map(p => ({
+        productCode: p.productCode || '',
+        cropName: p.cropName || mainCropName,
+        cropCode: p.cropCode || '',
+        variety: p.variety || mainVariety,
+        batchCode: p.batchCode || newRecord.batchCode,
+        plantingMode: p.plantingMode || mainPlantingMode,
+        harvestQuantity: p.harvestQuantity || 0,
+        targetYield: p.targetYield ?? mainTargetYield,
+        grade: p.grade || mainGrade,
+        auditor: p.auditor || newRecord.auditor,
+        remarks: p.remarks || '',
+        unit: p.unit || newRecord.unit,
+      })),
+    };
+
+    // 使用 Store 添加 1 条主单（架构：组件 → Store → API）
+    const createdRecord = await addItem(record);
+
+    if (!createdRecord) {
+      showAlert('采收记录保存失败，请重试', 'error');
+      return;
+    }
+
+    // 同步到库存中心：每个产品 1 条 inventory_stock，businessId 都用主单 id
+    const stockTypeMap: Record<string, StockType> = {
+      'seed': StockType.SEED,
+      'seedling': StockType.SEEDLING,
+      'product': StockType.PRODUCT,
+    };
+    const stockType = stockTypeMap[newRecord.targetInventory] || StockType.PRODUCT;
+
+    // 兜底：万一 productList 为空，仍要写 1 条库存（兼容行为）
+    const inventoryTargets = productList.length > 0 ? productList : [{
+      cropName: mainCropName,
+      cropCode: '',
+      variety: mainVariety,
+      plantingMode: mainPlantingMode,
+      targetYield: mainTargetYield,
+      grade: mainGrade,
       auditor: newRecord.auditor,
       remarks: newRecord.remarks,
+      harvestQuantity: totalHarvestQuantity,
+      unit: newRecord.unit,
     }];
 
-    for (const product of productRecords) {
-      // 生成采收单号
-      const harvestCode = newRecord.harvestCode || await genHarvestCode();
+    for (const product of inventoryTargets) {
+      const quantity = product.harvestQuantity || 0;
+      if (quantity <= 0) continue;
 
-      const quantity = product.harvestQuantity || totalHarvestQuantity;
-      const unitPrice = newRecord.unitPrice || 0;
-
-      const selectedWarehouse = safeWarehouses.find(w => w.oid === newRecord.warehouseId);
-      const record = {
-        harvestCode,
-        batchCode: newRecord.batchCode,
-        cropName: selectedBatch?.cropName || product.cropName,
-        greenhouseId: primaryGreenhouseId,
-        greenhouseName: allGreenhouseNames,  // 多区域时用全名（兼容性）
-        harvestDate: newRecord.harvestDate,
-        harvestQuantity: quantity,
-        unit: newRecord.unit,
-        grade: product.grade,  // 字典码（special/excellent/good/qualified/unqualified），不再硬编码断言为 A/B/C
-        harvesterIds: newRecord.harvesterIds,
-        harvesterNames: newRecord.harvesterNames || [],
-        warehouseId: newRecord.warehouseId,
-        warehouseName: selectedWarehouse?.name || '',
-        status: 'harvested' as const,
-        remarks: `${areaSummary}${product.remarks || newRecord.remarks}`.trim(),
-        auditor: product.auditor || newRecord.auditor,
-        variety: product.variety || selectedBatch?.variety || '',
-        plantingMode: product.plantingMode || selectedBatch?.plantingMode || '',
-        targetYield: product.targetYield || selectedBatch?.targetYield || 0,
-        quality: 'good' as const,
-        unitPrice,                                    // 单价(元/kg)
-        totalAmount: quantity * unitPrice,            // 收入 = 产量 × 单价
-      };
-
-      // 使用 Store 添加记录（架构：组件 → Store → API）
-      const createdRecord = await addItem(record);
-
-      // 如果保存失败，跳过后续步骤
-      if (!createdRecord) {
-        showAlert('采收记录保存失败，请重试', 'error');
-        return;
-      }
-
-      // 同步到库存中心（V3.0统一库存）- 使用同步等待
-      // targetInventory 映射到 StockType
-      const stockTypeMap: Record<string, StockType> = {
-        'seed': StockType.SEED,
-        'seedling': StockType.SEEDLING,
-        'product': StockType.PRODUCT,
-      };
-      const stockType = stockTypeMap[newRecord.targetInventory] || StockType.PRODUCT;
       const inventoryResult = await inventoryInbound({
         stockType,
         businessId: createdRecord.id,
         businessType: BusinessType.HARVEST,
         cropId: selectedBatch?.cropId || '',
-        cropName: record.cropName,
+        cropName: product.cropName || mainCropName,
         varietyId: selectedBatch?.varietyId,
-        varietyName: record.variety,
-        quantity: product.harvestQuantity || totalHarvestQuantity,
-        unit: newRecord.unit,
+        varietyName: product.variety || mainVariety,
+        quantity,
+        unit: product.unit || newRecord.unit,
         sourceType: SourceType.SELF_PRODUCED,
         baseName: selectedGreenhouse?.name,
         productionPlanId: selectedBatch?.productionPlanId,
         productionPlanCode: selectedBatch?.productionPlanCode,
         businessCode: record.harvestCode,
-        // V3 扩展字段：让作物库存页展示完整采收元数据
-        cropCode: product.cropCode,           // 来自产品明细（11 位品种库编码）
-        plantingMode: product.plantingMode,   // 来自产品明细
-        targetYield: product.targetYield,     // 来自产品明细
-        grade: product.grade,                 // 来自产品明细（A/B/C）
-        auditor: product.auditor || newRecord.auditor,  // 产品级 > 单据级
-        greenhouseName: allGreenhouseNames,   // 多区域拼好的字符串
+        cropCode: product.cropCode || '',
+        plantingMode: product.plantingMode || mainPlantingMode,
+        targetYield: product.targetYield ?? mainTargetYield,
+        grade: product.grade || mainGrade,
+        auditor: product.auditor || newRecord.auditor,
+        greenhouseName: allGreenhouseNames,
         remarks: product.remarks || newRecord.remarks,
         extensions: {
           warehouseId: newRecord.warehouseId,
@@ -822,28 +852,26 @@ export default function HarvestPage() {
       }, 'system', '系统管理员');
 
       if (!inventoryResult.success) {
-        // 同步失败：先尝试回滚刚创建的采收记录，避免数据不一致
         try {
           await deleteItem(String(createdRecord.id));
         } catch (rollbackErr) {
           console.error('[HarvestPage] 回滚采收记录失败:', rollbackErr);
         }
-        // 弹窗显示具体失败原因（不再吞掉）
+
         showAlert(
           `库存同步失败，采收记录已回滚。\n原因：${inventoryResult.error || '未知错误'}\n\n请检查：\n1. 仓库类型与采收类型是否匹配（种子/种苗/成品）\n2. 网络是否正常\n3. 后端服务是否运行`,
           'error'
         );
         return;
       }
-
-      // 入库成功：通知库存 Store 触发跨页刷新
-      useInventoryStore.getState().notifyChange();
-
-      // 更新作物实例的采收数量
-      if (selectedBatch?.instanceId) {
-        await cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', product.harvestQuantity || totalHarvestQuantity);
-      }
     }
+
+    useInventoryStore.getState().notifyChange();
+
+    if (selectedBatch?.instanceId && totalHarvestQuantity > 0) {
+      await cropInstanceService.updateQuantity(selectedBatch.instanceId, 'harvest', totalHarvestQuantity);
+    }
+
     refreshHarvestData();
 
     setIsCreateModalOpen(false);
@@ -868,7 +896,6 @@ export default function HarvestPage() {
     });
     setErrors({});
     } catch (error) {
-      // logger.error('保存采收记录失败:', error);
       showAlert('保存失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     }
   };

@@ -17,6 +17,7 @@ import {
   DownstreamTraceResult,
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
+import { getPlantingModeLabel } from '../../../constants/cropConstants';
 
 interface InventoryTableProps {
   data: InventoryStock[];
@@ -255,7 +256,7 @@ export function InventoryTable({
                       {stock.greenhouseName || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                      {stock.plantingMode || '-'}
+                      {getPlantingModeLabel(stock.plantingMode) || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {stock.currentQuantity} {stock.unit}
