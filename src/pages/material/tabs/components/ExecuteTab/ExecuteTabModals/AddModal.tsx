@@ -83,12 +83,13 @@ export function ExecuteAddModal({
   const [appSearch, setAppSearch] = useState('');
 
   // 过滤后的领料申请单列表 — 只显示已审批的（可出库状态）
+  // 依赖 applicationItems：Store 首次加载为空数组，缺此依赖会导致 useMemo 永远缓存空结果
   const availableApplications = useMemo(() => {
     return applicationItems.filter(app => {
       if (appSearch && !app.code.toLowerCase().includes(appSearch.toLowerCase())) return false;
       return true;
     });
-  }, [appSearch]);
+  }, [appSearch, applicationItems]);
 
   // 当前选中的领料申请单
   const selectedApplication = useMemo(() => {

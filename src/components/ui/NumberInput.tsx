@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 // NumberInput 组件属性接口
 interface NumberInputProps {
@@ -33,6 +33,15 @@ export function NumberInput({
   );
   // 跟踪是否正在编辑
   const isFocusedRef = useRef(false);
+
+  // 修复：value prop 变化时同步内部 state（不打断用户输入，仅在非聚焦状态下同步）
+  // 根因：原 useState 初始化只读一次 prop，后续父组件切换物料时新 value 不会传入
+  // 场景：批量编辑弹窗切换物料，"库存数量"等字段始终显示上一条的值
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setInputValue(value != null && value !== '' ? String(value) : '');
+    }
+  }, [value]);
 
   // 格式化显示值（用于失焦后显示）
   const formatValue = (val: string | number | null | undefined): string => {

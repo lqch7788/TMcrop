@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from '@/components/ui/Modal';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import type { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';
 
@@ -194,11 +195,19 @@ export function EditModal({
                     />
                   </td>
                   <td className="px-2 py-2">
-                    <Input
-                      type="text"
+                    <MaterialAutocomplete
                       value={material.materialName}
-                      onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      onChange={(v) => onMaterialChange(idx, 'materialName', v)}
+                      onSelect={(m) => {
+                        onMaterialChange(idx, 'materialCode', m.code);
+                        onMaterialChange(idx, 'spec', m.specification);
+                        onMaterialChange(idx, 'unit', m.unit);
+                        onMaterialChange(idx, 'stockQuantity', m.quantity);
+                        onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                        onMaterialChange(idx, 'warehousePosition', m.location);
+                      }}
+                      placeholder="输入物料名称搜索"
+                      className="w-full"
                     />
                   </td>
                   <td className="px-2 py-2">
@@ -522,11 +531,19 @@ export function AddModal({
                     />
                   </td>
                   <td className="px-2 py-2">
-                    <Input
-                      type="text"
+                    <MaterialAutocomplete
                       value={material.materialName}
-                      onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      onChange={(v) => onMaterialChange(idx, 'materialName', v)}
+                      onSelect={(m) => {
+                        onMaterialChange(idx, 'materialCode', m.code);
+                        onMaterialChange(idx, 'spec', m.specification);
+                        onMaterialChange(idx, 'unit', m.unit);
+                        onMaterialChange(idx, 'stockQuantity', m.quantity);
+                        onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                        onMaterialChange(idx, 'warehousePosition', m.location);
+                      }}
+                      placeholder="输入物料名称搜索"
+                      className="w-full"
                     />
                   </td>
                   <td className="px-2 py-2">

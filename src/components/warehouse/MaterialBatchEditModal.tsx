@@ -74,7 +74,9 @@ export function MaterialBatchEditModal({
         </Select>
       </div>
 
-      <div className="space-y-3">
+      {/* key={currentMaterialId} 强制切换物料时整个表单区 remount
+          避免 NumberInput 内部 state 或其他闭包残留导致字段显示上一条物料的值 */}
+      <div className="space-y-3" key={currentMaterialId}>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-50 rounded-lg p-2">
             <div className="text-xs text-gray-500 mb-1">物料编号</div>

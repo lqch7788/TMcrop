@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/NumberInput';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { showAlert } from '@/lib/dialogService';
 
@@ -48,10 +49,9 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
 
   // 修改物料字段
   const handleMaterialChange = (materialId: number, field: keyof InboundMaterial, value: string | number) => {
-    const updated = editedMaterials.map(m =>
+    setEditedMaterials((prev) => prev.map(m =>
       m.id === materialId ? { ...m, [field]: value } : m
-    );
-    setEditedMaterials(updated);
+    ));
   };
 
   // 删除物料
@@ -239,11 +239,26 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
                       </TableCell>
                       <TableCell className="px-1 py-1.5">
                         {record.status === 'pending' ? (
-                          <Input
-                            type="text"
+                          <MaterialAutocomplete
                             value={m.name}
-                            onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
-                            className="h-6 px-1 text-xs"
+                            onChange={(v) => handleMaterialChange(m.id, 'name', v)}
+                            onSelect={(wm) => {
+                              setEditedMaterials((prev) => prev.map(x =>
+                                x.id === m.id ? {
+                                  ...x,
+                                  name: wm.name,
+                                  code: wm.code || x.code,
+                                  category: wm.category || x.category,
+                                  specification: wm.specification || x.specification,
+                                  barcode: wm.barcode || x.barcode,
+                                  unit: wm.unit || x.unit,
+                                  price: wm.price || x.price,
+                                  location: wm.location || x.location,
+                                } : x
+                              ));
+                            }}
+                            placeholder="搜索物料名称"
+                            className="w-32"
                           />
                         ) : (
                           <span className="text-xs text-gray-900">{m.name}</span>

@@ -417,12 +417,14 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   // ============================================
-  // 编辑弹窗 - 更新物料行
+  // 编辑弹窗 - 更新物料行（函数式 setState，避免连续多次调用互相覆盖）
   // ============================================
   const handleEditMaterialChange = (index: number, field: keyof MaterialItem, value: string | number) => {
-    const newMaterials = [...editForm.materials];
-    newMaterials[index] = { ...newMaterials[index], [field]: value };
-    setEditForm({ ...editForm, materials: newMaterials });
+    setEditForm((prev) => {
+      const newMaterials = [...prev.materials];
+      newMaterials[index] = { ...newMaterials[index], [field]: value };
+      return { ...prev, materials: newMaterials };
+    });
   };
 
   // ============================================
@@ -543,12 +545,14 @@ export function useApplicationTab(): UseApplicationTabReturn {
   };
 
   // ============================================
-  // 更新物料行
+  // 更新物料行（函数式 setState，避免连续多次调用互相覆盖）
   // ============================================
   const handleMaterialChange = (index: number, field: keyof MaterialItem, value: string | number) => {
-    const newMaterials = [...addForm.materials];
-    newMaterials[index] = { ...newMaterials[index], [field]: value };
-    setAddForm({ ...addForm, materials: newMaterials });
+    setAddForm((prev) => {
+      const newMaterials = [...prev.materials];
+      newMaterials[index] = { ...newMaterials[index], [field]: value };
+      return { ...prev, materials: newMaterials };
+    });
   };
 
   // ============================================

@@ -24,6 +24,7 @@ router.get('/', (req: Request, res: Response) => {
 
 /**
  * 创建物料
+ * 修复：返回完整物料记录（不仅是 id），符合 MEMORY.md "后端 POST/PUT 必须返回完整记录" 铁律
  */
 router.post('/', (req: Request, res: Response) => {
   try {
@@ -47,7 +48,13 @@ router.post('/', (req: Request, res: Response) => {
       lastUpdateTime: new Date().toISOString(),
       dataStatus: material.dataStatus || '启用'
     });
-    res.status(201).json({ id });
+    // INSERT 后立即 SELECT 完整记录返回
+    const created = materialsDb.getMaterialById(id);
+    if (!created) {
+      // 极端兜底：刚 INSERT 完查不到，返回至少带 id 的对象
+      return res.status(201).json({ id });
+    }
+    res.status(201).json(created);
   } catch (error) {
     console.error('创建物料失败:', error);
     res.status(500).json({ error: '创建物料失败' });

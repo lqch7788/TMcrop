@@ -9,7 +9,10 @@ import { getDatabase, saveDatabase } from './index';
  */
 export function getAllMaterials(): any[] {
   const db = getDatabase();
-  const results = db.exec('SELECT * FROM materials ORDER BY code');
+  // 修复：按 id DESC 排序，让新建物料显示在最前面
+  // 旧 ORDER BY code 会让"ULTRATESTxxx"这种新编码排到 MAT_xxx 后面，用户分页看不到
+  // 库存总览页面用户最关心"刚加了啥"，按 id DESC 符合该场景
+  const results = db.exec('SELECT * FROM materials ORDER BY id DESC');
   if (results.length === 0) return [];
 
   const { columns, values } = results[0];
@@ -24,14 +27,19 @@ export function getAllMaterials(): any[] {
 
 /**
  * 根据ID获取物料
+ * 修复：sql.js 必须先 stmt.step() 推进游标，再 getAsObject() 才有数据；原写法直接 getAsObject 永远返回空对象
  */
 export function getMaterialById(id: number): any | null {
   const db = getDatabase();
   const stmt = db.prepare('SELECT * FROM materials WHERE id = ?');
   stmt.bind([id]);
-  const item = stmt.getAsObject();
+  if (stmt.step()) {
+    const item = stmt.getAsObject();
+    stmt.free();
+    return item;
+  }
   stmt.free();
-  return Object.keys(item).length > 0 ? item : null;
+  return null;
 }
 
 /**
@@ -80,24 +88,26 @@ export function createMaterial(material: {
     material.lastUpdateTime,
     material.dataStatus
   ]);
-  saveDatabase();
-  // 返回最后插入的ID
+  // 先取 last_insert_rowid，再 saveDatabase（sql.js 在 saveDatabase 后会重置该值为 0）
   const result = db.exec('SELECT last_insert_rowid() as id');
-  return result[0]?.values[0]?.[0] as number || 0;
+  const newId = (result[0]?.values[0]?.[0] as number) || 0;
+  saveDatabase();
+  return newId;
 }
 
 /**
  * 更新物料
  */
-export function updateMaterial(id: number, updates: Record<string, any>): boolean {
+export function updateMaterial(id: number, updates: Record<string, any>): any | null {
   const db = getDatabase();
   const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-  if (fields.length === 0) return false;
+  if (fields.length === 0) return null;
 
   const values = Object.keys(updates).map(k => updates[k]);
   db.run(`UPDATE materials SET ${fields} WHERE id = ?`, [...values, id]);
   saveDatabase();
-  return true;
+  // 修复：返回更新后的完整记录（不再只返回 true），符合"POST/PUT 必须返回完整记录"
+  return getMaterialById(id);
 }
 
 /**

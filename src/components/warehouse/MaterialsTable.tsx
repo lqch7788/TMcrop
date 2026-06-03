@@ -118,34 +118,40 @@ export function MaterialsTable({
                   </TableCell>
                 )}
                 <TableCell
-                  className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline whitespace-nowrap"
+                  className="px-4 py-3 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline truncate"
+                  title={`${item.code}（点击查看详情）`}
                   onClick={() => onView(item)}
                 >
                   {item.code}
                 </TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.name}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.category}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.specification}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.barcode}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.unit}</TableCell>
-                <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                  <span className={`font-medium ${item.quantity < item.minStock ? 'text-red-600' : 'text-gray-900'}`}>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.name}>{item.name}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.category}>{item.category}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.specification}>{item.specification}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.barcode}>{item.barcode}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.unit}>{item.unit}</TableCell>
+                <TableCell className="px-4 py-3 text-sm truncate">
+                  <span
+                    className={`font-medium ${item.quantity < item.minStock ? 'text-red-600' : 'text-gray-900'}`}
+                    title={`库存 ${item.quantity}（最低 ${item.minStock}）`}
+                  >
                     {item.quantity}
                   </span>
                 </TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.minStock}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.maxStock}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.price.replace('元', '')}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.supplier}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.location}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.batchNo}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.productionDate}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.expiryDate}</TableCell>
-                <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最低 ${item.minStock}`}>{item.minStock}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={`最高 ${item.maxStock}`}>{item.maxStock}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.price}>{item.price.replace('元', '')}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.supplier}>{item.supplier}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.location}>{item.location}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.batchNo}>{item.batchNo}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.productionDate}>{item.productionDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.expiryDate}>{item.expiryDate}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-600 truncate" title={item.lastUpdateTime}>
+                  {item.lastUpdateTime ? item.lastUpdateTime.slice(0, 10) : ''}
+                </TableCell>
                 <TableCell className="px-4 py-3 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                     item.dataStatus === '启用' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
+                  }`} title={item.dataStatus}>
                     {item.dataStatus}
                   </span>
                 </TableCell>

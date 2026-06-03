@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 // 深度输入框样式
@@ -196,11 +197,20 @@ export const ExecuteEditModal: React.FC<ExecuteEditModalProps> = ({
                       />
                     </TableCell>
                     <TableCell className="px-3 py-2">
-                      <Input
-                        type="text"
+                      <MaterialAutocomplete
                         value={material.materialName}
-                        onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                        className="h-8 px-2 text-xs"
+                        onChange={(v) => onMaterialChange(idx, 'materialName', v)}
+                        onSelect={(m) => {
+                          onMaterialChange(idx, 'materialCode', m.code);
+                          onMaterialChange(idx, 'spec', m.specification);
+                          onMaterialChange(idx, 'unit', m.unit);
+                          onMaterialChange(idx, 'stockQuantity', m.quantity);
+                          onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                          onMaterialChange(idx, 'warehousePosition', m.location);
+                          // 不覆盖：applicationCode（只读）/ requestedQuantity（申请量）/ actualQuantity（实发量，业务人员手动填）
+                        }}
+                        placeholder="输入物料名称搜索"
+                        className="h-8"
                       />
                     </TableCell>
                     <TableCell className="px-3 py-2">

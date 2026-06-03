@@ -101,9 +101,15 @@ export async function updateInboundRecord(id: number, updates: Partial<InboundRe
 /**
  * 创建物料
  * 降级策略：API → 离线队列
+ * 修复：返回完整物料记录（后端 POST 已改为 SELECT * 后返回），符合"POST 必须返回完整记录"铁律
  */
-export async function createMaterial(material: Omit<Material, 'id'>): Promise<{ id: number }> {
-  return await enhancedApiClient.post<{ id: number }>('/materials', material);
+export async function createMaterial(material: Omit<Material, 'id'>): Promise<Material> {
+  const result = await enhancedApiClient.post<Material | { id: number }>('/materials', material);
+  // 防御兜底：万一后端又退回只返回 id，至少用入参 + id 拼出完整对象
+  if (result && 'code' in result) {
+    return result as Material;
+  }
+  return { ...material, id: (result as { id: number })?.id ?? 0 } as Material;
 }
 
 /**

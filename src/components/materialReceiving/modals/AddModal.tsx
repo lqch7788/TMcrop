@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { Label } from '@/components/ui/label';
@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { MaterialItem, MaterialRequestFormState } from '../../../types/materialReceiving';
-import { materialBaseDatabase, findMaterialByCode, findMaterialByName } from '../../../data/materialReceivingData';
+import { useWarehouseMaterialStore } from '@/stores';
 import { UserSelect } from '../../common/settings/UserSelect';
 import { useUserStore } from '../../../stores/useUserStore';
 
@@ -48,40 +49,42 @@ export const AddModal: React.FC<AddModalProps> = ({
   const currentOperator = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
   const isOtherBatch = addForm.productionBatchCode === '其他';
 
-  // 物料编码或名称变化时，自动填充其他字段
+  // 仓库物料主数据（用于输入物料编码/名称时自动关联；数据源已统一从 useWarehouseMaterialStore 加载）
+  const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
+  const loadWarehouseMaterials = useWarehouseMaterialStore((s) => s.loadItems);
+  useEffect(() => {
+    if (isOpen && warehouseMaterials.length === 0) loadWarehouseMaterials();
+  }, [isOpen, warehouseMaterials.length, loadWarehouseMaterials]);
+
+  // 从 Store 精确匹配物料
+  const findMaterialInStore = (code?: string, name?: string) => {
+    if (code) return warehouseMaterials.find((m) => m.code === code);
+    if (name) return warehouseMaterials.find((m) => m.name === name);
+    return undefined;
+  };
+
+  // 物料编码变化时，自动填充其他字段（精确匹配来自 Store）
   const handleMaterialCodeChange = (idx: number, value: string) => {
     onMaterialChange(idx, 'materialCode', value);
     if (value) {
-      const material = findMaterialByCode(value);
+      const material = findMaterialInStore(value);
       if (material) {
-        onMaterialChange(idx, 'materialName', material.materialName);
-        onMaterialChange(idx, 'spec', material.spec);
+        onMaterialChange(idx, 'materialName', material.name);
+        onMaterialChange(idx, 'spec', material.specification);
         onMaterialChange(idx, 'unit', material.unit);
         onMaterialChange(idx, 'category', material.category);
-        onMaterialChange(idx, 'stockQuantity', material.stockQuantity);
-        onMaterialChange(idx, 'unitPrice', material.unitPrice);
-        onMaterialChange(idx, 'warehousePosition', material.warehousePosition);
-        onMaterialChange(idx, 'remark', material.remark);
+        onMaterialChange(idx, 'stockQuantity', material.quantity);
+        onMaterialChange(idx, 'unitPrice', Number(material.price) || 0);
+        onMaterialChange(idx, 'warehousePosition', material.location);
+        onMaterialChange(idx, 'remark', '');
       }
     }
   };
 
-  // 物料名称变化时，自动填充其他字段
-  const handleMaterialNameChange = (idx: number, value: string) => {
-    onMaterialChange(idx, 'materialName', value);
-    if (value) {
-      const material = findMaterialByName(value);
-      if (material) {
-        onMaterialChange(idx, 'materialCode', material.materialCode);
-        onMaterialChange(idx, 'spec', material.spec);
-        onMaterialChange(idx, 'unit', material.unit);
-        onMaterialChange(idx, 'category', material.category);
-        onMaterialChange(idx, 'stockQuantity', material.stockQuantity);
-        onMaterialChange(idx, 'unitPrice', material.unitPrice);
-        onMaterialChange(idx, 'warehousePosition', material.warehousePosition);
-        onMaterialChange(idx, 'remark', material.remark);
-      }
-    }
+  // 物料名称变化：搜索/自动填充由 MaterialAutocomplete 内部管理（onChange + onSelect）
+  // 此处保留空以兼容旧调用点（如有）— 实际已无引用
+  const handleMaterialNameChange = (_idx: number, _value: string) => {
+    // no-op: 已迁移到 MaterialAutocomplete.onChange + onSelect
   };
   return (
     <UnifiedModal
@@ -270,11 +273,21 @@ export const AddModal: React.FC<AddModalProps> = ({
                       />
                     </TableCell>
                     <TableCell className="px-2 py-2">
-                      <Input
-                        type="text"
+                      <MaterialAutocomplete
                         value={material.materialName}
-                        onChange={(e) => handleMaterialNameChange(idx, e.target.value)}
-                        className="h-8 px-2 text-xs"
+                        onChange={(v) => onMaterialChange(idx, 'materialName', v)}
+                        onSelect={(m) => {
+                          onMaterialChange(idx, 'materialCode', m.code);
+                          onMaterialChange(idx, 'spec', m.specification);
+                          onMaterialChange(idx, 'unit', m.unit);
+                          onMaterialChange(idx, 'category', m.category);
+                          onMaterialChange(idx, 'stockQuantity', m.quantity);
+                          onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                          onMaterialChange(idx, 'warehousePosition', m.location);
+                          onMaterialChange(idx, 'remark', '');
+                        }}
+                        placeholder="输入物料名称搜索"
+                        className="h-8"
                       />
                     </TableCell>
                     <TableCell className="px-2 py-2">

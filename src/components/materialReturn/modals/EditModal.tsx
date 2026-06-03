@@ -4,6 +4,7 @@ import { RETURN_TYPES } from '../config';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -215,11 +216,20 @@ export function EditModal({
                     />
                   </td>
                   <td className="px-2 py-2">
-                    <input
-                      type="text"
+                    <MaterialAutocomplete
                       value={material.materialName}
-                      onChange={(e) => onMaterialChange(idx, 'materialName', e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      onChange={(v) => onMaterialChange(idx, 'materialName', v)}
+                      onSelect={(m) => {
+                        onMaterialChange(idx, 'materialCode', m.code);
+                        onMaterialChange(idx, 'category', m.category);
+                        onMaterialChange(idx, 'spec', m.specification);
+                        onMaterialChange(idx, 'unit', m.unit);
+                        onMaterialChange(idx, 'unitPrice', Number(m.price) || 0);
+                        onMaterialChange(idx, 'warehousePosition', m.location);
+                        // 不覆盖：sourceApplicationCode（来源单据，已建立退料关系）/ returnQuantity（实退数量）/ reason
+                      }}
+                      placeholder="输入物料名称搜索"
+                      className="w-full"
                     />
                   </td>
                   <td className="px-2 py-2">

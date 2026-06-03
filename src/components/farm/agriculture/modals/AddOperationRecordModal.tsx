@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Modal } from '../../../ui/Modal';
 import { Input } from '../../../ui/input';
@@ -13,18 +14,10 @@ import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
-import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
+import { useGreenhouseStore, useWorkerStore, useWarehouseMaterialStore } from '../../../../stores';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-
-// 物料选项（静态配置，非动态数据）
-const materialOptions = [
-  '番茄苗', '黄瓜苗', '草莓苗', '生根剂',
-  '水溶肥', '有机肥', '复合肥', '多菌灵',
-  '吡虫啉', '周转箱', '滴灌带', '钾肥',
-  '氮肥', '磷肥', '微生物菌剂', '其他'
-];
 
 // 工作量单位选项（静态配置）
 const workloadUnitOptions = [
@@ -53,6 +46,13 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     if (workers.length === 0) loadWorkers();
   }, [greenhouses.length, loadGreenhouses, workers.length, loadWorkers]);
 
+  // 仓库物料主数据（用于动态生成物料多选下拉，已废弃硬编码 materialOptions）
+  const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
+  const loadWarehouseMaterials = useWarehouseMaterialStore((s) => s.loadItems);
+  useEffect(() => {
+    if (isOpen && warehouseMaterials.length === 0) loadWarehouseMaterials();
+  }, [isOpen, warehouseMaterials.length, loadWarehouseMaterials]);
+
   // 温室选项（从Store获取）
   const greenhouseOptions = useMemo(() =>
     greenhouses.filter(g => g.status === 'active').map(g => ({ value: g.id, label: g.name })),
@@ -64,6 +64,16 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     workers.filter(w => w.status === 'active').map(w => ({ value: w.id, label: w.name })),
     [workers]
   );
+
+  // 动态物料多选选项：来自仓库物料主数据，保留"其他"作为兜底
+  const materialOptions = useMemo(() => {
+    const names = warehouseMaterials
+      .filter((m) => !m.dataStatus || m.dataStatus === '启用')
+      .map((m) => m.name)
+      .filter(Boolean);
+    if (!names.includes('其他')) names.push('其他');
+    return Array.from(new Set(names));
+  }, [warehouseMaterials]);
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -354,6 +364,12 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
               </div>
             )}
           </div>
+          <Link
+            to="/warehouse-overview"
+            className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline mt-1 inline-block"
+          >
+            没找到物料？去物料总览添加
+          </Link>
         </div>
 
         {/* 备注 */}
