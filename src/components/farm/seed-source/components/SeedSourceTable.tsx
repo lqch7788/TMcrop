@@ -9,6 +9,7 @@ import { Edit2, Trash2, Printer, Image, Download, Plus, CheckCircle, XCircle, Cl
 import { Button } from '../../../ui/button';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
 import { Input } from '../../../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -168,6 +169,11 @@ export function SeedSourceTable({
     }
     switch (op) {
       case 'edit':
+        // P2 #14 修复: 编辑模式多选时只编辑第一条与提示矛盾，加校验
+        if (selectedRows.length > 1) {
+          showAlert('编辑模式只能选择一条记录，请先取消其他选中项');
+          return;
+        }
         onEdit(record);
         break;
       case 'delete':
@@ -360,10 +366,11 @@ export function SeedSourceTable({
                 <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
                   <Input
                     type="checkbox"
-                    checked={selectedRows.length === data.length && data.length > 0}
+                    // P2 #13 修复: 用 currentData 判断"当前页全选"，而非 data（避免多页时只选当前页却显示已全选）
+                    checked={currentData.length > 0 && currentData.every(r => selectedRows.includes(r.id))}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        onSelectionChange(data.map(item => item.id));
+                        onSelectionChange(currentData.map(item => item.id));
                       } else {
                         onSelectionChange([]);
                       }
@@ -471,14 +478,8 @@ export function SeedSourceTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     {record.initialCount > 0 ? (
-                      <span className={`font-medium ${
-                        record.availableCount / record.initialCount >= 0.8
-                          ? 'text-green-600'
-                          : record.availableCount / record.initialCount >= 0.5
-                          ? 'text-amber-600'
-                          : 'text-red-600'
-                      }`}>
-                        {Math.round(record.availableCount / record.initialCount * 100)}%
+                      <span className={`font-medium ${getStatusColorClass(computeStockStatus(record.availableCount, record.initialCount)).text}`}>
+                        {getCompletionRate(record.availableCount, record.initialCount)}%
                       </span>
                     ) : (
                       <span className="text-gray-400">-</span>
@@ -523,24 +524,29 @@ export function SeedSourceTable({
                           </Button>
                         </>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEnd(record, 'normal')}
-                        className="text-gray-500 hover:text-green-600 hover:bg-green-50"
-                        title="正常结束"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEnd(record, 'abnormal')}
-                        className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
-                        title="异常结束"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </Button>
+                      {/* P2 #11 修复: 仅有关联生产计划的种源才显示"结束"按钮 */}
+                      {record.productionPlanCode && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'normal')}
+                            className="text-gray-500 hover:text-green-600 hover:bg-green-50"
+                            title="正常结束"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'abnormal')}
+                            className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                            title="异常结束"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>

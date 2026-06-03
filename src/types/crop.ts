@@ -99,7 +99,8 @@ export enum TransplantAction {
 export enum StockStatus {
   SUFFICIENT = 'sufficient',  // 充足
   LOW = 'low',                // 不足
-  DEPLETED = 'depleted'       // 耗尽
+  DEPLETED = 'depleted',     // 耗尽
+  ACTIVE = 'active',          // 活跃（兼容后端 DEFAULT 'active' 历史数据）
 }
 
 // ========== 繁殖途径类型（种源管理升级 V2.0）==========

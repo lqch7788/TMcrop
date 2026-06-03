@@ -10,7 +10,7 @@ import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { SeedSource } from '../../../../types/crop';
 import { printLabel } from '../../../../services/apiSeedSourceService';
-import { useUserStore } from '../../../../stores';
+import { useUserStore, useAuthStore } from '../../../../stores';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
@@ -33,8 +33,12 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [printLabels, setPrintLabels] = useState<string[]>([]);
 
   // 获取当前操作员
+  // P2 #16 修复: 从 useAuthStore.currentUser 读取，移除 localStorage.getItem('username')
+  const authCurrentUser = useAuthStore((s) => s.currentUser);
   const storeUsers = useUserStore((s) => s.users);
-  const currentOperator = storeUsers.length > 0 ? storeUsers[0]?.name : (localStorage.getItem('username') || '系统管理员');
+  const currentOperator = authCurrentUser?.name
+    || authCurrentUser?.username
+    || (storeUsers.length > 0 ? storeUsers[0]?.name : '系统管理员');
 
   // 初始化标签编号列表（直接从record字段生成，不依赖localStorage查找）
   useEffect(() => {

@@ -12,14 +12,18 @@ import { SourceType, StockStatus, PropagationType, PropagationStatus, BreedingMe
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { generateSeedCode } from '../../../../services/apiSeedSourceService';
+import { computeStockStatus } from '../../../../lib/stockStatus';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
-import * as supplierService from '../../../../services/supplierService';
+// supplierService 已重写为兼容层（从 useSupplierStore 读内存数据，**不再用 localStorage**）
+// 业务代码应优先用 useSupplierStore 订阅
 import { CropVariety } from '../../../../types/cropVariety';
 import { Supplier } from '../../../supplier/types';
 import { QuickAddModal } from '../../crop-variety/modals/QuickAddModal';
 import { useUserStore } from '../../../../stores/useUserStore';
+import { useAuthStore } from '../../../../stores/useAuthStore';
 import { useProductionPlanStore } from '../../../../stores/useProductionPlanStore';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
+import { useSupplierStore } from '../../../../stores/useSupplierStore';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -65,12 +69,16 @@ export function AddModal({
   // 使用审批Context
   const { addApproval } = useApprovalContext();
 
-  // 从 Store 获取当前用户和生产计划（使用 getState() 读取）
-  const storeUsers = useUserStore.getState().users;
-  const storePlans = useProductionPlanStore.getState().plans;
-  const currentUser = storeUsers.length > 0
-    ? { id: storeUsers[0].oid, name: storeUsers[0].name, department: storeUsers[0].orgOid || '生产部' }
-    : { id: 'U013', name: localStorage.getItem('username') || '未知用户', department: '生产部' };
+  // P1 #5 修复: 改用订阅式读取 store，store 更新时组件自动重渲染
+  const storeUsers = useUserStore((s) => s.users);
+  const storePlans = useProductionPlanStore((s) => s.plans);
+  // P2 #16 修复: 当前用户从 useAuthStore.currentUser 读取（认证已登录的用户），不再用 localStorage
+  const authCurrentUser = useAuthStore((s) => s.currentUser);
+  const currentUser = authCurrentUser
+    ? { id: authCurrentUser.id || authCurrentUser.oid, name: authCurrentUser.name || authCurrentUser.username, department: authCurrentUser.department || authCurrentUser.orgName || '生产部' }
+    : (storeUsers.length > 0
+        ? { id: storeUsers[0].oid, name: storeUsers[0].name, department: storeUsers[0].orgOid || '生产部' }
+        : { id: 'U013', name: '未知用户', department: '生产部' });
   const cropBatches = storePlans.length > 0
     ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
     : [];
@@ -122,6 +130,11 @@ export function AddModal({
   // 供应商搜索状态
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [supplierSearchKeyword, setSupplierSearchKeyword] = useState('');
+  // P2 #15 修复: 直接订阅 useSupplierStore（响应式），替代 supplierService 的 localStorage 同步缓存
+  const supplierItems = useSupplierStore((s) => s.items);
+  const loadSuppliers = useSupplierStore((s) => s.loadItems);
+  const searchSuppliersInStore = useSupplierStore((s) => s.search);
+
   const [supplierSearchResults, setSupplierSearchResults] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const supplierSearchRef = useRef<HTMLDivElement>(null);
@@ -129,16 +142,20 @@ export function AddModal({
   // 快速新增弹窗状态
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-  // 搜索供应商
+  // 挂载时触发供应商全量加载（store 内部有 5 分钟去重）
   useEffect(() => {
-    supplierService.initSuppliers();
+    void loadSuppliers();
+  }, [loadSuppliers]);
+
+  // 搜索供应商（响应 keyword 变化 + 内存 supplierItems 变化）
+  useEffect(() => {
     if (supplierSearchKeyword.trim()) {
-      const results = supplierService.searchSuppliers(supplierSearchKeyword);
-      setSupplierSearchResults(results);
+      setSupplierSearchResults(searchSuppliersInStore(supplierSearchKeyword));
     } else {
-      setSupplierSearchResults([]);
+      // 无关键字时显示全部（避免空数组时啥也看不到）
+      setSupplierSearchResults(supplierItems);
     }
-  }, [supplierSearchKeyword]);
+  }, [supplierSearchKeyword, supplierItems, searchSuppliersInStore]);
 
   // 种源类型→供应商类型级联过滤
   const filteredSearchResults = useMemo(() => {
@@ -250,13 +267,8 @@ export function AddModal({
     const initialCount = formData.quantity;
     const availableCount = initialCount;
 
-    // 判断库存状态
-    let status = StockStatus.SUFFICIENT;
-    if (availableCount === 0) {
-      status = StockStatus.DEPLETED;
-    } else if (availableCount < initialCount * 0.2) {
-      status = StockStatus.LOW;
-    }
+    // 状态4 修复: 使用统一计算函数 computeStockStatus
+    const status = computeStockStatus(availableCount, initialCount);
 
     // 生成溯源码
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
@@ -311,6 +323,11 @@ export function AddModal({
       }
 
       newSeedSource = await useSeedSourceStore.getState().addItem(baseData);
+      // P0 #3 修复: addItem 失败时返回 null，下游不可访问 .id
+      if (!newSeedSource) {
+        await showAlert('创建失败，请重试');
+        return;
+      }
     } catch (error) {
       // logger.error('创建种源失败:', error);
       await showAlert('创建失败，请重试');
@@ -331,7 +348,9 @@ export function AddModal({
           sourceDescription: `种源入库-${supplierName || '未知供应商'}`,
         }
       );
-      useSeedSourceStore.getState().updateItem(String(newSeedSource.id), { instanceId: instance.id });
+      if (newSeedSource?.id) {
+        useSeedSourceStore.getState().updateItem(String(newSeedSource.id), { instanceId: instance.id });
+      }
     } catch (error) {
       // logger.error('创建作物实例失败:', error);
     }
@@ -454,12 +473,18 @@ export function AddModal({
                   key={opt.value}
                   variant="ghost"
                   size="sm"
-                  onClick={() => setFormData(prev => ({
-                    ...prev,
-                    propagationType: opt.value,
-                    propagationMethod: '',
-                    sourceOrigin: opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'self_produced' as SourceOrigin,
-                  }))}
+                  onClick={() => {
+                    // P1 #7 修复: 切换入库方式时清空已选供应商，避免 EXTERNAL→BREEDING 切换时残留
+                    setFormData(prev => ({
+                      ...prev,
+                      propagationType: opt.value,
+                      propagationMethod: '',
+                      sourceOrigin: opt.value === PropagationType.EXTERNAL ? 'external_purchase' : 'self_produced' as SourceOrigin,
+                      supplierId: '',
+                      supplierName: '',
+                    }));
+                    setSelectedSupplier(null);
+                  }}
                   className={`p-3 border-2 text-left w-full h-auto ${
                     formData.propagationType === opt.value
                       ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-50'

@@ -1,8 +1,9 @@
 /**
  * React Query 客户端配置 — V3.0 Phase 5 动态参数化
  *
- * 默认值从系统配置动态读取（API→IndexedDB→localStorage 三级降级）
+ * 默认值从系统配置动态读取（API → Store 内存）
  * 首次加载时使用硬编码兜底，Store就绪后调用 configureQueryClient() 更新
+ * 已彻底去除 IndexedDB / localStorage 三级降级（V2.1 架构铁律：直连 API）
  */
 
 import { QueryClient } from '@tanstack/react-query';

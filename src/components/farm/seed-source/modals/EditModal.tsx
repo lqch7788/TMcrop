@@ -5,8 +5,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '../../../ui/button';
+import { X, Upload } from 'lucide-react';
 import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
+import { computeStockStatus } from '../../../../lib/stockStatus';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
@@ -54,57 +57,59 @@ export function EditModal({
   // 选中的作物信息
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
-  const [formData, setFormData] = useState({
-    sourceType: record.sourceType,
-    sourceOrigin: record.sourceOrigin || 'external_purchase',
-    cropCategory: record.cropCategory,
-    typeName: record.typeName,
-    varietyName: record.varietyName,
-    cropName: record.cropName,
-    cropVariety: record.cropVariety,
-    supplierId: record.supplierId,
-    supplierName: record.supplierName,
-    purchaseDate: record.purchaseDate,
-    quantity: record.quantity,
-    unit: record.unit,
-    unitPrice: record.unitPrice,
+  // P2 #9 修复: formData 包含繁殖字段，编辑时不再丢失
+  const buildFormData = (r: SeedSource) => ({
+    sourceType: r.sourceType,
+    sourceOrigin: r.sourceOrigin || 'external_purchase',
+    cropCategory: r.cropCategory,
+    typeName: r.typeName,
+    varietyName: r.varietyName,
+    cropName: r.cropName,
+    cropVariety: r.cropVariety,
+    supplierId: r.supplierId,
+    supplierName: r.supplierName,
+    purchaseDate: r.purchaseDate,
+    quantity: r.quantity,
+    unit: r.unit,
+    unitPrice: r.unitPrice,
     pictures: (() => {
-      if (Array.isArray(record.pictures)) return record.pictures;
-      if (typeof record.pictures === 'string') {
-        try { return JSON.parse(record.pictures); } catch { return []; }
+      if (Array.isArray(r.pictures)) return r.pictures;
+      if (typeof r.pictures === 'string') {
+        try { return JSON.parse(r.pictures); } catch { return []; }
       }
       return [];
     })(),
-    remarks: record.remarks || ''
+    remarks: r.remarks || '',
+    // 繁殖途径字段（编辑时保留）
+    propagationType: r.propagationType,
+    propagationStatus: r.propagationStatus,
+    propagationMethod: r.propagationMethod || '',
+    parentMaleId: r.parentMaleId || '',
+    parentMaleCode: r.parentMaleCode || '',
+    parentFemaleId: r.parentFemaleId || '',
+    parentFemaleCode: r.parentFemaleCode || '',
+    motherPlantId: r.motherPlantId || '',
+    motherPlantCode: r.motherPlantCode || '',
+    linkedPlantingId: r.linkedPlantingId || '',
+    linkedPlantingCode: r.linkedPlantingCode || '',
+    propagationStartDate: r.propagationStartDate || '',
+    expectedHarvestDate: r.expectedHarvestDate || '',
+    actualHarvestDate: r.actualHarvestDate || '',
+    breedingLocation: r.breedingLocation || '',
+    targetTraits: r.targetTraits || '',
+    generation: r.generation || '',
   });
 
-  // 当 record 变化时重置表单
+  const [formData, setFormData] = useState(() => buildFormData(record));
+
+  // P2 #10 修复: 仅在弹窗打开瞬间初始化（避免父组件重渲染吞用户输入）
+  // P2 #9 修复: 保留繁殖字段
   useEffect(() => {
-    setCropCode(record.cropCode || '');
-    setFormData({
-      sourceType: record.sourceType,
-      sourceOrigin: record.sourceOrigin || 'external_purchase',
-      cropCategory: record.cropCategory,
-      typeName: record.typeName,
-      varietyName: record.varietyName,
-      cropName: record.cropName,
-      cropVariety: record.cropVariety,
-      supplierId: record.supplierId,
-      supplierName: record.supplierName,
-      purchaseDate: record.purchaseDate,
-      quantity: record.quantity,
-      unit: record.unit,
-      unitPrice: record.unitPrice,
-      pictures: (() => {
-      if (Array.isArray(record.pictures)) return record.pictures;
-      if (typeof record.pictures === 'string') {
-        try { return JSON.parse(record.pictures); } catch { return []; }
-      }
-      return [];
-    })(),
-      remarks: record.remarks || ''
-    });
-  }, [record]);
+    if (isOpen) {
+      setCropCode(record.cropCode || '');
+      setFormData(buildFormData(record));
+    }
+  }, [isOpen, record.id]);
 
   // 种源类型→供应商类型级联过滤
   const filteredSuppliers = useMemo(() => {
@@ -168,15 +173,9 @@ export function EditModal({
     // 计算总金额
     const totalAmount = formData.quantity * formData.unitPrice;
 
-    // 判断库存状态
-    let status = record.status;
-    if (formData.quantity === 0) {
-      status = StockStatus.DEPLETED;
-    } else if (formData.quantity < record.initialCount * 0.2) {
-      status = StockStatus.LOW;
-    } else {
-      status = StockStatus.SUFFICIENT;
-    }
+    // 状态5 修复: 使用统一计算函数
+    // 注意: 编辑时用 formData.quantity 作为"当前可用量"（采购数量编辑语义），initialCount 来自 record
+    const status = computeStockStatus(formData.quantity, record.initialCount, record.status as StockStatus);
 
     try {
       await useSeedSourceStore.getState().updateItem(String(record.id), {
@@ -197,7 +196,25 @@ export function EditModal({
         totalAmount,
         pictures: formData.pictures,
         remarks: formData.remarks,
-        status
+        status,
+        // P2 #9 修复: 提交时同时传递繁殖字段，避免编辑后丢失
+        propagationType: formData.propagationType,
+        propagationStatus: formData.propagationStatus,
+        propagationMethod: formData.propagationMethod,
+        parentMaleId: formData.parentMaleId,
+        parentMaleCode: formData.parentMaleCode,
+        parentFemaleId: formData.parentFemaleId,
+        parentFemaleCode: formData.parentFemaleCode,
+        motherPlantId: formData.motherPlantId,
+        motherPlantCode: formData.motherPlantCode,
+        linkedPlantingId: formData.linkedPlantingId,
+        linkedPlantingCode: formData.linkedPlantingCode,
+        propagationStartDate: formData.propagationStartDate,
+        expectedHarvestDate: formData.expectedHarvestDate,
+        actualHarvestDate: formData.actualHarvestDate,
+        breedingLocation: formData.breedingLocation,
+        targetTraits: formData.targetTraits,
+        generation: formData.generation,
       });
     } catch (error) {
       // logger.error('更新种源失败:', error);
@@ -374,13 +391,61 @@ export function EditModal({
           />
         </div>
 
-        {/* 图片上传 - 占两列 */}
+        {/* 图片上传 - 占两列 (P2 #8 修复: 从 AddModal 移植完整实现) */}
         <div className="col-span-2">
           <Label className="text-gray-900">图片上传</Label>
-          <div className="border-2 border-dashed border-gray-400 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer">
-            <div className="text-gray-500 text-sm">
-              点击上传或拖拽图片到此处
-            </div>
+          <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
+            {formData.pictures && formData.pictures.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {formData.pictures.map((pic, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={pic}
+                      alt={`预览${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => setFormData({
+                        ...formData,
+                        pictures: formData.pictures.filter((_, i) => i !== index)
+                      })}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
+              <Upload className="w-8 h-8 text-gray-400 mb-2" />
+              <span className="text-sm text-gray-500">点击上传图片</span>
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files) {
+                    Array.from(files).forEach(file => {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const result = event.target?.result as string;
+                        setFormData({
+                          ...formData,
+                          pictures: [...(formData.pictures || []), result]
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </Label>
           </div>
         </div>
 

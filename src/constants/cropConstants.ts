@@ -167,11 +167,13 @@ export const INVENTORY_STATUS_OPTIONS = [
 ] as const;
 
 // ========== 种源库存状态映射（StockStatus） ==========
+// 状态3 修复: 移除 'out_of_stock' 死代码（无对应 enum，永远不会显示）
+// 推荐统一从 @/lib/stockStatus 的 STOCK_STATUS_COLOR / getStatusLabel 取
 export const STOCK_STATUS_MAP: Record<string, { label: string; color: string }> = {
   sufficient: { label: '充足', color: 'text-green-600 bg-green-50' },
   low: { label: '不足', color: 'text-amber-600 bg-amber-50' },
   depleted: { label: '耗尽', color: 'text-red-600 bg-red-50' },
-  out_of_stock: { label: '缺货', color: 'text-gray-600 bg-gray-50' },
+  active: { label: '充足', color: 'text-green-600 bg-green-50' },
 };
 
 // ========== 默认作物编码（兜底值） ==========
