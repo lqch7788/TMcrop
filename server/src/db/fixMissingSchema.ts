@@ -1465,6 +1465,15 @@ export async function fixMissingSchema(): Promise<void> {
     else console.log('• seed_sources.print_count:', e.message);
   }
 
+  // P0 #1: 为 seed_sources 表添加 pictures 列（种源图片）
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN pictures TEXT DEFAULT '[]'`);
+    console.log('✓ seed_sources 表添加 pictures 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) console.log('• seed_sources.pictures 列已存在');
+    else console.log('• seed_sources.pictures:', e.message);
+  }
+
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
