@@ -171,9 +171,9 @@ export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<P
  * 数据流：API → SQLite DB
  */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
-  const result = await enhancedApiClient.put<{ data: PurchasePlan }>(`/purchase-plans/${id}`, updates);
-  // PUT 响应现在返回经过 mapToFrontendFormat 的完整更新数据
-  return result?.data ? transformPurchasePlan(result.data) as PurchasePlan : null;
+  // enhancedApiClient 已自动解包 { success, data }，result 就是 plan 本身
+  const result = await enhancedApiClient.put<PurchasePlan>(`/purchase-plans/${id}`, updates);
+  return result ? transformPurchasePlan(result) as PurchasePlan : null;
 }
 
 /**
@@ -223,9 +223,10 @@ export async function updateExecutionStatus(
   id: string,
   executionStatus: string
 ): Promise<PurchasePlan | null> {
-  const result = await enhancedApiClient.patch<{ data: PurchasePlan }>(
+  // enhancedApiClient 已自动解包 { success, data }，result 就是 plan 本身
+  const result = await enhancedApiClient.patch<PurchasePlan>(
     `/purchase-plans/${id}/execution-status`,
     { executionStatus }
   );
-  return result?.data ? transformPurchasePlan(result.data) as PurchasePlan : null;
+  return result ? transformPurchasePlan(result) as PurchasePlan : null;
 }
