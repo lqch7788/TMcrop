@@ -42,7 +42,28 @@ const FIELD_MAP: Record<string, string> = {
   inboundType: 'inbound_type',
   relatedTaskId: 'related_task_id',
   relatedTaskCode: 'related_task_code',
+  // V3.1: 1:N 产品明细（JSON 数组，存多条产品；不拆主单）
+  products: 'products',
 };
+
+/**
+ * 安全解析 products JSON 字段
+ * 老数据：products 列为 null/undefined → []
+ * 新数据：JSON 字符串 → array
+ */
+function parseProductsField(value: any): any[] {
+  if (value === null || value === undefined || value === '') return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
 
 /** 将前端驼峰数据转换为数据库蛇形字段（只保留白名单内字段） */
 function toSnakeFields(data: Record<string, any>): Record<string, any> {
@@ -169,6 +190,11 @@ export class HarvestRepository {
 
     const items = queryToObjects<HarvestRecord>(db, baseSql, params);
 
+    // V3.1: products JSON 字符串 → 数组
+    for (const item of items) {
+      (item as any).products = parseProductsField((item as any).products);
+    }
+
     return { data: items, total };
   }
 
@@ -191,7 +217,10 @@ export class HarvestRepository {
 
     // 用 queryToObjects 走 camelCase 转换（之前用 stmt.getAsObject() 直接拿，snake_case 字段名导致前端读不到 record.cropName 等）
     const items = queryToObjects<HarvestRecord>(db, sql, [id]);
-    return items.length > 0 ? items[0] : undefined;
+    if (items.length === 0) return undefined;
+    // V3.1: products JSON 字符串 → 数组
+    (items[0] as any).products = parseProductsField((items[0] as any).products);
+    return items[0];
   }
 
   /**
@@ -255,6 +284,10 @@ export class HarvestRepository {
     const harvesterNamesJson = snakeData.harvester_names
       ? (Array.isArray(snakeData.harvester_names) ? JSON.stringify(snakeData.harvester_names) : snakeData.harvester_names)
       : null;
+    // V3.1: products 1:N 产品明细数组 → JSON 字符串
+    const productsJson = Array.isArray(snakeData.products)
+      ? JSON.stringify(snakeData.products)
+      : (typeof snakeData.products === 'string' ? snakeData.products : null);
 
     // 使用 any[] 来避免 sql.js 类型严格检查问题
     // 字段顺序必须与 INSERT 语句中的列顺序完全一致
@@ -291,9 +324,9 @@ export class HarvestRepository {
       snakeData.planting_mode,    // 29. planting_mode
       snakeData.target_yield,      // 30. target_yield
       snakeData.harvest_area,     // 31. harvest_area
+      productsJson,                // 32. products (1:N 产品明细 JSON 数组)
     ];
     console.log('[HarvestRepository] params 数量:', params.length);
-    console.log('[HarvestRepository] params 内容:', params);
 
     try {
       db.run(`
@@ -303,8 +336,8 @@ export class HarvestRepository {
           total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
           remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
           harvester_ids, harvester_names, inbound_type, batch_code,
-          planting_mode, target_yield, harvest_area
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          planting_mode, target_yield, harvest_area, products
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, params);
     } catch (err) {
       console.error('[HarvestRepository] INSERT 错误:', err);

@@ -1102,6 +1102,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'planting_mode', sql: 'ALTER TABLE harvest_records ADD COLUMN planting_mode TEXT' },     // 种植模式（FIELD_MAP 第 37 行）
     { name: 'target_yield', sql: 'ALTER TABLE harvest_records ADD COLUMN target_yield REAL DEFAULT 0' }, // 目标产量（FIELD_MAP 第 38 行）
     { name: 'harvest_area', sql: 'ALTER TABLE harvest_records ADD COLUMN harvest_area REAL DEFAULT 0' },   // 采收面积（FIELD_MAP 第 39 行）
+    // V3.1 1:N 产品明细：1 条主单 + products JSON 数组存 N 个产品（修复"主单被拆成 N 条"bug）
+    { name: 'products', sql: 'ALTER TABLE harvest_records ADD COLUMN products TEXT' },                 // 产品明细 JSON 数组字符串
   ];
   for (const col of harvestColumnsToAdd) {
     try {

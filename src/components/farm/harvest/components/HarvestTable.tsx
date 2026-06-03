@@ -7,24 +7,13 @@ import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { HarvestRecord } from '../../../../types/crop';
 import { getStatusBadge, getGradeBadge } from '../statusBadgeUtils.tsx';
+import { getPlantingModeLabel, parseHarvesterNames } from '../../../../constants/cropConstants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
 import { INBOUND_TYPE_MAP, SUPPLEMENTARY_STATUS_MAP } from '../../../../constants/cropConstants';
-
-// 安全解析采收人员数组（可能来自JSON字符串或直接数组）
-function parseHarvesterNames(value: string[] | string | undefined): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 // 产品明细行组件
 interface ProductRowProps {
@@ -33,10 +22,31 @@ interface ProductRowProps {
   generateProductCode: (cropName: string, variety: string, index: number) => string;
 }
 
+// V3.1: 1:N 产品明细
+// - 有 products 数组：每条产品 1 行（1 条主单 + N 行产品）
+// - 无 products 数组（老数据 1:1 简化）：用 record 自身字段填充 1 行
 function ProductRow({ record, recordIdx, generateProductCode }: ProductRowProps) {
+  const productList: any[] = Array.isArray((record as any).products) && (record as any).products.length > 0
+    ? (record as any).products
+    : null;
+
+  // 老数据兼容：1 条主单 = 1 个产品
+  const rows = productList ?? [{
+    productCode: '',
+    cropName: record.cropName,
+    cropCode: (record as any).cropCode || '',
+    variety: record.variety || record.cropVariety || '',
+    batchCode: record.batchCode,
+    plantingMode: record.plantingMode,
+    harvestQuantity: record.harvestQuantity,
+    targetYield: record.targetYield,
+    grade: record.grade || record.qualityGrade,
+    remarks: record.remarks,
+  }];
+
   return (
     <>
-      {/* 表头 - 使用原生HTML元素+内联样式彻底禁止hover变色 */}
+      {/* 表头 */}
       <thead style={{ backgroundColor: '#059669' }}>
         <tr style={{ backgroundColor: '#059669' }}>
           <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">产品编码</th>
@@ -51,22 +61,30 @@ function ProductRow({ record, recordIdx, generateProductCode }: ProductRowProps)
           <th className="px-2 py-2 text-white text-xs font-medium whitespace-nowrap text-left">备注</th>
         </tr>
       </thead>
-      {/* 表体 */}
+      {/* 表体：每条产品 1 行 */}
       <tbody>
-        <tr className="border-t" style={{ backgroundColor: 'white' }}>
-          <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">{generateProductCode(record.cropName, record.variety || record.cropVariety || '', recordIdx)}</td>
-          <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.cropName}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.variety || record.cropVariety || '-'}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.batchCode || '-'}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.plantingMode || '-'}</td>
-          <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{record.harvestQuantity} {record.unit}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.targetYield || 0}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
-            {record.targetYield ? Math.round(record.harvestQuantity / record.targetYield * 100) : 0}%
-          </td>
-          <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(record.grade || record.qualityGrade || 'A')}</td>
-          <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{record.remarks || '-'}</td>
-        </tr>
+        {rows.map((p, i) => {
+          const qty = Number(p.harvestQuantity) || 0;
+          const tgt = Number(p.targetYield) || 0;
+          return (
+            <tr key={i} className="border-t" style={{ backgroundColor: 'white' }}>
+              <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
+                {p.productCode || generateProductCode(p.cropName || record.cropName, p.variety || '', recordIdx + i)}
+              </td>
+              <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{p.cropName || record.cropName || '-'}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.variety || '-'}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.batchCode || record.batchCode || '-'}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{getPlantingModeLabel(p.plantingMode) || '-'}</td>
+              <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{qty} {p.unit || record.unit}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{tgt}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">
+                {tgt ? Math.round(qty / tgt * 100) : 0}%
+              </td>
+              <td className="px-2 py-2 text-xs whitespace-nowrap">{getGradeBadge(p.grade || 'good')}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.remarks || '-'}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </>
   );
@@ -106,7 +124,7 @@ export function HarvestTableRow({
   const colSpan = showCheckbox ? 13 : 12;
 
   return (
-    <React.Fragment key={record.id}>
+    <React.Fragment>
       {/* 主行 */}
       <TableRow className="hover:bg-blue-100 transition-colors">
         {showCheckbox && (

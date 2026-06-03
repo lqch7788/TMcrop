@@ -127,6 +127,99 @@ export const QUALITY_GRADE_MAP: Record<string, { label: string; bg: string; text
   D: { label: '次品', bg: 'bg-red-600',     text: 'text-white' },
 };
 
+// 种植模式中文标签（key = 字典码）
+// 数据源：seedBasicData.ts 的 planting_mode 字典
+// 兼容：单值 / 逗号分隔多值 / JSON 数组字符串
+export const PLANTING_MODE_MAP: Record<string, string> = {
+  // 字典标准码
+  direct_seeding:         '直播',
+  transplanting:          '移栽',
+  grafting:               '嫁接',
+  tissue_culture:         '组培',
+  greenhouse:             '温室种植',
+  open_field:             '露天种植',
+  hydroponic:             '水培',
+  substrate:              '基质栽培',
+  greenhouse_planting:    '大棚种植',
+  open_field_planting:    '露地种植',
+  // 育苗/种源相关（实际数据里也存了这些 key，复用同一字段）
+  plug_seedling:          '穴盘育苗',
+  nutrient_block:         '营养块育苗',
+  seedling_split:         '分株',
+  cutting:                '扦插',
+  division:               '分株繁殖',
+  spore:                  '孢子/菌种',
+  // 老数据兼容（v1.0 时代用过的中文写法）
+  '温室':     '温室种植',
+  '水培':     '水培',
+  '土壤':     '露天种植',
+  '基质':     '基质栽培',
+  '露天':     '露天种植',
+  '大棚':     '大棚种植',
+  '直播':     '直播',
+  '移栽':     '移栽',
+  '嫁接':     '嫁接',
+  '组培':     '组培',
+  '穴盘':     '穴盘育苗',
+  '营养块':   '营养块育苗',
+  '扦插':     '扦插',
+  '分株':     '分株',
+};
+
+/**
+ * 获取种植模式中文标签
+ * @param code 字典码 / 逗号分隔多值 / JSON 数组字符串 / 原始中文
+ * @returns 中文标签（多值用顿号连接），未匹配单项原样返回
+ */
+export function getPlantingModeLabel(code: string | undefined | null | string[]): string {
+  if (code === null || code === undefined) return '';
+  // 已经是数组：直接 map
+  if (Array.isArray(code)) {
+    return code.map(c => PLANTING_MODE_MAP[c] || c).join('、');
+  }
+  const raw = String(code).trim();
+  if (!raw) return '';
+  // JSON 数组字符串：["open_field","greenhouse"]
+  if (raw.startsWith('[') && raw.endsWith(']')) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return arr.map(c => PLANTING_MODE_MAP[c] || c).join('、');
+      }
+    } catch {
+      // 解析失败则按字符串处理
+    }
+  }
+  // 逗号分隔：open_field,greenhouse → 露天种植、温室种植
+  if (raw.includes(',')) {
+    return raw.split(',').map(c => {
+      const t = c.trim();
+      return PLANTING_MODE_MAP[t] || t;
+    }).filter(Boolean).join('、');
+  }
+  // 单值
+  return PLANTING_MODE_MAP[raw] || raw;
+}
+
+/**
+ * 安全解析采收人员数组
+ * 兼容：直接数组 / JSON 字符串 / null / undefined / 字符串（按 JSON 解析，失败回退空数组）
+ * @param value 任意来源的 harvesterNames 字段
+ * @returns string[] 统一数组
+ */
+export function parseHarvesterNames(value: string[] | string | null | undefined): string[] {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value;
+  const raw = String(value).trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(v => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 // ========== 库存状态映射（ProduceInventory） ==========
 export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   in_stock: { label: '正常', bg: 'bg-emerald-600', text: 'text-white' },
