@@ -1,7 +1,8 @@
 import { Trash2, RefreshCw } from 'lucide-react';
+import { useMemo } from 'react';
 import { AddFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { APPLICANTS, WAREHOUSE_LOCATIONS, OPERATORS, REVIEWERS } from '../config';
-import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
+import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useUserStore } from '../../../stores/useUserStore';
 import { SearchableSelect } from './SearchableSelect';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
@@ -35,13 +36,16 @@ export function AddModal({
 }: AddModalProps) {
   // 从 API 获取部门选项
   const { options: departmentOptions } = useDepartmentOptions();
-  // 从 Zustand Store 获取当前用户和退料数据
+  // 从 Zustand Store 获取当前用户
   const currentUserName = useUserStore(state => state.users[0]?.name) || localStorage.getItem('username') || '系统管理员';
-  const returnItems = useMaterialReturnStore(state => state.items);
-  // 从退料记录中提取唯一的来源领料单号
-  const sourceApplicationOptions = Array.from(
-    new Set(returnItems.flatMap(r => r.materials?.map(m => m.sourceApplicationCode) || []))
-  ).filter(Boolean).map(code => ({ value: code, label: code }));
+  // 来源领料单号列表：来自领料出库 Store（业务规则：只能基于已出库单据退料，保证数据闭环）
+  // 仅展示有实际出库物料的记录，避免出现"选了单号但没物料可选"
+  const executeItems = useExecuteDataStore(state => state.items);
+  const sourceApplicationOptions = useMemo(() => {
+    return executeItems
+      .filter((r) => r.code && r.materials && r.materials.length > 0)
+      .map((r) => ({ value: r.code, label: `${r.code}（${r.applicant} · ${r.materials.length} 项）` }));
+  }, [executeItems]);
   return (
     <UnifiedModal
       isOpen={open}
@@ -251,7 +255,7 @@ export function AddModal({
           </div>
         ) : (
           <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-4 text-center">
-            暂无物料明细，请点击"添加物料"按钮添加
+            暂无物料明细，请通过上方"选择领料单号"添加退料物料（只能基于已出库的物料退料）
           </div>
         )}
       </div>

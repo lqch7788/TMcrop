@@ -39,7 +39,9 @@ export const useWarehouseMaterialStore = create<WarehouseMaterialState>()(
     addItem: async (item) => {
       try {
         const result = await warehouseService.createMaterial(item);
-        if (result) set((s) => ({ items: [...s.items, { ...item, id: result.id } as Material] }));
+        // 修复：新建物料 unshift 到列表头部，与后端 ORDER BY id DESC 一致
+        // 旧 push 到末尾会让用户在第一页看不到新建的
+        if (result) set((s) => ({ items: [{ ...item, id: result.id } as Material, ...s.items] }));
         return result;
       } catch (error) {
         // logger.error('[useWarehouseMaterialStore] 添加物料失败:', error);

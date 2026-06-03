@@ -14,6 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { NumberInput } from '@/components/ui/NumberInput';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { showAlert } from '@/lib/dialogService';
 
 interface InboundBatchEditModalProps {
@@ -58,10 +59,12 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
 
   // 修改物料字段
   const handleMaterialChange = (materialId: number, field: keyof InboundMaterial, value: string | number) => {
-    const updatedMaterials = currentEditedMaterials.map(m =>
-      m.id === materialId ? { ...m, [field]: value } : m
-    );
-    setEditedMaterials({ ...editedMaterials, [currentRecord.id]: updatedMaterials });
+    setEditedMaterials((prev) => ({
+      ...prev,
+      [currentRecord.id]: prev[currentRecord.id].map(m =>
+        m.id === materialId ? { ...m, [field]: value } : m
+      ),
+    }));
   };
 
   // 删除物料
@@ -309,11 +312,29 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                     </TableCell>
                     <TableCell className="px-1 py-1.5">
                       {currentRecord.status === 'pending' ? (
-                        <Input
-                          type="text"
+                        <MaterialAutocomplete
                           value={m.name}
-                          onChange={(e) => handleMaterialChange(m.id, 'name', e.target.value)}
-                          className="h-6 px-1 text-xs"
+                          onChange={(v) => handleMaterialChange(m.id, 'name', v)}
+                          onSelect={(wm) => {
+                            setEditedMaterials((prev) => ({
+                              ...prev,
+                              [currentRecord.id]: prev[currentRecord.id].map(x =>
+                                x.id === m.id ? {
+                                  ...x,
+                                  name: wm.name,
+                                  code: wm.code || x.code,
+                                  category: wm.category || x.category,
+                                  specification: wm.specification || x.specification,
+                                  barcode: wm.barcode || x.barcode,
+                                  unit: wm.unit || x.unit,
+                                  price: wm.price || x.price,
+                                  location: wm.location || x.location,
+                                } : x
+                              ),
+                            }));
+                          }}
+                          placeholder="搜索物料名称"
+                          className="w-32"
                         />
                       ) : (
                         <span className="text-xs text-gray-900">{m.name || '-'}</span>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { MaterialItem } from '../types';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { useWarehouseMaterialStore } from '../../../stores/useWarehouseMaterialStore';
+import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -22,32 +22,46 @@ export function MaterialSelectModal({
 }: MaterialSelectModalProps) {
   const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
   const [searchKeyword, setSearchKeyword] = useState('');
-  // 从 Zustand Store 获取仓库物料列表
-  const warehouseMaterials = useWarehouseMaterialStore(state => state.items);
-  const loadWarehouseMaterials = useWarehouseMaterialStore(state => state.loadItems);
+  // 数据源：领料出库 Store（业务规则：没有出库的物料不能退料，保证数据闭环）
+  const executeItems = useExecuteDataStore(state => state.items);
+  const loadExecutes = useExecuteDataStore(state => state.fetchItems);
 
   useEffect(() => {
     if (open) {
       setSelectedMaterials(new Set());
       setSearchKeyword('');
-      if (warehouseMaterials.length === 0) {
-        loadWarehouseMaterials();
+      if (executeItems.length === 0) {
+        loadExecutes();
       }
     }
-  }, [open, warehouseMaterials.length, loadWarehouseMaterials]);
+  }, [open, executeItems.length, loadExecutes]);
 
-  // 将仓库物料转换为选择列表格式
-  const materials = warehouseMaterials.map(wm => ({
-    sourceApplicationCode: sourceAppCode,
-    materialCode: wm.code || wm.name,
-    materialName: wm.name,
-    spec: wm.specification || '',
-    unit: wm.unit || '',
-    quantity: wm.stockQuantity || 0,
-    unitPrice: wm.unitPrice || 0,
-    warehousePosition: wm.location || '',
-    category: wm.category || '',
-  }));
+  // 找到选中的领料出库单 — 数据流来源
+  const executeRecord = useMemo(
+    () => executeItems.find((r) => r.code === sourceAppCode) || null,
+    [executeItems, sourceAppCode]
+  );
+
+  // 将出库单物料映射为退料表单行格式
+  // quantity = 实际出库数量（决定可退料上限）
+  // returnQuantity 留空，用户填写本次实退数量
+  const materials = useMemo<MaterialItem[]>(() => {
+    if (!executeRecord) return [];
+    return executeRecord.materials.map((em) => ({
+      sourceApplicationCode: sourceAppCode,
+      materialCode: em.materialCode,
+      materialName: em.materialName,
+      category: em.category,
+      spec: em.spec,
+      unit: em.unit,
+      quantity: em.actualQuantity,
+      unitPrice: em.unitPrice || 0,
+      warehousePosition: em.warehousePosition || '',
+      returnQuantity: 0,
+      reason: '',
+      remark: '',
+    }));
+  }, [executeRecord, sourceAppCode]);
 
   const filteredMaterials = useMemo(() => {
     if (!searchKeyword) return materials;

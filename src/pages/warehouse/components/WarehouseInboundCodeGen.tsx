@@ -176,6 +176,15 @@ export const WarehouseInboundCodeGen: React.FC<WarehouseInboundCodeGenProps> = (
           </div>
         </div>
       </div>
+      {/* 方案 C：I/O 风险防御性提示
+          - OP/IT/OT 等大类的编码会含字母 I/O，与数字 1/0 形近
+          - 提示让用户生成后主动核对，避免抄错/OCR 误读 */}
+      <div className="mt-2 text-xs text-amber-600 flex items-start gap-1">
+        <span className="font-bold">⚠️</span>
+        <span>
+          部分大类（如 OP/IT/OT）编码含字母 I/O，与数字 1/0 形近。生成后请人工核对，避免抄录/扫描时误读。
+        </span>
+      </div>
     </div>
   );
 };

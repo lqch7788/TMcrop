@@ -27,6 +27,7 @@ import {
   handleCancelSelection,
 } from '../utils/warehouseInbound.utils';
 import { useInboundStore } from '../../../stores';
+import { useWarehouseMaterialStore } from '../../../stores';
 import { showAlert } from '@/lib/dialogService';
 
 /**
@@ -66,6 +67,9 @@ export function useWarehouseInbound() {
     subCategory: '',
     generatedCode: '',
   });
+
+  // 仓库物料主数据（用于编码生成器查 max+1）
+  const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
   const [codeGenError, setCodeGenError] = useState('');
   const [codeGenSuccess, setCodeGenSuccess] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
@@ -164,10 +168,12 @@ export function useWarehouseInbound() {
     setInboundPage(1);
   }, []);
 
-  // 编码生成
+  // 编码生成（按现有物料编码 max+1 生成下一个，避免随机重码）
   const handleGenerateCode = useCallback(() => {
-    handleCodeGen(codeGen, setCodeGen, setCodeGenError, setCodeGenSuccess);
-  }, [codeGen]);
+    // 从仓库物料主数据 Store 取已用编码列表
+    const existingCodes = (warehouseMaterials ?? []).map((m) => m.code).filter((c): c is string => typeof c === 'string' && c.length > 0);
+    handleCodeGen(codeGen, setCodeGen, setCodeGenError, setCodeGenSuccess, existingCodes);
+  }, [codeGen, warehouseMaterials]);
 
   // 复制编码
   const handleCopyCode = useCallback(() => {

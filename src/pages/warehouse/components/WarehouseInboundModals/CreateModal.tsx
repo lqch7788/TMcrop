@@ -3,8 +3,8 @@
  * 从 InboundModals 拆分出来，独立管理新增入库记录弹窗
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
-import { useWarehouseMaterialStore } from '@/stores/useWarehouseMaterialStore';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
+import type { Material } from '@/services/apiWarehouseMaterialService';
 
 interface InboundAddModalProps {
   isOpen: boolean;
@@ -42,31 +43,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   const suppliers = useSupplierStore((s) => s.items);
   const loadSuppliers = useSupplierStore((s) => s.loadItems);
 
-  // 仓库已有物料列表（用于输入物料名称时自动关联）
-  const warehouseMaterials = useWarehouseMaterialStore((s) => s.items);
-  const loadWarehouseMaterials = useWarehouseMaterialStore((s) => s.loadItems);
-
-  // 弹窗打开时加载供应商列表和物料列表
+  // 弹窗打开时加载供应商列表（物料由 MaterialAutocomplete 内部按需加载）
   useEffect(() => {
-    if (isOpen) {
-      if (suppliers.length === 0) loadSuppliers();
-      if (warehouseMaterials.length === 0) loadWarehouseMaterials();
-    }
-  }, [isOpen, suppliers.length, loadSuppliers, warehouseMaterials.length, loadWarehouseMaterials]);
+    if (isOpen && suppliers.length === 0) loadSuppliers();
+  }, [isOpen, suppliers.length, loadSuppliers]);
 
-  // 物料名称搜索输入 → 更新搜索词并打开下拉
-  const handleMaterialSearchChange = (materialId: number, query: string) => {
-    setMaterialSearchQueries(prev => ({ ...prev, [materialId]: query }));
-    setOpenDropdowns(prev => ({ ...prev, [materialId]: true }));
-    // 同时更新物料行名称字段
-    setMaterials(materials.map(m =>
-      m.id === materialId ? { ...m, name: query } : m
-    ));
-  };
-
-  // 选中下拉物料 → 自动填充基本信息
-  const handleSelectMaterial = (materialId: number, wm: typeof warehouseMaterials[number]) => {
-    setMaterials(materials.map(m => {
+  // 选中下拉物料 → 自动填充基本信息（搜索状态/下拉开关由 MaterialAutocomplete 内部管理）
+  const handleMaterialAutofill = (materialId: number, wm: Material) => {
+    setMaterials(prev => prev.map(m => {
       if (m.id !== materialId) return m;
       return {
         ...m,
@@ -80,8 +64,6 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
         location: wm.location || m.location,
       };
     }));
-    setMaterialSearchQueries(prev => ({ ...prev, [materialId]: wm.name }));
-    setOpenDropdowns(prev => ({ ...prev, [materialId]: false }));
   };
 
   // 表单数据状态
@@ -95,24 +77,6 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
 
   // 物料列表状态
   const [materials, setMaterials] = useState<InboundMaterial[]>([]);
-
-  // 物料名称搜索状态（每个物料行独立）
-  const [materialSearchQueries, setMaterialSearchQueries] = useState<Record<number, string>>({});
-  const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
-  // 输入框 ref 映射：用于计算下拉菜单的 fixed 定位
-  const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
-
-  // 获取某个物料行的搜索结果（最多显示8条）
-  const getFilteredMaterials = (materialId: number) => {
-    const query = (materialSearchQueries[materialId] || '').trim().toLowerCase();
-    if (!query) return warehouseMaterials.filter(wm => wm.dataStatus === '启用').slice(0, 8);
-    return warehouseMaterials
-      .filter(wm => wm.dataStatus === '启用' && (
-        wm.name.toLowerCase().includes(query) ||
-        wm.code.toLowerCase().includes(query)
-      ))
-      .slice(0, 8);
-  };
 
   // 编码错误状态
   const [codeError, setCodeError] = useState('');
@@ -576,54 +540,13 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5">
-                        <div className="flex items-center">
-                          <Input
-                            ref={(el) => { inputRefs.current[m.id] = el; }}
-                            type="text"
-                            value={materialSearchQueries[m.id] ?? m.name}
-                            onChange={(e) => handleMaterialSearchChange(m.id, e.target.value)}
-                            onFocus={() => setOpenDropdowns(prev => ({ ...prev, [m.id]: true }))}
-                            onBlur={() => {
-                              setTimeout(() => setOpenDropdowns(prev => ({ ...prev, [m.id]: false })), 150);
-                            }}
-                            placeholder="搜索物料名称"
-                            className="w-32 h-6 px-1.5 pr-5 text-xs border-blue-300 bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                          <Search className="w-3 h-3 text-blue-400 -ml-4" />
-                        </div>
-                        {/* 下拉搜索结果 — fixed 定位突破 overflow 限制 */}
-                        {openDropdowns[m.id] && (() => {
-                          const results = getFilteredMaterials(m.id);
-                          if (results.length === 0) return null;
-                          const inputEl = inputRefs.current[m.id];
-                          const rect = inputEl?.getBoundingClientRect();
-                          return (
-                            <div
-                              className="fixed z-[999] bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto"
-                              style={{
-                                top: rect ? rect.bottom + 2 : 0,
-                                left: rect ? rect.left : 0,
-                                minWidth: rect ? rect.width : 200,
-                              }}
-                            >
-                              {results.map((wm) => (
-                                <Button
-                                  key={wm.id}
-                                  type="button"
-                                  variant="ghost"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    handleSelectMaterial(m.id, wm);
-                                  }}
-                                  className="h-auto w-full text-left px-2.5 py-1.5 text-xs hover:bg-blue-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
-                                >
-                                  <span className="font-medium text-gray-800 truncate max-w-[140px]">{wm.name}</span>
-                                  <span className="text-gray-400 font-mono text-[10px] ml-2 flex-shrink-0">{wm.code}</span>
-                                </Button>
-                              ))}
-                            </div>
-                          );
-                        })()}
+                        <MaterialAutocomplete
+                          value={m.name}
+                          onChange={(v) => setMaterials(prev => prev.map(x => x.id === m.id ? { ...x, name: v } : x))}
+                          onSelect={(wm) => handleMaterialAutofill(m.id, wm)}
+                          placeholder="搜索物料名称"
+                          className="w-32"
+                        />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <Input

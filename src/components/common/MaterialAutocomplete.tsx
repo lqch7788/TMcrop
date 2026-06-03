@@ -160,7 +160,8 @@ export function MaterialAutocomplete({
         <div className="mt-0.5 text-[10px] text-amber-600">
           未在物料库中找到 ·
           <Link
-            to={createUrl}
+            // deep link：库存总览页面会读 ?new=1 自动开新建 Modal，prefillName 把用户搜的词带过去
+            to={`${createUrl}?new=1&prefillName=${encodeURIComponent(searchQuery.trim())}`}
             className="text-emerald-600 hover:text-emerald-700 hover:underline ml-0.5"
           >
             {createLabel}

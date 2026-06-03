@@ -6,14 +6,53 @@
 import { InboundRecord, InboundSearchFilters, CodeGenState, categoryConfig } from '../../../types/warehouseInbound.types';
 
 /**
- * 编码生成函数
+ * 生成下一个物料编码（纯函数）
+ * 在传入的 existingCodes 中查找同 prefix 的最大序号，+1 返回
+ *
+ * 修复：旧版用 Math.random() 随机生成，会重复、跳号、用户不知道已经有多少个
+ * 新版：按现有最大序号+1，保证连续性、可追溯性、无重码
+ *
+ * @param prefix 由 bigCategory + midCategory + subCategory 拼接的前缀
+ * @param existingCodes 已存在的所有物料编码数组
+ * @returns { code, error } code 为空字符串表示生成失败（error 有说明）
+ */
+export const generateNextMaterialCode = (
+  prefix: string,
+  existingCodes: string[]
+): { code: string; error?: string } => {
+  // 1. 过滤同前缀的编码（防御：只接受 string 类型）
+  const samePrefixCodes = existingCodes.filter(
+    (c): c is string => typeof c === 'string' && c.startsWith(prefix)
+  );
+  // 2. 找最大有效序号（parseInt 后是有效数字且在 1-999 范围内的）
+  let maxSeq = 0;
+  for (const code of samePrefixCodes) {
+    const seqStr = code.slice(prefix.length);
+    const seq = parseInt(seqStr, 10);
+    if (!isNaN(seq) && seq > maxSeq && seq < 1000) {
+      maxSeq = seq;
+    }
+  }
+  // 3. +1 生成下一个
+  const nextSeq = maxSeq + 1;
+  if (nextSeq > 999) {
+    return { code: '', error: '该分类编码已达上限 999，无法继续生成' };
+  }
+  return { code: `${prefix}${String(nextSeq).padStart(3, '0')}` };
+};
+
+/**
+ * 编码生成函数（兼容旧签名 + 接收 existingCodes）
  * 根据选择的大类、中类、小类生成物料编码
+ *
+ * @param existingCodes 新参数：已存在的所有物料编码（从 useWarehouseMaterialStore.items 取）
  */
 export const handleCodeGen = (
   codeGen: CodeGenState,
   setCodeGen: React.Dispatch<React.SetStateAction<CodeGenState>>,
   setCodeGenError: React.Dispatch<React.SetStateAction<string>>,
-  setCodeGenSuccess: React.Dispatch<React.SetStateAction<string>>
+  setCodeGenSuccess: React.Dispatch<React.SetStateAction<string>>,
+  existingCodes: string[] = []
 ) => {
   if (!codeGen.bigCategory || !codeGen.midCategory || !codeGen.subCategory) {
     setCodeGenError('请选择完整的分类');
@@ -21,10 +60,14 @@ export const handleCodeGen = (
     return;
   }
   const baseCode = `${codeGen.bigCategory}${codeGen.midCategory}${codeGen.subCategory}`;
-  const seq = Math.floor(Math.random() * 999) + 1;
-  const generatedCode = `${baseCode}${String(seq).padStart(3, '0')}`;
-  setCodeGen(prev => ({ ...prev, generatedCode }));
-  setCodeGenSuccess(`生成成功: ${generatedCode}`);
+  const { code, error } = generateNextMaterialCode(baseCode, existingCodes);
+  if (error) {
+    setCodeGenError(error);
+    setCodeGenSuccess('');
+    return;
+  }
+  setCodeGen(prev => ({ ...prev, generatedCode: code }));
+  setCodeGenSuccess(`生成成功: ${code}`);
   setCodeGenError('');
 };
 

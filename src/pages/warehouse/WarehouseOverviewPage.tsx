@@ -14,6 +14,7 @@ import { BatchEditWarningModal } from '../../components/warehouse/BatchEditWarni
 import { DeleteWarningDialog } from '../../components/warehouse/DeleteWarningDialog';
 import { BatchDeleteConfirmDialog } from '../../components/warehouse/BatchDeleteConfirmDialog';
 import { MaterialExportModal } from '../../components/warehouse/MaterialExportModal';
+import { MaterialCreateModal } from '../../components/warehouse/MaterialCreateModal';
 import PageHeader from '../../components/warehouse/PageHeader';
 import ActionToolbar from '../../components/warehouse/ActionToolbar';
 import { useWarehouseMaterialStore } from '../../stores';
@@ -70,9 +71,26 @@ export default function WarehouseOverviewPage() {
   const [showBatchEditModal, setShowBatchEditModal] = useState(false);
   const [showBatchEditWarning, setShowBatchEditWarning] = useState(false);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createPrefillName, setCreatePrefillName] = useState<string | undefined>(undefined);
+  const [createExpandCodeGen, setCreateExpandCodeGen] = useState(false);
   const [batchEditedMaterials, setBatchEditedMaterials] = useState<Record<number, any>>({});
   const [currentBatchEditIndex, setCurrentBatchEditIndex] = useState(0);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+
+  // 读 URL 参数：支持 MaterialAutocomplete "去添加" 链接 deep link
+  // 用法：/warehouse-overview?new=1&prefillName=xxx
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === '1') {
+      setCreatePrefillName(params.get('prefillName') || undefined);
+      setCreateExpandCodeGen(true);
+      setShowCreateModal(true);
+      // 清理 URL 参数，避免刷新重复触发
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   // 筛选变化
   const handleFiltersChange = (newFilters: MaterialFiltersState) => {
@@ -154,10 +172,53 @@ export default function WarehouseOverviewPage() {
     } else { setShowBatchEditModal(true); }
   };
   const handleCancelBatchEdit = () => { setBatchEditMode(false); setSelectedRows([]); };
+
+  // 批量编辑保存全部：遍历 batchEditedMaterials 调 updateItem，再刷新列表
+  // 修复：原 onSaveAll 只关弹窗不真保存，编辑后列表信息不变
+  const handleSaveBatchAll = async () => {
+    const editedIds = Object.keys(batchEditedMaterials);
+    // 边界：没编辑任何东西直接关闭
+    if (editedIds.length === 0) {
+      setShowBatchEditModal(false);
+      setBatchEditMode(false);
+      setSelectedRows([]);
+      setBatchEditedMaterials({});
+      setCurrentBatchEditIndex(0);
+      return;
+    }
+    // 顺序保存每条编辑（顺序即可，不并发——后端是 SQLite）
+    for (const idStr of editedIds) {
+      const id = Number(idStr);
+      const updates = batchEditedMaterials[id];
+      if (updates && Object.keys(updates).length > 0) {
+        await updateItem(id, updates);
+      }
+    }
+    // 刷新列表拿后端最新数据（避免乐观更新和后端实际不一致）
+    await loadItems();
+    // 关闭 + 重置 state
+    setShowBatchEditModal(false);
+    setBatchEditMode(false);
+    setSelectedRows([]);
+    setBatchEditedMaterials({});
+    setCurrentBatchEditIndex(0);
+  };
   const handleConfirmBatchDeleteAction = () => { setShowBatchDeleteConfirm(true); };
   const handleCancelDeleteAction = () => { setDeleteMode(false); setSelectedRows([]); };
   const handleConfirmExportClick = () => setShowExportModal(true);
   const handleCancelExportAction = () => { setExportMode(false); setSelectedRows([]); };
+
+  // 新建物料（"+ 新增" 按钮 + URL deep link 都会走这里）
+  const handleAdd = () => {
+    setCreatePrefillName(undefined);
+    setCreateExpandCodeGen(false);
+    setShowCreateModal(true);
+  };
+
+  // 新建成功：刷新列表（addItem 内部已 push 进 store，loadItems 是为了同步后端最新数据）
+  const handleCreateSuccess = async (_material: Material) => {
+    await loadItems();
+  };
 
   // 批量删除确认
   const handleBatchDeleteConfirm = () => {
@@ -195,6 +256,7 @@ export default function WarehouseOverviewPage() {
         onCancelDelete={handleCancelDeleteAction}
         onConfirmExport={handleConfirmExportClick}
         onCancelExport={handleCancelExportAction}
+        onAdd={handleAdd}
       />
 
       <MaterialsTable
@@ -268,13 +330,7 @@ export default function WarehouseOverviewPage() {
             [materialId]: { ...currentData, [field]: value }
           });
         }}
-        onSaveAll={() => {
-          setShowBatchEditModal(false);
-          setBatchEditMode(false);
-          setSelectedRows([]);
-          setBatchEditedMaterials({});
-          setCurrentBatchEditIndex(0);
-        }}
+        onSaveAll={handleSaveBatchAll}
         onNext={() => {
           const nextIndex = currentBatchEditIndex + 1;
           if (nextIndex < selectedRows.length) {
@@ -302,6 +358,14 @@ export default function WarehouseOverviewPage() {
         onClose={() => setShowExportModal(false)}
         onFormatChange={setExportFormat}
         onExport={handleDoExport}
+      />
+
+      <MaterialCreateModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+        prefillName={createPrefillName}
+        defaultExpandCodeGen={createExpandCodeGen}
       />
     </div>
   );
