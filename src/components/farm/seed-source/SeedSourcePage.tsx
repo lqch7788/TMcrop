@@ -79,6 +79,9 @@ export default function SeedSourcePage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // TDZ 修复: 必须在挂载 useEffect 之前声明（useEffect 依赖该 state）
+  const [recalculating, setRecalculating] = useState(false);
+
   // 组件挂载时加载数据
   useEffect(() => {
     loadItems();
@@ -285,7 +288,7 @@ export default function SeedSourcePage() {
   };
 
   // 状态7 修复: 批量重算库存状态（处理扣减库存后 status 字段过期问题）
-  const [recalculating, setRecalculating] = useState(false);
+  // TDZ 修复: recalculating state 已在顶部声明
   const handleRecalculateStatus = async () => {
     if (recalculating) return;
     const needUpdate = seedSources.filter(item => {
