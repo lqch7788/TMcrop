@@ -1,10 +1,11 @@
 /**
- * 库存服务
+ * 库存服务（V3.0）
+ * 所有方法直接操作 SQLite 库存中心表（inventory_stock / inventory_transaction）
  */
 
 import { getDatabase, saveDatabase } from '../db';
-import { inventoryStockRepository } from '../repositories/inventory.repository';
-import { inventoryTransactionRepository } from '../repositories/inventory-tx.repository';
+import { inventoryStockRepository, InventoryStock } from '../repositories/inventory.repository';
+import { inventoryTransactionRepository, InventoryTransaction } from '../repositories/inventory-tx.repository';
 import { queryToObjects } from '../utils/queryHelper';
 
 export interface Inventory {
@@ -46,6 +47,13 @@ export interface InboundDTO {
   remarks?: string;
   operatorId?: string;
   operatorName?: string;
+  // V3 扩展字段（采收入库对接：让"作物库存"页展示完整采收元数据）
+  cropCode?: string;           // 11 位品种库编码
+  plantingMode?: string;        // 种植模式
+  targetYield?: number;         // 目标产量
+  grade?: string;               // 品质等级 A/B/C
+  auditor?: string;              // 审核人
+  greenhouseName?: string;      // 采收区域
 }
 
 /**
@@ -238,6 +246,14 @@ export class InventoryService {
         production_plan_code: request.productionPlanCode,
         source_instance_id: request.sourceInstanceId,
         status: 'in_stock',
+        // V3 扩展字段（采收入库完整对接）
+        crop_code: request.cropCode,
+        planting_mode: request.plantingMode,
+        target_yield: request.targetYield,
+        grade: request.grade,
+        auditor: request.auditor,
+        remarks: request.remarks,
+        greenhouse_name: request.greenhouseName,
       });
 
       // 5. 创建入库流水
@@ -281,8 +297,8 @@ export class InventoryService {
    * 获取库存详情（含流水）
    */
   async getDetail(instanceId: string): Promise<{
-    stock: any | null;
-    transactions: any[];
+    stock: InventoryStock | null;
+    transactions: InventoryTransaction[];
   }> {
     const stock = await inventoryStockRepository.findByInstanceId(instanceId);
     const transactions = await inventoryTransactionRepository.findByInstanceId(instanceId);
@@ -298,8 +314,265 @@ export class InventoryService {
     cropName?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ data: any[]; total: number }> {
+  }): Promise<{ data: InventoryStock[]; total: number }> {
     return inventoryStockRepository.findAll(query);
+  }
+
+  // ============================================
+  // V3.0 新增：出库 / 冻结 / 解冻 / 统计 / 追溯
+  // ============================================
+
+  /**
+   * 出库操作（带乐观锁）
+   */
+  async outbound(request: {
+    instanceId: string;
+    businessId: string;
+    businessType: string;
+    businessCode?: string;
+    quantity: number;
+    operatorId?: string;
+    operatorName?: string;
+    remarks?: string;
+  }): Promise<{
+    success: boolean;
+    instanceId?: string;
+    currentQuantity?: number;
+    availableQuantity?: number;
+    transactionId?: string;
+    error?: string;
+  }> {
+    try {
+      if (!request.instanceId) return { success: false, error: '缺少 instanceId' };
+      if (!request.quantity || request.quantity <= 0) {
+        return { success: false, error: '出库数量必须大于 0' };
+      }
+
+      const stock = await inventoryStockRepository.findByInstanceId(request.instanceId);
+      if (!stock) return { success: false, error: `库存实例 ${request.instanceId} 不存在` };
+
+      const currentQty = stock.current_quantity ?? 0;
+      const frozenQty = stock.frozen_quantity ?? 0;
+      const available = currentQty - frozenQty;
+
+      if (available < request.quantity) {
+        return {
+          success: false,
+          error: `可用数量不足：可用 ${available}，需要 ${request.quantity}`,
+        };
+      }
+
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const newQty = currentQty - request.quantity;
+      const version = stock.version ?? 1;
+
+      // 1. 更新库存数量（带乐观锁）
+      await inventoryStockRepository.updateQuantity(request.instanceId, newQty, version);
+
+      // 2. 创建出库流水
+      const transactionId = `TRX-OUT-${now.getTime()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await inventoryTransactionRepository.create({
+        transaction_id: transactionId,
+        instance_id: request.instanceId,
+        stock_type: stock.stock_type,
+        transaction_type: 'outbound',
+        quantity: -request.quantity,
+        balance_before: currentQty,
+        balance_after: newQty,
+        business_id: request.businessId,
+        business_type: request.businessType,
+        business_code: request.businessCode,
+        operator_id: request.operatorId,
+        operator_name: request.operatorName || '系统操作员',
+        operate_date: nowIso.slice(0, 10),
+        remarks: request.remarks || '出库',
+      });
+
+      // 3. 状态更新（出库后数量为 0 → empty）
+      if (newQty === 0) {
+        const db = getDatabase();
+        db.run(`UPDATE inventory_stock SET status = 'empty', update_time = ? WHERE instance_id = ?`,
+          [nowIso, request.instanceId]);
+        saveDatabase();
+      }
+
+      return {
+        success: true,
+        instanceId: request.instanceId,
+        currentQuantity: newQty,
+        availableQuantity: newQty - frozenQty,
+        transactionId,
+      };
+    } catch (error) {
+      console.error('[InventoryService] outbound 失败:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '出库失败',
+      };
+    }
+  }
+
+  /**
+   * 获取可用数量
+   */
+  async getAvailableQuantity(instanceId: string): Promise<{
+    instanceId: string;
+    currentQuantity: number;
+    frozenQuantity: number;
+    availableQuantity: number;
+  } | null> {
+    const stock = await inventoryStockRepository.findByInstanceId(instanceId);
+    if (!stock) return null;
+    const currentQty = stock.current_quantity ?? 0;
+    const frozenQty = stock.frozen_quantity ?? 0;
+    return {
+      instanceId,
+      currentQuantity: currentQty,
+      frozenQuantity: frozenQty,
+      availableQuantity: Math.max(0, currentQty - frozenQty),
+    };
+  }
+
+  /**
+   * 获取库存统计
+   */
+  async getStats(filters?: { stockType?: string }): Promise<{
+    totalInstances: number;
+    totalQuantity: number;
+    byStockType: Record<string, { count: number; quantity: number }>;
+    lowStockCount: number;
+    expiringCount: number;
+  }> {
+    return inventoryStockRepository.getStats(filters);
+  }
+
+  /**
+   * 上游追溯（沿 source_instance_id 链向上）
+   */
+  async traceUpstream(instanceId: string, maxDepth: number = 10): Promise<Array<{
+    instanceId: string;
+    stockType: string;
+    businessType: string;
+    businessId: string;
+    cropName: string;
+    varietyName?: string;
+    quantity: number;
+    inboundDate: string;
+    sourceInstanceId?: string;
+  }>> {
+    const results: any[] = [];
+    const visited = new Set<string>();
+    const queue: { id: string; depth: number }[] = [{ id: instanceId, depth: 0 }];
+
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!;
+      if (visited.has(id) || depth > maxDepth) continue;
+      visited.add(id);
+
+      const stock = await inventoryStockRepository.findByInstanceId(id);
+      if (!stock) continue;
+
+      results.push({
+        instanceId: stock.instance_id,
+        stockType: stock.stock_type,
+        businessType: stock.business_type,
+        businessId: stock.business_id,
+        cropName: stock.crop_name,
+        varietyName: stock.variety_name,
+        quantity: stock.current_quantity,
+        inboundDate: stock.inbound_date,
+        sourceInstanceId: stock.source_instance_id,
+      });
+
+      if (stock.source_instance_id && !visited.has(stock.source_instance_id)) {
+        queue.push({ id: stock.source_instance_id, depth: depth + 1 });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 下游追溯（沿 source_instance_id 反向链）
+   */
+  async traceDownstream(instanceId: string, maxDepth: number = 10): Promise<Array<{
+    instanceId: string;
+    stockType: string;
+    businessType: string;
+    businessId: string;
+    outboundQuantity: number;
+    outboundDate: string;
+  }>> {
+    const results: any[] = [];
+    const visited = new Set<string>();
+    const queue: { id: string; depth: number }[] = [{ id: instanceId, depth: 0 }];
+
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!;
+      if (visited.has(id) || depth > maxDepth) continue;
+      visited.add(id);
+
+      // 查找所有以当前 instance 为 source 的下游库存
+      const children = await inventoryStockRepository.findBySourceInstanceId(id);
+      for (const child of children) {
+        // 找对应的入库流水作为出库日期
+        const txs = await inventoryTransactionRepository.findByInstanceId(child.instance_id!);
+        const inboundTx = txs.find(t => t.transaction_type === 'inbound');
+
+        results.push({
+          instanceId: child.instance_id,
+          stockType: child.stock_type,
+          businessType: child.business_type,
+          businessId: child.business_id,
+          outboundQuantity: child.current_quantity ?? 0,
+          outboundDate: inboundTx?.operate_date ?? child.create_time ?? '',
+        });
+
+        if (child.instance_id && !visited.has(child.instance_id)) {
+          queue.push({ id: child.instance_id, depth: depth + 1 });
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 按作物名称聚合查询
+   */
+  async aggregateByCrop(cropName?: string): Promise<{
+    cropName: string;
+    seed: InventoryStock[];
+    seedling: InventoryStock[];
+    product: InventoryStock[];
+    total: number;
+    totalQuantity: { seed: number; seedling: number; product: number };
+  }> {
+    const db = getDatabase();
+    const params: any[] = [];
+    let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
+    if (cropName) {
+      sql += ` AND crop_name LIKE ?`;
+      params.push(`%${cropName}%`);
+    }
+
+    const items = queryToObjects<InventoryStock>(db, sql, params);
+
+    const seed = items.filter((i: any) => i.stock_type === 'seed');
+    const seedling = items.filter((i: any) => i.stock_type === 'seedling');
+    const product = items.filter((i: any) => i.stock_type === 'product');
+
+    const sum = (arr: InventoryStock[]) => arr.reduce((s, i) => s + (i.current_quantity ?? 0), 0);
+
+    return {
+      cropName: cropName || '',
+      seed,
+      seedling,
+      product,
+      total: items.length,
+      totalQuantity: { seed: sum(seed), seedling: sum(seedling), product: sum(product) },
+    };
   }
 }
 

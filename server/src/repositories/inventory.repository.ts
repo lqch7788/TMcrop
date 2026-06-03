@@ -42,6 +42,14 @@ export interface InventoryStock {
   version?: number;
   create_time?: string;
   update_time?: string;
+  // V3 扩展字段（采收入库对接）
+  crop_code?: string;          // 11 位品种库编码
+  planting_mode?: string;       // 种植模式
+  target_yield?: number;        // 目标产量
+  grade?: string;               // 品质等级 A/B/C
+  auditor?: string;             // 审核人
+  remarks?: string;             // 备注
+  greenhouse_name?: string;     // 采收区域
 }
 
 /**
@@ -64,8 +72,9 @@ export class InventoryStockRepository {
         current_quantity, frozen_quantity, available_quantity, unit,
         warehouse_id, warehouse_name, inbound_date, source_type,
         production_plan_code, source_instance_id, status, version,
+        crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       instanceId,
@@ -89,6 +98,14 @@ export class InventoryStockRepository {
       data.source_instance_id || null,
       data.status || 'in_stock',
       1,  // version
+      // V3 扩展字段（采收 → 库存完整字段对接）
+      data.crop_code || null,
+      data.planting_mode || null,
+      data.target_yield || 0,
+      data.grade || null,
+      data.auditor || null,
+      data.remarks || null,
+      data.greenhouse_name || null,
       now,
       now
     ]);
@@ -171,7 +188,7 @@ export class InventoryStockRepository {
   }
 
   /**
-   * 更新库存数量
+   * 更新库存数量（带乐观锁）
    */
   async updateQuantity(instanceId: string, newQuantity: number, version: number): Promise<boolean> {
     const db = getDatabase();
@@ -192,6 +209,96 @@ export class InventoryStockRepository {
 
     saveDatabase();
     return true;
+  }
+
+  /**
+   * 更新冻结数量（带乐观锁）
+   */
+  async updateFrozenQuantity(instanceId: string, newFrozenQty: number, version: number): Promise<boolean> {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 乐观锁检查
+    const existing = await this.findByInstanceId(instanceId);
+    if (!existing) return false;
+    if (existing.version !== version) {
+      throw new Error(`乐观锁冲突：期望版本 ${version}，实际版本 ${existing.version}`);
+    }
+
+    const availableQty = (existing.current_quantity ?? 0) - newFrozenQty;
+
+    db.run(`
+      UPDATE inventory_stock
+      SET frozen_quantity = ?, available_quantity = ?, version = version + 1, update_time = ?
+      WHERE instance_id = ?
+    `, [newFrozenQty, availableQty, now, instanceId]);
+
+    saveDatabase();
+    return true;
+  }
+
+  /**
+   * 根据 source_instance_id 查找所有下游库存实例
+   */
+  async findBySourceInstanceId(sourceInstanceId: string): Promise<InventoryStock[]> {
+    const db = getDatabase();
+    const sql = `SELECT * FROM inventory_stock WHERE source_instance_id = ? ORDER BY create_time DESC`;
+    return queryToObjects<InventoryStock>(db, sql, [sourceInstanceId]);
+  }
+
+  /**
+   * 统计库存（按 stockType 分组 + 总览）
+   */
+  async getStats(filters?: { stockType?: string }): Promise<{
+    totalInstances: number;
+    totalQuantity: number;
+    byStockType: Record<string, { count: number; quantity: number }>;
+    lowStockCount: number;
+    expiringCount: number;
+  }> {
+    const db = getDatabase();
+    const params: any[] = [];
+    let whereClause = 'WHERE 1=1';
+    if (filters?.stockType) {
+      whereClause += ' AND stock_type = ?';
+      params.push(filters.stockType);
+    }
+
+    const totals = queryToObjects<{ totalInstances: number; totalQuantity: number }>(db,
+      `SELECT COUNT(*) as totalInstances, COALESCE(SUM(current_quantity), 0) as totalQuantity
+       FROM inventory_stock ${whereClause}`, params);
+    const totalInstances = totals[0]?.totalInstances ?? 0;
+    const totalQuantity = Number(totals[0]?.totalQuantity ?? 0);
+
+    const byType = queryToObjects<{ stock_type: string; count: number; quantity: number }>(db,
+      `SELECT stock_type, COUNT(*) as count, COALESCE(SUM(current_quantity), 0) as quantity
+       FROM inventory_stock ${whereClause} GROUP BY stock_type`, params);
+
+    const byStockType: Record<string, { count: number; quantity: number }> = {
+      seed: { count: 0, quantity: 0 },
+      seedling: { count: 0, quantity: 0 },
+      product: { count: 0, quantity: 0 },
+    };
+    for (const row of byType) {
+      byStockType[row.stock_type] = {
+        count: row.count,
+        quantity: Number(row.quantity),
+      };
+    }
+
+    // 低库存与临期（简化：低库存=current<10；临期=inbound_date>180天）
+    const lowStock = queryToObjects<{ c: number }>(db,
+      `SELECT COUNT(*) as c FROM inventory_stock ${whereClause} AND current_quantity < 10`, params);
+    const expiring = queryToObjects<{ c: number }>(db,
+      `SELECT COUNT(*) as c FROM inventory_stock ${whereClause} AND inbound_date < date('now', '-180 days')`, params);
+
+    return {
+      totalInstances,
+      totalQuantity,
+      byStockType,
+      lowStockCount: lowStock[0]?.c ?? 0,
+      expiringCount: expiring[0]?.c ?? 0,
+    };
   }
 }
 

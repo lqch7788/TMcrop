@@ -11,10 +11,10 @@ import * as plantingService from '../services/plantingService';
 import * as harvestService from '../services/harvestService';
 
 // 清理函数
+// 注意：库存服务已重构为后端 API 直连模式（不再使用 localStorage）
+// 旧的 inventory_*_v3 localStorage key 已废弃
 const clearAllTestData = () => {
-  localStorage.removeItem('inventory_stock_v3');
-  localStorage.removeItem('inventory_transaction_v3');
-  localStorage.removeItem('inventory_freeze_v3');
+  // 清理其他仍使用 localStorage 的服务残留（种子/育苗/种植/采收等老服务）
   localStorage.removeItem('crop_seed_sources');
   localStorage.removeItem('crop_seedlings');
   localStorage.removeItem('crop_plantings');
