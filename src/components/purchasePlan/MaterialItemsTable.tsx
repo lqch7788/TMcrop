@@ -8,12 +8,13 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { PurchasePlanItem } from '../../types/purchase';
 
 export interface MaterialItemsTableProps {
   items: PurchasePlanItem[];
   mode?: 'view' | 'edit';
-  onItemsChange?: (items: PurchasePlanItem[]) => void;
+  onItemsChange?: (items: PurchasePlanItem[] | ((prev: PurchasePlanItem[]) => PurchasePlanItem[])) => void;
   /** view 模式下的表头主题色 */
   headerTheme?: 'emerald' | 'blue';
 }
@@ -56,17 +57,15 @@ export function MaterialItemsTable({
 
   const updateItem = (id: string, field: keyof PurchasePlanItem, value: string | number) => {
     if (!onItemsChange) return;
-    onItemsChange(
-      items.map(item => {
-        if (item.id !== id) return item;
-        const updated: PurchasePlanItem = { ...item, [field]: value };
-        // 数量/单价变化时自动计算总价
-        if (field === 'quantity' || field === 'estimatedPrice') {
-          updated.estimatedTotalPrice = Number(updated.quantity) * Number(updated.estimatedPrice);
-        }
-        return updated;
-      })
-    );
+    // 用函数式 setState 避免连续多次调用（onSelect 一次性写多字段）互相覆盖
+    onItemsChange((prev: PurchasePlanItem[]) => prev.map(item => {
+      if (item.id !== id) return item;
+      const updated: PurchasePlanItem = { ...item, [field]: value };
+      if (field === 'quantity' || field === 'estimatedPrice') {
+        updated.estimatedTotalPrice = Number(updated.quantity) * Number(updated.estimatedPrice);
+      }
+      return updated;
+    }));
   };
 
   const removeItem = (id: string) => {
@@ -151,6 +150,34 @@ export function MaterialItemsTable({
             {EDIT_COLUMNS.map(col => {
               const isNumeric = col.key === 'quantity' || col.key === 'estimatedPrice';
               const value = (item as any)[col.key] ?? '';
+              if (col.key === 'materialName') {
+                return (
+                  <td key={col.key} className="px-2 py-2">
+                    <MaterialAutocomplete
+                      value={item.materialName ?? ''}
+                      onChange={(v) => updateItem(item.id, 'materialName', v)}
+                      onSelect={(m) => {
+                        const updates: Partial<PurchasePlanItem> = {
+                          materialId: String(m.id),
+                          materialCode: m.code,
+                          materialName: m.name,
+                          category: m.category || '',
+                          specification: m.specification || '',
+                          unit: m.unit || '',
+                          barcode: m.barcode || '',
+                          supplier: m.supplier || '',
+                        };
+                        if (onItemsChange) {
+                          onItemsChange((prev: PurchasePlanItem[]) =>
+                            prev.map((it) => (it.id === item.id ? { ...it, ...updates } : it))
+                          );
+                        }
+                      }}
+                      placeholder="输入名称搜索物料库"
+                    />
+                  </td>
+                );
+              }
               return (
                 <td key={col.key} className="px-2 py-2">
                   <Input

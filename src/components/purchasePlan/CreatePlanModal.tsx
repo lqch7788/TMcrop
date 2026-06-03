@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
 import { usePlantingStore, useDictionaryStore } from '../../stores';
+import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
 
@@ -36,9 +37,9 @@ interface CreatePlanModalProps {
   createItems: PurchasePlanItem[];
   // 数据列表（用于检查编号重复）
   purchasePlansData: PurchasePlan[];
-  // 操作函数
+  // 操作函数（支持值或 updater 函数，避免连续 setState 互相覆盖）
   onFormChange: (field: string, value: any) => void;
-  onItemsChange: (items: PurchasePlanItem[]) => void;
+  onItemsChange: (items: PurchasePlanItem[] | ((prev: PurchasePlanItem[]) => PurchasePlanItem[])) => void;
   onSubmit: () => void;
 }
 
@@ -199,14 +200,14 @@ export function CreatePlanModal({
     return Math.round(raw * Math.pow(10, maxDecimals)) / Math.pow(10, maxDecimals);
   };
   const handleUpdateItem = (id: string, field: keyof PurchasePlanItem, value: string | number) => {
-    onItemsChange(createItems.map(item => {
+    // 用函数式 setState，避免连续 7 次调用（onSelect 一次性写多字段）时互相覆盖
+    onItemsChange((prev: PurchasePlanItem[]) => prev.map(item => {
       if (item.id === id) {
         let v = value as any;
         if (field === 'quantity' || field === 'estimatedPrice') {
           v = sanitizePositive(Number(value));
         }
         const updated = { ...item, [field]: v };
-        // 自动计算预估总价
         if (field === 'quantity' || field === 'estimatedPrice') {
           updated.estimatedTotalPrice = Math.round(updated.quantity * updated.estimatedPrice * 100) / 100;
         }
@@ -547,11 +548,21 @@ export function CreatePlanModal({
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
-                        <Input
+                        <MaterialAutocomplete
                           value={item.materialName}
-                          onChange={(e) => handleUpdateItem(item.id, 'materialName', e.target.value)}
-                          placeholder="名称"
-                          className={deepInputClass}
+                          onChange={(v) => handleUpdateItem(item.id, 'materialName', v)}
+                          onSelect={(m) => {
+                            handleUpdateItem(item.id, 'materialId', String(m.id));
+                            handleUpdateItem(item.id, 'materialCode', m.code);
+                            handleUpdateItem(item.id, 'materialName', m.name);
+                            handleUpdateItem(item.id, 'category', m.category || '');
+                            handleUpdateItem(item.id, 'specification', m.specification || '');
+                            handleUpdateItem(item.id, 'unit', m.unit || '');
+                            handleUpdateItem(item.id, 'barcode', m.barcode || '');
+                            handleUpdateItem(item.id, 'supplier', m.supplier || '');
+                          }}
+                          placeholder="输入名称搜索物料库"
+                          className="min-w-[160px]"
                         />
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">
