@@ -50,8 +50,9 @@ export class SeedSourceService {
 
   /**
    * 创建种源
+   * P1 #4 修复: 返回完整记录而非仅 id（违反 CLAUDE.md 铁律）
    * @param data 创建数据
-   * @returns 创建结果
+   * @returns 完整创建结果
    */
   async create(data: CreateSeedSourceDTO) {
     // 生成ID
@@ -68,15 +69,16 @@ export class SeedSourceService {
       quantity: data.quantity || 0
     };
 
-    const result = await this.repository.create(record);
-    return { id: result.id };
+    // 返回 repository.create 的完整记录（含 create_time/update_time）
+    return await this.repository.create(record);
   }
 
   /**
    * 更新种源
+   * P1 #4 修复: 返回更新后的完整记录
    * @param id 种源ID
    * @param data 更新数据
-   * @returns 更新结果
+   * @returns 更新后的完整记录
    */
   async update(id: string, data: UpdateSeedSourceDTO) {
     // 检查记录是否存在
@@ -86,7 +88,8 @@ export class SeedSourceService {
     }
 
     await this.repository.update(id, data);
-    return { id };
+    // 返回 findById 查到的最新完整记录
+    return await this.repository.findById(id);
   }
 
   /**

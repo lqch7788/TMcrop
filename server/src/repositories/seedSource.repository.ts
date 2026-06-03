@@ -44,7 +44,7 @@ export class SeedSourceRepository {
       ss.total_amount AS totalAmount,
       ss.remaining_quantity AS availableCount,
       ss.quantity AS initialCount,
-      '[]' AS pictures,
+      COALESCE(ss.pictures, '[]') AS pictures,
       ss.used_quantity AS usedQuantity,
       ss.remaining_quantity,
       ss.status,
@@ -189,6 +189,14 @@ export class SeedSourceRepository {
         total_amount, used_quantity, remaining_quantity, status, remarks, create_by, create_by_id, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, params);
+
+    // P0 #1: 单独 UPDATE pictures 列（避免破坏既有 INSERT 字段顺序）
+    if (data.pictures !== undefined) {
+      const picturesJson = typeof data.pictures === 'string'
+        ? data.pictures
+        : JSON.stringify(data.pictures || []);
+      db.run(`UPDATE seed_sources SET pictures = ? WHERE id = ?`, [picturesJson, newId]);
+    }
 
     saveDatabase();
 

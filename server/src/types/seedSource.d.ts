@@ -33,6 +33,8 @@ export interface SeedSourceRecord {
   create_by_id: string;
   create_time: string;
   update_time: string;
+  // P0 #1: 种源图片（JSON 字符串）
+  pictures?: string;
   // 繁殖途径字段
   propagation_type?: string;
   propagation_status?: string;

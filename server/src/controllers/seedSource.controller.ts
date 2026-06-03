@@ -24,7 +24,9 @@ export class SeedSourceController {
    */
   async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { crop_name, status, page = 1, limit = 50 } = req.query;
+      // P2 #15 修复: 后端默认 limit 从 50 改为 1000，避免数据 > 50 时前端"分页消失"
+      // 前端 pageSize=10 会基于后端全量结果再切片
+      const { crop_name, status, page = 1, limit = 1000 } = req.query;
 
       const result = await this.service.getAll({
         crop_name: crop_name as string,

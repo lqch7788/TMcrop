@@ -101,7 +101,10 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     status = StockStatus.LOW;
   } else if (item.status === 'depleted') {
     status = StockStatus.DEPLETED;
+  } else if (item.status === 'active') {
+    status = StockStatus.ACTIVE;
   }
+  // 未知值（如旧数据 'inactive'）默认 SUFFICIENT
 
   return {
     id: item.id,
@@ -191,7 +194,7 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
   // 转换为后端期望的 snake_case 格式
   const backendData = {
     source_code: source.seedCode,
-    source_name: source.supplierName,
+    source_name: source.seedCode,  // 修复 P3 #20: source_name 应该是种源批号，而非供应商名
     source_type: source.sourceType,
     source_origin: source.sourceOrigin,
     production_plan_code: source.productionPlanCode || '',
@@ -213,10 +216,17 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
     status: source.status,
     remarks: source.remarks || '',
     create_by: source.createBy,
+    // P0 #1: 传递 pictures 字段（后端 JSON 字符串）
+    pictures: JSON.stringify(source.pictures || []),
   };
 
-  const result = await enhancedApiClient.post<{ id: string }>('/seed-sources', backendData);
-  return { ...source, id: result.id } as SeedSource;
+  const result = await enhancedApiClient.post<{ id: string; create_time?: string; update_time?: string }>('/seed-sources', backendData);
+  return {
+    ...source,
+    id: result.id,
+    createTime: result.create_time || '',
+    updateTime: result.update_time || '',
+  } as SeedSource;
 }
 
 /**
@@ -247,9 +257,11 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
   if (updates.availableCount !== undefined) backendUpdates.remaining_quantity = updates.availableCount;
   if (updates.status !== undefined) backendUpdates.status = updates.status;
   if (updates.remarks !== undefined) backendUpdates.remarks = updates.remarks;
+  // P0 #1: 传递 pictures 字段
+  if (updates.pictures !== undefined) backendUpdates.pictures = JSON.stringify(updates.pictures);
 
-  const result = await enhancedApiClient.put<{ id: string }>(`/seed-sources/${id}`, backendUpdates);
-  return result ? { ...updates, id } as SeedSource : null;
+  const result = await enhancedApiClient.put<{ id: string; update_time?: string }>(`/seed-sources/${id}`, backendUpdates);
+  return result ? { ...updates, id, updateTime: result.update_time || '' } as SeedSource : null;
 }
 
 /**
@@ -314,23 +326,100 @@ export async function generateSeedCode(dateStr: string): Promise<string> {
 
 /**
  * 添加繁殖过程记录
+ * P0 #2 修复: 前端 camelCase → 后端 snake_case 转换，避免扩展字段全部丢失
  */
 export async function addPropagationRecord(seedSourceId: string, data: Partial<PropagationRecord>): Promise<PropagationRecord> {
-  const result = await enhancedApiClient.post<PropagationRecord>(
+  // 字段映射：camelCase → snake_case
+  const backendData = {
+    seed_source_id: seedSourceId,  // URL 已有，但后端 service 也会从 data 里读
+    record_date: data.recordDate || new Date().toISOString(),
+    stage: data.stage || '',
+    temperature: data.temperature ?? null,
+    humidity: data.humidity ?? null,
+    abnormality: data.abnormality || null,
+    operator: data.operator || null,
+    remarks: data.remarks || null,
+    pictures: JSON.stringify(data.pictures || []),
+    pollination_type: data.pollinationType || null,
+    pollinator_crop: data.pollinatorCrop || null,
+    flower_count: data.flowerCount ?? 0,
+    fruit_set_count: data.fruitSetCount ?? 0,
+    harvest_seed_count: data.harvestSeedCount ?? 0,
+    seed_weight: data.seedWeight ?? 0,
+    harvest_plant_count: data.harvestPlantCount ?? 0,
+    germination_rate: data.germinationRate ?? 0,
+    purity: data.purity ?? 0,
+    moisture: data.moisture ?? 0,
+    survival_rate: data.survivalRate ?? 0,
+    rooted_rate: data.rootedRate ?? 0,
+    graft_success_rate: data.graftSuccessRate ?? 0,
+  };
+
+  const result = await enhancedApiClient.post<any>(
     `/seed-sources/${seedSourceId}/propagation-records`,
-    data
+    backendData
   );
-  return result;
+  // 把后端返回的 snake_case 转回 camelCase 供前端使用
+  return {
+    id: result.id,
+    seedSourceId: result.seed_source_id || seedSourceId,
+    recordDate: result.record_date || '',
+    stage: result.stage || '',
+    temperature: result.temperature,
+    humidity: result.humidity,
+    abnormality: result.abnormality,
+    operator: result.operator,
+    remarks: result.remarks,
+    pictures: typeof result.pictures === 'string' ? JSON.parse(result.pictures || '[]') : (result.pictures || []),
+    pollinationType: result.pollination_type,
+    pollinatorCrop: result.pollinator_crop,
+    flowerCount: result.flower_count,
+    fruitSetCount: result.fruit_set_count,
+    harvestSeedCount: result.harvest_seed_count,
+    seedWeight: result.seed_weight,
+    harvestPlantCount: result.harvest_plant_count,
+    germinationRate: result.germination_rate,
+    purity: result.purity,
+    moisture: result.moisture,
+    survivalRate: result.survival_rate,
+    rootedRate: result.rooted_rate,
+    graftSuccessRate: result.graft_success_rate,
+  };
 }
 
 /**
  * 获取繁殖过程记录列表
+ * P0 #2 修复: 后端返回 snake_case，需转 camelCase 供前端使用
  */
 export async function getPropagationRecords(seedSourceId: string): Promise<PropagationRecord[]> {
-  const data = await enhancedApiClient.get<PropagationRecord[]>(
+  const data = await enhancedApiClient.get<any[]>(
     `/seed-sources/${seedSourceId}/propagation-records`
   );
-  return data;
+  return (data || []).map(item => ({
+    id: item.id,
+    seedSourceId: item.seed_source_id || seedSourceId,
+    recordDate: item.record_date || '',
+    stage: item.stage || '',
+    temperature: item.temperature,
+    humidity: item.humidity,
+    abnormality: item.abnormality,
+    operator: item.operator,
+    remarks: item.remarks,
+    pictures: typeof item.pictures === 'string' ? JSON.parse(item.pictures || '[]') : (item.pictures || []),
+    pollinationType: item.pollination_type,
+    pollinatorCrop: item.pollinator_crop,
+    flowerCount: item.flower_count,
+    fruitSetCount: item.fruit_set_count,
+    harvestSeedCount: item.harvest_seed_count,
+    seedWeight: item.seed_weight,
+    harvestPlantCount: item.harvest_plant_count,
+    germinationRate: item.germination_rate,
+    purity: item.purity,
+    moisture: item.moisture,
+    survivalRate: item.survival_rate,
+    rootedRate: item.rooted_rate,
+    graftSuccessRate: item.graft_success_rate,
+  }));
 }
 
 /**
