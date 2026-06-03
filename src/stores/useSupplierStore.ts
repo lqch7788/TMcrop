@@ -11,12 +11,18 @@ interface SupplierState {
   items: Supplier[];
   isLoading: boolean;
   error: string | null;
+  lastFetch: number | null;
 
-  loadItems: () => Promise<void>;
+  loadItems: (force?: boolean) => Promise<void>;
   addItem: (item: Omit<Supplier, 'id'>) => Promise<Supplier | null>;
   updateItem: (id: number, updates: Partial<Supplier>) => Promise<Supplier | null>;
   deleteItem: (id: number) => Promise<boolean>;
   deleteItems: (ids: number[]) => Promise<boolean>;
+
+  /** 前端内存搜索（避免重复请求） */
+  search: (keyword: string) => Supplier[];
+  /** 合作中的供应商下拉选项（status = 合作中 / active） */
+  getActiveOptions: () => Array<{ value: string; label: string; code: string }>;
 }
 
 /**
@@ -74,23 +80,53 @@ function fromBackendFields(record: Record<string, unknown>): Supplier {
   };
 }
 
+const STALE_MS = 5 * 60 * 1000; // 5 分钟内不重复请求
+
 export const useSupplierStore = create<SupplierState>()(
-  (set) => ({
+  (set, get) => ({
     items: [],
     isLoading: false,
     error: null,
+    lastFetch: null,
 
-    loadItems: async () => {
+    loadItems: async (force = false) => {
+      // 防止并发
+      if (get().isLoading) return;
+      // 5 分钟内不重复拉取
+      if (!force && get().items.length > 0 && get().lastFetch
+          && Date.now() - get().lastFetch < STALE_MS) {
+        return;
+      }
       set({ isLoading: true, error: null });
       try {
-        const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/suppliers?limit=200');
+        const resp = await enhancedApiClient.get<Record<string, unknown>[]>('/suppliers?limit=1000');
         const list = Array.isArray(resp) ? resp : [];
         const mapped = list.map(fromBackendFields);
-        set({ items: mapped, isLoading: false });
+        set({ items: mapped, isLoading: false, lastFetch: Date.now() });
       } catch (error) {
         // logger.error('[useSupplierStore] 获取供应商失败:', error);
         set({ error: error instanceof Error ? error.message : '获取供应商失败', isLoading: false });
       }
+    },
+
+    /** 前端内存关键字过滤 */
+    search: (keyword: string) => {
+      const items = get().items;
+      if (!keyword.trim()) return items;
+      const lower = keyword.toLowerCase().trim();
+      return items.filter(s =>
+        s.name.toLowerCase().includes(lower) ||
+        s.code.toLowerCase().includes(lower) ||
+        s.contact.toLowerCase().includes(lower) ||
+        s.mobilePhone.includes(keyword)
+      );
+    },
+
+    /** 合作中的供应商（用于下拉） */
+    getActiveOptions: () => {
+      return get().items
+        .filter(s => s.status === '合作中' || s.status === 'active')
+        .map(s => ({ value: String(s.id), label: s.name, code: s.code }));
     },
 
     addItem: async (item) => {
