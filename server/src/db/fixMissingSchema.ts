@@ -1098,6 +1098,10 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'harvester_names', sql: 'ALTER TABLE harvest_records ADD COLUMN harvester_names TEXT' },
     { name: 'inbound_type', sql: 'ALTER TABLE harvest_records ADD COLUMN inbound_type TEXT' },
     { name: 'batch_code', sql: 'ALTER TABLE harvest_records ADD COLUMN batch_code TEXT' },
+    // V3.0 补漏：FIELD_MAP 写了但 schema 漏建的列
+    { name: 'planting_mode', sql: 'ALTER TABLE harvest_records ADD COLUMN planting_mode TEXT' },     // 种植模式（FIELD_MAP 第 37 行）
+    { name: 'target_yield', sql: 'ALTER TABLE harvest_records ADD COLUMN target_yield REAL DEFAULT 0' }, // 目标产量（FIELD_MAP 第 38 行）
+    { name: 'harvest_area', sql: 'ALTER TABLE harvest_records ADD COLUMN harvest_area REAL DEFAULT 0' },   // 采收面积（FIELD_MAP 第 39 行）
   ];
   for (const col of harvestColumnsToAdd) {
     try {
@@ -1699,6 +1703,33 @@ export async function fixMissingSchema(): Promise<void> {
 
   saveDatabase();
   console.log('\n数据库结构修复完成！');
+
+  // ========== 库存中心表 (inventory_stock) 扩展字段（V3.0 关联采收入库）==========
+  // 这些字段由采收入库 API 在调用 inventoryInbound 时一起传入并落库，
+  // 让"作物库存"页能展示完整的采收元数据（品级 / 区域 / 编码 / 备注等）
+  console.log('\n检查 inventory_stock 扩展字段...');
+  const inventoryStockExtColumns = [
+    { name: 'crop_code', sql: "ALTER TABLE inventory_stock ADD COLUMN crop_code TEXT" },          // 11 位品种库编码
+    { name: 'planting_mode', sql: "ALTER TABLE inventory_stock ADD COLUMN planting_mode TEXT" },   // 种植模式
+    { name: 'target_yield', sql: "ALTER TABLE inventory_stock ADD COLUMN target_yield REAL DEFAULT 0" }, // 目标产量
+    { name: 'grade', sql: "ALTER TABLE inventory_stock ADD COLUMN grade TEXT" },                  // 品质等级 A/B/C
+    { name: 'auditor', sql: "ALTER TABLE inventory_stock ADD COLUMN auditor TEXT" },              // 审核人
+    { name: 'remarks', sql: "ALTER TABLE inventory_stock ADD COLUMN remarks TEXT" },              // 备注
+    { name: 'greenhouse_name', sql: "ALTER TABLE inventory_stock ADD COLUMN greenhouse_name TEXT" }, // 采收区域
+  ];
+  for (const col of inventoryStockExtColumns) {
+    try {
+      db.run(col.sql);
+      console.log(`✓ inventory_stock 表添加 ${col.name} 列`);
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) {
+        console.log(`• inventory_stock.${col.name} 列已存在`);
+      } else {
+        console.log(`• inventory_stock.${col.name}: ${e.message}`);
+      }
+    }
+  }
+  saveDatabase();
 }
 
 /**

@@ -47,6 +47,7 @@ interface AddModalProps {
     harvestCode: string;
     harvestDate: string;
     greenhouseId: string;
+    greenhouseIds: string[];  // 多选采收区域（主区域 greenhouseId 取数组第一个）
     batchCode: string;
     harvesterIds: string[];
     harvesterNames: string[];
@@ -72,7 +73,9 @@ interface AddModalProps {
   onGenerateCode: () => void;
   greenhouses: Array<{ id: string; name: string }>;
   warehouses: Array<{ id: string; name: string; warehouseType?: string }>;
-  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string; cropCode?: string }>;
+  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string; cropCode?: string; greenhouseId?: string; greenhouseName?: string }>;
+  /** 批次号 → 实际种植/育苗的温室ID 列表（用于过滤采收区域下拉） */
+  batchAreasMap?: Record<string, string[]>;
   users: Array<{ id: string; name: string; role: string }>;
   errors: Record<string, string>;
 }
@@ -90,6 +93,7 @@ export const AddModal: React.FC<AddModalProps> = ({
   greenhouses,
   warehouses,
   cropBatches,
+  batchAreasMap = {},
   users,
   errors,
 }) => {
@@ -135,6 +139,35 @@ export const AddModal: React.FC<AddModalProps> = ({
       onFormChange('harvesterNames', [...currentNames, userName]);
     }
   };
+
+  // 处理采收区域多选
+  const toggleGreenhouse = (ghId: string) => {
+    const current = addForm.greenhouseIds || [];
+    let next: string[];
+    if (current.includes(ghId)) {
+      next = current.filter(id => id !== ghId);
+    } else {
+      next = [...current, ghId];
+    }
+    onFormChange('greenhouseIds', next);
+    // 同步主区域字段（取第一个）
+    onFormChange('greenhouseId', next[0] || '');
+  };
+
+  // 根据当前选中的批次号，决定可用的温室列表
+  // 数据源优先级：
+  //   1) batchAreasMap[batchCode] — 从种植/育苗记录反查的实际种植区域（最准，支持多区域）
+  //   2) selectedBatch.greenhouseId — 批次自带的温室（单值，可能为空）
+  //   3) 全部温室（兜底）
+  const selectedBatch = filteredBatches.find(b => b.batchCode === addForm.batchCode);
+  const mapAreas = addForm.batchCode ? batchAreasMap[addForm.batchCode] : undefined;
+  const allowedAreaIds: string[] | null = mapAreas && mapAreas.length > 0
+    ? mapAreas
+    : (selectedBatch?.greenhouseId ? [selectedBatch.greenhouseId] : null);
+  const availableGreenhouses = allowedAreaIds
+    ? greenhouses.filter(gh => allowedAreaIds.includes(gh.id))
+    : greenhouses;
+  const isGreenhouseLocked = allowedAreaIds !== null;
 
   // 生成产品编码
   const handleProductCodeGenerate = (idx: number, categoryCode: string, typeCode: string, subCode: string) => {
@@ -201,36 +234,85 @@ export const AddModal: React.FC<AddModalProps> = ({
           <Select
             value={addForm.batchCode}
             onValueChange={(val) => {
-              // 先更新批次号
+              // 切到"不关联"时，把自动联动字段清空，避免残留旧批次信息
+              if (val === '__none__') {
+                onFormChange('batchCode', '');
+                onFormChange('harvestType', 'product');
+                onFormChange('targetInventory', 'product');
+                onFormChange('greenhouseIds', []);
+                onFormChange('greenhouseId', '');
+                return;
+              }
+              // 选了具体批次 → 让父组件 useEffect 联动 harvestType/greenhouseIds
               onFormChange('batchCode', val);
             }}
           >
             <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="请选择批次" />
+              <SelectValue placeholder="请选择批次（或不关联）" />
             </SelectTrigger>
             <SelectContent>
-              {filteredBatches.map(batch => (
-                <SelectItem key={batch.id} value={batch.batchCode}>{batch.batchCode} - {batch.cropName}</SelectItem>
-              ))}
+              <SelectItem value="__none__">— 不关联 —（自由填写）</SelectItem>
+              {filteredBatches.map(batch => {
+                const areas = batchAreasMap[batch.batchCode];
+                const areaNames = areas
+                  ? areas.map(id => greenhouses.find(g => g.id === id)?.name).filter(Boolean)
+                  : (batch.greenhouseName ? [batch.greenhouseName] : []);
+                return (
+                  <SelectItem key={batch.id} value={batch.batchCode}>
+                    {batch.batchCode} - {batch.cropName}
+                    {areaNames.length > 0 ? `（${areaNames.join('、')}）` : ''}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {errors.batchCode && <p className="text-red-500 text-xs mt-1">{errors.batchCode}</p>}
         </div>
         <div>
-          <Label className="text-gray-900">采收区域</Label>
-          <Select
-            value={addForm.greenhouseId}
-            onValueChange={(val) => onFormChange('greenhouseId', val)}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="请选择区域" />
-            </SelectTrigger>
-            <SelectContent>
-              {greenhouses.map(gh => (
-                <SelectItem key={gh.id} value={gh.id}>{gh.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-gray-900">
+            采收区域
+            {isGreenhouseLocked && (
+              <span className="ml-2 text-xs text-emerald-600">（已根据批次锁定）</span>
+            )}
+          </Label>
+          <div className="relative">
+            <div
+              className="w-full min-h-[42px] px-3 py-2 border border-gray-400 rounded-lg bg-white cursor-pointer flex items-center justify-between"
+              onClick={() => {
+                const dropdown = document.getElementById('greenhouse-dropdown');
+                if (dropdown) dropdown.classList.toggle('hidden');
+              }}
+            >
+              <span className="text-sm text-gray-700">
+                {addForm.greenhouseIds && addForm.greenhouseIds.length > 0
+                  ? addForm.greenhouseIds
+                      .map(id => greenhouses.find(g => g.id === id)?.name || id)
+                      .join('、')
+                  : '请选择采收区域（可多选）'}
+              </span>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </div>
+            <div id="greenhouse-dropdown" className="hidden absolute z-10 w-full mt-1 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
+              {availableGreenhouses.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-gray-400 italic">无可用区域</div>
+              ) : (
+                availableGreenhouses.map(gh => (
+                  <Label
+                    key={gh.id}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <Input
+                      type="checkbox"
+                      checked={(addForm.greenhouseIds || []).includes(gh.id)}
+                      onChange={() => toggleGreenhouse(gh.id)}
+                      className="w-4 h-4 text-emerald-600 rounded border-gray-400 focus:ring-emerald-500"
+                    />
+                    <span className="text-sm text-gray-700">{gh.name}</span>
+                  </Label>
+                ))
+              )}
+            </div>
+          </div>
           {errors.greenhouseId && <p className="text-red-500 text-xs mt-1">{errors.greenhouseId}</p>}
         </div>
         <div>
@@ -455,14 +537,13 @@ export const AddModal: React.FC<AddModalProps> = ({
                           className={deepInputClass}
                         />
                       </td>
-                      {/* 种植模式 */}
+                      {/* 种植模式（DictSelect 强制中文） */}
                       <td className="px-2 py-2">
-                        <Input
-                          type="text"
+                        <DictSelect
+                          category="planting_mode"
                           value={product.plantingMode}
-                          onChange={(e) => onProductChange(idx, 'plantingMode', e.target.value)}
-                          placeholder="种植模式"
-                          className={deepInputClass}
+                          onChange={(value) => onProductChange(idx, 'plantingMode', value)}
+                          placeholder="选择种植模式"
                         />
                       </td>
                       {/* 品质等级 */}

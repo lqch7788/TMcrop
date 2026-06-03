@@ -452,7 +452,7 @@ function initData(): void {
       harvestQuantity: config.quantity,
       unit: '公斤',
       quality: config.quality,
-      grade: config.quality === 'excellent' ? 'A' : 'B',
+      grade: config.quality, // 用字典码（excellent/good/qualified/unqualified），与产品明细选择一致
       harvesterIds: ['U001', 'U002'],
       harvesterNames: ['郭靖', '黄蓉'],
       warehouseId: 'W001',

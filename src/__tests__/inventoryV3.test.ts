@@ -1,6 +1,11 @@
 /**
  * V3.0 统一库存服务集成测试
- * 测试库存的入库、出库、冻结、追溯等核心功能
+ *
+ * ⚠️ 重要变更：此服务已从 localStorage 模式重构为「前端 → enhancedApiClient → 后端 → SQLite」直连架构。
+ * 所有测试需要后端 API（http://localhost:3001）运行才能通过。
+ * 启动后端：cd server && npm run dev
+ *
+ * 测试覆盖：入库、出库、冻结、追溯等核心功能
  */
 
 import {
@@ -14,21 +19,23 @@ import {
 } from '../types/inventory';
 import * as inventoryService from '../services/inventoryService';
 
-// 清理函数
-const clearTestData = () => {
-  localStorage.removeItem('inventory_stock_v3');
-  localStorage.removeItem('inventory_transaction_v3');
-  localStorage.removeItem('inventory_freeze_v3');
-};
+// 检测后端是否可用
+async function checkBackendAvailable(): Promise<boolean> {
+  try {
+    const response = await fetch('http://localhost:3001/api/inventory/stats', {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
 
-describe('V3.0 统一库存服务', () => {
-  beforeEach(() => {
-    clearTestData();
-  });
+const BACKEND_AVAILABLE = await checkBackendAvailable();
+const describeIfBackend = BACKEND_AVAILABLE ? describe : describe.skip;
 
-  afterAll(() => {
-    clearTestData();
-  });
+describeIfBackend('V3.0 统一库存服务', () => {
 
   describe('入库功能 (inbound)', () => {
     it('应该能够创建种源源入库记录', async () => {
@@ -452,14 +459,8 @@ describe('V3.0 统一库存服务', () => {
   });
 });
 
-describe('V3.0 库存集成服务', () => {
-  beforeEach(() => {
-    clearTestData();
-  });
-
-  afterAll(() => {
-    clearTestData();
-  });
+describeIfBackend('V3.0 库存集成服务', () => {
+  // 清理工作由后端 API 负责（无需本地清理）
 
   // 这些测试需要导入 inventoryIntegration，这里只做基本验证
   describe('种源库存集成', () => {

@@ -152,6 +152,22 @@ export interface InventoryStock {
 
   /** 扩展字段（JSON格式存储） */
   extensions?: Record<string, unknown>;
+
+  // ========== V3 扩展字段（采收入库对接）==========
+  /** 11 位作物编码（来自品种库） */
+  cropCode?: string;
+  /** 种植模式（如：土壤/水培/基质） */
+  plantingMode?: string;
+  /** 目标产量 */
+  targetYield?: number;
+  /** 品质等级（A/B/C） */
+  grade?: string;
+  /** 审核人 */
+  auditor?: string;
+  /** 备注 */
+  remarks?: string;
+  /** 采收区域（多个时用、分隔） */
+  greenhouseName?: string;
 }
 
 /**
@@ -404,6 +420,13 @@ export interface InboundRequest {
   sourceBusinessType?: BusinessType;
   remarks?: string;
   extensions?: Record<string, unknown>;
+  // V3 扩展字段（让库存页展示完整采收元数据）
+  cropCode?: string;
+  plantingMode?: string;
+  targetYield?: number;
+  grade?: string;
+  auditor?: string;
+  greenhouseName?: string;
 }
 
 /** 出库请求 */

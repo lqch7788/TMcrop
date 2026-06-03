@@ -112,19 +112,27 @@ export const SUPPLEMENTARY_STATUS_MAP: Record<string, string> = {
 };
 
 // ========== 品质等级映射 ==========
+// 品质等级徽章（key 用字典码：special / excellent / good / qualified / unqualified）
+// 数据源：seedBasicData.ts 的 quality_level 字典
 export const QUALITY_GRADE_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  A: { label: 'A级', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  B: { label: 'B级', bg: 'bg-blue-100', text: 'text-blue-700' },
-  C: { label: 'C级', bg: 'bg-amber-100', text: 'text-amber-700' },
-  D: { label: '次品', bg: 'bg-red-100', text: 'text-red-700' },
+  special:     { label: '特优',   bg: 'bg-emerald-600', text: 'text-white' },
+  excellent:   { label: '优',     bg: 'bg-emerald-500', text: 'text-white' },
+  good:        { label: '良',     bg: 'bg-blue-600',    text: 'text-white' },
+  qualified:   { label: '合格',   bg: 'bg-amber-600',   text: 'text-white' },
+  unqualified: { label: '不合格', bg: 'bg-red-600',     text: 'text-white' },
+  // 兼容老 A/B/C/D 数据（v1.0 时代留下的）
+  A: { label: 'A级', bg: 'bg-emerald-500', text: 'text-white' },
+  B: { label: 'B级', bg: 'bg-blue-600',    text: 'text-white' },
+  C: { label: 'C级', bg: 'bg-amber-600',   text: 'text-white' },
+  D: { label: '次品', bg: 'bg-red-600',     text: 'text-white' },
 };
 
 // ========== 库存状态映射（ProduceInventory） ==========
 export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  in_stock: { label: '正常', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  low_stock: { label: '库存不足', bg: 'bg-blue-100', text: 'text-blue-700' },
-  expired: { label: '已过期', bg: 'bg-red-100', text: 'text-red-700' },
-  out_of_stock: { label: '缺货', bg: 'bg-gray-100', text: 'text-gray-700' },
+  in_stock: { label: '正常', bg: 'bg-emerald-600', text: 'text-white' },
+  low_stock: { label: '库存不足', bg: 'bg-blue-600', text: 'text-white' },
+  expired: { label: '已过期', bg: 'bg-red-600', text: 'text-white' },
+  out_of_stock: { label: '缺货', bg: 'bg-slate-600', text: 'text-white' },
 };
 
 // ========== 采收状态映射 ==========

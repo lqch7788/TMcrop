@@ -1,17 +1,22 @@
 /**
  * V3.0 统一库存管理页面
- * 展示所有库存实例，支持追溯查询和出库操作
+ * 样式与 OrderPage（订单管理）保持一致
+ * 数据流：组件 → enhancedApiClient → 后端 Express → SQLite
  */
 
-import React, { useState, useEffect } from 'react';
-import { Package, Leaf, Sprout, Search, Filter, RefreshCw, ChevronRight, History, ExternalLink, X, ArrowDownCircle, ArrowUpCircle, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Boxes, Package, Leaf, Sprout } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '@/lib/utils';
+import ActionToolbar from '../components/warehouse/ActionToolbar';
 import {
   getInventoryList,
   getInventoryStats,
   traceUpstream,
   traceDownstream,
+  deleteInventoryBatch,
 } from '../services/inventoryService';
+import { useInventoryStore } from '../stores';
 import {
   StockType,
   SourceType,
@@ -21,20 +26,16 @@ import {
   DownstreamTraceResult,
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 
-// Tab 类型
-type TabType = 'list' | 'outbound';
-
-// 库存类型 Tab
-type StockTypeTab = 'all' | 'seed' | 'seedling' | 'product';
+import { InventoryStats } from '../components/farm/inventory/InventoryStats';
+import { InventoryStockTypeCards } from '../components/farm/inventory/InventoryStockTypeCards';
+import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
+import { InventoryTable } from '../components/farm/inventory/InventoryTable';
+import { InventoryTraceModal } from '../components/farm/inventory/InventoryTraceModal';
 
 export default function InventoryV3Page() {
-  const [loading, setLoading] = useState(true);
+  // 数据状态
   const [stocks, setStocks] = useState<InventoryStock[]>([]);
   const [stats, setStats] = useState<{
     totalInstances: number;
@@ -43,81 +44,211 @@ export default function InventoryV3Page() {
     lowStockCount: number;
     expiringCount: number;
   } | null>(null);
-  const [filter, setFilter] = useState<{
-    stockType: StockType | '';
-    status: InventoryStatus | '';
-    sourceType: SourceType | '';
-  }>({
+  const [loading, setLoading] = useState(true);
+
+  // 筛选
+  const [filters, setFilters] = useState<InventoryFilterState>({
     stockType: '',
     status: '',
     sourceType: '',
+    keyword: '',
   });
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedStock, setSelectedStock] = useState<InventoryStock | null>(null);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+
+  // 弹窗状态
+  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
+  const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
+  const [traceModalOpen, setTraceModalOpen] = useState(false);
+  const [traceStock, setTraceStock] = useState<InventoryStock | null>(null);
   const [traceData, setTraceData] = useState<{
     upstream: TraceResult[];
     downstream: DownstreamTraceResult[];
   } | null>(null);
-  // 出库功能相关 state
-  const [activeTab, setActiveTab] = useState<TabType>('list');
-  const [outboundModalOpen, setOutboundModalOpen] = useState(false);
-  const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
 
-  // 库存类型 Tab 筛选
-  const [stockTypeTab, setStockTypeTab] = useState<StockTypeTab>('all');
+  // 批量操作状态（与 ActionToolbar 协同）
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [batchEditMode, setBatchEditMode] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
-  // Tab 配置
-  const stockTypeTabs: { key: StockTypeTab; label: string; icon: React.ReactNode; color: string }[] = [
-    { key: 'all', label: '全部', icon: <Package className="w-4 h-4" />, color: 'gray' },
-    { key: 'seed', label: '种子', icon: <Leaf className="w-4 h-4" />, color: 'amber' },
-    { key: 'seedling', label: '种苗', icon: <Sprout className="w-4 h-4" />, color: 'green' },
-    { key: 'product', label: '成品', icon: <Package className="w-4 h-4" />, color: 'emerald' },
-  ];
+  // 跨页刷新：订阅 useInventoryStore.version
+  // 任何写操作（采收入库 / 出库 / 冻结）成功后 store.notifyChange() 会触发这里自动重新加载
+  const inventoryVersion = useInventoryStore((s) => s.version);
 
   useEffect(() => {
     loadData();
-  }, [filter]);
+  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const filters: { stockType?: StockType; status?: InventoryStatus; sourceType?: SourceType } = {};
-      if (filter.stockType) filters.stockType = filter.stockType;
-      if (filter.status) filters.status = filter.status;
-      if (filter.sourceType) filters.sourceType = filter.sourceType;
+      const apiFilters: { stockType?: StockType; status?: InventoryStatus; sourceType?: SourceType } = {};
+      if (filters.stockType) apiFilters.stockType = filters.stockType as StockType;
+      if (filters.status) apiFilters.status = filters.status as InventoryStatus;
+      if (filters.sourceType) apiFilters.sourceType = filters.sourceType as SourceType;
 
       const [stockList, statsData] = await Promise.all([
-        getInventoryList(filters),
+        getInventoryList(apiFilters),
         getInventoryStats(),
       ]);
 
       setStocks(stockList);
       setStats(statsData);
     } catch (error) {
-      // logger.error('加载库存数据失败:', error);
+      console.error('[InventoryV3] 加载库存数据失败:', error);
+      showAlert('加载库存数据失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTrace = async (stock: InventoryStock) => {
-    setSelectedStock(stock);
-    try {
-      const [upstream, downstream] = await Promise.all([
-        traceUpstream(stock.instanceId),
-        traceDownstream(stock.instanceId),
-      ]);
-      setTraceData({ upstream, downstream });
-    } catch (error) {
-      // logger.error('加载追溯链失败:', error);
-      setTraceData({ upstream: [], downstream: [] });
+  // 关键字过滤（前端）+ 低库存过滤
+  const filteredStocks = useMemo(() => {
+    let result = stocks;
+    if (filters.keyword) {
+      const keyword = filters.keyword.toLowerCase();
+      result = result.filter(stock =>
+        (stock.instanceId || '').toLowerCase().includes(keyword) ||
+        (stock.cropName || '').toLowerCase().includes(keyword) ||
+        (stock.varietyName || '').toLowerCase().includes(keyword) ||
+        (stock.warehouseName || '').toLowerCase().includes(keyword)
+      );
+    }
+    if (showLowStockOnly) {
+      // 数量 < 10 视为低库存（与后端 stats.lowStockCount 一致）
+      result = result.filter(s => (s.currentQuantity ?? 0) < 10);
+    }
+    return result;
+  }, [stocks, filters.keyword, showLowStockOnly]);
+
+  // 退出批量模式时清空选中
+  useEffect(() => {
+    if (!batchEditMode && !deleteMode && !exportMode) {
+      setSelectedRows([]);
+    }
+  }, [batchEditMode, deleteMode, exportMode]);
+
+  // ===== 操作按钮处理 =====
+  const handleAdd = () => {
+    showAlert('库存数据来源于采收入库 / 采购入库，请前往对应页面新增。');
+  };
+
+  const handleBatchEdit = () => {
+    if (!showLowStockOnly && !batchEditMode) {
+      setBatchEditMode(true);
+      return;
+    }
+    showAlert('批量编辑暂未实现，请到出库弹窗调整单条库存数量。');
+  };
+
+  const handleDelete = () => {
+    if (deleteMode) {
+      // 确认模式
+      if (selectedRows.length === 0) {
+        showAlert('请先选择要删除的库存记录');
+        return;
+      }
+      handleConfirmDelete();
+      return;
+    }
+    setDeleteMode(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedRows.length === 0) {
+      showAlert('请先选择要删除的库存记录');
+      return;
+    }
+    const ok = await showConfirm(`确定要删除选中的 ${selectedRows.length} 条库存记录吗？此操作不可撤销。`);
+    if (!ok) return;
+    const result = await deleteInventoryBatch(selectedRows);
+    if (result.success) {
+      showAlert(`已删除 ${result.deletedCount} 条记录`);
+      setSelectedRows([]);
+      setDeleteMode(false);
+      useInventoryStore.getState().notifyChange();
+      loadData();
+    } else {
+      showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
     }
   };
 
+  const handleCancelDelete = () => {
+    setDeleteMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleExport = () => {
+    if (exportMode) {
+      // 确认模式：执行导出
+      handleConfirmExport();
+      return;
+    }
+    setExportMode(true);
+  };
+
+  const handleConfirmExport = () => {
+    const rowsToExport = selectedRows.length > 0
+      ? filteredStocks.filter(s => selectedRows.includes(s.instanceId))
+      : filteredStocks;
+    if (rowsToExport.length === 0) {
+      showAlert('没有可导出的数据');
+      return;
+    }
+    // 导出 CSV（UTF-8 BOM 防止 Excel 打开乱码）
+    const headers = ['实例ID', '类型', '作物', '品种', '数量', '可用', '冻结', '仓库', '来源', '状态', '入库日期'];
+    const csvRows = [headers.join(',')];
+    rowsToExport.forEach((s) => {
+      const stockTypeLabel = s.stockType === 'seed' ? '种源' : s.stockType === 'seedling' ? '种苗' : '成品';
+      const statusLabel = s.status === 'in_stock' ? '库存中' : s.status === 'low_stock' ? '低库存' : s.status === 'frozen' ? '已冻结' : s.status === 'outbound' ? '已出库' : '已用完';
+      const sourceLabel = s.sourceType === 'self_produced' ? '自产' : '外购';
+      csvRows.push([
+        s.instanceId, stockTypeLabel, s.cropName, s.varietyName,
+        `${s.currentQuantity} ${s.unit}`, `${(s.currentQuantity ?? 0) - (s.frozenQuantity ?? 0)} ${s.unit}`,
+        `${s.frozenQuantity} ${s.unit}`, s.warehouseName, sourceLabel, statusLabel, s.inboundDate,
+      ].map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','));
+    });
+    const csvContent = '﻿' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `作物库存_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showAlert(`已导出 ${rowsToExport.length} 条记录`);
+    setSelectedRows([]);
+    setExportMode(false);
+  };
+
+  const handleCancelExport = () => {
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  const handleSelectAll = () => {
+    const pageIds = filteredStocks
+      .slice((pagination.current - 1) * pagination.pageSize, pagination.current * pagination.pageSize)
+      .map(s => s.instanceId);
+    const allSelected = pageIds.every(id => selectedRows.includes(id));
+    if (allSelected) {
+      setSelectedRows(selectedRows.filter(id => !pageIds.includes(id)));
+    } else {
+      setSelectedRows(Array.from(new Set([...selectedRows, ...pageIds])));
+    }
+  };
+
+  // 统计当前低库存数（用于 ActionToolbar 红点徽章）
+  const lowStockCount = useMemo(
+    () => stocks.filter(s => (s.currentQuantity ?? 0) < 10).length,
+    [stocks]
+  );
+
   // 打开出库弹窗
   const handleOpenOutbound = (stock: InventoryStock) => {
-    // 只允许对库存中的物品出库
-    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK) {
+    if (stock.status !== InventoryStatus.IN_STOCK && stock.status !== InventoryStatus.LOW_STOCK
+      && stock.status !== 'in_stock' && stock.status !== 'low_stock') {
       showAlert('只有库存中或低库存状态的物品可以出库');
       return;
     }
@@ -125,459 +256,178 @@ export default function InventoryV3Page() {
     setOutboundModalOpen(true);
   };
 
-  // 出库成功后的回调
+  // 出库成功回调
   const handleOutboundSuccess = () => {
-    loadData(); // 刷新列表
+    useInventoryStore.getState().notifyChange();
+    loadData();
   };
 
-  const getStockTypeIcon = (stockType: StockType) => {
-    switch (stockType) {
-      case StockType.SEED:
-        return <Leaf className="w-5 h-5 text-amber-600" />;
-      case StockType.SEEDLING:
-        return <Sprout className="w-5 h-5 text-green-600" />;
-      case StockType.PRODUCT:
-        return <Package className="w-5 h-5 text-emerald-600" />;
-      default:
-        return <Package className="w-5 h-5 text-gray-600" />;
+  // 打开追溯弹窗
+  const handleOpenTrace = async (stock: InventoryStock) => {
+    setTraceStock(stock);
+    setTraceModalOpen(true);
+    setTraceData(null);
+    try {
+      const [upstream, downstream] = await Promise.all([
+        traceUpstream(stock.instanceId),
+        traceDownstream(stock.instanceId),
+      ]);
+      setTraceData({ upstream, downstream });
+    } catch (error) {
+      console.error('[InventoryV3] 加载追溯链失败:', error);
+      setTraceData({ upstream: [], downstream: [] });
     }
   };
-
-  const getStockTypeName = (stockType: StockType) => {
-    switch (stockType) {
-      case StockType.SEED: return '种源';
-      case StockType.SEEDLING: return '育苗';
-      case StockType.PRODUCT: return '成品';
-      default: return '未知';
-    }
-  };
-
-  const getStatusBadge = (status: InventoryStatus) => {
-    switch (status) {
-      case InventoryStatus.IN_STOCK:
-        return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">库存中</span>;
-      case InventoryStatus.LOW_STOCK:
-        return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">低库存</span>;
-      case InventoryStatus.FROZEN:
-        return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">已冻结</span>;
-      case InventoryStatus.OUTBOUND:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已出库</span>;
-      case InventoryStatus.EMPTY:
-        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已用完</span>;
-      default:
-        return null;
-    }
-  };
-
-  // Tab 与 Select 联动：Tab 变化时同步更新 Select
-  const handleStockTypeTabChange = (tab: StockTypeTab) => {
-    setStockTypeTab(tab);
-    // Tab 切换时同步更新 filter
-    if (tab === 'all') {
-      setFilter({ ...filter, stockType: '' });
-    } else {
-      // Tab 值转换为 StockType
-      const stockTypeMap: Record<string, StockType> = {
-        'seed': StockType.SEED,
-        'seedling': StockType.SEEDLING,
-        'product': StockType.PRODUCT,
-      };
-      setFilter({ ...filter, stockType: stockTypeMap[tab] || '' });
-    }
-  };
-
-  const filteredStocks = stocks.filter(stock => {
-    // 搜索过滤
-    if (searchKeyword) {
-      const keyword = searchKeyword.toLowerCase();
-      if (
-        !stock.instanceId.toLowerCase().includes(keyword) &&
-        !stock.cropName.toLowerCase().includes(keyword) &&
-        !(stock.varietyName || '').toLowerCase().includes(keyword)
-      ) {
-        return false;
-      }
-    }
-    return true;
-  });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* 页面标题 */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">V3.0 统一库存管理</h1>
-          <p className="text-sm text-gray-500 mt-1">全链路库存追溯管理</p>
-        </div>
-
-        {/* 统计卡片 */}
-        {stats && (
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="text-sm text-gray-500">总库存实例</div>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalInstances}</div>
+    <div className="space-y-6">
+      {/* 页面标题卡片（与 OrderPage 风格一致） */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Boxes className="w-6 h-6 text-white" />
             </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="text-sm text-gray-500">总库存数量</div>
-              <div className="text-2xl font-bold text-emerald-600">{stats.totalQuantity}</div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">作物库存</h1>
+              <p className="text-gray-500">管理采收入库产品的库存状态、出入库与全链路追溯</p>
             </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="text-sm text-gray-500">低库存预警</div>
-              <div className="text-2xl font-bold text-amber-600">{stats.lowStockCount}</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-              <div className="text-sm text-gray-500">即将过期</div>
-              <div className="text-2xl font-bold text-red-600">{stats.expiringCount}</div>
-            </div>
-          </div>
-        )}
-
-        {/* 库存类型统计 */}
-        {stats && (
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Leaf className="w-5 h-5 text-amber-600" />
-                <span className="text-sm font-medium text-amber-700">种源库存</span>
-              </div>
-              <div className="text-2xl font-bold text-amber-700">
-                {stats.byStockType[StockType.SEED]?.count || 0} 实例
-              </div>
-              <div className="text-sm text-amber-600">
-                {stats.byStockType[StockType.SEED]?.quantity || 0} 数量
-              </div>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Sprout className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium text-green-700">育苗库存</span>
-              </div>
-              <div className="text-2xl font-bold text-green-700">
-                {stats.byStockType[StockType.SEEDLING]?.count || 0} 实例
-              </div>
-              <div className="text-sm text-green-600">
-                {stats.byStockType[StockType.SEEDLING]?.quantity || 0} 数量
-              </div>
-            </div>
-            <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-5 h-5 text-emerald-600" />
-                <span className="text-sm font-medium text-emerald-700">成品库存</span>
-              </div>
-              <div className="text-2xl font-bold text-emerald-700">
-                {stats.byStockType[StockType.PRODUCT]?.count || 0} 实例
-              </div>
-              <div className="text-sm text-emerald-600">
-                {stats.byStockType[StockType.PRODUCT]?.quantity || 0} 数量
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 筛选和搜索 */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="搜索实例ID、作物名称..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
-            </div>
-            <Select
-              value={filter.stockType}
-              onValueChange={(val) => {
-                setFilter({ ...filter, stockType: val as StockType | '' });
-                // Select 变化时同步更新 Tab
-                if (val === '') {
-                  setStockTypeTab('all');
-                } else if (val === StockType.SEED) {
-                  setStockTypeTab('seed');
-                } else if (val === StockType.SEEDLING) {
-                  setStockTypeTab('seedling');
-                } else if (val === StockType.PRODUCT) {
-                  setStockTypeTab('product');
-                }
-              }}
-            >
-              <SelectTrigger className="w-auto">
-                <SelectValue placeholder="全部类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部类型</SelectItem>
-                <SelectItem value={StockType.SEED}>种源</SelectItem>
-                <SelectItem value={StockType.SEEDLING}>育苗</SelectItem>
-                <SelectItem value={StockType.PRODUCT}>成品</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filter.status}
-              onValueChange={(val) => setFilter({ ...filter, status: val as InventoryStatus | '' })}
-            >
-              <SelectTrigger className="w-auto">
-                <SelectValue placeholder="全部状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部状态</SelectItem>
-                <SelectItem value={InventoryStatus.IN_STOCK}>库存中</SelectItem>
-                <SelectItem value={InventoryStatus.LOW_STOCK}>低库存</SelectItem>
-                <SelectItem value={InventoryStatus.FROZEN}>已冻结</SelectItem>
-                <SelectItem value={InventoryStatus.OUTBOUND}>已出库</SelectItem>
-                <SelectItem value={InventoryStatus.EMPTY}>已用完</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filter.sourceType}
-              onValueChange={(val) => setFilter({ ...filter, sourceType: val as SourceType | '' })}
-            >
-              <SelectTrigger className="w-auto">
-                <SelectValue placeholder="全部来源" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">全部来源</SelectItem>
-                <SelectItem value={SourceType.SELF_PRODUCED}>自产</SelectItem>
-                <SelectItem value={SourceType.EXTERNAL_PURCHASED}>外购</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={loadData}
-            >
-              <RefreshCw className="w-4 h-4" />
-              刷新
-            </Button>
           </div>
         </div>
+      </div>
 
-        {/* 库存类型 Tab 切换栏 */}
-        <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200 mb-4">
-          <Tabs value={stockTypeTab} onValueChange={(val) => handleStockTypeTabChange(val as StockTypeTab)}>
-            <TabsList className="w-full justify-start bg-transparent p-0 gap-1">
-              {stockTypeTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.key}
-                  value={tab.key}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                    stockTypeTab === tab.key
-                      ? tab.color === 'amber' ? "bg-amber-100 text-amber-700 shadow-sm" :
-                        tab.color === 'green' ? "bg-green-100 text-green-700 shadow-sm" :
-                        tab.color === 'emerald' ? "bg-emerald-100 text-emerald-700 shadow-sm" :
-                        "bg-gray-100 text-gray-700 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  )}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </TabsTrigger>
-              ))}
+      {/* 主统计卡片 */}
+      <InventoryStats data={stats} />
+
+      {/* 筛选工具栏（移到分类汇总上方，方便先过滤再看分类） */}
+      <InventoryFilter
+        filters={filters}
+        onChange={setFilters}
+        onRefresh={loadData}
+        loading={loading}
+      />
+
+      {/* 按库存类型分类小卡片 + Tab 切换（同一行：Tabs 左，分类汇总右） */}
+      <div className="flex items-stretch gap-3 flex-wrap">
+        {/* 库存类型 Tab 快速切换（加粗 + 高亮背景） */}
+        <div className="bg-white rounded-xl p-1 shadow-sm border border-gray-100 flex-1 min-w-0">
+          <Tabs
+            value={filters.stockType || 'all'}
+            onValueChange={(val) => {
+              // 同步更新筛选条件
+              const stockType =
+                val === 'all' ? '' :
+                val === 'seed' ? StockType.SEED :
+                val === 'seedling' ? StockType.SEEDLING :
+                val === 'product' ? StockType.PRODUCT : '';
+              setFilters({ ...filters, stockType: stockType as StockType | '' });
+            }}
+          >
+            <TabsList className="w-full justify-start bg-transparent p-0 gap-2 flex-wrap">
+              {[
+                { key: 'all', label: '全部', icon: <Package className="w-4 h-4" />,
+                  activeStyle: 'bg-blue-600 text-white shadow-md ring-1 ring-blue-700' },
+                { key: 'seed', label: '种源', icon: <Leaf className="w-4 h-4" />,
+                  activeStyle: 'bg-amber-500 text-white shadow-md ring-1 ring-amber-600' },
+                { key: 'seedling', label: '种苗', icon: <Sprout className="w-4 h-4" />,
+                  activeStyle: 'bg-green-500 text-white shadow-md ring-1 ring-green-600' },
+                { key: 'product', label: '成品', icon: <Package className="w-4 h-4" />,
+                  activeStyle: 'bg-emerald-500 text-white shadow-md ring-1 ring-emerald-600' },
+              ].map((tab) => {
+                const isActive =
+                  (filters.stockType === '' && tab.key === 'all') ||
+                  filters.stockType === tab.key;
+                return (
+                  <TabsTrigger
+                    key={tab.key}
+                    value={tab.key}
+                    className={cn(
+                      'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all',
+                      isActive
+                        ? tab.activeStyle
+                        : 'text-gray-600 bg-white hover:bg-gray-50 hover:text-gray-900'
+                    )}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </Tabs>
         </div>
 
-        {/* 库存列表 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">实例ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">作物</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">数量</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">可用</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">冻结</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">来源</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">入库日期</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600" />
-                        加载中...
-                      </div>
-                    </td>
-                  </tr>
-                ) : filteredStocks.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                      暂无库存数据
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStocks.map((stock) => (
-                    <tr key={stock.instanceId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-900">{stock.instanceId}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {getStockTypeIcon(stock.stockType)}
-                          <span className="text-sm text-gray-700">{getStockTypeName(stock.stockType)}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-900">{stock.cropName}</div>
-                        <div className="text-xs text-gray-500">{stock.varietyName || '-'}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {stock.currentQuantity} {stock.unit}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-emerald-600 font-medium">
-                        {stock.currentQuantity - stock.frozenQuantity} {stock.unit}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-blue-600">
-                        {stock.frozenQuantity} {stock.unit}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {stock.sourceType === SourceType.SELF_PRODUCED ? '自产' : '外购'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(stock.status)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(stock.inboundDate).toLocaleDateString('zh-CN')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {/* 出库按钮 */}
-                          {(stock.status === InventoryStatus.IN_STOCK || stock.status === InventoryStatus.LOW_STOCK) && (
-                            <Button
-                              variant="link"
-                              size="sm"
-                              onClick={() => handleOpenOutbound(stock)}
-                              className="text-red-600 hover:text-red-700"
-                              title="出库"
-                            >
-                              <ArrowUpCircle className="w-4 h-4" />
-                              出库
-                            </Button>
-                          )}
-                          {/* 追溯按钮 */}
-                          <Button
-                            variant="link"
-                            size="sm"
-                            onClick={() => handleTrace(stock)}
-                          >
-                            <History className="w-4 h-4" />
-                            追溯
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        {/* 分类汇总（靠右） */}
+        <div className="shrink-0">
+          <InventoryStockTypeCards byStockType={stats?.byStockType} />
         </div>
+      </div>
 
-        {/* 追溯链弹窗 */}
-        {selectedStock && traceData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-4xl shadow-xl max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-emerald-600">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">库存追溯链</h3>
-                  <p className="text-sm text-emerald-200">实例ID: {selectedStock.instanceId}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedStock(null);
-                    setTraceData(null);
-                  }}
-                  className="text-white hover:bg-emerald-700"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-              <div className="p-6 overflow-y-auto flex-1">
-                <div className="grid grid-cols-2 gap-6">
-                  {/* 上游来源 */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <ChevronRight className="w-4 h-4" />
-                      上游来源 ({traceData.upstream.length})
-                    </h4>
-                    {traceData.upstream.length === 0 ? (
-                      <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">
-                        无上游来源（最原始记录）
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {traceData.upstream.map((item, idx) => (
-                          <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-2 mb-1">
-                              {getStockTypeIcon(item.stockType)}
-                              <span className="text-sm font-medium">{item.cropName}</span>
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              <div>实例: {item.instanceId}</div>
-                              <div>类型: {getStockTypeName(item.stockType)}</div>
-                              <div>数量: {item.quantity}</div>
-                              <div>入库: {new Date(item.inboundDate).toLocaleDateString('zh-CN')}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* 下游去向 */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <ChevronRight className="w-4 h-4" />
-                      下游去向 ({traceData.downstream.length})
-                    </h4>
-                    {traceData.downstream.length === 0 ? (
-                      <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">
-                        无下游去向（尚未流转）
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {traceData.downstream.map((item, idx) => (
-                          <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-2 mb-1">
-                              {getStockTypeIcon(item.stockType)}
-                              <span className="text-sm font-medium">{item.businessType}</span>
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              <div>业务: {item.businessId}</div>
-                              <div>出库量: {item.outboundQuantity}</div>
-                              <div>出库日期: {new Date(item.outboundDate).toLocaleDateString('zh-CN')}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* 表格操作工具栏（与 OrderPage 风格一致：标题 + 新增/编辑/删除/导出按钮） */}
+      <ActionToolbar
+        title="库存列表"
+        batchEditMode={batchEditMode}
+        deleteMode={deleteMode}
+        exportMode={exportMode}
+        selectedRows={selectedRows as unknown as number[]}
+        lowStockCount={lowStockCount}
+        filters={{ showLowStock: showLowStockOnly }}
+        onLowStockToggle={() => setShowLowStockOnly(v => !v)}
+        onBatchEdit={handleBatchEdit}
+        onDelete={handleDelete}
+        onExport={handleExport}
+        onConfirmBatchEdit={() => showAlert('批量编辑暂未实现')}
+        onCancelBatchEdit={() => setBatchEditMode(false)}
+        onConfirmDelete={handleConfirmDelete}
+        onCancelDelete={handleCancelDelete}
+        onConfirmExport={handleConfirmExport}
+        onCancelExport={handleCancelExport}
+        onAdd={handleAdd}
+        canCreate={true}
+        canEdit={true}
+        canDelete={true}
+        canExport={true}
+        showLowStockButton={true}
+        showCustomerButton={false}
+        noCard={true}
+      />
 
-        {/* 出库弹窗 */}
+      {/* 数据表格 */}
+      <InventoryTable
+        data={filteredStocks}
+        loading={loading}
+        pagination={pagination}
+        onChange={setPagination}
+        onOutbound={handleOpenOutbound}
+        onTrace={handleOpenTrace}
+        selectedRows={selectedRows}
+        onSelectionChange={setSelectedRows}
+        showCheckboxes={batchEditMode || deleteMode || exportMode}
+        onSelectAll={handleSelectAll}
+      />
+
+      {/* 出库弹窗 */}
+      {selectedOutboundStock && (
         <OutboundModal
           isOpen={outboundModalOpen}
-          onClose={() => {
-            setOutboundModalOpen(false);
-            setSelectedOutboundStock(null);
-          }}
+          onClose={() => setOutboundModalOpen(false)}
           stock={selectedOutboundStock}
           onSuccess={handleOutboundSuccess}
         />
-      </div>
+      )}
+
+      {/* 追溯弹窗 */}
+      <InventoryTraceModal
+        isOpen={traceModalOpen}
+        stock={traceStock}
+        upstream={traceData?.upstream || []}
+        downstream={traceData?.downstream || []}
+        onClose={() => {
+          setTraceModalOpen(false);
+          setTraceStock(null);
+          setTraceData(null);
+        }}
+      />
     </div>
   );
 }

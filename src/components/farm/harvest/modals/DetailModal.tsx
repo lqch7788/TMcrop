@@ -47,7 +47,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
   const getGradeBadge = (grade: string) => {
     const info = QUALITY_GRADE_MAP[grade];
     if (!info) return null;
-    return <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full`}>{info.label}</span>;
+    return <span className={`px-2.5 py-0.5 ${info.bg} ${info.text} text-xs rounded-full font-bold shadow-sm`}>{info.label}</span>;
   };
 
   // TODO: status badges 颜色与共享常量 HARVEST_STATUS_MAP 不同（blue vs emerald），暂保留本地定义

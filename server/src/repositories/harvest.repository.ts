@@ -188,16 +188,10 @@ export class HarvestRepository {
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.oid
     WHERE h.id = ?`;
-    const stmt = db.prepare(sql);
-    stmt.bind([id]);
 
-    let item: HarvestRecord | null = null;
-    if (stmt.step()) {
-      item = stmt.getAsObject() as HarvestRecord;
-    }
-    stmt.free();
-
-    return item || undefined;
+    // 用 queryToObjects 走 camelCase 转换（之前用 stmt.getAsObject() 直接拿，snake_case 字段名导致前端读不到 record.cropName 等）
+    const items = queryToObjects<HarvestRecord>(db, sql, [id]);
+    return items.length > 0 ? items[0] : undefined;
   }
 
   /**
@@ -292,7 +286,11 @@ export class HarvestRepository {
       harvesterIdsJson,            // 25. harvester_ids (JSON字符串)
       harvesterNamesJson,           // 26. harvester_names (JSON字符串)
       snakeData.inbound_type,     // 27. inbound_type
-      snakeData.batch_code        // 28. batch_code
+      snakeData.batch_code,       // 28. batch_code
+      // V3 补漏：FIELD_MAP 写了但 schema 和 INSERT 都漏建的 3 个字段
+      snakeData.planting_mode,    // 29. planting_mode
+      snakeData.target_yield,      // 30. target_yield
+      snakeData.harvest_area,     // 31. harvest_area
     ];
     console.log('[HarvestRepository] params 数量:', params.length);
     console.log('[HarvestRepository] params 内容:', params);
@@ -304,8 +302,9 @@ export class HarvestRepository {
           greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
           total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
           remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
-          harvester_ids, harvester_names, inbound_type, batch_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          harvester_ids, harvester_names, inbound_type, batch_code,
+          planting_mode, target_yield, harvest_area
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, params);
     } catch (err) {
       console.error('[HarvestRepository] INSERT 错误:', err);
