@@ -206,10 +206,9 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
             </div>
             <div className="col-span-2">
               <Label className="text-gray-700">定植日期</Label>
-              <DatePicker
+              <DatePicker className="w-full"
                 selected={formData.transplantDate ? new Date(formData.transplantDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, transplantDate: date.toISOString().split('T')[0] })}
-                className={deepInputClass}
               />
             </div>
             <div className="col-span-2">

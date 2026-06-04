@@ -113,10 +113,9 @@ export function PlantingFilter({
         {/* 定植日期 */}
         <div className="min-w-[150px]">
           <Label className="text-gray-700">定植日期</Label>
-          <DatePicker
+          <DatePicker className="w-full"
             selected={filters.transplantDate ? new Date(filters.transplantDate) : undefined}
             onChange={(date) => onChange({ ...filters, transplantDate: date.toISOString().split('T')[0] })}
-            className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
 

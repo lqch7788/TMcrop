@@ -343,20 +343,18 @@ export function EditModal({
         {/* 开始日期 */}
         <div>
           <Label className="text-gray-900">开始日期</Label>
-          <DatePicker
+          <DatePicker className="w-full"
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
             onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
-            className={deepInputClass}
           />
         </div>
 
         {/* 预计结束日期 */}
         <div>
           <Label className="text-gray-900">预计结束日期</Label>
-          <DatePicker
+          <DatePicker className="w-full"
             selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
             onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
-            className={deepInputClass}
           />
         </div>
 

@@ -667,10 +667,9 @@ export function AddModal({
               </div>
               <div>
                 <Label className="text-gray-900">预计采收日期</Label>
-                <DatePicker
+                <DatePicker className="w-full"
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className={deepInputClass}
                 />
               </div>
             </>
@@ -701,10 +700,9 @@ export function AddModal({
               </div>
               <div>
                 <Label className="text-gray-900">预计采收日期</Label>
-                <DatePicker
+                <DatePicker className="w-full"
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
                   onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
-                  className={deepInputClass}
                 />
               </div>
             </>
@@ -902,10 +900,9 @@ export function AddModal({
             <Label className="text-gray-900">
               {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
             </Label>
-            <DatePicker
+            <DatePicker className="w-full"
               selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
               onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-              className={deepInputClass}
             />
           </div>
 

@@ -123,94 +123,90 @@ export function HarvestTableRow({
   const showCheckbox = exportMode || batchEditMode || batchDeleteMode;
   const colSpan = showCheckbox ? 13 : 12;
 
-  return (
-    <React.Fragment>
-      {/* 主行 */}
-      <TableRow className="hover:bg-blue-100 transition-colors">
-        {showCheckbox && (
-          <TableCell className="px-4 py-3 whitespace-nowrap">
-            <Input
-              type="checkbox"
-              checked={isSelected}
-              onChange={onSelectRow}
-              className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
-            />
-          </TableCell>
-        )}
-        <TableCell className="px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={onToggleExpand} className="p-1 hover:bg-gray-100 rounded">
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-gray-500" />
-            )}
-          </Button>
-        </TableCell>
-        <TableCell
-          className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
-          onClick={onViewDetail}
-        >
-          {record.harvestCode}
-        </TableCell>
-        <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-          {record.inboundType && INBOUND_TYPE_MAP[record.inboundType] ? (
-            <span className={`px-2 py-0.5 ${INBOUND_TYPE_MAP[record.inboundType].bg} ${INBOUND_TYPE_MAP[record.inboundType].text} rounded text-xs`}>
-              {INBOUND_TYPE_MAP[record.inboundType].label}
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">-</span>
-          )}
-          {record.isSupplementary && (
-            <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
-              {SUPPLEMENTARY_STATUS_MAP[record.supplementaryStatus] || '补录'}
-            </span>
-          )}
-        </TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate?.replace('T', ' ') || '-'}</TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName || '-'}</TableCell>
+  return [
+    <TableRow key="main" className="hover:bg-blue-100 transition-colors">
+      {showCheckbox && (
         <TableCell className="px-4 py-3 whitespace-nowrap">
-          <div className="flex flex-col items-center gap-1">
-            {parseHarvesterNames(record.harvesterNames).length > 0 ? (
-              parseHarvesterNames(record.harvesterNames).map((name, i) => (
-                <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
-              ))
-            ) : (
-              <span className="text-sm text-gray-400">-</span>
-            )}
+          <Input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onSelectRow}
+            className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
+          />
+        </TableCell>
+      )}
+      <TableCell className="px-4 py-3">
+        <Button variant="ghost" size="icon" onClick={onToggleExpand} className="p-1 hover:bg-gray-100 rounded">
+          {isExpanded ? (
+            <ChevronDown className="w-4 h-4 text-gray-500" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          )}
+        </Button>
+      </TableCell>
+      <TableCell
+        className="px-4 py-3 text-sm font-medium text-blue-600 cursor-pointer hover:text-blue-800 underline whitespace-nowrap"
+        onClick={onViewDetail}
+      >
+        {record.harvestCode}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+        {record.inboundType && INBOUND_TYPE_MAP[record.inboundType] ? (
+          <span className={`px-2 py-0.5 ${INBOUND_TYPE_MAP[record.inboundType].bg} ${INBOUND_TYPE_MAP[record.inboundType].text} rounded text-xs`}>
+            {INBOUND_TYPE_MAP[record.inboundType].label}
+          </span>
+        ) : (
+          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">-</span>
+        )}
+        {record.isSupplementary && (
+          <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
+            {SUPPLEMENTARY_STATUS_MAP[record.supplementaryStatus] || '补录'}
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.harvestDate?.replace('T', ' ') || '-'}</TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.greenhouseName}</TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.warehouseName || '-'}</TableCell>
+      <TableCell className="px-4 py-3 whitespace-nowrap">
+        <div className="flex flex-col items-center gap-1">
+          {parseHarvesterNames(record.harvesterNames).length > 0 ? (
+            parseHarvesterNames(record.harvesterNames).map((name, i) => (
+              <span key={i} className="text-sm text-gray-900">{name || '-'}</span>
+            ))
+          ) : (
+            <span className="text-sm text-gray-400">-</span>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">
+        {record.unitPrice ? `${record.unitPrice.toFixed(2)}` : '-'}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium text-right whitespace-nowrap">
+        {record.totalAmount ? `${record.totalAmount.toFixed(2)}` : '-'}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</TableCell>
+      <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor || '-'}</TableCell>
+      <TableCell className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</TableCell>
+    </TableRow>,
+    isExpanded && (
+      <TableRow key="expand">
+        <TableCell colSpan={colSpan} className="px-4 py-3 bg-gray-50">
+          <div className="text-sm">
+            <p className="font-medium text-gray-700 mb-2">产品明细：</p>
+            <div className="overflow-x-auto rounded border">
+              <Table className="bg-white">
+                <ProductRow
+                  record={record}
+                  recordIdx={idx}
+                  generateProductCode={generateProductCode}
+                />
+              </Table>
+            </div>
           </div>
         </TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 text-right whitespace-nowrap">
-          {record.unitPrice ? `${record.unitPrice.toFixed(2)}` : '-'}
-        </TableCell>
-        <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium text-right whitespace-nowrap">
-          {record.totalAmount ? `${record.totalAmount.toFixed(2)}` : '-'}
-        </TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">1 条</TableCell>
-        <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.auditor || '-'}</TableCell>
-        <TableCell className="px-4 py-3 whitespace-nowrap">{getStatusBadge(record.status)}</TableCell>
       </TableRow>
-      {/* 展开行：产品明细 */}
-      {isExpanded && (
-        <TableRow>
-          <TableCell colSpan={colSpan} className="px-4 py-3 bg-gray-50">
-            <div className="text-sm">
-              <p className="font-medium text-gray-700 mb-2">产品明细：</p>
-              <div className="overflow-x-auto rounded border">
-                <Table className="bg-white">
-                  <ProductRow
-                    record={record}
-                    recordIdx={idx}
-                    generateProductCode={generateProductCode}
-                  />
-                </Table>
-              </div>
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </React.Fragment>
-  );
+    ),
+  ];
 }
 
 // 主表格组件

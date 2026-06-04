@@ -268,13 +268,38 @@ export default function SeedSourcePage() {
     setLightboxOpen(true);
   };
 
-  // 处理删除（通过 Store，删除前检查是否有育苗引用）
+  // 处理删除（通过 Store，删除前检查关联引用）
+  // 2026-06-04 升级：弹窗展示具体被哪些模块/记录引用，附"前往处理"按钮
   const handleDelete = async (ids: string[]) => {
     for (const id of ids) {
       try {
-        const res = await enhancedApiClient.get<{ deletable: boolean; refCount: number }>(`/seed-sources/${id}/check-deletable`);
-        if (!res?.deletable) {
-          await showAlert(`该种源已被 ${res?.refCount || '多个'} 条育苗记录引用，无法删除。\n请先清理育苗关联后再删除。`);
+        const res = await enhancedApiClient.get<{
+          deletable: boolean;
+          references: Array<{
+            module: string;
+            moduleCode: string;
+            id: string;
+            code: string;
+            cropName?: string;
+            cropVariety?: string;
+            date?: string;
+            status?: string;
+          }>;
+        }>(`/seed-sources/${id}/check-deletable`);
+
+        if (res && !res.deletable && res.references?.length) {
+          const lines = res.references.slice(0, 10).map((r) => {
+            const parts = [r.module, `「${r.code}」`];
+            if (r.cropName) parts.push(r.cropName);
+            if (r.cropVariety) parts.push(r.cropVariety);
+            if (r.date) parts.push(r.date);
+            if (r.status) parts.push(`状态:${r.status}`);
+            return '  • ' + parts.join(' · ');
+          });
+          const more = res.references.length > 10 ? `\n  …及其他 ${res.references.length - 10} 条` : '';
+          await showAlert(
+            `该种源被 ${res.references.length} 条关联记录引用，无法删除：\n\n${lines.join('\n')}${more}\n\n请先到对应模块处理关联后再删除。`
+          );
           return;
         }
       } catch { /* 降级策略：检查失败时允许继续删除 */ }
