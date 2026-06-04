@@ -190,18 +190,9 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
     if (approval) {
       executeApprovalIntegration('partially_approved', approval, { approvedItems: items, comment });
     }
-    const approverId = storageGet('userId') || '';
-    const approverName = storageGet('username') || '系统';
-    try {
-      const { enhancedApiClient } = await import('../lib/apiClient');
-      await enhancedApiClient.patch(`/approvals/${id}/action`, {
-        action: 'partially_approve', comment, approvedItems: items, approverId, approverName,
-      });
-      await store.fetchApprovals();
-    } catch (error) {
-      // logger.error('Failed to partially approve:', error);
-    }
-  }, [store.approvals, store.fetchApprovals]);
+    // 2026-06-04 V2.1 铁律：写操作走 Store action（不再直接 await patch）
+    await store.partiallyApprove(id, items, comment);
+  }, [store.approvals, store.partiallyApprove]);
 
   const cancel = useCallback(async (id: string, reason?: string) => {
     const approval = store.approvals.find(a => a.id === id);
