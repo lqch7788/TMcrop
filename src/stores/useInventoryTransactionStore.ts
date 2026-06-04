@@ -88,7 +88,15 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     const mergedQuery = { ...get().query, ...(q || {}) };
     set({ loading: true, error: null, query: mergedQuery });
     try {
-      const data = await enhancedApiClient.get<OutboundListResult>('/inventory-transactions', { params: mergedQuery });
+      // 2026-06-04 紧急修复：enhancedApiClient.get 不支持 params（options 只有 retryCount），
+      // 必须手拼 query string 到 URL，否则后端 service 收到无 from/to 抛 500
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(mergedQuery)) {
+        if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
+      }
+      const qs = params.toString();
+      const url = qs ? `/inventory-transactions?${qs}` : '/inventory-transactions';
+      const data = await enhancedApiClient.get<OutboundListResult>(url);
       set({
         rows: data?.rows || [],
         total: data?.total || 0,

@@ -18,6 +18,9 @@ import { useToast } from '@/components/ui/Toast';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调
 import { exportOutboundCSV, OutboundQuery } from '@/services/inventoryTransactionService';
 import { useInventoryTransactionStore } from '@/stores/useInventoryTransactionStore';
+// 2026-06-04 紧急修复：跨页刷新订阅（任何写操作 → useInventoryStore.notifyChange()
+// → version 自增 → 此 useEffect 重跑 → 重新加载最新数据）
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import {
   OutboundRecordsStats,
   OutboundRecordsFilter,
@@ -60,8 +63,9 @@ export default function OutboundRecordsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const toast = useToast();
 
-  // 数据加载：筛选条件变化即重查
-  useEffect(() => { loadOutbound(query); }, [query, loadOutbound]);
+  // 数据加载：筛选条件变化即重查 + 跨页刷新订阅（出库/入库后自动重查）
+  const inventoryVersion = useInventoryStore((s) => s.version);
+  useEffect(() => { loadOutbound(query); }, [query, loadOutbound, inventoryVersion]);
 
   function handleFilterChange(q: OutboundQuery) {
     setQuery({ ...q, page: 1 }); // 改筛选条件回到第 1 页
