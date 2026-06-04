@@ -155,7 +155,7 @@ export default function OutboundRecordsPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-6">
       {/* 页面标题卡片（100% 对齐 OrderPage.tsx 顶部卡片样式） */}
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -14,10 +14,13 @@
 
 import React, { useMemo } from 'react';
 import { Button } from '../../ui/button';
-import { Input, Select } from '../../ui/Modal';
+import { Input } from '../../ui/input';
 import { Pagination } from '../../ui/Pagination';
 import { Checkbox } from '../../ui/checkbox';
-import { Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
+import { Label } from '../../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { DatePicker } from '../../ui/DatePicker';
+import { RotateCcw, Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
 import {
   OutboundRow,
   OutboundSummary,
@@ -71,24 +74,24 @@ export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsP
   };
   return (
     // 7 个卡同一行：grid-cols-7 强制 7 列（小屏可滚动 overflow-x-auto）
-    <div className="grid grid-cols-7 gap-2 overflow-x-auto">
+    <div className="grid grid-cols-7 gap-4 overflow-x-auto">
       {/* 4 个数值卡（带图标） */}
       {numberCards.map((card, i) => {
         const IconComponent = card.Icon;
         return (
           <div
             key={`n-${i}`}
-            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
+            className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-7 h-7 rounded-md ${card.color} flex items-center justify-center shrink-0`}>
-                <IconComponent className="w-3.5 h-3.5 text-white" />
+              <div className={`w-8 h-8 rounded-lg ${card.color} flex items-center justify-center shrink-0`}>
+                <IconComponent className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight truncate">
+                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">
                   {loading ? '…' : card.value.toLocaleString()}
                 </p>
-                <p className="text-[11px] text-gray-500 leading-tight truncate">{card.label}</p>
+                <p className="text-xs text-gray-500 leading-tight truncate">{card.label}</p>
               </div>
             </div>
           </div>
@@ -100,19 +103,19 @@ export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsP
         return (
           <div
             key={t.key}
-            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
+            className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <div className={`w-7 h-7 rounded-md ${c.bg} flex items-center justify-center shrink-0`}>
+              <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center shrink-0`}>
                 <span className={`text-sm font-bold ${c.text}`}>
                   {t.label.charAt(0)}
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight truncate">
+                <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight truncate">
                   {loading ? '…' : t.data.count.toLocaleString()}
                 </p>
-                <p className="text-[11px] text-gray-500 leading-tight truncate">
+                <p className="text-xs text-gray-500 leading-tight truncate">
                   {t.label} · {loading ? '…' : t.data.quantity.toLocaleString()}
                 </p>
               </div>
@@ -141,76 +144,90 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
     onChange({ ...value, [field]: v || undefined });
   };
   return (
-    <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">开始日期</label>
-          <Input
-            type="date"
-            value={value.from}
-            onChange={(e) => handleField('from', e.target.value)}
-            className="w-36"
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-end gap-4 flex-wrap">
+        {/* 开始日期 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">开始日期</Label>
+          <DatePicker
+            selected={value.from ? new Date(value.from) : undefined}
+            onChange={(d) => handleField('from', d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '')}
+            className="border-gray-300"
           />
         </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">结束日期</label>
-          <Input
-            type="date"
-            value={value.to}
-            onChange={(e) => handleField('to', e.target.value)}
-            className="w-36"
+        {/* 结束日期 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">结束日期</Label>
+          <DatePicker
+            selected={value.to ? new Date(value.to) : undefined}
+            onChange={(d) => handleField('to', d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '')}
+            className="border-gray-300"
           />
         </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">库存类型</label>
+        {/* 库存类型 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">库存类型</Label>
           <Select
-            value={value.stockType || ''}
-            onChange={(e) => handleField('stockType', e.target.value)}
-            options={[
-              { value: '',         label: '全部' },
-              { value: 'seed',     label: '种源' },
-              { value: 'seedling', label: '种苗' },
-              { value: 'product',  label: '成品' },
-            ]}
-            className="w-32"
-          />
+            value={value.stockType || 'all'}
+            onValueChange={(v) => handleField('stockType', v === 'all' ? '' : v)}
+          >
+            <SelectTrigger className="border-gray-300">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="seed">种源</SelectItem>
+              <SelectItem value="seedling">种苗</SelectItem>
+              <SelectItem value="product">成品</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">业务类型</label>
+        {/* 业务类型 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">业务类型</Label>
           <Select
-            value={value.businessType || ''}
-            onChange={(e) => handleField('businessType', e.target.value)}
-            options={[
-              { value: '',         label: '全部' },
-              { value: 'harvest',  label: '采收入库' },
-              { value: 'purchase', label: '采购入库' },
-              { value: 'manual',   label: '手动新建' },
-              { value: 'transfer', label: '调拨入库' },
-            ]}
-            className="w-32"
-          />
+            value={value.businessType || 'all'}
+            onValueChange={(v) => handleField('businessType', v === 'all' ? '' : v)}
+          >
+            <SelectTrigger className="border-gray-300">
+              <SelectValue placeholder="请选择" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部</SelectItem>
+              <SelectItem value="harvest">采收入库</SelectItem>
+              <SelectItem value="purchase">采购入库</SelectItem>
+              <SelectItem value="manual">手动新建</SelectItem>
+              <SelectItem value="transfer">调拨入库</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">品种</label>
+        {/* 品种 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">品种</Label>
           <Input
             value={value.cropName || ''}
             onChange={(e) => handleField('cropName', e.target.value)}
             placeholder="品种名模糊搜索"
-            className="w-32"
+            className="border-gray-300"
           />
         </div>
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">出库人</label>
+        {/* 出库人 */}
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">出库人</Label>
           <Input
             value={value.operatorName || ''}
             onChange={(e) => handleField('operatorName', e.target.value)}
             placeholder="操作人姓名"
-            className="w-32"
+            className="border-gray-300"
           />
         </div>
-        <Button variant="outline" size="sm" onClick={onReset}>
-          重置
-        </Button>
+        {/* 按钮 */}
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={onReset} className="whitespace-nowrap">
+            <RotateCcw className="w-4 h-4" />
+            重置
+          </Button>
+        </div>
       </div>
     </div>
   );
