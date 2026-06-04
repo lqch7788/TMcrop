@@ -12,7 +12,7 @@
 
 ### 2.1 在范围内
 
-- 全量出库流水查询（按 `inventory_transactions` 表 `transaction_type='outbound'` 过滤）
+- 全量出库流水查询（按 `inventory_transaction` 表（**单数**）`transaction_type='outbound'` 过滤）
 - 6 维筛选（时间/库存类型/仓库/品种/出库人/业务类型）
 - 3 种导出格式（CSV / XLSX / PDF）
 - 顶部统计卡 + 库存类型分组卡
@@ -28,6 +28,8 @@
 - 出库预测/AI 趋势分析
 - 跨财年对比
 - PDF 数字签名
+- 路由级 type 参数（路由名已限定）
+- 起始日期校验（项目无「起始日」概念）
 
 ## 3. 入口位置
 
@@ -57,7 +59,6 @@
 
 | 参数 | 必填 | 类型 | 说明 |
 |---|---|---|---|
-| type | 否 | string | 固定 `outbound`（V3.1 预留） |
 | from | **是** | YYYY-MM-DD | 起始日期 |
 | to | **是** | YYYY-MM-DD | 结束日期 |
 | stock_type | 否 | seed/seedling/product | 库存类型 |
@@ -89,9 +90,9 @@
         "businessCode": "HS20260604001",
         "operatorId": "...",
         "operatorName": "张三",
-        "operateDate": "2026-06-04T10:30:00.000Z",
+        "operateDate": "2026-06-04",
         "remarks": "...",
-        "createTime": "...",
+        "createTime": "2026-06-04T10:30:00.000Z",
         "cropName": "番茄",
         "varietyName": "粉冠 F1",
         "cropCode": "TS0000000001",
@@ -106,6 +107,7 @@
     "summary": {
       "totalCount": 1234,
       "totalQuantity": 5678.5,
+      "todayCount": 12,
       "byStockType": { "seed": { "count": 100, "quantity": 500 }, ... },
       "byBusinessType": { "harvest": { "count": 800, "quantity": 4000 }, ... }
     }
@@ -113,19 +115,27 @@
 }
 ```
 
+> **注**：`operateDate` 存的是**纯日期字符串**（`"2026-06-04"`，来自 `now.toISOString().slice(0, 10)`），不是 ISO 完整时间戳。`createTime` 是 ISO 完整。
+
 ### 4.2 `GET /api/inventory/transactions/export`
 
-导出文件，参数与 list 一致 + `format=csv|xlsx|pdf`。
+导出文件，参数与 list 一致 + `format=csv|xlsx`。
+
+> **PDF 不走服务端**：前端用 jspdf + jspdf-autotable 生成（已装），后端只出 CSV/XLSX。这样：
+> - 不引 pdfkit（项目无后端 PDF 依赖，避免 +5MB 中文字体）
+> - PDF 限制 ≤ 2000 行（受 jspdf 性能/体积影响）
+> - XLSX 不限行数
+> - CSV 不限行数
 
 **响应**：`Content-Disposition: attachment; filename="outbound-2026-06-04.xlsx"` 文件流。
 
 ### 4.3 `GET /api/inventory/transactions/stats`
 
-仅汇总（无 rows/total），用于顶部 4 个统计卡。
+仅汇总（无 rows/total），用于顶部统计卡。
 
 ## 5. 数据模型
 
-### 5.1 `inventory_transactions` 表（已存在）
+### 5.1 `inventory_transaction` 表（已存在，**单数**）
 
 ```sql
 id, instance_id, stock_type, transaction_type,
@@ -135,7 +145,9 @@ operator_id, operator_name, operate_date,
 remarks, create_time
 ```
 
-### 5.2 JOIN `inventory_stock`（取展示字段）
+> 表名是**单数** `inventory_transaction`，不是复数。证据：`server/src/db/schema.ts`、`server/src/repositories/inventory-tx.repository.ts`。
+
+### 5.2 JOIN `inventory_stock`（LEFT JOIN 防删单丢失）
 
 ```sql
 LEFT JOIN inventory_stock s ON s.instance_id = t.instance_id
@@ -143,9 +155,11 @@ LEFT JOIN inventory_stock s ON s.instance_id = t.instance_id
 
 JOIN 字段：`crop_name`, `variety_name`, `crop_code`, `unit`, `warehouse_name`, `planting_mode`, `grade`, `greenhouse_name`
 
+> 即使对应 `inventory_stock` 已被删除，出库记录仍能展示（只缺 JOIN 字段），与错误处理"实例ID 已删 → 友好提示"一致。
+
 ## 6. 核心 SQL
 
-### 6.1 列表查询
+### 6.1 列表查询（LEFT JOIN 过滤放 ON 子句或 IS NULL 兼容）
 
 ```sql
 SELECT
@@ -156,26 +170,35 @@ SELECT
   t.create_time,
   s.crop_name, s.variety_name, s.crop_code, s.unit,
   s.warehouse_name, s.planting_mode, s.grade, s.greenhouse_name
-FROM inventory_transactions t
-LEFT JOIN inventory_stock s ON s.instance_id = t.instance_id
+FROM inventory_transaction t
+LEFT JOIN inventory_stock s
+  ON s.instance_id = t.instance_id
+  AND (? IS NULL OR s.warehouse_id = ?)            -- warehouse 过滤放 ON
+  AND (? IS NULL OR s.crop_name LIKE ?)            -- crop 过滤放 ON
 WHERE t.transaction_type = 'outbound'
   AND t.operate_date >= ? AND t.operate_date <= ?
-  [AND t.stock_type = ?]
-  [AND s.warehouse_id = ?]
-  [AND s.crop_name LIKE ?]
-  [AND t.operator_name LIKE ?]
-  [AND t.business_type = ?]
+  [AND t.stock_type = ?]                           -- stock_type 在 transactions 表上
+  [AND t.operator_name LIKE ?]                     -- operator_name 在 transactions 表上
+  [AND t.business_type = ?]                        -- business_type 在 transactions 表上
 ORDER BY t.operate_date DESC, t.create_time DESC
 LIMIT ? OFFSET ?
 ```
+
+> **关键**：对 `inventory_stock` 的字段（warehouse/crop_name）过滤放 LEFT JOIN 的 ON 子句，**不要放 WHERE**，否则会过滤掉已删库存的记录，与第 9 节错误处理矛盾。
+> 对于 `inventory_transaction` 表自身的字段（stock_type/operator_name/business_type）放 WHERE，没问题。
 
 ### 6.2 统计查询
 
 ```sql
 -- 总计
 SELECT COUNT(*) AS total_count, COALESCE(SUM(ABS(t.quantity)),0) AS total_quantity
-FROM inventory_transactions t LEFT JOIN inventory_stock s ...
-WHERE [同 list WHERE]
+FROM inventory_transaction t LEFT JOIN inventory_stock s ON s.instance_id = t.instance_id
+WHERE t.transaction_type = 'outbound' AND t.operate_date >= ? AND t.operate_date <= ?
+  [AND ...]
+
+-- 今日出库次数（顶部"今日出库"卡专用）
+SELECT COUNT(*) AS today_count FROM inventory_transaction
+WHERE transaction_type = 'outbound' AND operate_date = date('now')
 
 -- 按库存类型
 SELECT t.stock_type, COUNT(*) AS cnt, COALESCE(SUM(ABS(t.quantity)),0) AS qty
@@ -186,19 +209,42 @@ SELECT t.business_type, COUNT(*) AS cnt, COALESCE(SUM(ABS(t.quantity)),0) AS qty
 FROM ... WHERE ... GROUP BY t.business_type
 ```
 
+## 6.5 索引（fixMissingSchema 加）
+
+```sql
+-- 复合索引：主要按 (transaction_type, operate_date) 范围扫描
+CREATE INDEX IF NOT EXISTS idx_inventory_tx_type_date
+  ON inventory_transaction(transaction_type, operate_date DESC);
+
+-- 外键索引：JOIN 性能
+CREATE INDEX IF NOT EXISTS idx_inventory_tx_instance
+  ON inventory_transaction(instance_id);
+
+-- 业务类型统计
+CREATE INDEX IF NOT EXISTS idx_inventory_tx_business
+  ON inventory_transaction(business_type);
+```
+
+> 实施位置：`server/src/db/fixMissingSchema.ts` 的"采收/库存相关索引"块。
+
 ## 7. UI 设计（与作物库存像素级一致）
 
-### 7.1 复用现有组件
+### 7.1 组件策略：**新建 + 复用通用 UI**
 
-| 位置 | 复用组件 | 来源文件 |
-|---|---|---|
-| 顶部 4 个统计卡 | `InventoryStats` | `src/components/farm/inventory/InventoryStats.tsx` |
-| 3 个库存类型卡 | `InventoryStockTypeCards` | 同上目录 |
-| 筛选条 | `InventoryFilter`（扩 5→6 维） | 同上目录 |
-| 表格 | `InventoryTable`（扩列加 4 列） | 同上目录 |
-| 分页 | `Pagination` | `src/components/ui/Pagination.tsx` |
-| 详情弹窗 | `InventoryDetailModal` | 同上 inventory 目录 |
-| 工具栏 | `ActionToolbar` | `src/components/warehouse/ActionToolbar.tsx` |
+> **重要**：原 spec 误判"复用 InventoryTable/InventoryFilter/InventoryStats"，经 critic 审核 + 代码验证，这 3 个组件的 props 契约与流水数据形态不匹配（前者 data=库存实例，后者 data=出库交易），**不能直接复用**。需要新写 3 个专用组件。
+
+| 位置 | **新写** 组件 | 复用组件 | 来源 |
+|---|---|---|---|
+| 顶部 4 个统计卡 | `OutboundRecordsStats` | — | 新建（语义与库存 4 卡不同） |
+| 3 个库存类型卡 | `OutboundRecordsStockTypeCards` | — | 新建（接出库统计 byStockType） |
+| 筛选条 | `OutboundRecordsFilter` | — | 新建（4→6 维 + 时间范围） |
+| 表格 | `OutboundRecordsTable` | — | 新建（19 列，主键=transaction_id 而非 instance_id） |
+| 分页 | — | `Pagination` | `src/components/ui/Pagination.tsx` |
+| 详情弹窗 | — | `InventoryDetailModal` | 按 instanceId 跳详情（数据契约匹配） |
+| 顶部工具栏 | — | `ActionToolbar` | 筛选+导出按钮容器 |
+| Badge 样式 | — | `getStockTypeBadge` / `BUSINESS_TYPE_META` | 已存在 |
+
+> 表格组件的 19 列、`data: OutboundTransaction[]`、`onViewDetail(instanceId)` 回调——是**全新**接口（不复用 `InventoryTable` 的 `data: InventoryStock[]` + `onOutbound`）。
 
 ### 7.2 样式锚点（与库存表对照）
 
@@ -235,30 +281,32 @@ FROM ... WHERE ... GROUP BY t.business_type
 | 17 | 备注 | t.remarks | — |
 | 18 | 操作 | — | ✅ 库存列 15「详情」 |
 
-**字段覆盖率**：库存 11/15 列展示（4 列不适用），新增 7 个流水专属列。
+> 操作列在表内（不在工具栏），符合"详情按钮在每行触发"的一致性。**操作列只此一处**。
+
+**字段覆盖率**：库存 11/15 列展示（4 列不适用：可用/冻结/状态/入库日期），新增 7 个流水专属列。
 
 ### 7.4 顶部 4 个统计卡
 
 | 卡 | 数据 | 计算 |
 |---|---|---|
-| 总条数 | `summary.totalCount` | COUNT(*) |
+| 总条数 | `summary.totalCount` | COUNT(*) 当前筛选 |
 | 总出库量 | `summary.totalQuantity`（含单位 kg） | SUM(ABS(quantity)) |
-| 出库次数 | `summary.totalCount`（**与总条数相同**；每次 transaction 一行 = 一次出库） | COUNT(*) |
+| 今日出库次数 | `summary.todayCount` | COUNT(*) WHERE operate_date = date('now')（**独立维度**） |
 | 品种数 | COUNT(DISTINCT s.crop_name) | DISTINCT |
+
+> 替换原 spec "出库次数 = 总条数" 的无意义卡。**今日出库次数** 更有业务意义（运营/管理层每天关心）。
 
 ### 7.5 3 个库存类型卡
 
 种源/种苗/成品，分别显示 `byStockType[xxx].count` 和 `quantity`。
 
-### 7.6 导出按钮
-
-顶部工具栏右侧（与 ActionToolbar 同一行）：
+### 7.6 导出按钮（顶部工具栏右侧）
 
 ```
 [默认本月▼]  [📥 导出CSV]  [📥 导出XLSX]  [📥 导出PDF]
 ```
 
-`<Button variant="outline" size="sm">` 风格一致。
+`<Button variant="outline" size="sm">` 风格一致。**PDF 由前端 jspdf 生成**（详见 4.2 节）。
 
 ## 8. 交互行为
 
@@ -269,7 +317,8 @@ FROM ... WHERE ... GROUP BY t.business_type
 | 翻页 | 表格内 spinner，分页按钮 disabled |
 | 点击实例ID | 打开 `InventoryDetailModal`（复用） |
 | 点击详情按钮 | 同上 |
-| 导出 | 按钮 spinner + Toast「正在生成 N 条记录的 XLSX...」+ 下载 |
+| 导出 CSV/XLSX | 按钮 spinner + Toast「正在生成 N 条记录的 XLSX...」+ 下载 |
+| 导出 PDF | 按钮 spinner + Toast「正在生成 PDF...」+ 前端 jspdf 渲染 + 下载 |
 
 ## 9. 错误处理
 
@@ -277,13 +326,13 @@ FROM ... WHERE ... GROUP BY t.business_type
 |---|---|---|
 | from/to 为空 | 400 | 顶部红色 Alert + 高亮筛选区 |
 | from > to | 400 | Alert「开始日期不能晚于结束日期」 |
-| 范围 > 365 天 | 前端禁用导出 | Alert「时间范围超过 1 年，请缩短或多次导出」 |
+| 范围 > 365 天 | 禁用 PDF 导出 | Alert「时间范围超过 1 年，已禁用 PDF（CSV/XLSX 不限）」 |
 | 无数据 | total=0 | EmptyState 插画 + 「重置筛选」 |
 | 网络断开 | fetch failed | Toast「网络异常，请检查后重试」 |
 | API 500 | server error | 表格区「加载失败，点击重试」按钮 |
-| 导出失败 | server timeout | Toast「导出失败：超过 1 万行请缩短时间范围」 |
-| 实例ID 已删 | 详情 | 弹窗「该库存实例已被删除」 |
-| 401/403 | 拦截器 | 跳登录 / Toast「无访问权限」 |
+| 导出失败 | server timeout | Toast「导出失败，请缩短时间范围」 |
+| 实例ID 已删 | LEFT JOIN NULL，详情页提示 | 弹窗「该库存实例已被删除」 |
+| 401/403 | **本页 catch 后 Toast「无访问权限」** | 注意：项目当前无统一拦截器（`src/services/apiClient.ts:80` 401 处理已注释），本设计**不在范围内**实现全局拦截器 |
 
 ## 10. 默认行为
 
@@ -291,74 +340,88 @@ FROM ... WHERE ... GROUP BY t.business_type
 - **默认分页**：50/页
 - **默认筛选**：全部（仅时间范围）
 - **默认排序**：操作时间 DESC
+- **首次挂载**：前端 `useEffect` **同步**设置 `from = 本月1号`、`to = 今天`，再发首次请求（避免 from/to 为空触发 400）
 
 ## 11. 边界保护
 
 | 输入 | 防御 |
 |---|---|
-| from > 当前日期 | 禁用 |
-| to < 项目起始日 | 后端 404 + Alert |
+| from > 当前日期 | 禁用（前端 DatePicker 限 max=today） |
+| from > to | 阻止提交 + Alert |
 | cropName 长度 | 限制 50 字符 |
 | operatorName 长度 | 限制 50 字符 |
 | 数量为 0 的记录 | 展示但标灰 |
-| instanceId 已删除 | 详情页友好提示 |
+| instanceId 已删除 | LEFT JOIN → 字段为 null，详情页友好提示 |
 
 ## 12. 测试策略
 
 ### 12.1 单元测试（Vitest）
 
-- `outboundRecordsService.ts` 参数序列化（camelCase → snake_case）
+- `inventoryTransactionService` 参数序列化（camelCase → snake_case）
 - 日期范围校验（from > to 抛错）
 - 空值过滤（不传 → 全部）
 - 分页计算
+- PDF 生成器（前端 jspdf）单元测试
 
 ### 12.2 集成测试（API + DB）
 
-- POST 1000 条测试记录 → GET total=1000
+- `scripts/seedOutboundFixtures.ts` **新增** 生成 1000 条跨月出库测试数据（**项目无现有 seed 脚本**）
+- POST 1000 条 → GET total=1000
 - 多条件组合筛选 → SQL 正确
 - 默认本月 → 返回当月
-- JOIN 字段正确
+- JOIN 字段正确（含 LEFT JOIN 时 stock 已删场景）
 - 导出 CSV 头部行格式
 - 导出 XLSX 多 sheet（"明细" + "汇总"）
 
 ### 12.3 端到端（手动 10 轮次）
 
-1. 建 30 条跨月出库记录 → 默认本月看 30 条 ✓
+1. 用 seed 脚本建 30 条跨月出库记录 → 默认本月看 30 条 ✓
 2. 改时间范围 → 列表 + 统计实时更新 ✓
 3. 改业务类型筛选 → 列表过滤 ✓
 4. 导出 CSV → 行数对得上 ✓
 5. 导出 XLSX → Excel 打开，多 sheet ✓
-6. 导出 PDF → 浏览器预览正常 ✓
+6. 导出 PDF（≤2000 行） → 浏览器预览正常 ✓
 7. 点实例ID → 详情弹窗字段对得上 ✓
-8. 删 1 条库存 → 该条详情显示「已删除」 ✓
-9. 时间范围超 1 年 → 导出禁用 ✓
+8. 删 1 条库存 → 该条详情显示「已删除」（LEFT JOIN null）✓
+9. 时间范围超 1 年 → 导出 PDF 按钮禁用，CSV/XLSX 仍可用 ✓
 10. 空数据 → EmptyState + 重置 ✓
 
 ## 13. 改动清单
 
 | # | 文件 | 类型 | 行数 | 备注 |
 |---|---|---|---|---|
-| 1 | `server/src/repositories/inventoryTransaction.repository.ts` | 新增 | +150 | 出库流水 Repository |
-| 2 | `server/src/services/inventoryTransaction.service.ts` | 新增 | +200 | service 层 |
-| 3 | `server/src/routes/inventory.ts` | 改 | +60 | 加 3 个端点 |
-| 4 | `server/src/utils/exporter.ts` | 新增 | +120 | CSV/XLSX/PDF 生成器 |
-| 5 | `src/services/inventoryTransactionService.ts` | 新增 | +60 | 前端 service |
-| 6 | `src/pages/OutboundRecordsPage.tsx` | 新增 | +500 | 页面主体 |
-| 7 | `src/components/layout/Sidebar.tsx` | 改 | +2 | 加菜单项 |
-| 8 | `src/App.tsx` | 改 | +2 | 加路由 |
-| 9 | `src/__tests__/outboundRecords.test.ts` | 新增 | +150 | 测试 |
+| 1 | `server/src/db/fixMissingSchema.ts` | 改 | +20 | 加 3 个复合索引（type+date / instance / business） |
+| 2 | `server/src/repositories/inventoryTransaction.repository.ts` | 新增 | +200 | 出库流水 Repository（list/stats/export SQL） |
+| 3 | `server/src/services/inventoryTransaction.service.ts` | 新增 | +180 | service 层（参数转换 + 业务校验） |
+| 4 | `server/src/routes/inventory.ts` | 改 | +80 | 加 3 个端点（list/stats/export） |
+| 5 | `server/src/utils/csvExporter.ts` | 新增 | +60 | CSV 流式生成 |
+| 6 | `server/src/utils/xlsxExporter.ts` | 新增 | +100 | XLSX 多 sheet（明细+汇总） |
+| 7 | `scripts/seedOutboundFixtures.ts` | 新增 | +120 | 测试数据生成（1000 条跨月） |
+| 8 | `src/services/inventoryTransactionService.ts` | 新增 | +80 | 前端 service |
+| 9 | `src/components/farm/inventory/OutboundRecordsStats.tsx` | 新增 | +150 | 4 个统计卡 |
+| 10 | `src/components/farm/inventory/OutboundRecordsStockTypeCards.tsx` | 新增 | +120 | 3 个类型卡 |
+| 11 | `src/components/farm/inventory/OutboundRecordsFilter.tsx` | 新增 | +250 | 6 维筛选 + 时间范围 |
+| 12 | `src/components/farm/inventory/OutboundRecordsTable.tsx` | 新增 | +400 | 19 列表格 |
+| 13 | `src/pages/OutboundRecordsPage.tsx` | 新增 | +300 | 页面主体（组装上述组件） |
+| 14 | `src/components/layout/Sidebar.tsx` | 改 | +2 | 加菜单项 |
+| 15 | `src/App.tsx` | 改 | +2 | 加路由 |
+| 16 | `src/utils/pdfExporter.ts` | 新增 | +150 | 前端 jspdf + jspdf-autotable PDF 生成 |
+| 17 | `src/__tests__/outboundRecords.test.ts` | 新增 | +200 | 单元 + 集成测试 |
 
-**总改动 ~1240 行，1.5 天工作量。**
+**总改动 ~2410 行，2.5-3 天工作量**（含审核修订后真实预估）。
 
 ## 14. 风险与缓解
 
 | 风险 | 概率 | 影响 | 缓解 |
 |---|---|---|---|
-| 后端导出大文件 OOM | 中 | 高 | 数据 > 5000 行走后端 stream；前端超时用 30s |
-| JOIN 性能（30 万行 +） | 中 | 中 | `instance_id` 已有索引（V3 库存已建） |
-| 出库流水表无索引 | 中 | 高 | fixMissingSchema 加 `(transaction_type, operate_date)` 复合索引 |
-| 用户误删库存影响流水展示 | 低 | 低 | 详情页友好提示，不崩 |
-| PDF 中文乱码 | 中 | 中 | 选用支持中文的字体嵌入 |
+| `inventory_transaction` 表无索引 | 高 | 高（30 万行全表扫） | fixMissingSchema 加 3 个复合索引（已写明） |
+| LEFT JOIN 过滤放 WHERE 退化 | 中 | 中（已删库存记录丢失） | spec 第 6.1 强制 ON 子句 |
+| 数据量 > 30 万行导出 OOM | 中 | 高 | CSV 用 stream；XLSX 用 streaming write；PDF 限 ≤ 2000 行 |
+| operateDate 是纯日期 vs ISO 字符串混存 | 中 | 中 | 已识别（服务层统一用 `.slice(0, 10)`），索引能命中 |
+| PDF 中文字体 | 中 | 中 | jspdf 默认 Helvetica 不支持中文，需嵌入思源黑体子集（~3MB） |
+| 用户误删库存影响流水展示 | 低 | 低 | LEFT JOIN 保留，详情页友好提示 |
+| jspdf 性能（>2000 行变慢） | 中 | 中 | 限 PDF ≤ 2000 行，超出提示用 XLSX |
+| 401/403 没拦截器 | 低 | 低 | spec 改"本页 catch + Toast"，不依赖拦截器（拦截器是另一个 PR） |
 
 ## 15. 后续（不在本设计范围）
 
@@ -366,9 +429,10 @@ FROM ... WHERE ... GROUP BY t.business_type
 - 跨年对比
 - 出库预测
 - 数字签名
+- 全局 401 拦截器（独立 PR）
 
 ---
 
-**已批准状态**：4 节设计用户全部确认「可以」。
+**已批准状态**：原 4 节设计用户确认「可以」；本次按 critic 审核修订（11 项问题，含 3 BLOCK + 6 HIGH + 部分 MEDIUM）。
 
 **下一步**：调用 writing-plans 技能创建实现计划。
