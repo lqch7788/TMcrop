@@ -288,9 +288,8 @@ export function OutboundRecordsTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务单号</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实例ID</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务单号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品种</th>
@@ -303,6 +302,7 @@ export function OutboundRecordsTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出库人</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">余额前→后</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作时间</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
@@ -333,8 +333,6 @@ export function OutboundRecordsTable({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operateDate}</td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     <button
                       type="button"
@@ -344,6 +342,7 @@ export function OutboundRecordsTable({
                       {row.instanceId}
                     </button>
                   </td>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 ${stockColor(row.stockType)} text-white text-xs rounded-full`}>
                       {stockLabel(row.stockType)}
@@ -373,6 +372,7 @@ export function OutboundRecordsTable({
                       详情
                     </Button>
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operateDate}</td>
                 </tr>
               ))
             )}
