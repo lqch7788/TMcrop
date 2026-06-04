@@ -3,10 +3,10 @@
  * 对接后端 /api/crop-instances
  * 核心功能：管理作物实例的全生命周期
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -15,7 +15,7 @@ import { CropInstance, CropInstanceStatus, SourceOrigin, CropTraceChain } from '
 
 /**
  * 初始化数据
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function initInstances(): Promise<CropInstance[]> {
   return await enhancedApiClient.get<CropInstance[]>('/crop-instances/init');
@@ -23,7 +23,7 @@ export async function initInstances(): Promise<CropInstance[]> {
 
 /**
  * 获取所有作物实例
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInstances(): Promise<CropInstance[]> {
   return await enhancedApiClient.get<CropInstance[]>('/crop-instances');
@@ -31,7 +31,7 @@ export async function getInstances(): Promise<CropInstance[]> {
 
 /**
  * 根据ID获取单个作物实例
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInstanceById(id: string): Promise<CropInstance | undefined> {
   return await enhancedApiClient.get<CropInstance>(`/crop-instances/${id}`);
@@ -39,7 +39,7 @@ export async function getInstanceById(id: string): Promise<CropInstance | undefi
 
 /**
  * 根据ID数组获取多个作物实例
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInstancesByIds(ids: string[]): Promise<CropInstance[]> {
   return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/batch?ids=${ids.join(',')}`);
@@ -47,7 +47,7 @@ export async function getInstancesByIds(ids: string[]): Promise<CropInstance[]> 
 
 /**
  * 根据订单ID获取关联的作物实例
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInstancesByOrderId(orderId: string): Promise<CropInstance[]> {
   return await enhancedApiClient.get<CropInstance[]>(`/crop-instances/order/${orderId}`);
@@ -127,7 +127,7 @@ export async function updateStatus(id: string, status: CropInstanceStatus): Prom
 
 /**
  * 获取实例的完整溯源链
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTraceChain(id: string): Promise<CropTraceChain | null> {
   try {

@@ -2,10 +2,10 @@
  * 作物品种 API 服务
  * 对接后端 /api/crop-varieties
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -61,7 +61,7 @@ export function getVarietyOptions(): CropVarietyOption[] {
 
 /**
  * 获取所有作物品种
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllVarieties(): Promise<CropVariety[]> {
   const data = await enhancedApiClient.get<Record<string, unknown>[]>('/crop-varieties');
@@ -70,7 +70,7 @@ export async function getAllVarieties(): Promise<CropVariety[]> {
 
 /**
  * 根据ID获取单个品种
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getVarietyById(id: string): Promise<CropVariety | undefined> {
   const data = await enhancedApiClient.get<any>(`/crop-varieties/${id}`);
@@ -121,7 +121,7 @@ export async function bulkImportVarieties(varieties: Record<string, unknown>[]):
 
 /**
  * 根据作物名称查找品种
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function findByCropName(cropName: string): Promise<CropVariety[]> {
   const all = await getAllVarieties();
@@ -130,7 +130,7 @@ export async function findByCropName(cropName: string): Promise<CropVariety[]> {
 
 /**
  * 根据作物编码获取品种信息
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getVarietyByCode(cropCode: string): Promise<CropVariety | undefined> {
   const all = await getAllVarieties();

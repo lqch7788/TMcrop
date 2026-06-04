@@ -73,10 +73,6 @@ export { useFeatureFlag, getFeatureFlag } from './useFeatureFlag';
 export { useLaborCostCalc, calculateLaborCost } from './useLaborCostCalc';
 export type { LaborCostSummary, LaborCostItem } from './useLaborCostCalc';
 
-// 班组成员管理 Hook
-export { useTeamMembers } from './useTeamMembers';
-export type { TeamMember, UseTeamMembersResult } from './useTeamMembers';
-
 // 农事任务排班 Hook
 export { useFarmTaskSchedule } from './useFarmTaskSchedule';
 export type { FarmTaskSchedule, UnscheduledTask, UseFarmTaskScheduleResult } from './useFarmTaskSchedule';

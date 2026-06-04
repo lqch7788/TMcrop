@@ -2,10 +2,10 @@
  * 巡查管理 API 服务
  * 对接后端 /api/inspections
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -14,7 +14,7 @@ import { InspectionRecord } from '../types/views';
 
 /**
  * 获取所有巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllInspections(): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>('/inspections');
@@ -22,7 +22,7 @@ export async function getAllInspections(): Promise<InspectionRecord[]> {
 
 /**
  * 根据ID获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionById(id: string): Promise<InspectionRecord | undefined> {
   return await enhancedApiClient.get<InspectionRecord>(`/inspections/${id}`);
@@ -30,7 +30,7 @@ export async function getInspectionById(id: string): Promise<InspectionRecord | 
 
 /**
  * 根据巡查编码获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionByCode(recordCode: string): Promise<InspectionRecord | undefined> {
   return await enhancedApiClient.get<InspectionRecord>(`/inspections/code/${recordCode}`);
@@ -38,7 +38,7 @@ export async function getInspectionByCode(recordCode: string): Promise<Inspectio
 
 /**
  * 获取巡查记录列表（支持筛选）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspections(filters?: {
   greenhouseId?: string;
@@ -99,7 +99,7 @@ export async function deleteInspections(ids: string[]): Promise<boolean> {
 
 /**
  * 根据大棚ID获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/greenhouse/${greenhouseId}`);
@@ -107,7 +107,7 @@ export async function getInspectionsByGreenhouse(greenhouseId: string): Promise<
 
 /**
  * 根据巡查人员ID获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionsByInspector(inspectorId: string): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/inspector/${inspectorId}`);
@@ -115,7 +115,7 @@ export async function getInspectionsByInspector(inspectorId: string): Promise<In
 
 /**
  * 根据日期范围获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionsByDateRange(startDate: string, endDate: string): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/date-range?start=${startDate}&end=${endDate}`);
@@ -123,7 +123,7 @@ export async function getInspectionsByDateRange(startDate: string, endDate: stri
 
 /**
  * 根据状态获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'critical'): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/status/${status}`);
@@ -131,7 +131,7 @@ export async function getInspectionsByStatus(status: 'normal' | 'attention' | 'c
 
 /**
  * 获取异常的巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getCriticalInspections(): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>('/inspections/critical');
@@ -186,7 +186,7 @@ export async function getInspectionStats(filters?: {
 
 /**
  * 根据批次获取巡查记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInspectionsByBatch(batchId: string): Promise<InspectionRecord[]> {
   return await enhancedApiClient.get<InspectionRecord[]>(`/inspections/batch/${batchId}`);

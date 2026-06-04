@@ -4,7 +4,7 @@
  *
  * 数据流：API → enhancedApiClient（无缓存）→ Store → 页面组件
  * - L1：Store 内存数据
- * - L2：（未使用）无 IndexedDB 缓存
+ * - L2：（未使用）无 API
  * - L3：（未使用）techSolution 页面不读取 localStorage
  */
 import { create } from 'zustand';

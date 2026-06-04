@@ -2,7 +2,7 @@
  * 基础数据 API 服务
  * 对接后端 /api/basic-data 和 /api/dictionary
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -243,7 +243,7 @@ export interface Device {
 
 /**
  * 获取所有部门
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getDepartments(): Promise<Department[]> {
   const data = await enhancedApiClient.get<Department[]>('/basic-data/departments');
@@ -272,7 +272,7 @@ export async function deleteDepartment(id: string): Promise<void> {
 
 /**
  * 获取所有仓库
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWarehouses(): Promise<Warehouse[]> {
   const data = await enhancedApiClient.get<Warehouse[]>('/basic-data/warehouses');
@@ -310,7 +310,7 @@ export async function deleteWarehouse(id: string): Promise<void> {
 
 /**
  * 获取所有温室
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getGreenhouses(): Promise<Greenhouse[]> {
   const data = await enhancedApiClient.get<Greenhouse[]>('/basic-data/greenhouses');
@@ -348,7 +348,7 @@ export async function deleteGreenhouse(id: string): Promise<void> {
 
 /**
  * 获取所有区域
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getZones(): Promise<Zone[]> {
   const data = await enhancedApiClient.get<Zone[]>('/basic-data/zones');
@@ -386,7 +386,7 @@ export async function deleteZone(id: string): Promise<void> {
 
 /**
  * 获取所有地块
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getBlocks(): Promise<Block[]> {
   const data = await enhancedApiClient.get<Block[]>('/basic-data/blocks');
@@ -424,7 +424,7 @@ export async function deleteBlock(id: string): Promise<void> {
 
 /**
  * 获取所有编码规则
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getCodeRules(): Promise<CodeRule[]> {
   const data = await enhancedApiClient.get<CodeRule[]>('/basic-data/code-rules');
@@ -437,7 +437,7 @@ export async function getCodeRules(): Promise<CodeRule[]> {
 
 /**
  * 获取所有系统配置
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSystemConfigs(): Promise<SystemConfig[]> {
   const data = await enhancedApiClient.get<SystemConfig[]>('/basic-data/system-configs');
@@ -475,7 +475,7 @@ export async function deleteSystemConfig(id: string): Promise<void> {
 
 /**
  * 获取所有字典项
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  *
  * 注意：后端返回 snake_case (category_code, dict_code)，
  * 需要转换为前端使用的 camelCase (categoryCode, dictCode)
@@ -503,7 +503,7 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
 
 /**
  * 获取字典分类列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getDictionaryCategories(): Promise<string[]> {
   const data = await enhancedApiClient.get<string[]>('/dictionary/dictionaries/categories');
@@ -516,7 +516,7 @@ export async function getDictionaryCategories(): Promise<string[]> {
 
 /**
  * 获取所有班组
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTeams(): Promise<Team[]> {
   const data = await enhancedApiClient.get<Team[]>('/basic-data/teams');
@@ -554,7 +554,7 @@ export async function deleteTeam(id: string): Promise<void> {
 
 /**
  * 获取所有职位
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getPositions(): Promise<Position[]> {
   const data = await enhancedApiClient.get<Position[]>('/basic-data/positions');
@@ -592,7 +592,7 @@ export async function deletePosition(id: string): Promise<void> {
 
 /**
  * 获取所有设备
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getDevices(): Promise<Device[]> {
   const data = await enhancedApiClient.get<Device[]>('/basic-data/devices');

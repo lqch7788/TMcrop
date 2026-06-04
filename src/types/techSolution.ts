@@ -3,7 +3,7 @@
  * 唯一类型来源（V2.1 架构）
  *
  * 数据流：API → enhancedApiClient（无缓存，仅3次重试）→ Store → 组件
- * - 无 IndexedDB 缓存
+ * - 无 API
  * - 无 localStorage 兜底（TechSolution 页面不读取 localStorage 中的方案数据）
  * - 无离线队列（apiClient 不支持）
  */

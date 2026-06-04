@@ -2,10 +2,10 @@
  * 问题管理 API 服务
  * 对接后端 /api/problems
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -55,7 +55,7 @@ export interface Problem {
 
 /**
  * 获取所有问题记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllProblems(): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>('/problems');
@@ -63,7 +63,7 @@ export async function getAllProblems(): Promise<Problem[]> {
 
 /**
  * 根据ID获取问题
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblemById(id: number): Promise<Problem | undefined> {
   return await enhancedApiClient.get<Problem>(`/problems/${id}`);
@@ -71,7 +71,7 @@ export async function getProblemById(id: number): Promise<Problem | undefined> {
 
 /**
  * 根据问题编码获取问题
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblemByCode(problemCode: string): Promise<Problem | undefined> {
   return await enhancedApiClient.get<Problem>(`/problems/code/${problemCode}`);
@@ -79,7 +79,7 @@ export async function getProblemByCode(problemCode: string): Promise<Problem | u
 
 /**
  * 获取问题列表（支持筛选）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblems(filters?: {
   status?: string;
@@ -170,7 +170,7 @@ export async function resolveProblem(id: number, handleResult?: string): Promise
 
 /**
  * 根据大棚获取问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>(`/problems/greenhouse/${greenhouseId}`);
@@ -178,7 +178,7 @@ export async function getProblemsByGreenhouse(greenhouseId: string): Promise<Pro
 
 /**
  * 根据批次获取问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>(`/problems/batch/${batchId}`);
@@ -186,7 +186,7 @@ export async function getProblemsByBatch(batchId: string): Promise<Problem[]> {
 
 /**
  * 根据来源获取问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProblemsBySource(sourceType: string, sourceId: string): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>(`/problems/source/${sourceType}/${sourceId}`);
@@ -194,7 +194,7 @@ export async function getProblemsBySource(sourceType: string, sourceId: string):
 
 /**
  * 获取待处理的问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getPendingProblems(): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>('/problems/pending');
@@ -202,7 +202,7 @@ export async function getPendingProblems(): Promise<Problem[]> {
 
 /**
  * 获取处理中的问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getProcessingProblems(): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>('/problems/processing');
@@ -210,7 +210,7 @@ export async function getProcessingProblems(): Promise<Problem[]> {
 
 /**
  * 获取已处理的问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getResolvedProblems(): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>('/problems/resolved');
@@ -218,7 +218,7 @@ export async function getResolvedProblems(): Promise<Problem[]> {
 
 /**
  * 获取严重问题列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeriousProblems(): Promise<Problem[]> {
   return await enhancedApiClient.get<Problem[]>('/problems/serious');

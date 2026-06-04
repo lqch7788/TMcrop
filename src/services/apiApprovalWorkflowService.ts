@@ -2,7 +2,7 @@
  * 审批流程配置 API 服务
  * 对接后端 /api/approval-workflows
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -73,7 +73,7 @@ export interface NodeTemplate {
 
 /**
  * 获取所有审批工作流
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkflows(): Promise<ApprovalWorkflow[]> {
   const data = await enhancedApiClient.get<ApprovalWorkflow[]>('/approval-workflows');
@@ -82,7 +82,7 @@ export async function getWorkflows(): Promise<ApprovalWorkflow[]> {
 
 /**
  * 根据业务类型获取工作流
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkflowsByType(businessType: string): Promise<ApprovalWorkflow[]> {
   const data = await enhancedApiClient.get<ApprovalWorkflow[]>(`/approval-workflows/by-type/${encodeURIComponent(businessType)}`);
@@ -91,7 +91,7 @@ export async function getWorkflowsByType(businessType: string): Promise<Approval
 
 /**
  * 获取单个审批工作流
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkflowById(id: string): Promise<ApprovalWorkflow | null> {
   try {
@@ -170,7 +170,7 @@ export async function evaluateConditions(id: string, context: Record<string, unk
 
 /**
  * 获取节点模板列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getNodeTemplates(): Promise<NodeTemplate[]> {
   const data = await enhancedApiClient.get<NodeTemplate[]>('/approval-workflows/node-templates/list');

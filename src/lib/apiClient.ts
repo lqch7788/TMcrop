@@ -3,7 +3,7 @@
  *
  * 数据流：API → 内存（无缓存）
  * 特性：
- * - 直接 API 调用，无 IndexedDB 缓存
+ * - 直接 API 调用，无 API
  * - 网络状态检测：online/offline事件监听
  * - 自动重试：指数退避
  */

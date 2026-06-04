@@ -2,10 +2,10 @@
  * 人工管理 API 服务
  * 对接后端 /api/labor
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -16,7 +16,7 @@ import { TrainingRecord, AssessmentRecord, WorkExperience } from '../types';
 
 /**
  * 获取所有员工/工人列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllWorkers(): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>('/labor/workers');
@@ -25,7 +25,7 @@ export async function getAllWorkers(): Promise<Worker[]> {
 
 /**
  * 根据ID获取员工/工人
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerById(id: string): Promise<Worker | undefined> {
   return await enhancedApiClient.get<Worker>(`/labor/workers/${id}`);
@@ -33,7 +33,7 @@ export async function getWorkerById(id: string): Promise<Worker | undefined> {
 
 /**
  * 获取员工列表（支持筛选）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkers(filters?: EmployeeFilter): Promise<Worker[]> {
   const params: Record<string, string> = {};
@@ -88,7 +88,7 @@ export async function deleteWorkers(ids: string[]): Promise<boolean> {
 
 /**
  * 根据姓名搜索员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function searchWorkers(keyword: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/search?keyword=${encodeURIComponent(keyword)}`);
@@ -97,7 +97,7 @@ export async function searchWorkers(keyword: string): Promise<Worker[]> {
 
 /**
  * 根据部门获取员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkersByDepartment(deptId: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/department/${deptId}`);
@@ -106,7 +106,7 @@ export async function getWorkersByDepartment(deptId: string): Promise<Worker[]> 
 
 /**
  * 根据岗位获取员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkersByPosition(positionId: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/position/${positionId}`);
@@ -115,7 +115,7 @@ export async function getWorkersByPosition(positionId: string): Promise<Worker[]
 
 /**
  * 根据员工类型获取员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkersByType(employeeType: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/type/${employeeType}`);
@@ -124,7 +124,7 @@ export async function getWorkersByType(employeeType: string): Promise<Worker[]> 
 
 /**
  * 根据状态获取员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkersByStatus(status: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/status/${status}`);
@@ -133,7 +133,7 @@ export async function getWorkersByStatus(status: string): Promise<Worker[]> {
 
 /**
  * 获取在职员工列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getActiveWorkers(): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>('/labor/workers/active');
@@ -142,7 +142,7 @@ export async function getActiveWorkers(): Promise<Worker[]> {
 
 /**
  * 获取离职员工列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getLeftWorkers(): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>('/labor/workers/left');
@@ -169,7 +169,7 @@ export async function rejoinWorker(id: string, rejoinDate: string): Promise<bool
 
 /**
  * 获取员工统计
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerStats(): Promise<{
   total: number;
@@ -183,7 +183,7 @@ export async function getWorkerStats(): Promise<{
 
 /**
  * 获取员工技能标签列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerSkillTags(): Promise<string[]> {
   return await enhancedApiClient.get<string[]>('/labor/workers/skill-tags');
@@ -191,7 +191,7 @@ export async function getWorkerSkillTags(): Promise<string[]> {
 
 /**
  * 根据技能标签获取员工
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkersBySkillTag(skillTag: string): Promise<Worker[]> {
   const data = await enhancedApiClient.get<Worker[]>(`/labor/workers/skill-tag/${encodeURIComponent(skillTag)}`);
@@ -200,7 +200,7 @@ export async function getWorkersBySkillTag(skillTag: string): Promise<Worker[]> 
 
 /**
  * 获取员工培训记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerTrainingRecords(workerId: string): Promise<any[]> {
   return await enhancedApiClient.get<any[]>(`/labor/workers/${workerId}/training-records`);
@@ -217,7 +217,7 @@ export async function addTrainingRecord(workerId: string, record: Partial<Traini
 
 /**
  * 获取员工考核记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerAssessmentRecords(workerId: string): Promise<AssessmentRecord[]> {
   return await enhancedApiClient.get<AssessmentRecord[]>(`/labor/workers/${workerId}/assessment-records`);
@@ -234,7 +234,7 @@ export async function addAssessmentRecord(workerId: string, record: Partial<Asse
 
 /**
  * 获取员工工作经验
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWorkerWorkExperiences(workerId: string): Promise<WorkExperience[]> {
   return await enhancedApiClient.get<WorkExperience[]>(`/labor/workers/${workerId}/work-experiences`);

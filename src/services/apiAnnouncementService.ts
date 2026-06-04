@@ -2,10 +2,10 @@
  * 公告数据 API 服务
  * 对接后端 /api/announcements
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -14,7 +14,7 @@ import type { Notice } from '../pages/types/announcement.types';
 
 /**
  * 获取所有公告
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getNotices(): Promise<Notice[]> {
   return await enhancedApiClient.get<Notice[]>('/announcements');
@@ -22,7 +22,7 @@ export async function getNotices(): Promise<Notice[]> {
 
 /**
  * 根据ID获取单个公告
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getNoticeById(id: string): Promise<Notice | undefined> {
   return await enhancedApiClient.get<Notice>(`/announcements/${id}`);
@@ -30,7 +30,7 @@ export async function getNoticeById(id: string): Promise<Notice | undefined> {
 
 /**
  * 根据ID数组获取多个公告
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getNoticesByIds(ids: string[]): Promise<Notice[]> {
   // API 可能不支持批量查询，先获取所有再过滤

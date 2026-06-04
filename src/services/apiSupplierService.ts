@@ -2,10 +2,10 @@
  * 供应商 API 服务
  * 对接后端 /api/suppliers
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -21,7 +21,7 @@ export async function initSuppliers(): Promise<Supplier[]> {
 
 /**
  * 获取所有供应商
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllSuppliers(): Promise<Supplier[]> {
   return await enhancedApiClient.get<Supplier[]>('/suppliers');
@@ -29,7 +29,7 @@ export async function getAllSuppliers(): Promise<Supplier[]> {
 
 /**
  * 搜索供应商（按名称、编码、联系人搜索）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function searchSuppliers(keyword: string): Promise<Supplier[]> {
   return await enhancedApiClient.get<Supplier[]>(`/suppliers/search?keyword=${encodeURIComponent(keyword)}`);
@@ -37,7 +37,7 @@ export async function searchSuppliers(keyword: string): Promise<Supplier[]> {
 
 /**
  * 根据ID获取供应商
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSupplierById(id: number): Promise<Supplier | undefined> {
   return await enhancedApiClient.get<Supplier>(`/suppliers/${id}`);
@@ -45,7 +45,7 @@ export async function getSupplierById(id: number): Promise<Supplier | undefined>
 
 /**
  * 获取合作中的供应商（用于下拉选择）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getActiveSuppliers(): Promise<Array<{ value: string; label: string; code: string }>> {
   return await enhancedApiClient.get<Array<{ value: string; label: string; code: string }>>('/suppliers/active');

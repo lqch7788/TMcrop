@@ -2,10 +2,10 @@
  * 调薪申请 API 服务
  * 对接后端 /api/salary_adjustment (如后端无此接口则返回空数据)
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -67,7 +67,7 @@ export interface UpdateSalaryAdjustmentParams {
 
 /**
  * 获取调薪记录列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSalaryAdjustmentRecords(
   filters?: { status?: string; keyword?: string; department?: string },
@@ -96,7 +96,7 @@ export async function getSalaryAdjustmentRecords(
 
 /**
  * 获取单个调薪记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSalaryAdjustmentById(id: string): Promise<SalaryAdjustmentRecord | null> {
   try {
