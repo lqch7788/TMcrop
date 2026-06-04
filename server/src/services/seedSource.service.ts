@@ -59,11 +59,11 @@ export class SeedSourceService {
     const newId = data.id || `SS${Date.now()}`;
 
     // 设置默认值
+    // 2026-06-04: status 字段已废弃，改为前端实时计算，后端不再设默认值
     const record = {
       ...data,
       id: newId,
       source_origin: data.source_origin || 'external_purchase',
-      status: data.status || 'active',
       remaining_quantity: data.remaining_quantity || data.quantity || 0,
       used_quantity: data.used_quantity || 0,
       quantity: data.quantity || 0

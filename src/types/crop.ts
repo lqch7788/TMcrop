@@ -202,7 +202,8 @@ export interface SeedSource {
   availableCount: number;      // 可用数量
   pictures: string[];          // 图片（Base64数组）
   remarks?: string;           // 备注
-  status: StockStatus;         // 库存状态
+  /** @deprecated 2026-06-04 改为派生字段：由 computeStockStatus(availableCount, initialCount) 实时计算。后端不再返回/写入该字段。读取时建议用 computeStockStatus 替代。 */
+  status?: StockStatus;         // 库存状态（已废弃，勿依赖）
   traceabilityCode?: string;   // 溯源码
   printCount: number;          // 打印次数
   createBy: string;           // 创建人

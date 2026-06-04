@@ -26,11 +26,11 @@ export class SeedSourceController {
     try {
       // P2 #15 修复: 后端默认 limit 从 50 改为 1000，避免数据 > 50 时前端"分页消失"
       // 前端 pageSize=10 会基于后端全量结果再切片
-      const { crop_name, status, page = 1, limit = 1000 } = req.query;
+      // 2026-06-04: status 过滤已废弃（改为前端实时计算）
+      const { crop_name, page = 1, limit = 1000 } = req.query;
 
       const result = await this.service.getAll({
         crop_name: crop_name as string,
-        status: status as string,
         page: Number(page),
         limit: Number(limit)
       });

@@ -32,7 +32,7 @@ import { enhancedApiClient } from '../../../lib/apiClient';
 import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert, showConfirm } from '@/lib/dialogService';
-import { RefreshCw } from 'lucide-react';
+// 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
   // 权限检查 - 已取消，所有人可使用所有功能
@@ -80,66 +80,12 @@ export default function SeedSourcePage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // TDZ 修复: 必须在挂载 useEffect 之前声明（useEffect 依赖该 state）
-  const [recalculating, setRecalculating] = useState(false);
-
   // 组件挂载时加载数据
   useEffect(() => {
     loadItems();
   }, [loadItems]);
 
-  // 状态8: 挂载后 + 窗口 focus 时自动后台重算库存状态（兜底历史脏数据）
-  // 仅在状态不一致时静默更新，不打扰用户
-  useEffect(() => {
-    const silentRecalc = async () => {
-      if (!seedSources.length || recalculating) return;
-      const needUpdate = seedSources.filter(item => {
-        const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-        return expected !== item.status;
-      });
-      if (needUpdate.length === 0) return;
-      setRecalculating(true);
-      try {
-        for (const item of needUpdate) {
-          const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-          await updateItem(item.id, { status: expected });
-        }
-        await loadItems();
-      } finally {
-        setRecalculating(false);
-      }
-    };
-    // 延迟 2s 跑（避免阻塞首次渲染）
-    const timer = setTimeout(silentRecalc, 2000);
-    return () => clearTimeout(timer);
-  }, [seedSources, recalculating, loadItems, updateItem]);
-
-  // 窗口重新获得焦点时也跑一次（用户从其他模块切回时自动同步）
-  useEffect(() => {
-    const onFocus = () => {
-      // 仅当距上次重算 > 5 秒才跑
-      if (recalculating) return;
-      const needUpdate = seedSources.filter(item => {
-        const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-        return expected !== item.status;
-      });
-      if (needUpdate.length === 0) return;
-      void (async () => {
-        setRecalculating(true);
-        try {
-          for (const item of needUpdate) {
-            const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-            await updateItem(item.id, { status: expected });
-          }
-          await loadItems();
-        } finally {
-          setRecalculating(false);
-        }
-      })();
-    };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [seedSources, recalculating, loadItems, updateItem]);
+  // 2026-06-04: status 改为实时计算，移除静默重算 useEffect（不再需要）
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -206,7 +152,8 @@ export default function SeedSourcePage() {
       if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
       if (filters.sourceType && filters.sourceType !== '__all__' && item.sourceType !== filters.sourceType) return false;
       if (filters.supplierName && filters.supplierName !== '__all__' && !item.supplierName.includes(filters.supplierName)) return false;
-      if (filters.status && filters.status !== '__all__' && item.status !== filters.status) return false;
+      // 2026-06-04: status 改为实时计算，筛选比较用 computeStockStatus
+      if (filters.status && filters.status !== '__all__' && computeStockStatus(item.availableCount, item.initialCount) !== filters.status) return false;
       if (filters.startDate && item.purchaseDate < filters.startDate) return false;
       if (filters.endDate && item.purchaseDate > filters.endDate) return false;
       if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
@@ -245,17 +192,18 @@ export default function SeedSourcePage() {
       const now = new Date();
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length;
-    // 中度告警：库存状态为 LOW，或可用量/初始量 < 50%（DEPLETED 也算，因为必定 < 50%）
+    // 2026-06-04: status 改为实时计算，告警判断用 computeStockStatus
     const mediumAlertCount = seedSources.filter(item => {
-      if (item.status === StockStatus.DEPLETED) return true;
-      if (item.status === StockStatus.LOW) return true;
-      // 兜底：动态计算（应对历史脏数据）
+      const liveStatus = computeStockStatus(item.availableCount, item.initialCount);
+      if (liveStatus === StockStatus.DEPLETED) return true;
+      if (liveStatus === StockStatus.LOW) return true;
+      // 兜底：可用量/初始量 < 50% 也算中度告警
       if (item.initialCount > 0 && item.availableCount / item.initialCount < 0.5) return true;
       return false;
     }).length;
     // 高度告警：仅 DEPLETED
     const highAlertCount = seedSources.filter(item =>
-      item.status === StockStatus.DEPLETED
+      computeStockStatus(item.availableCount, item.initialCount) === StockStatus.DEPLETED
     ).length;
     return { total, totalQuantity, monthCount, mediumAlertCount, highAlertCount };
   }, [seedSources]);
@@ -288,32 +236,7 @@ export default function SeedSourcePage() {
     setPagination({ ...pagination, current: 1 });
   };
 
-  // 状态7 修复: 批量重算库存状态（处理扣减库存后 status 字段过期问题）
-  // TDZ 修复: recalculating state 已在顶部声明
-  const handleRecalculateStatus = async () => {
-    if (recalculating) return;
-    const needUpdate = seedSources.filter(item => {
-      const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-      return expected !== item.status;
-    });
-    if (needUpdate.length === 0) {
-      toast.info('所有种源状态已是最新');
-      return;
-    }
-    setRecalculating(true);
-    try {
-      let success = 0;
-      for (const item of needUpdate) {
-        const expected = computeStockStatus(item.availableCount, item.initialCount, item.status);
-        const ok = await updateItem(item.id, { status: expected });
-        if (ok) success += 1;
-      }
-      toast.success(`已重算 ${success}/${needUpdate.length} 条种源状态`);
-      await loadItems();
-    } finally {
-      setRecalculating(false);
-    }
-  };
+  // 2026-06-04: handleRecalculateStatus 已删除，status 改为实时计算，无需手动重算
 
   // 处理新增
   const handleAdd = () => {
@@ -500,7 +423,11 @@ export default function SeedSourcePage() {
       '总金额(元)': record.totalAmount,
       '初始数量': record.initialCount,
       '可用数量': record.availableCount,
-      '库存状态': record.status === StockStatus.SUFFICIENT ? '充足' : record.status === StockStatus.LOW ? '不足' : '耗尽',
+      '库存状态': (() => {
+        // 2026-06-04: 实时计算 status
+        const live = computeStockStatus(record.availableCount, record.initialCount);
+        return live === StockStatus.SUFFICIENT ? '充足' : live === StockStatus.LOW ? '不足' : '耗尽';
+      })(),
       '溯源码': record.traceabilityCode || '',
       '创建人': record.createBy,
       '创建时间': record.createTime,
@@ -620,7 +547,7 @@ export default function SeedSourcePage() {
         </div>
       </div>
 
-      {/* 筛选工具栏 */}
+      {/* 2026-06-04: 移除重算库存状态按钮，status 改为实时计算无需手动重算 */}
       <SeedSourceFilter
         filters={filters}
         onChange={setFilters}
@@ -630,22 +557,6 @@ export default function SeedSourcePage() {
         suppliers={suppliers}
         statusOptions={seedSourceStatusOptions}
       />
-
-      {/* 状态7 修复: 重算状态工具栏 */}
-      <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
-        <span className="text-sm text-emerald-700">
-          库存状态会因育苗/出库等操作而变化。若显示与实际不符，可手动重算。
-        </span>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={handleRecalculateStatus}
-          disabled={recalculating || isLoading}
-        >
-          <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} />
-          {recalculating ? '重算中...' : '重算库存状态'}
-        </Button>
-      </div>
 
       {/* 数据表格 */}
       <SeedSourceTable

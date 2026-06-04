@@ -47,7 +47,7 @@ export class SeedSourceRepository {
       COALESCE(ss.pictures, '[]') AS pictures,
       ss.used_quantity AS usedQuantity,
       ss.remaining_quantity,
-      ss.status,
+      -- ss.status 2026-06-04 改为实时计算：status 由 availableCount/initialCount 派生，不再 DB 存储
       ss.remarks,
       ss.production_plan_code AS productionPlanCode,
       0 AS printCount,
@@ -83,10 +83,7 @@ export class SeedSourceRepository {
       params.push(`%${crop_name}%`);
     }
 
-    if (status) {
-      baseSql += ' AND ss.status = ?';
-      params.push(status);
-    }
+    // status 过滤已废弃（2026-06-04 改实时计算）
 
     // Count 查询
     let countSql = `SELECT COUNT(*) as total FROM seed_sources ss LEFT JOIN crop_varieties cv ON ss.crop_code = cv.crop_code WHERE 1=1`;
@@ -96,10 +93,7 @@ export class SeedSourceRepository {
       countSql += ' AND ss.crop_name LIKE ?';
       countParams.push(`%${crop_name}%`);
     }
-    if (status) {
-      countSql += ' AND ss.status = ?';
-      countParams.push(status);
-    }
+    // status 过滤已废弃：2026-06-04 status 改为前端实时计算，后端不再支持 status 过滤
 
     baseSql += ' ORDER BY ss.create_time DESC';
 
@@ -174,7 +168,7 @@ export class SeedSourceRepository {
       data.total_amount || 0,
       data.used_quantity || 0,
       data.remaining_quantity || data.quantity || 0,
-      data.status || 'active', // TODO: 使用 CommonStatus.ACTIVE 枚举
+      // 2026-06-04: status 不再写入 DB，由前端 computeStockStatus(availableCount, initialCount) 实时计算
       data.remarks || '',
       data.create_by || '',
       data.create_by_id || '',
@@ -186,8 +180,8 @@ export class SeedSourceRepository {
       INSERT INTO seed_sources (id, source_code, source_name, source_type, source_origin,
         production_plan_code, crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
         supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
-        total_amount, used_quantity, remaining_quantity, status, remarks, create_by, create_by_id, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        total_amount, used_quantity, remaining_quantity, remarks, create_by, create_by_id, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, params);
 
     // P0 #1: 单独 UPDATE pictures 列（避免破坏既有 INSERT 字段顺序）
@@ -397,7 +391,7 @@ export class SeedSourceRepository {
     db.run(
       `UPDATE seed_sources SET
         propagation_status = 'completed',
-        status = 'sufficient',
+        -- status = 'sufficient' 已废弃（2026-06-04 改实时计算）
         quantity = ?,
         remaining_quantity = ?,
         actual_harvest_date = ?,

@@ -486,9 +486,15 @@ export function SeedSourceTable({
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[record.status]?.color || ''}`}>
-                      {STOCK_STATUS_MAP[record.status]?.label || record.status}
-                    </span>
+                    {(() => {
+                      // 2026-06-04: 实时计算 status，不再依赖 record.status
+                      const liveStatus = computeStockStatus(record.availableCount, record.initialCount);
+                      return (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[liveStatus]?.color || ''}`}>
+                          {STOCK_STATUS_MAP[liveStatus]?.label || liveStatus}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
