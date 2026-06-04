@@ -172,6 +172,7 @@ export function InventoryTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">数量</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">可用</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">冻结</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">单位</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">仓库</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">来源</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">状态</th>
@@ -266,13 +267,16 @@ export function InventoryTable({
                       {getPlantingModeLabel(stock.plantingMode) || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {stock.currentQuantity} {stock.unit}
+                      {stock.currentQuantity}
                     </td>
                     <td className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
-                      {available} {stock.unit}
+                      {available}
                     </td>
                     <td className="px-4 py-3 text-sm text-blue-600 whitespace-nowrap">
-                      {stock.frozenQuantity} {stock.unit}
+                      {stock.frozenQuantity}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                      {stock.unit || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs" title={stock.warehouseName}>
                       {stock.warehouseName || '-'}

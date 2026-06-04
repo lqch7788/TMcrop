@@ -260,6 +260,8 @@ interface OutboundRecordsTableProps {
   onViewDetail: (instanceId: string) => void;
   /** 导出模式：开启后表格第 1 列显示 checkbox */
   exportMode?: boolean;
+  /** 删除模式：开启后表格第 1 列显示 checkbox */
+  deleteMode?: boolean;
   /** 已选中的 instanceId 列表 */
   selectedRows?: string[];
   onSelectionChange?: (instanceIds: string[]) => void;
@@ -269,7 +271,8 @@ interface OutboundRecordsTableProps {
 
 export function OutboundRecordsTable({
   data, loading, pagination, total, onChange, onViewDetail,
-  exportMode = false, selectedRows = [], onSelectionChange, onSelectAll,
+  exportMode = false, deleteMode = false,
+  selectedRows = [], onSelectionChange, onSelectAll,
 }: OutboundRecordsTableProps) {
   // 字典/标签全部从映射取（不硬编码）
   const stockLabel = (s: string) => STOCK_TYPE_LABEL[s]?.label || s;
@@ -279,16 +282,18 @@ export function OutboundRecordsTable({
     return OUTBOUND_BUSINESS_TYPE_META[normalized];
   };
 
-  const colSpan = exportMode ? 16 : 15;
+  const colSpan = (exportMode || deleteMode) ? 16 : 15;
   const allSelected = data.length > 0 && selectedRows.length === data.length;
   const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
 
-  const toggleRow = (instanceId: string) => {
+  // 用 row.id（流水唯一 ID）而非 row.instanceId（库存实例 ID）作为选中 key
+  // — 同一库存实例可有多条出库流水，必须按行 ID 区分
+  const toggleRow = (id: string) => {
     if (!onSelectionChange) return;
-    if (selectedRows.includes(instanceId)) {
-      onSelectionChange(selectedRows.filter(id => id !== instanceId));
+    if (selectedRows.includes(id)) {
+      onSelectionChange(selectedRows.filter(x => x !== id));
     } else {
-      onSelectionChange([...selectedRows, instanceId]);
+      onSelectionChange([...selectedRows, id]);
     }
   };
 
@@ -298,10 +303,11 @@ export function OutboundRecordsTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
-              {exportMode && (
+              {(exportMode || deleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">
                   <Checkbox
                     checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
                     onCheckedChange={onSelectAll}
                     className="border-white rounded"
                   />
@@ -343,11 +349,11 @@ export function OutboundRecordsTable({
             ) : (
               data.map((row) => (
                 <tr key={row.id} className="hover:bg-emerald-50 transition-colors">
-                  {exportMode && (
+                  {(exportMode || deleteMode) && (
                     <td className="px-4 py-3">
                       <Checkbox
-                        checked={selectedRows.includes(row.instanceId)}
-                        onCheckedChange={() => toggleRow(row.instanceId)}
+                        checked={selectedRows.includes(row.id)}
+                        onCheckedChange={() => toggleRow(row.id)}
                         className="rounded"
                       />
                     </td>

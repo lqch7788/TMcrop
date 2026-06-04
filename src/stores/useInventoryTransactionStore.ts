@@ -88,6 +88,8 @@ interface InventoryTransactionState {
   loadOutbound: (q?: Partial<OutboundQuery>) => Promise<void>;
   addTransaction: (payload: Partial<OutboundRow>) => Promise<OutboundRow | null>;
   deleteTransaction: (id: string) => Promise<boolean>;
+  /** 批量删除（V2.1 铁律：写操作走 Store action，自动 notifyChange 跨页刷新） */
+  deleteTransactions: (ids: string[]) => Promise<{ success: boolean; deletedCount: number; error?: string }>;
 }
 
 export const useInventoryTransactionStore = create<InventoryTransactionState>()((set, get) => ({
@@ -150,5 +152,34 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     } catch {
       return false;
     }
+  },
+
+  deleteTransactions: async (ids) => {
+    if (!ids || ids.length === 0) {
+      return { success: false, deletedCount: 0, error: '未选择任何记录' };
+    }
+    let deletedCount = 0;
+    let lastError: string | undefined;
+    // 逐条调用 DELETE（与 OutboundModal 写操作风格一致——单条 API 而非批量 API，简单清晰）
+    for (const id of ids) {
+      try {
+        await enhancedApiClient.delete(`/inventory-transactions/${id}`);
+        deletedCount++;
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : `删除 ${id} 失败`;
+      }
+    }
+    if (deletedCount > 0) {
+      set((s) => ({
+        rows: s.rows.filter(r => !ids.includes(r.id)),
+        total: Math.max(0, s.total - deletedCount),
+      }));
+      // 2026-06-04 V2.1 铁律：写后跨页刷新
+      const { useInventoryStore } = await import('./useInventoryStore');
+      useInventoryStore.getState().notifyChange();
+    }
+    return deletedCount > 0
+      ? { success: true, deletedCount }
+      : { success: false, deletedCount: 0, error: lastError };
   },
 }));

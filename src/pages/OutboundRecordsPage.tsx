@@ -15,6 +15,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/Toast';
+import { showAlert, showConfirm } from '@/lib/dialogService';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 import { exportOutboundCSV } from '@/services/inventoryTransactionService';
 import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
@@ -55,17 +56,26 @@ export default function OutboundRecordsPage() {
   const summary = useInventoryTransactionStore((s) => s.summary);
   const loading = useInventoryTransactionStore((s) => s.loading);
   const loadOutbound = useInventoryTransactionStore((s) => s.loadOutbound);
+  const deleteTransactions = useInventoryTransactionStore((s) => s.deleteTransactions);
   const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  // 导出：按 OrderPage 模式（先选行 exportMode，再确认弹窗）
+  // 工具栏模式（与作物库存 ActionToolbar 协同）
   const [exportMode, setExportMode] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);  // 选中行的 instanceId
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);  // 选中行的 row.id（流水唯一 ID）
   const [exportOpen, setExportOpen] = useState(false);
   const toast = useToast();
 
   // 数据加载：筛选条件变化即重查 + 跨页刷新订阅（出库/入库后自动重查）
   const inventoryVersion = useInventoryStore((s) => s.version);
   useEffect(() => { loadOutbound(query); }, [query, loadOutbound, inventoryVersion]);
+
+  // 退出任何模式时清空选中
+  useEffect(() => {
+    if (!exportMode && !deleteMode) {
+      setSelectedRows([]);
+    }
+  }, [exportMode, deleteMode]);
 
   function handleFilterChange(q: OutboundQuery) {
     setQuery({ ...q, page: 1 }); // 改筛选条件回到第 1 页
@@ -87,12 +97,12 @@ export default function OutboundRecordsPage() {
     setSelectedRows([]);
   };
 
-  // 2. 全选/取消全选
+  // 2. 全选/取消全选（用 row.id 而非 instanceId —— 同一库存可有多条流水）
   const handleExportSelectAll = () => {
     if (selectedRows.length === rows.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(rows.map(r => r.instanceId));
+      setSelectedRows(rows.map(r => r.id));
     }
   };
 
@@ -100,6 +110,40 @@ export default function OutboundRecordsPage() {
   const handleExportCancel = () => {
     setExportMode(false);
     setSelectedRows([]);
+  };
+
+  // ===== 删除：参照作物库存模式（先选行 deleteMode，再确认弹窗） =====
+  // 1. 点 ActionToolbar "删除" → 进入 deleteMode
+  const handleDeleteClick = () => {
+    setDeleteMode(true);
+    setSelectedRows([]);
+  };
+
+  // 2. 全选/取消全选（复用导出模式的 selectAll 逻辑）
+  //    — 已在 handleExportSelectAll 中实现（共用 selectedRows）
+
+  // 3. 取消删除模式
+  const handleDeleteCancel = () => {
+    setDeleteMode(false);
+    setSelectedRows([]);
+  };
+
+  // 4. 校验 selectedRows 不空 → showConfirm → 调 Store action
+  const handleDeleteConfirm = async () => {
+    if (selectedRows.length === 0) {
+      showAlert('请先选择要删除的出库记录');
+      return;
+    }
+    const ok = await showConfirm(`确定要删除选中的 ${selectedRows.length} 条出库记录吗？此操作不可撤销。`);
+    if (!ok) return;
+    const result = await deleteTransactions(selectedRows);
+    if (result.success) {
+      showAlert(`已删除 ${result.deletedCount} 条记录`);
+      setSelectedRows([]);
+      setDeleteMode(false);
+    } else {
+      showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
+    }
   };
 
   // 4. 校验 selectedRows 不空 → 弹格式选择弹窗
@@ -117,8 +161,8 @@ export default function OutboundRecordsPage() {
     setExportMode(false);
     setSelectedRows([]);
     try {
-      // 选中的行（按 instanceId 过滤）
-      const selectedData = rows.filter(r => selectedRows.includes(r.instanceId));
+      // 选中的行（按 row.id 过滤 — selectedRows 现在存的是 row.id 而非 instanceId）
+      const selectedData = rows.filter(r => selectedRows.includes(r.id));
       if (format === 'csv') {
         // CSV 走后端（保持一致性）
         const blob = await exportOutboundCSV(query);
@@ -169,24 +213,24 @@ export default function OutboundRecordsPage() {
       <ActionToolbar
         title="出库记录列表"
         batchEditMode={false}
-        deleteMode={false}
+        deleteMode={deleteMode}
         exportMode={exportMode}
         selectedRows={selectedRows as any}
         lowStockCount={0}
         filters={{ showLowStock: false }}
         onLowStockToggle={() => {}}
         onBatchEdit={() => {}}
-        onDelete={() => {}}
+        onDelete={handleDeleteClick}
         onExport={handleExportClick}
         onConfirmBatchEdit={() => {}}
         onCancelBatchEdit={() => {}}
-        onConfirmDelete={() => {}}
-        onCancelDelete={() => {}}
+        onConfirmDelete={handleDeleteConfirm}
+        onCancelDelete={handleDeleteCancel}
         onConfirmExport={handleExportClickConfirm}
         onCancelExport={handleExportCancel}
         canCreate={false}
         canEdit={false}
-        canDelete={false}
+        canDelete={true}
         canExport={true}
         showLowStockButton={false}
         showCustomerButton={false}
@@ -202,6 +246,7 @@ export default function OutboundRecordsPage() {
         onChange={(p) => setQuery((q) => ({ ...q, page: p.current, limit: p.pageSize }))}
         onViewDetail={handleViewDetail}
         exportMode={exportMode}
+        deleteMode={deleteMode}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         onSelectAll={handleExportSelectAll}

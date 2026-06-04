@@ -98,7 +98,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       isOpen={isOpen}
       onClose={handleClose}
       title="出库操作"
-      size="lg"
+      size="xxxl"
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
@@ -118,7 +118,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       {/* 库存信息 */}
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
         <h4 className="text-sm font-medium text-gray-700 mb-3">库存信息</h4>
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
             <span className="text-gray-500 block">实例ID</span>
             <span className="font-mono text-gray-900">{stock.instanceId}</span>
@@ -164,69 +164,72 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
 
       {/* 出库表单 */}
       <div className="space-y-4">
-        {/* 出库数量 */}
-        <div>
-          <Label className="block text-sm font-medium text-gray-700 mb-1">
-            出库数量 <span className="text-red-500">*</span>
-          </Label>
-          <div className="flex items-center gap-2">
-            <NumberInput
-              value={quantity}
-              onChange={(val) => setQuantity(val)}
-              placeholder={`最大 ${availableQuantity}`}
-              decimals={2}
-              className="h-10 px-3"
-            />
-            <span className="text-gray-500">{stock.unit}</span>
+        {/* 出库数量 / 业务类型 / 业务单号 — 同一排 */}
+        <div className="grid grid-cols-3 gap-4">
+          {/* 出库数量 */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
+              出库数量 <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <NumberInput
+                value={quantity}
+                onChange={(val) => setQuantity(val)}
+                placeholder={`最大 ${availableQuantity}`}
+                decimals={2}
+                className="h-10 px-3 flex-1 min-w-0"
+              />
+              <span className="text-gray-500 shrink-0">{stock.unit}</span>
+            </div>
           </div>
-        </div>
 
-        {/* 业务类型 */}
-        <div>
-          <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
-          <Select value={businessType} onValueChange={(val) => setBusinessType(val as OutboundBusinessType)}>
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="其他" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={OutboundBusinessType.CUSTOMER_SALE}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.CUSTOMER_SALE].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.TRANSFER_OUT}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.TRANSFER_OUT].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.DAMAGE_LOSS}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.DAMAGE_LOSS].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.RETURN_INBOUND}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.RETURN_INBOUND].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.INVENTORY_ADJUST}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INVENTORY_ADJUST].label}
-              </SelectItem>
-              <SelectItem value={OutboundBusinessType.OTHER}>
-                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.OTHER].label}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          {/* 业务类型 */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
+            <Select value={businessType} onValueChange={(val) => setBusinessType(val as OutboundBusinessType)}>
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="其他" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={OutboundBusinessType.CUSTOMER_SALE}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.CUSTOMER_SALE].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.TRANSFER_OUT}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.TRANSFER_OUT].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.DAMAGE_LOSS}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.DAMAGE_LOSS].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.RETURN_INBOUND}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.RETURN_INBOUND].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.INVENTORY_ADJUST}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INVENTORY_ADJUST].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.OTHER}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.OTHER].label}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* 业务单号 */}
-        <div>
-          <Label className="block text-sm font-medium text-gray-700 mb-1">业务单号</Label>
-          <Input
-            type="text"
-            value={businessCode}
-            onChange={(e) => setBusinessCode(e.target.value)}
-            placeholder="请输入业务单号（可选）"
-            className={deepInputClass}
-          />
+          {/* 业务单号 */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-1">业务单号</Label>
+            <Input
+              type="text"
+              value={businessCode}
+              onChange={(e) => setBusinessCode(e.target.value)}
+              placeholder="请输入业务单号（可选）"
+              className={deepInputClass}
+            />
+          </div>
         </div>
 
         {/* 备注 */}
