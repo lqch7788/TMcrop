@@ -22,7 +22,6 @@ import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
-import { InventoryStats } from '../components/farm/inventory/InventoryStats';
 import { InventoryStockTypeCards } from '../components/farm/inventory/InventoryStockTypeCards';
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
@@ -275,9 +274,6 @@ export default function InventoryV3Page() {
           </div>
         </div>
       </div>
-
-      {/* 主统计卡片 */}
-      <InventoryStats data={stats} />
 
       {/* 筛选工具栏（移到分类汇总上方，方便先过滤再看分类） */}
       <InventoryFilter
