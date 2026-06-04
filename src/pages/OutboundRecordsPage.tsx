@@ -116,6 +116,21 @@ export default function OutboundRecordsPage() {
 
   return (
     <div className="p-6 space-y-4">
+      {/* 页面标题卡片（对齐订单管理 OrderPage.tsx 顶部卡片样式：白色大卡 + 渐变图标 + 标题/副标题） */}
+      <div className="bg-white rounded-xl p-6 shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <Download className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">出库记录</h1>
+              <p className="text-gray-500">管理出库流水、按多维筛选查询、导出 CSV/XLSX/PDF 报表</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 顶部：7 个紧凑型卡片（4 数值 + 3 分类）同一行 */}
       <OutboundRecordsStats summary={summary} loading={loading} />
 
