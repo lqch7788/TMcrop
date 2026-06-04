@@ -171,6 +171,8 @@ interface ApprovalStore {
   // ========== 审批操作（通过 API + 联动） ==========
   approve: (id: string, comment?: string) => Promise<void>;
   reject: (id: string, comment: string) => Promise<void>;
+  // 2026-06-04 V2.1 铁律：部分审批走 Store action（之前 ApprovalContext 直接 await patch 违规）
+  partiallyApprove: (id: string, items: Record<string, number>, comment?: string) => Promise<void>;
   cancel: (id: string, reason?: string) => Promise<void>;
   batchApprove: (ids: string[], comment?: string) => Promise<void>;
   batchReject: (ids: string[], comment: string) => Promise<void>;
@@ -367,6 +369,27 @@ export const useApprovalStore = create<ApprovalStore>()(
           await get().fetchApprovals();
         } catch (error) {
           console.error('[ApprovalStore] 撤回失败:', error);
+        }
+      },
+
+      // 2026-06-04 V2.1 铁律：部分审批走 Store action（替代 Context 直接 await patch）
+      partiallyApprove: async (id, items, comment) => {
+        const approverId = useAuthStore.getState().currentUser?.oid || '';
+        const approverName = useAuthStore.getState().currentUser?.realName || '系统';
+        try {
+          await enhancedApiClient.patch(
+            `${API_BASE}/${id}/action`,
+            { action: 'partially_approve', comment, approvedItems: items, approverId, approverName }
+          );
+          set((state) => {
+            const approvals = state.approvals.map((a) =>
+              a.id === id ? { ...a, status: ApprovalStatus.PARTIALLY_APPROVED as string, updatedAt: new Date().toISOString() } : a
+            );
+            return { approvals, stats: computeStats(approvals as Approval[]) };
+          });
+          await get().fetchApprovals();
+        } catch (error) {
+          console.error('[ApprovalStore] 部分审批失败:', error);
         }
       },
 
