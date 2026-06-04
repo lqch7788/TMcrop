@@ -182,6 +182,12 @@ export function ProductionTable({
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.orderCode || '-'}</td>
+                <td
+                  className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate"
+                  title={batch.remarks || ''}
+                >
+                  {batch.remarks || '-'}
+                </td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载生产计划文件" onClick={() => {

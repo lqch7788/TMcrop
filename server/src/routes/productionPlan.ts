@@ -56,7 +56,8 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     remarks: 'remarks',
     createBy: 'publisher',
     createTime: 'createTime',
-    updateTime: 'updateTime',
+    // DB 列 update_time -> 前端 CropBatch.lastModifyDate（与编辑/详情弹窗字段名对齐）
+    updateTime: 'lastModifyDate',
     // 额外字段
     planDetail: 'planDetail',
     locationName: 'locationName',

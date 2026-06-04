@@ -6,7 +6,7 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
-import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
+import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,10 +85,6 @@ export function BatchEditModal({
   // 获取当前批次的计划类型，用于种植模式选项
   const currentPlanType = editedData.planType || currentBatch?.planType || PlanType.PLANTING;
   const plantingModeOptions = getModesByPlanType(currentPlanType);
-
-  // 完整的种植模式映射（用于显示已选值）
-  const allModes = [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES];
-  const modeMap = Object.fromEntries(allModes.map(m => [m.value, m.label]));
 
   // 处理字段变更
   const handleFieldChange = (field: keyof CropBatch, value: unknown) => {
@@ -245,7 +241,7 @@ export function BatchEditModal({
                     </div>
                   ) : (
                     <div className="h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-center">
-                      {currentGreenhouseIds.length === 0 ? '请选择' : currentGreenhouseIds.map(id => greenhouses.find(g => g.id === id || g.name === id)?.name).filter(Boolean).join(', ')}
+                      {currentGreenhouseNames.length === 0 ? '请选择' : currentGreenhouseNames.join(', ')}
                     </div>
                   )}
                 </div>
@@ -287,7 +283,7 @@ export function BatchEditModal({
                     </div>
                   ) : (
                     <div className="h-10 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-gray-50 flex items-center">
-                      {currentPlantingModes.length === 0 ? '请选择' : currentPlantingModes.map(m => modeMap[m] || m).filter(Boolean).join(', ')}
+                      {currentPlantingModes.length === 0 ? '请选择' : currentPlantingModes.map(m => plantingModeOptions.find(mode => mode.value === m)?.label).filter(Boolean).join(', ')}
                     </div>
                   )}
                 </div>
