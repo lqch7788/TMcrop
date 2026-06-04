@@ -27,13 +27,49 @@ router.put('/:id/propagation-stage', (req, res, next) => seedSourceController.up
 router.post('/:id/complete-propagation', (req, res, next) => seedSourceController.completePropagation(req, res, next));
 
 // 检查种源是否可删除（被育苗引用则不可删）
+// 2026-06-04 升级：返回 references 详情列表，前端弹窗可直接展示"被哪些数据引用"
 router.get('/:id/check-deletable', (req, res) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    const cntResult = db.exec('SELECT COUNT(*) as cnt FROM seedlings WHERE source_id = ?', [id]);
-    const refCount = Number(cntResult[0]?.values[0]?.[0]) || 0;
-    res.json({ success: true, data: { deletable: refCount === 0, refCount } });
+
+    // 引用方1：育苗记录（source_id）
+    const seedlingRefs = db.exec(`
+      SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
+      FROM seedlings WHERE source_id = ?
+      ORDER BY create_time DESC
+    `, [id]);
+
+    const references: Array<{
+      module: string;
+      moduleCode: string;
+      id: string;
+      code: string;
+      cropName?: string;
+      cropVariety?: string;
+      date?: string;
+      status?: string;
+    }> = (seedlingRefs[0]?.values || []).map((row) => ({
+      module: '育苗管理',
+      moduleCode: 'seedling',
+      id: row[0] as string,
+      code: row[1] as string,
+      cropName: row[2] as string,
+      cropVariety: row[3] as string,
+      date: row[4] as string,
+      status: row[5] as string,
+    }));
+
+    // 引用方2：可在此扩展（订单/采收等如果引用了种源，加在这里即可）
+    // const orderRefs = db.exec(`...`, [id]);
+
+    res.json({
+      success: true,
+      data: {
+        deletable: references.length === 0,
+        references,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: '检查失败' });
   }

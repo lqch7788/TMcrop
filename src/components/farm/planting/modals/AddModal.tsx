@@ -371,10 +371,9 @@ export function AddModal({
         {/* 种植日期 */}
         <div>
           <Label className="text-gray-900">种植日期</Label>
-          <DatePicker
+          <DatePicker className="w-full"
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
             onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
-            className={deepInputClass}
           />
         </div>
 

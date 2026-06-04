@@ -275,10 +275,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             {/* 第一行：记录日期 */}
             <div>
               <Label className="text-gray-700">记录日期</Label>
-              <DatePicker
+              <DatePicker className="w-full"
                 selected={formData.recordDate ? new Date(formData.recordDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, recordDate: date.toISOString().split('T')[0] })}
-                className="w-full px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             {/* 第一行：温度 */}

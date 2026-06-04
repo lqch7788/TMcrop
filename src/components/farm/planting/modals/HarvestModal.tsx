@@ -142,11 +142,10 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
             </div>
             <div>
               <Label className="text-gray-700">采收日期</Label>
-              <DatePicker
+              <DatePicker className="w-full"
                 selected={formData.harvestDate ? new Date(formData.harvestDate) : undefined}
                 onChange={(date) => setFormData({ ...formData, harvestDate: date.toISOString().split('T')[0] })}
                 disabled={isHarvest === 'no'}
-                className={`${deepInputClass} disabled:bg-gray-100 disabled:cursor-not-allowed`}
               />
               {isHarvest === 'no' && (
                 <p className="mt-1 text-xs text-gray-400">选择"是"后将自动填充当天日期</p>

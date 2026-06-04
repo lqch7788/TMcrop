@@ -164,7 +164,7 @@ export class HarvestRepository {
       COALESCE(h.harvester_names, '[]') AS harvesterNames
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.oid
-    WHERE 1=1`;
+    WHERE h.deleted_at IS NULL`;
     const params: any[] = [];
 
     if (crop_name) {
@@ -177,7 +177,7 @@ export class HarvestRepository {
       params.push(status);
     }
 
-    const countSql = `SELECT COUNT(*) FROM harvest_records h WHERE 1=1`
+    const countSql = `SELECT COUNT(*) FROM harvest_records h WHERE h.deleted_at IS NULL`
       + (crop_name ? ' AND h.crop_name LIKE ?' : '')
       + (status ? ' AND h.status = ?' : '');
 
@@ -213,7 +213,7 @@ export class HarvestRepository {
       COALESCE(h.harvester_names, '[]') AS harvesterNames
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.oid
-    WHERE h.id = ?`;
+    WHERE h.id = ? AND h.deleted_at IS NULL`;
 
     // 用 queryToObjects 走 camelCase 转换（之前用 stmt.getAsObject() 直接拿，snake_case 字段名导致前端读不到 record.cropName 等）
     const items = queryToObjects<HarvestRecord>(db, sql, [id]);
@@ -237,7 +237,7 @@ export class HarvestRepository {
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.id
     LEFT JOIN users u ON h.auditor_id = u.id
-    WHERE h.source_id = ? OR h.source_name = ? ORDER BY h.harvest_date DESC, h.create_time DESC`;
+    WHERE (h.source_id = ? OR h.source_name = ?) AND h.deleted_at IS NULL ORDER BY h.harvest_date DESC, h.create_time DESC`;
     return queryToObjects<HarvestRecord>(db, sql, [batchCode, batchCode]);
   }
 
@@ -258,7 +258,7 @@ export class HarvestRepository {
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.id
     LEFT JOIN users u ON h.auditor_id = u.id
-    WHERE h.id IN (${placeholders}) ORDER BY h.create_time DESC`;
+    WHERE h.id IN (${placeholders}) AND h.deleted_at IS NULL ORDER BY h.create_time DESC`;
     return queryToObjects<HarvestRecord>(db, sql, ids);
   }
 
@@ -412,17 +412,19 @@ export class HarvestRepository {
   }
 
   /**
-   * 删除采收记录
+   * 删除采收记录（2026-06-04 改为软删除：标记 deleted_at，物理行保留）
+   * 修复"用户删除 → 重启后 seedData INSERT OR IGNORE 复活"bug
    * @param id 采收记录ID
    */
   async delete(id: string): Promise<void> {
     const db = getDatabase();
-    db.run('DELETE FROM harvest_records WHERE id = ?', [id]);
+    const now = new Date().toISOString();
+    db.run('UPDATE harvest_records SET deleted_at = ?, update_time = ? WHERE id = ? AND deleted_at IS NULL', [now, now, id]);
     saveDatabase();
   }
 
   /**
-   * 批量删除采收记录（仅删除草稿状态）
+   * 批量删除采收记录（软删除）
    * @param ids ID数组
    * @returns 删除结果
    */
@@ -435,9 +437,10 @@ export class HarvestRepository {
     const deletedIds: string[] = [];
     const failedIds: { id: string; reason: string }[] = [];
 
-    // 直接执行批量删除（不检查状态，允许删除任何状态的记录）
+    const now = new Date().toISOString();
     const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM harvest_records WHERE id IN (${placeholders})`, ids);
+    const softDeleteSql = `UPDATE harvest_records SET deleted_at = ?, update_time = ? WHERE id IN (${placeholders}) AND deleted_at IS NULL`;
+    db.run(softDeleteSql, [now, now, ...ids]);
 
     saveDatabase();
 
@@ -456,8 +459,8 @@ export class HarvestRepository {
   async getStats(startDate?: string, endDate?: string, cropName?: string, greenhouseName?: string): Promise<HarvestStats> {
     const db = getDatabase();
 
-    // 构建基础WHERE条件
-    let whereClause = 'WHERE 1=1';
+    // 构建基础WHERE条件（2026-06-04 软删除：必须过滤 deleted_at IS NULL）
+    let whereClause = 'WHERE deleted_at IS NULL';
     const params: any[] = [];
 
     if (startDate) {
@@ -571,7 +574,7 @@ export class HarvestRepository {
     FROM harvest_records h
     LEFT JOIN warehouses w ON h.warehouse_id = w.id
     LEFT JOIN users u ON h.auditor_id = u.id
-    WHERE 1=1`;
+    WHERE h.deleted_at IS NULL`;
     const params: any[] = [];
 
     if (startDate) {

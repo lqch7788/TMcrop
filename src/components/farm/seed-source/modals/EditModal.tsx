@@ -354,10 +354,9 @@ export function EditModal({
           <Label className="text-gray-900">
             {formData.sourceOrigin === 'external_purchase' ? '采购日期' : '入库日期'}
           </Label>
-          <DatePicker
+          <DatePicker className="w-full"
             selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
             onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
-            className={deepInputClass}
           />
         </div>
 
