@@ -5711,17 +5711,10 @@ export function exportDatabase() {
 
 /**
  * 库存出库交易初始数据（V3.1 OutboundRecordsPage 改造）
- * 数据源：原 V1 库存管理 mock（无源码残留）——新建 8 条代表性数据
- * 行为：先 count 检查 → 有数据跳过；无则插入 8 条
- *
- * 2026-06-04 撤销：用户要求"彻底清除 8 条"，函数定义保留为参考但 exportDatabase 不再调用。
- * 表 schema + Store 改造已 commit，表初始化由 schema.ts 的 CREATE TABLE IF NOT EXISTS 保证。
+ * 2026-06-04 彻底撤销：用户要求"新表字段 = 老表字段 + 保留原数据"。
+ *          整个新表 inventory_transactions 设计被废弃，老表 inventory_transaction 接管。
+ *          此函数定义删除，schema 同步删除新表创建。
  */
-function seedInventoryTransactionsInitialData() {
-  // 函数体保留作为历史参考；不再被 exportDatabase 调用。
-  // 如需恢复：在此处恢复 SEED 数组 + 在 exportDatabase 末尾加调用。
-  void 0;
-}
 
 /**
  * workLog 初始数据迁移
