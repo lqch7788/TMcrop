@@ -97,6 +97,8 @@ export interface CropBatch {
   orderCode?: string;         // 关联的订单编号
   // ========== 执行状态字段（双轨并行）==========
   executionStatus?: 'pending_execution' | 'in_progress' | 'completed';
+  // ========== 备注字段（来自表单 description）==========
+  remarks?: string;            // 备注说明
 }
 
 export interface Task {
