@@ -3194,6 +3194,24 @@ export function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_farm_op_records_date ON farm_operation_records(operation_date)`);
   } catch (e) {}
 
+  // 2026-06-04 V2.1 铁律：问题附件后端化（替代 localStorage）
+  // 字段：id/problem_id/flow_record_id/attachment_type/data(base64)/filename/created_at
+  db.run(`
+    CREATE TABLE IF NOT EXISTS problem_attachments (
+      id TEXT PRIMARY KEY,
+      problem_id INTEGER NOT NULL,
+      flow_record_id TEXT,
+      attachment_type TEXT NOT NULL,
+      data TEXT NOT NULL,
+      filename TEXT,
+      created_at TEXT NOT NULL
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_problem_attachments_problem ON problem_attachments(problem_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_problem_attachments_flow ON problem_attachments(flow_record_id)`);
+  } catch (e) {}
+
   // 创建索引
   try {
     createIndexes();

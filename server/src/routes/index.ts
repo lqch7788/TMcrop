@@ -14,6 +14,7 @@ import cropInstanceRouter from './cropInstance';
 import farmTaskRouter from './farmTask';
 import inspectionRouter from './inspection';
 import problemRouter from './problem';
+import problemAttachmentsRouter from './problemAttachments';
 import laborRouter from './labor';
 import overtimeRouter from './overtime';
 import leaveRouter from './leave';
@@ -143,6 +144,8 @@ router.use('/inspections', requireAuth, inspectionRouter);
 
 // 问题记录路由 - 需要认证
 router.use('/problems', requireAuth, problemRouter);
+// 2026-06-04 V2.1 铁律：问题附件后端化路由（替代 localStorage）
+router.use('/problem-attachments', requireAuth, problemAttachmentsRouter);
 
 // 人工记录路由 - 需要认证
 router.use('/labor', requireAuth, laborRouter);
