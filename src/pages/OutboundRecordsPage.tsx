@@ -30,6 +30,7 @@ import {
 import { OutboundExportModal } from '@/components/farm/inventory/OutboundExportModal';
 import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
 import { exportOutboundPDF, exportOutboundXLSX } from '@/utils/outboundPdfExporter';
+import ActionToolbar from '@/components/warehouse/ActionToolbar';
 
 /** 默认本月 1 号到今天（V3.1 关键：useEffect 同步设值避免 400） */
 export function getThisMonthRange(): { from: string; to: string } {
@@ -55,7 +56,9 @@ export default function OutboundRecordsPage() {
   const [loading, setLoading] = useState(false);
   const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  // 导出弹窗 state
+  // 导出：按 OrderPage 模式（先选行 exportMode，再确认弹窗）
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);  // 选中行的 instanceId
   const [exportOpen, setExportOpen] = useState(false);
   const toast = useToast();
 
@@ -89,11 +92,47 @@ export default function OutboundRecordsPage() {
     setDetailOpen(true);
   }
 
-  // 弹窗选中格式后调起实际导出
+  // ===== 导出：按 OrderPage 3 步流程 =====
+  // 1. 点 ActionToolbar "导出" → 进入 exportMode（表格出现 checkbox + 全选）
+  const handleExportClick = () => {
+    setExportMode(true);
+    setSelectedRows([]);
+  };
+
+  // 2. 全选/取消全选
+  const handleExportSelectAll = () => {
+    if (selectedRows.length === rows.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(rows.map(r => r.instanceId));
+    }
+  };
+
+  // 3. 取消导出模式
+  const handleExportCancel = () => {
+    setExportMode(false);
+    setSelectedRows([]);
+  };
+
+  // 4. 校验 selectedRows 不空 → 弹格式选择弹窗
+  const handleExportClickConfirm = () => {
+    if (selectedRows.length === 0) {
+      toast.error('请先选择要导出的数据（点表格左侧 checkbox）');
+      return;
+    }
+    setExportOpen(true);
+  };
+
+  // 5. 弹窗选中格式后实际导出（**只导出选中行**，不是全表）
   async function handleExportConfirm(format: 'csv' | 'xlsx' | 'pdf') {
     setExportOpen(false);
+    setExportMode(false);
+    setSelectedRows([]);
     try {
+      // 选中的行（按 instanceId 过滤）
+      const selectedData = rows.filter(r => selectedRows.includes(r.instanceId));
       if (format === 'csv') {
+        // CSV 走后端（保持一致性）
         const blob = await exportOutboundCSV(query);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -101,13 +140,14 @@ export default function OutboundRecordsPage() {
         a.download = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success('CSV 下载已开始');
+        toast.success(`CSV 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'xlsx') {
-        exportOutboundXLSX(rows, summary);
-        toast.success('XLSX 下载已开始');
+        // XLSX 走前端（按选中的行生成）
+        exportOutboundXLSX(selectedData, summary);
+        toast.success(`XLSX 下载已开始（共 ${selectedData.length} 条）`);
       } else if (format === 'pdf') {
-        await exportOutboundPDF(rows, summary);
-        toast.success('PDF 下载已开始');
+        await exportOutboundPDF(selectedData, summary);
+        toast.success(`PDF 下载已开始（共 ${selectedData.length} 条）`);
       }
     } catch (e: any) {
       toast.error(`${format.toUpperCase()} 导出失败：${e?.message || '未知错误'}`);
@@ -116,7 +156,7 @@ export default function OutboundRecordsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 页面标题卡片（对齐订单管理 OrderPage.tsx 顶部卡片样式：白色大卡 + 渐变图标 + 标题/副标题） */}
+      {/* 页面标题卡片（对齐订单管理 OrderPage.tsx 顶部卡片样式） */}
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -137,14 +177,33 @@ export default function OutboundRecordsPage() {
       {/* 6 维筛选 */}
       <OutboundRecordsFilter value={query} onChange={handleFilterChange} onReset={handleReset} />
 
-      {/* 列表标题 + 导出按钮（同行靠右） */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">出库记录列表</h2>
-        <Button variant="default" size="sm" onClick={() => setExportOpen(true)}>
-          <FileDown className="w-4 h-4 mr-1" />
-          导出
-        </Button>
-      </div>
+      {/* 工具栏：复用 ActionToolbar（对齐订单管理 OrderPage 模式：title + 导出/批量/删除等按钮） */}
+      <ActionToolbar
+        title="出库记录列表"
+        batchEditMode={false}
+        deleteMode={false}
+        exportMode={exportMode}
+        selectedRows={selectedRows as any}
+        lowStockCount={0}
+        filters={{ showLowStock: false }}
+        onLowStockToggle={() => {}}
+        onBatchEdit={() => {}}
+        onDelete={() => {}}
+        onExport={handleExportClick}
+        onConfirmBatchEdit={() => {}}
+        onCancelBatchEdit={() => {}}
+        onConfirmDelete={() => {}}
+        onCancelDelete={() => {}}
+        onConfirmExport={handleExportClickConfirm}
+        onCancelExport={handleExportCancel}
+        canCreate={false}
+        canEdit={false}
+        canDelete={false}
+        canExport={true}
+        showLowStockButton={false}
+        showCustomerButton={false}
+        noCard={true}
+      />
 
       {/* 数据表格 */}
       <OutboundRecordsTable
@@ -154,6 +213,10 @@ export default function OutboundRecordsPage() {
         total={total}
         onChange={(p) => setQuery((q) => ({ ...q, page: p.current, limit: p.pageSize }))}
         onViewDetail={handleViewDetail}
+        exportMode={exportMode}
+        selectedRows={selectedRows}
+        onSelectionChange={setSelectedRows}
+        onSelectAll={handleExportSelectAll}
       />
 
       {/* 详情弹窗（按 instanceId 跳详情，复用 InventoryDetailModal） */}
