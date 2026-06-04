@@ -6,6 +6,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { REMINDER_CONFIG } from '../config/taskConfig';
 import type { ReminderRecord } from '../types/task';
+// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useReminderStore 同步双写
+import { useReminderStore } from '../stores/useReminderStore';
 
 const REMINDER_STORAGE_KEY = 'farm_task_reminders';
 
@@ -146,6 +148,17 @@ export function useReminder(): UseReminderReturn {
     const updatedRecords = [...reminderRecords, newRecord];
     saveReminderRecords(updatedRecords);
     setReminderRecords(updatedRecords);
+
+    // 2026-06-04 V2.1 铁律改造：双写 Store（异步，失败不影响主流程）
+    void useReminderStore.getState().sendReminder({
+      id: newRecord.id,
+      taskId: newRecord.taskId,
+      taskCode: newRecord.taskCode,
+      operatorId: newRecord.remindedBy,
+      operatorName: newRecord.remindedByName,
+      message: newRecord.message,
+      createTime: newRecord.remindedAt,
+    } as any);
 
     return true;
   }, [reminderRecords, canRemind]);

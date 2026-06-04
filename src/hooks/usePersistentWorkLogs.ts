@@ -5,6 +5,9 @@
 
 import { useCallback, useMemo } from 'react';
 import { useLocalStorage, STORAGE_KEYS, clearAllPersistedData } from './useLocalStorage';
+// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useWorkLogStore 同步双写
+// Store 异步同步到后端（API → SQLite），失败不影响主流程（localStorage 仍是数据源）
+import { useWorkLogStore } from '../stores/useWorkLogStore';
 
 // 工单类型
 export interface WorkLogEntry {
@@ -124,17 +127,44 @@ export function usePersistentWorkLogs() {
       id: nextWorkLogId++,
     };
     setWorkLogs(prev => [newEntry, ...prev]);
+    // 2026-06-04 V2.1 铁律改造：双写 Store（失败不影响主流程）
+    void useWorkLogStore.getState().addWorkLog({
+      ...newEntry,
+      id: String(newEntry.id),
+      weather: newEntry.weather,
+      temperature: newEntry.temperature,
+      growthStatus: newEntry.growthStatus,
+      tasks: newEntry.tasks,
+      problems: newEntry.problems,
+      solutions: newEntry.solutions,
+      taskId: newEntry.taskId,
+      batchId: newEntry.batchId,
+      batchCode: newEntry.batchCode,
+      taskCode: newEntry.taskCode,
+      taskType: newEntry.taskType,
+      taskTypeName: newEntry.taskTypeName,
+      progress: newEntry.progress,
+      workloadHours: newEntry.workloadHours,
+      workloadDays: newEntry.workloadDays,
+      workers: newEntry.workers,
+      submitTime: newEntry.submitTime,
+      feedbackText: newEntry.feedbackText,
+    } as any);
     return newEntry;
   }, [setWorkLogs]);
 
   // 更新工单
   const updateWorkLog = useCallback((id: number, updates: Partial<WorkLogEntry>) => {
     setWorkLogs(prev => prev.map(log => log.id === id ? { ...log, ...updates } : log));
+    // 2026-06-04 V2.1 铁律改造：双写 Store
+    void useWorkLogStore.getState().updateWorkLog(String(id), updates as any);
   }, [setWorkLogs]);
 
   // 删除工单
   const deleteWorkLog = useCallback((id: number) => {
     setWorkLogs(prev => prev.filter(log => log.id !== id));
+    // 2026-06-04 V2.1 铁律改造：双写 Store
+    void useWorkLogStore.getState().deleteWorkLog(String(id));
   }, [setWorkLogs]);
 
   // 重置为初始数据

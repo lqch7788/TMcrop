@@ -27,20 +27,31 @@ export const SOURCE_TYPE_MAP: Record<string, string> = {
 };
 
 // ========== 种源来源途径映射 ==========
-export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, string> = {
-  internal_seed: '内部种源',
-  external_purchase: '外部采购',
-  self_produced: '自产',
-  commissioned: '委托生产',
-  gift: '赠送/受赠',
-  tissue_culture: '组培苗',
-  grafting: '嫁接苗',
-  seedling_split: '分株繁殖',
-  cutting: '扦插繁殖',
-  direct_seedling: '直接育苗',
-  direct_planting: '直接种植',
-  external_harvest: '外购入库',
+// V3.1 库存来源字典（与 inventory.ts 的 SourceType enum 一一对应）
+// key 同时支持短码（gift）和带后缀的（external_purchased）以兼容不同来源
+export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, { label: string; bg: string; text: string }> = {
+  internal_seed:       { label: '内部种源',     bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  external_purchase:   { label: '外部采购',     bg: 'bg-blue-100',    text: 'text-blue-700' },
+  external_purchased:  { label: '外购入库',     bg: 'bg-blue-100',    text: 'text-blue-700' },
+  external_harvest:    { label: '外购入库',     bg: 'bg-blue-100',    text: 'text-blue-700' },
+  self_produced:       { label: '自产',         bg: 'bg-orange-100',  text: 'text-orange-700' },
+  commissioned:        { label: '委托生产',     bg: 'bg-amber-100',   text: 'text-amber-700' },
+  gift:                { label: '赠送/受赠',    bg: 'bg-purple-100',  text: 'text-purple-700' },
+  transfer:            { label: '调拨入库',     bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  manual:              { label: '手动录入',     bg: 'bg-slate-100',   text: 'text-slate-700' },
+  // 老数据兼容
+  tissue_culture:      { label: '组培苗',       bg: 'bg-pink-100',    text: 'text-pink-700' },
+  grafting:            { label: '嫁接苗',       bg: 'bg-pink-100',    text: 'text-pink-700' },
+  seedling_split:      { label: '分株繁殖',     bg: 'bg-lime-100',    text: 'text-lime-700' },
+  cutting:             { label: '扦插繁殖',     bg: 'bg-lime-100',    text: 'text-lime-700' },
+  direct_seedling:     { label: '直接育苗',     bg: 'bg-teal-100',    text: 'text-teal-700' },
+  direct_planting:     { label: '直接种植',     bg: 'bg-teal-100',    text: 'text-teal-700' },
 };
+
+/** 兼容旧用法：仅返回 label（避免破坏老代码） */
+export const SOURCE_ORIGIN_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(SOURCE_ORIGIN_MAP).map(([k, v]) => [k, v.label])
+);
 
 // ========== 单位映射（英文→中文） ==========
 export const UNIT_MAP: Record<string, string> = {

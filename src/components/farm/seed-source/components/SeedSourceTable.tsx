@@ -464,7 +464,7 @@ export function SeedSourceTable({
                           )}
                         </>
                       ) : (
-                        <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin] || record.sourceOrigin || '-'}</span>
+                        <span>{SOURCE_ORIGIN_MAP[record.sourceOrigin]?.label || record.sourceOrigin || '-'}</span>
                       )}
                     </div>
                   </TableCell>

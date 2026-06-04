@@ -6,6 +6,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
+// 2026-06-04 V2.1 铁律改造：保留原 localStorage 行为，新增 useFarmOperationRecordStore 同步双写
+import { useFarmOperationRecordStore } from '../stores/useFarmOperationRecordStore';
 import { COMMON_STATUS } from '../types/farm/common';
 
 // ============================================
@@ -681,6 +683,8 @@ export function useOperationRecords(): UseOperationRecordsReturn {
     };
 
     setRecords(prev => [newRecord, ...prev]);
+    // 2026-06-04 V2.1 铁律改造：双写 Store（异步，失败不影响主流程）
+    void useFarmOperationRecordStore.getState().addRecord(newRecord as any);
     return newRecord;
   }, [setRecords]);
 
@@ -769,6 +773,8 @@ export function useOperationRecords(): UseOperationRecordsReturn {
         ? { ...record, status, updatedAt: new Date().toISOString() }
         : record
     ));
+    // 2026-06-04 V2.1 铁律改造：双写 Store
+    void useFarmOperationRecordStore.getState().updateRecord(id, { status });
   }, [setRecords]);
 
   // 获取记录
@@ -789,6 +795,8 @@ export function useOperationRecords(): UseOperationRecordsReturn {
   // 删除记录
   const deleteRecord = useCallback((id: string) => {
     setRecords(prev => prev.filter(record => record.id !== id));
+    // 2026-06-04 V2.1 铁律改造：双写 Store
+    void useFarmOperationRecordStore.getState().deleteRecord(id);
   }, [setRecords]);
 
   // 获取筛选后的记录

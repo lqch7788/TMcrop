@@ -351,8 +351,8 @@ export class InventoryService {
       const stock = await inventoryStockRepository.findByInstanceId(request.instanceId);
       if (!stock) return { success: false, error: `库存实例 ${request.instanceId} 不存在` };
 
-      const currentQty = stock.current_quantity ?? 0;
-      const frozenQty = stock.frozen_quantity ?? 0;
+      const currentQty = stock.currentQuantity ?? 0;
+      const frozenQty = stock.frozenQuantity ?? 0;
       const available = currentQty - frozenQty;
 
       if (available < request.quantity) {
@@ -375,7 +375,7 @@ export class InventoryService {
       await inventoryTransactionRepository.create({
         transaction_id: transactionId,
         instance_id: request.instanceId,
-        stock_type: stock.stock_type,
+        stock_type: stock.stockType,
         transaction_type: 'outbound',
         quantity: -request.quantity,
         balance_before: currentQty,
@@ -424,8 +424,8 @@ export class InventoryService {
   } | null> {
     const stock = await inventoryStockRepository.findByInstanceId(instanceId);
     if (!stock) return null;
-    const currentQty = stock.current_quantity ?? 0;
-    const frozenQty = stock.frozen_quantity ?? 0;
+    const currentQty = stock.currentQuantity ?? 0;
+    const frozenQty = stock.frozenQuantity ?? 0;
     return {
       instanceId,
       currentQuantity: currentQty,
@@ -474,19 +474,19 @@ export class InventoryService {
       if (!stock) continue;
 
       results.push({
-        instanceId: stock.instance_id,
-        stockType: stock.stock_type,
-        businessType: stock.business_type,
-        businessId: stock.business_id,
-        cropName: stock.crop_name,
-        varietyName: stock.variety_name,
-        quantity: stock.current_quantity,
-        inboundDate: stock.inbound_date,
-        sourceInstanceId: stock.source_instance_id,
+        instanceId: stock.instanceId,
+        stockType: stock.stockType,
+        businessType: stock.businessType,
+        businessId: stock.businessId,
+        cropName: stock.cropName,
+        varietyName: stock.varietyName,
+        quantity: stock.currentQuantity,
+        inboundDate: stock.inboundDate,
+        sourceInstanceId: stock.sourceInstanceId,
       });
 
-      if (stock.source_instance_id && !visited.has(stock.source_instance_id)) {
-        queue.push({ id: stock.source_instance_id, depth: depth + 1 });
+      if (stock.sourceInstanceId && !visited.has(stock.sourceInstanceId)) {
+        queue.push({ id: stock.sourceInstanceId, depth: depth + 1 });
       }
     }
 

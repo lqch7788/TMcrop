@@ -9,30 +9,24 @@ import { Boxes, Package, Leaf, Sprout } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '@/lib/utils';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
-import {
-  getInventoryList,
-  getInventoryStats,
-  traceUpstream,
-  traceDownstream,
-  deleteInventoryBatch,
-} from '../services/inventoryService';
+// 一次性动作（"非持久化数据"）：按修订后铁律直接调 service
+import { getInventoryList, getInventoryStats, deleteInventoryBatch } from '../services/inventoryService';
 import { useInventoryStore } from '../stores';
 import {
   StockType,
   SourceType,
   InventoryStatus,
   InventoryStock,
-  TraceResult,
-  DownstreamTraceResult,
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
+import { AddStockModal } from '../components/farm/inventory/AddStockModal';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 import { InventoryStats } from '../components/farm/inventory/InventoryStats';
 import { InventoryStockTypeCards } from '../components/farm/inventory/InventoryStockTypeCards';
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
 import { InventoryTable } from '../components/farm/inventory/InventoryTable';
-import { InventoryTraceModal } from '../components/farm/inventory/InventoryTraceModal';
+import { InventoryDetailModal } from '../components/farm/inventory/InventoryDetailModal';
 
 export default function InventoryV3Page() {
   // 数据状态
@@ -58,12 +52,9 @@ export default function InventoryV3Page() {
   // 弹窗状态
   const [outboundModalOpen, setOutboundModalOpen] = useState(false);
   const [selectedOutboundStock, setSelectedOutboundStock] = useState<InventoryStock | null>(null);
-  const [traceModalOpen, setTraceModalOpen] = useState(false);
-  const [traceStock, setTraceStock] = useState<InventoryStock | null>(null);
-  const [traceData, setTraceData] = useState<{
-    upstream: TraceResult[];
-    downstream: DownstreamTraceResult[];
-  } | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
 
   // 批量操作状态（与 ActionToolbar 协同）
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -131,7 +122,7 @@ export default function InventoryV3Page() {
 
   // ===== 操作按钮处理 =====
   const handleAdd = () => {
-    showAlert('库存数据来源于采收入库 / 采购入库，请前往对应页面新增。');
+    setAddModalOpen(true);
   };
 
   const handleBatchEdit = () => {
@@ -262,21 +253,10 @@ export default function InventoryV3Page() {
     loadData();
   };
 
-  // 打开追溯弹窗
-  const handleOpenTrace = async (stock: InventoryStock) => {
-    setTraceStock(stock);
-    setTraceModalOpen(true);
-    setTraceData(null);
-    try {
-      const [upstream, downstream] = await Promise.all([
-        traceUpstream(stock.instanceId),
-        traceDownstream(stock.instanceId),
-      ]);
-      setTraceData({ upstream, downstream });
-    } catch (error) {
-      console.error('[InventoryV3] 加载追溯链失败:', error);
-      setTraceData({ upstream: [], downstream: [] });
-    }
+  // 打开详情弹窗（合并原"追溯"功能）
+  const handleViewDetail = (stock: InventoryStock) => {
+    setDetailStock(stock);
+    setDetailModalOpen(true);
   };
 
   return (
@@ -399,7 +379,7 @@ export default function InventoryV3Page() {
         pagination={pagination}
         onChange={setPagination}
         onOutbound={handleOpenOutbound}
-        onTrace={handleOpenTrace}
+        onViewDetail={handleViewDetail}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}
         showCheckboxes={batchEditMode || deleteMode || exportMode}
@@ -416,16 +396,19 @@ export default function InventoryV3Page() {
         />
       )}
 
-      {/* 追溯弹窗 */}
-      <InventoryTraceModal
-        isOpen={traceModalOpen}
-        stock={traceStock}
-        upstream={traceData?.upstream || []}
-        downstream={traceData?.downstream || []}
+      {/* 新建入库弹窗（支持外购/赠送/委托/调拨/手动等） */}
+      <AddStockModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+      />
+
+      {/* 详情弹窗（合并原"追溯"功能） */}
+      <InventoryDetailModal
+        isOpen={detailModalOpen}
+        stock={detailStock}
         onClose={() => {
-          setTraceModalOpen(false);
-          setTraceStock(null);
-          setTraceData(null);
+          setDetailModalOpen(false);
+          setDetailStock(null);
         }}
       />
     </div>

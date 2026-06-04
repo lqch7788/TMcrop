@@ -300,7 +300,14 @@
       "Bash(grep -rn \"\\\\\\\\.stage\\\\\\\\b\\\\\\\\|stage:\" \"src/\")",
       "Bash(echo \"FRONTEND_EXIT=$?\")",
       "Bash(echo \"BACKEND_EXIT=$?\")",
-      "Bash(xargs wc -l)"
+      "Bash(xargs wc -l)",
+      "Bash(openspec new *)",
+      "Bash(openspec instructions *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(rm \"D:\\\\test_root_write.tmp\")",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "WebSearch",
+      "Bash(mcp__codegraph__codegraph_explore *)"
     ]
   }
 }

@@ -29,6 +29,8 @@ import approvalRouter from './approval';
 import approvalLinkageRouter from './approvalLinkage';
 import operationLogRouter from './operationLog';
 import workLogRouter from './workLog';
+import reminderRouter from './reminder';
+import farmOperationRecordsRouter from './farmOperationRecords';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
 import techSolutionRouter from './techSolution';
@@ -188,6 +190,8 @@ router.use('/operation-logs', requireAuth, operationLogRouter);
 
 // 工作日志路由 - 需要认证
 router.use('/work-logs', requireAuth, workLogRouter);
+router.use('/reminders', requireAuth, reminderRouter);
+router.use('/farm-operation-records', requireAuth, farmOperationRecordsRouter);
 
 // 订单路由 - 需要认证
 router.use('/crop-orders', requireAuth, cropOrderRouter);

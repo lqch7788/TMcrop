@@ -31,12 +31,20 @@ export enum StockType {
   PRODUCT = 'product',
 }
 
-/** 来源类型（自产/外购） */
+/** 来源类型（入库途径） */
 export enum SourceType {
-  /** 自产 */
+  /** 自产（采收入库） */
   SELF_PRODUCED = 'self_produced',
-  /** 外购 */
+  /** 外购（外部采购入库） */
   EXTERNAL_PURCHASED = 'external_purchased',
+  /** 赠送/受赠 */
+  GIFT = 'gift',
+  /** 委托生产 */
+  COMMISSIONED = 'commissioned',
+  /** 调拨（从其他基地/仓库调入） */
+  TRANSFER = 'transfer',
+  /** 手动新建（盘点/期初/其他） */
+  MANUAL = 'manual',
 }
 
 /** 库存交易类型 */
@@ -67,6 +75,8 @@ export enum BusinessType {
   HARVEST = 'harvest',
   /** 采购入库 */
   PURCHASE = 'purchase',
+  /** 手动新建（无上游业务单据） */
+  MANUAL = 'manual',
   /** 其他 */
   OTHER = 'other',
 }

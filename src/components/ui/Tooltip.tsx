@@ -11,6 +11,10 @@ export interface TooltipProps {
   position?: 'top' | 'bottom' | 'left' | 'right'
   delay?: number
   className?: string
+  /** 多行模式：内容超宽自动换行（默认 false 单行） */
+  multiline?: boolean
+  /** 多行模式下的最大宽度（px），默认 320 */
+  maxWidth?: number
 }
 
 const Tooltip: React.FC<TooltipProps> = ({
@@ -18,7 +22,9 @@ const Tooltip: React.FC<TooltipProps> = ({
   children,
   position = 'top',
   delay = 200,
-  className
+  className,
+  multiline = false,
+  maxWidth = 320,
 }) => {
   const [isVisible, setIsVisible] = React.useState(false)
   const timeoutRef = React.useRef<NodeJS.Timeout>()
@@ -71,21 +77,25 @@ const Tooltip: React.FC<TooltipProps> = ({
       {isVisible && (
         <div
           className={cn(
-            "absolute z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap",
+            "absolute z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg",
+            multiline ? "" : "whitespace-nowrap",
             "animate-in fade-in zoom-in-95 duration-150",
             positionClasses[position],
             className
           )}
+          style={multiline ? { maxWidth, width: 'max-content' } : undefined}
           role="tooltip"
         >
           {content}
-          {/* 箭头 */}
-          <div
-            className={cn(
-              "absolute w-0 h-0 border-4",
-              arrowClasses[position]
-            )}
-          />
+          {/* 箭头（多行模式不显示，避免与换行错位） */}
+          {!multiline && (
+            <div
+              className={cn(
+                "absolute w-0 h-0 border-4",
+                arrowClasses[position]
+              )}
+            />
+          )}
         </div>
       )}
     </div>

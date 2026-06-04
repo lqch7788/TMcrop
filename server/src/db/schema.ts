@@ -3121,6 +3121,79 @@ export function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_work_logs_greenhouse ON work_logs(greenhouse)`);
   } catch (e) {}
 
+  // ========== 2026-06-04: 催办记录表（农事管理 useReminder 改造新增） ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reminders (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      task_code TEXT,
+      task_title TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      reminder_type TEXT DEFAULT 'urge',
+      urgency TEXT DEFAULT 'normal',
+      message TEXT,
+      status TEXT DEFAULT 'pending',
+      create_time TEXT NOT NULL,
+      complete_time TEXT
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_reminders_task ON reminders(task_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_reminders_status ON reminders(status)`);
+  } catch (e) {}
+
+  // ========== 2026-06-04: 农事操作综合记录表（农事管理 useOperationRecords 改造新增）==========
+  // 重要：与老表 task_operation_records 并存，不取代（字段语义/聚合层级不匹配）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS farm_operation_records (
+      id TEXT PRIMARY KEY,
+      record_code TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      source_id TEXT,
+      source_code TEXT,
+      operation_type TEXT NOT NULL,
+      operation_type_name TEXT,
+      status TEXT,
+      greenhouse_id TEXT,
+      greenhouse_name TEXT,
+      crop_name TEXT,
+      variety TEXT,
+      batch_id TEXT,
+      batch_code TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      operation_date TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      duration REAL,
+      workload REAL,
+      workload_days REAL,
+      workload_hours REAL,
+      workers INTEGER,
+      unit TEXT,
+      materials TEXT,
+      gps_location TEXT,
+      photos_before TEXT,
+      photos_after TEXT,
+      voice_note TEXT,
+      material_code TEXT,
+      remarks TEXT,
+      progress INTEGER,
+      progress_increment INTEGER,
+      area TEXT,
+      children TEXT,
+      reject_reason TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT
+    )
+  `);
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_farm_op_records_source ON farm_operation_records(source_type, source_id)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_farm_op_records_status ON farm_operation_records(status)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_farm_op_records_date ON farm_operation_records(operation_date)`);
+  } catch (e) {}
+
   // 创建索引
   try {
     createIndexes();

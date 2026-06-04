@@ -5701,6 +5701,60 @@ export function exportDatabase() {
   seedInboundRecords();
   seedInventoryStock();
 
+  // 2026-06-04: 农事管理 workLog 数据迁移（V2.1 铁律改造）
+  // 前端 usePersistentWorkLogs.ts INITIAL_WORK_LOGS 7 条同步到后端
+  seedWorkLogInitialData();
+
   saveDatabase();
   console.log('数据库种子数据导入完成');
+}
+
+/**
+ * workLog 初始数据迁移
+ * 数据源：前端 usePersistentWorkLogs.ts INITIAL_WORK_LOGS（7 条 mock）
+ * 行为：先 count 检查 → 有数据跳过；无则插入 7 条
+ * 注：用户要求"先把老数据导入到后端作为种子数据"，此函数启动时自动跑
+ */
+function seedWorkLogInitialData() {
+  const db = getDatabase();
+  const existing = db.exec('SELECT COUNT(*) as count FROM work_logs');
+  const count = Number(existing[0]?.values[0]?.[0]) || 0;
+  if (count > 0) {
+    console.log(`[seedData] work_logs 已有 ${count} 条数据，跳过种子迁移`);
+    return;
+  }
+
+  // 与前端 src/hooks/usePersistentWorkLogs.ts INITIAL_WORK_LOGS 完全一致
+  const INITIAL_WORK_LOGS = [
+    { id: 'wl_seed_001', code: 'WL20260314001', date: '2026-03-14', worker: '郭靖', weather: '晴', temperature: '25°C', crop: '番茄', greenhouse: '1号棚', growth_status: '良好', tasks: '番茄授粉工作', problems: '无', solutions: '-', task_id: 'T001', batch_id: 'B001', batch_code: 'FQ2026-001', task_code: 'RW-20260301-001', task_type: 'spraying', task_type_name: '施肥', progress: 100, workload_hours: 6, workload_days: 1, workers: 2, submit_time: '2026-03-14T17:30:00Z', feedback_text: '已完成全部授粉任务' },
+    { id: 'wl_seed_002', code: 'WL20260314002', date: '2026-03-14', worker: '杨过', weather: '晴', temperature: '26°C', crop: '黄瓜', greenhouse: '2号棚', growth_status: '良好', tasks: '黄瓜施肥和病虫害防治', problems: '发现少量蚜虫', solutions: '已喷洒吡虫啉', task_id: 'T002', batch_id: 'B002', batch_code: 'FQ2026-002', task_code: 'RW-20260302-001', task_type: 'fertilizing', task_type_name: '施肥', progress: 80, workload_hours: 8, workload_days: 1, workers: 1, submit_time: '2026-03-14T18:00:00Z', feedback_text: '发现蚜虫已处理，整体进度80%' },
+    { id: 'wl_seed_003', code: 'WL20260314003', date: '2026-03-14', worker: '张无忌', weather: '晴', temperature: '24°C', crop: '草莓', greenhouse: '3号棚', growth_status: '一般', tasks: '草莓疏果和浇水', problems: '部分叶片发黄', solutions: '补充氮肥', task_id: 'T003', batch_id: 'B003', batch_code: 'FQ2026-003', task_code: 'RW-20260303-001', task_type: 'pruning', task_type_name: '修剪', progress: 60, workload_hours: 5, workload_days: 1, workers: 1, submit_time: '2026-03-14T16:45:00Z', feedback_text: '叶片发黄已补充氮肥' },
+    { id: 'wl_seed_004', code: 'WL20260313001', date: '2026-03-13', worker: '令狐冲', weather: '多云', temperature: '22°C', crop: '番茄', greenhouse: '1号棚', growth_status: '良好', tasks: '番茄整枝和授粉', problems: '无', solutions: '-', task_id: 'T001', batch_id: 'B001', batch_code: 'FQ2026-001', task_code: 'RW-20260228-001', task_type: 'pruning', task_type_name: '修剪', progress: 100, workload_hours: 7, workload_days: 1, workers: 2, submit_time: '2026-03-13T17:00:00Z', feedback_text: '整枝授粉完成' },
+    { id: 'wl_seed_005', code: 'WL20260313002', date: '2026-03-13', worker: '段誉', weather: '多云', temperature: '23°C', crop: '辣椒', greenhouse: '4号棚', growth_status: '良好', tasks: '辣椒浇水施肥', problems: '无', solutions: '-', task_id: 'T005', batch_id: 'B005', batch_code: 'FQ2026-005', task_code: 'RW-20260305-001', task_type: 'irrigation', task_type_name: '灌溉', progress: 100, workload_hours: 4, workload_days: 1, workers: 1, submit_time: '2026-03-13T15:30:00Z', feedback_text: '浇水施肥已完成' },
+    { id: 'wl_seed_006', code: 'WL20260312001', date: '2026-03-12', worker: '黄蓉', weather: '阴', temperature: '20°C', crop: '生菜', greenhouse: '5号棚', growth_status: '良好', tasks: '生菜采收清洗', problems: '无', solutions: '-', task_id: 'T004', batch_id: 'B004', batch_code: 'FQ2026-004', task_code: 'RW-20260306-001', task_type: 'harvesting', task_type_name: '采收', progress: 100, workload_hours: 10, workload_days: 2, workers: 3, submit_time: '2026-03-12T18:30:00Z', feedback_text: '生菜采收完毕，共200kg' },
+    { id: 'wl_seed_007', code: 'WL20260312002', date: '2026-03-12', worker: '陈家洛', weather: '阴', temperature: '21°C', crop: '菠菜', greenhouse: '6号棚', growth_status: '一般', tasks: '菠菜除草浇水', problems: '发现蜗牛', solutions: '已撒石灰驱除', task_id: null, batch_id: 'B006', batch_code: 'FQ2026-006', task_code: 'RW-20260307-001', task_type: 'weeding', task_type_name: '除草', progress: 45, workload_hours: 3, workload_days: 1, workers: 1, submit_time: '2026-03-12T14:20:00Z', feedback_text: '发现蜗牛，已用石灰处理' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO work_logs (
+      id, code, date, worker, weather, temperature, crop, greenhouse, growth_status,
+      tasks, problems, solutions,
+      task_id, batch_id, batch_code, task_code, task_type, task_type_name,
+      progress, workload_hours, workload_days, workers, submit_time, feedback_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const now = new Date().toISOString();
+  for (const log of INITIAL_WORK_LOGS) {
+    stmt.run([
+      log.id, log.code, log.date, log.worker, log.weather, log.temperature, log.crop, log.greenhouse, log.growth_status,
+      log.tasks, log.problems, log.solutions,
+      log.task_id, log.batch_id, log.batch_code, log.task_code, log.task_type, log.task_type_name,
+      log.progress, log.workload_hours, log.workload_days, log.workers, log.submit_time, log.feedback_text,
+    ]);
+    // 同步写 created_at / updated_at（schema 默认无值，迁就一下）
+    db.run('UPDATE work_logs SET created_at = ?, updated_at = ? WHERE id = ?', [now, now, log.id]);
+  }
+  stmt.free();
+  console.log(`[seedData] workLog 种子数据已迁移: ${INITIAL_WORK_LOGS.length} 条`);
 }
