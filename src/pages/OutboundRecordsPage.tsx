@@ -24,7 +24,6 @@ import {
 } from '@/services/inventoryTransactionService';
 import {
   OutboundRecordsStats,
-  OutboundRecordsStockTypeCards,
   OutboundRecordsFilter,
   OutboundRecordsTable,
 } from '@/components/farm/inventory/OutboundRecordsComponents';
@@ -117,11 +116,8 @@ export default function OutboundRecordsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 顶部：4 个紧凑型统计卡 */}
+      {/* 顶部：7 个紧凑型卡片（4 数值 + 3 分类）同一行 */}
       <OutboundRecordsStats summary={summary} loading={loading} />
-
-      {/* 分类汇总（复用作物库存 InventoryStockTypeCards） */}
-      <OutboundRecordsStockTypeCards byStockType={summary?.byStockType ?? {}} loading={loading} />
 
       {/* 6 维筛选 */}
       <OutboundRecordsFilter value={query} onChange={handleFilterChange} onReset={handleReset} />

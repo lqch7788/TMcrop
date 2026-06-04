@@ -26,9 +26,6 @@ import {
   getPlantingModeLabel,
 } from '../../../constants/cropConstants';
 
-// 复用作物库存的"分类汇总"紧凑型组件（组件模式 — 不重复造轮子）
-export { InventoryStockTypeCards as OutboundRecordsStockTypeCards } from './InventoryStockTypeCards';
-
 // ============ 1. Stats 4 卡 ============
 
 interface OutboundRecordsStatsProps {
@@ -52,32 +49,71 @@ const BUSINESS_TYPE_META: Record<string, { label: string; color: string }> = {
 };
 
 export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsProps) {
-  // 紧凑型（对齐作物库存 InventoryStats 风格：小图标 + 小 padding + lucide 图标）
-  const cards = [
+  // V3.1 用户调整：7 个卡（4 数值 + 3 分类）强制同一行
+  // 数据全部从 props 传入（summary），**不硬编码**任何 mock 数据
+  const numberCards = [
     { label: '总条数',       value: summary?.totalCount ?? 0,     color: 'bg-blue-500',   Icon: ClipboardList },
     { label: '总出库量',     value: summary?.totalQuantity ?? 0,  color: 'bg-emerald-500', Icon: Box },
     { label: '今日出库次数', value: summary?.todayCount ?? 0,     color: 'bg-orange-500',  Icon: Clock },
     { label: '品种数',       value: Object.keys(summary?.byStockType ?? {}).length, color: 'bg-purple-500', Icon: Sprout },
   ];
+  // 3 个类型卡（从 byStockType 取数，不硬编码）
+  const typeCards = [
+    { key: 'seed',     label: '种源', color: 'amber',   data: summary?.byStockType?.seed     || { count: 0, quantity: 0 } },
+    { key: 'seedling', label: '种苗', color: 'green',   data: summary?.byStockType?.seedling || { count: 0, quantity: 0 } },
+    { key: 'product',  label: '成品', color: 'emerald', data: summary?.byStockType?.product  || { count: 0, quantity: 0 } },
+  ];
+  const typeColorMap: Record<string, { text: string; bg: string }> = {
+    amber:   { text: 'text-amber-700',   bg: 'bg-amber-100' },
+    green:   { text: 'text-green-700',   bg: 'bg-green-100' },
+    emerald: { text: 'text-emerald-700', bg: 'bg-emerald-100' },
+  };
   return (
-    // V3.1 用户调整：4 个统计卡强制同一行（grid-cols-4 不受屏幕宽度影响）
-    <div className="grid grid-cols-4 gap-3">
-      {cards.map((card, i) => {
+    // 7 个卡同一行：grid-cols-7 强制 7 列（小屏可滚动 overflow-x-auto）
+    <div className="grid grid-cols-7 gap-2 overflow-x-auto">
+      {/* 4 个数值卡（带图标） */}
+      {numberCards.map((card, i) => {
         const IconComponent = card.Icon;
         return (
           <div
-            key={i}
-            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            key={`n-${i}`}
+            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className={`w-7 h-7 rounded-md ${card.color} flex items-center justify-center shrink-0`}>
                 <IconComponent className="w-3.5 h-3.5 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight">
+                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight truncate">
                   {loading ? '…' : card.value.toLocaleString()}
                 </p>
-                <p className="text-[11px] text-gray-500 leading-tight">{card.label}</p>
+                <p className="text-[11px] text-gray-500 leading-tight truncate">{card.label}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {/* 3 个类型卡（无图标，纯色 chip 风格） */}
+      {typeCards.map((t) => {
+        const c = typeColorMap[t.color];
+        return (
+          <div
+            key={t.key}
+            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow min-w-0"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-7 h-7 rounded-md ${c.bg} flex items-center justify-center shrink-0`}>
+                <span className={`text-sm font-bold ${c.text}`}>
+                  {t.label.charAt(0)}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight truncate">
+                  {loading ? '…' : t.data.count.toLocaleString()}
+                </p>
+                <p className="text-[11px] text-gray-500 leading-tight truncate">
+                  {t.label} · {loading ? '…' : t.data.quantity.toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
