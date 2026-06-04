@@ -3,10 +3,10 @@
  * 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md §7
  *
  * 组件模式：每个组件独立 export，按 props 解耦
- * - OutboundRecordsStats:           4 个统计卡
- * - OutboundRecordsStockTypeCards:  3 个库存类型卡
+ * - OutboundRecordsStats:           4 个紧凑型统计卡
+ * - (OutboundRecordsStockTypeCards 复用作物库存 InventoryStockTypeCards)
  * - OutboundRecordsFilter:          6 维筛选 + 时间范围
- * - OutboundRecordsTable:           18 列数据表（19 列含操作）
+ * - OutboundRecordsTable:           15 列数据表（含操作）
  *
  * 数据全部从 props 传入，**不硬编码**任何业务数据
  * 字典码 → 中文从 cropConstants.ts 复用映射
@@ -16,7 +16,7 @@ import React, { useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Input, Select } from '../../ui/Modal';
 import { Pagination } from '../../ui/Pagination';
-import { Eye } from 'lucide-react';
+import { Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
 import {
   OutboundRow,
   OutboundSummary,
@@ -24,8 +24,10 @@ import {
 } from '../../../services/inventoryTransactionService';
 import {
   getPlantingModeLabel,
-  SOURCE_ORIGIN_MAP, // 实际不用 — 库存类型用 stockType badge
 } from '../../../constants/cropConstants';
+
+// 复用作物库存的"分类汇总"紧凑型组件（组件模式 — 不重复造轮子）
+export { InventoryStockTypeCards as OutboundRecordsStockTypeCards } from './InventoryStockTypeCards';
 
 // ============ 1. Stats 4 卡 ============
 
@@ -50,58 +52,31 @@ const BUSINESS_TYPE_META: Record<string, { label: string; color: string }> = {
 };
 
 export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsProps) {
+  // 紧凑型（对齐作物库存 InventoryStats 风格：小图标 + 小 padding + lucide 图标）
   const cards = [
-    { label: '总条数',       value: summary?.totalCount ?? 0,     color: 'bg-blue-500',   icon: '📋' },
-    { label: '总出库量',     value: summary?.totalQuantity ?? 0,  color: 'bg-emerald-500', icon: '📦' },
-    { label: '今日出库次数', value: summary?.todayCount ?? 0,     color: 'bg-orange-500',  icon: '⏱️' },
-    { label: '品种数',       value: Object.keys(summary?.byStockType ?? {}).length, color: 'bg-purple-500', icon: '🌾' },
+    { label: '总条数',       value: summary?.totalCount ?? 0,     color: 'bg-blue-500',   Icon: ClipboardList },
+    { label: '总出库量',     value: summary?.totalQuantity ?? 0,  color: 'bg-emerald-500', Icon: Box },
+    { label: '今日出库次数', value: summary?.todayCount ?? 0,     color: 'bg-orange-500',  Icon: Clock },
+    { label: '品种数',       value: Object.keys(summary?.byStockType ?? {}).length, color: 'bg-purple-500', Icon: Sprout },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card, i) => (
-        <div key={i} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg ${card.color} flex items-center justify-center text-white text-sm`}>
-              {card.icon}
-            </div>
-            <div>
-              <p className="text-xl font-bold text-gray-900">{loading ? '…' : card.value.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">{card.label}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============ 2. 3 个库存类型卡 ============
-
-interface OutboundRecordsStockTypeCardsProps {
-  byStockType: Record<string, { count: number; quantity: number }>;
-  loading: boolean;
-}
-
-export function OutboundRecordsStockTypeCards({ byStockType, loading }: OutboundRecordsStockTypeCardsProps) {
-  const types = ['seed', 'seedling', 'product'] as const;
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {types.map(t => {
-        const info = STOCK_TYPE_LABEL[t];
-        const data = byStockType[t] || { count: 0, quantity: 0 };
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {cards.map((card, i) => {
+        const IconComponent = card.Icon;
         return (
-          <div key={t} className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div
+            key={i}
+            className="bg-white rounded-lg p-2 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          >
             <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-lg ${info.color} flex items-center justify-center text-white`}>
-                {info.icon}
+              <div className={`w-7 h-7 rounded-md ${card.color} flex items-center justify-center shrink-0`}>
+                <IconComponent className="w-3.5 h-3.5 text-white" />
               </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">
-                  {loading ? '…' : data.count}
+              <div className="min-w-0">
+                <p className="text-base font-bold text-gray-900 tabular-nums leading-tight">
+                  {loading ? '…' : card.value.toLocaleString()}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {info.label} · {loading ? '…' : data.quantity.toLocaleString()}
-                </p>
+                <p className="text-[11px] text-gray-500 leading-tight">{card.label}</p>
               </div>
             </div>
           </div>
@@ -110,6 +85,10 @@ export function OutboundRecordsStockTypeCards({ byStockType, loading }: Outbound
     </div>
   );
 }
+
+// ============ 2. 3 个库存类型卡 ============
+
+// OutboundRecordsStockTypeCards 已在文件顶部 re-export 复用作物库存 InventoryStockTypeCards
 
 // ============ 3. 6 维筛选 ============
 
