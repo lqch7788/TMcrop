@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -79,7 +79,7 @@ export async function getVarietyById(id: string): Promise<CropVariety | undefine
 
 /**
  * 创建品种
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createVariety(data: Partial<CropVariety>): Promise<string> {
   const snakeData = camelToSnake(data as Record<string, unknown>);
@@ -89,7 +89,7 @@ export async function createVariety(data: Partial<CropVariety>): Promise<string>
 
 /**
  * 更新品种
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateVariety(id: string, data: Partial<CropVariety>): Promise<string | null> {
   const snakeData = camelToSnake(data as Record<string, unknown>);
@@ -99,7 +99,7 @@ export async function updateVariety(id: string, data: Partial<CropVariety>): Pro
 
 /**
  * 删除品种
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteVariety(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/crop-varieties/${id}`);

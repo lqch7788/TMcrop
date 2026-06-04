@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -211,7 +211,7 @@ export async function generateSeedlingCodeByDate(date: Date | string): Promise<s
 
 /**
  * 创建育苗记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  *
  * 注意：前端使用 camelCase，后端期望 snake_case，需要转换
  */
@@ -250,7 +250,7 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
 
 /**
  * 更新育苗记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSeedling(id: string, updates: Partial<Seedling>): Promise<Seedling | null> {
   const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, updates);
@@ -259,7 +259,7 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
 
 /**
  * 删除育苗记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSeedling(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/seedlings/${id}`);
@@ -268,7 +268,7 @@ export async function deleteSeedling(id: string): Promise<boolean> {
 
 /**
  * 批量删除育苗记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSeedlings(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/seedlings/batch?ids=${ids.join(',')}`);
@@ -277,7 +277,7 @@ export async function deleteSeedlings(ids: string[]): Promise<boolean> {
 
 /**
  * 添加每日记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecord, 'id' | 'seedlingId'>): Promise<DailyRecord | null> {
   try {
@@ -289,7 +289,7 @@ export async function addDailyRecord(seedlingId: string, record: Omit<DailyRecor
 
 /**
  * 删除每日记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteDailyRecord(seedlingId: string, recordId: string): Promise<boolean> {
   await enhancedApiClient.delete(`/seedlings/${seedlingId}/daily-records/${recordId}`);
@@ -298,7 +298,7 @@ export async function deleteDailyRecord(seedlingId: string, recordId: string): P
 
 /**
  * 更新每日记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateDailyRecord(seedlingId: string, recordId: string, updates: Partial<DailyRecord>): Promise<boolean> {
   await enhancedApiClient.put(`/seedlings/${seedlingId}/daily-records/${recordId}`, updates);
@@ -307,7 +307,7 @@ export async function updateDailyRecord(seedlingId: string, recordId: string, up
 
 /**
  * 增加定植数量
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function increasePlantedCount(id: string, count: number): Promise<boolean> {
   await enhancedApiClient.post(`/seedlings/${id}/increase-planted`, { count });
@@ -358,7 +358,7 @@ export async function generateLabelNumber(seedlingCode: string, index: number): 
 
 /**
  * 打印标签
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function printLabel(
   seedlingId: string,
@@ -381,7 +381,7 @@ export async function printLabel(
 
 /**
  * 批量打印标签
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function batchPrintLabel(seedlingIds: string[], operator: string): Promise<PrintRecord[]> {
   try {
@@ -405,7 +405,7 @@ export async function getPrintRecords(seedlingId: string): Promise<PrintRecord[]
 
 /**
  * 更新打印记录标签编号
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updatePrintRecordLabelNumbers(seedlingId: string, printRecordId: string, labelNumbers: string[]): Promise<boolean> {
   await enhancedApiClient.put(`/seedlings/${seedlingId}/print-records/${printRecordId}`, { labelNumbers });
@@ -416,7 +416,7 @@ export async function updatePrintRecordLabelNumbers(seedlingId: string, printRec
 
 /**
  * 添加栽种记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTransplantRecord(seedlingId: string, record: Omit<TransplantRecord, 'id' | 'createTime'>): Promise<TransplantRecord | null> {
   try {
@@ -440,7 +440,7 @@ export async function getTransplantRecords(seedlingId: string): Promise<Transpla
 
 /**
  * 更新栽种记录状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTransplantRecordStatus(
   seedlingId: string,
@@ -455,7 +455,7 @@ export async function updateTransplantRecordStatus(
 
 /**
  * 添加栽种履历
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTransplantHistoryItem(
   seedlingId: string,
@@ -495,7 +495,7 @@ export async function getLabelTransplantHistory(seedlingId: string, labelNumber:
 
 /**
  * 更新标签状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateLabelStatus(
   seedlingId: string,

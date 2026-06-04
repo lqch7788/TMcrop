@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -73,7 +73,7 @@ export async function getPositionById(id: string): Promise<Position | null> {
 
 /**
  * 创建职位
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createPosition(position: CreatePositionParams): Promise<Position> {
   return await enhancedApiClient.post<Position>('/basic-data/positions', position);
@@ -81,7 +81,7 @@ export async function createPosition(position: CreatePositionParams): Promise<Po
 
 /**
  * 更新职位
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updatePosition(id: string, updates: UpdatePositionParams): Promise<Position | null> {
   const result = await enhancedApiClient.put<Position>(`/basic-data/positions/${id}`, updates);
@@ -90,7 +90,7 @@ export async function updatePosition(id: string, updates: UpdatePositionParams):
 
 /**
  * 删除职位（软删除）
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deletePosition(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/basic-data/positions/${id}`);
@@ -99,7 +99,7 @@ export async function deletePosition(id: string): Promise<boolean> {
 
 /**
  * 批量删除职位（软删除）
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deletePositions(ids: string[]): Promise<boolean> {
   await enhancedApiClient.post('/basic-data/positions/batch-delete', { ids });

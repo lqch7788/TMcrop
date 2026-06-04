@@ -194,7 +194,7 @@ export const useLeaveStore = create<LeaveState>()(
           const normalized = (Array.isArray(data) ? data : []).map(normalize);
           set({ leaveRecords: normalized, isLoading: false });
         } catch (error) {
-          console.warn('[LeaveStore] API获取失败，使用本地缓存:', error);
+          console.warn('[LeaveStore] API获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -220,7 +220,7 @@ export const useLeaveStore = create<LeaveState>()(
           set((state) => ({ leaveRecords: [newItem, ...state.leaveRecords] }));
           return newItem;
         } catch (error) {
-          console.warn('[LeaveStore] 创建请假记录失败，已加入离线队列:', error);
+          console.warn('[LeaveStore] 创建请假记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -252,7 +252,7 @@ export const useLeaveStore = create<LeaveState>()(
         try {
           await enhancedApiClient.put(`/leave/${id}`, body);
         } catch (error) {
-          console.warn('[LeaveStore] 更新请假记录失败，已加入离线队列:', error);
+          console.warn('[LeaveStore] 更新请假记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
         }
       },
 
@@ -266,7 +266,7 @@ export const useLeaveStore = create<LeaveState>()(
           await enhancedApiClient.delete(`/leave/${id}`);
           return true;
         } catch (error) {
-          console.warn('[LeaveStore] 删除请假记录失败，已加入离线队列:', error);
+          console.warn('[LeaveStore] 删除请假记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           return false;
         }
       },

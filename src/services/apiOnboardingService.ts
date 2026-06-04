@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -128,7 +128,7 @@ export async function getOnboardingById(id: string): Promise<OnboardingRecord | 
 
 /**
  * 创建入职记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createOnboardingRecord(record: CreateOnboardingParams): Promise<OnboardingRecord> {
   return await enhancedApiClient.post<OnboardingRecord>('/onboarding', record);
@@ -136,7 +136,7 @@ export async function createOnboardingRecord(record: CreateOnboardingParams): Pr
 
 /**
  * 更新入职记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateOnboardingRecord(id: string, updates: UpdateOnboardingParams): Promise<OnboardingRecord | null> {
   const result = await enhancedApiClient.put<{ id: string }>(`/onboarding/${id}`, updates);
@@ -145,7 +145,7 @@ export async function updateOnboardingRecord(id: string, updates: UpdateOnboardi
 
 /**
  * 删除入职记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteOnboardingRecord(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/onboarding/${id}`);
@@ -154,7 +154,7 @@ export async function deleteOnboardingRecord(id: string): Promise<boolean> {
 
 /**
  * 批量删除入职记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteOnboardingRecords(ids: string[]): Promise<boolean> {
   await enhancedApiClient.post('/onboarding/batch-delete', { ids });
@@ -163,7 +163,7 @@ export async function deleteOnboardingRecords(ids: string[]): Promise<boolean> {
 
 /**
  * 更新入职状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateOnboardingStatus(id: string, params: UpdateStatusParams): Promise<boolean> {
   await enhancedApiClient.post(`/onboarding/${id}/status`, params);

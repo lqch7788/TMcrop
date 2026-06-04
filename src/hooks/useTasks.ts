@@ -2,7 +2,7 @@
  * 统一任务管理 Hook
  * 管理农事任务的增删改查、状态流转、超时检测、催办等
  *
- * 数据层：所有数据通过 API 直接读写数据库，无本地缓存降级
+ * 数据层：所有数据通过 API 直接读写数据库（V2.1 铁律）
  * - 农事任务：farmTaskStore (Zustand) → enhancedApiClient → API → DB
  * - 临时任务：useTempTaskStore (Zustand) → enhancedApiClient → API → DB
  * - 巡查记录：useInspectionDataStore (Zustand)
@@ -692,7 +692,7 @@ export function useTasks(): UseTasksReturn {
       sourceCode: (taskData as any).sourceCode || '',
     };
 
-    // 使用 farmTaskStore 的 addTask（乐观本地更新 + API 同步 + 离线队列）
+    // 使用 farmTaskStore 的 addTask（V2.1 铁律：API 直连）
     // 注意：addTask 内部先做乐观本地更新（同步），再做 API 调用（异步）
     // 因此调用后 store 状态已立即更新，可以从 getState().tasks[0] 读取新任务
     useFarmTaskStore.getState().addTask(apiTaskData).then(s => {

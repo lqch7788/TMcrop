@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -52,7 +52,7 @@ export async function getWorkers(filters?: EmployeeFilter): Promise<Worker[]> {
 
 /**
  * 创建员工
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createWorker(worker: CreateEmployeeParams): Promise<Employee> {
   const result = await enhancedApiClient.post<Employee>('/labor/workers', worker);
@@ -61,7 +61,7 @@ export async function createWorker(worker: CreateEmployeeParams): Promise<Employ
 
 /**
  * 更新员工信息
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateWorker(id: string, updates: UpdateEmployeeParams): Promise<Employee | null> {
   const result = await enhancedApiClient.put<Employee>(`/labor/workers/${id}`, updates);
@@ -70,7 +70,7 @@ export async function updateWorker(id: string, updates: UpdateEmployeeParams): P
 
 /**
  * 删除员工
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteWorker(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/labor/workers/${id}`);
@@ -79,7 +79,7 @@ export async function deleteWorker(id: string): Promise<boolean> {
 
 /**
  * 批量删除员工
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteWorkers(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/labor/workers/batch?ids=${ids.join(',')}`);
@@ -151,7 +151,7 @@ export async function getLeftWorkers(): Promise<Worker[]> {
 
 /**
  * 员工离职
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function leaveWorker(id: string, leaveDate: string, leaveReason: string): Promise<boolean> {
   await enhancedApiClient.post(`/labor/workers/${id}/leave`, { leaveDate, leaveReason });
@@ -160,7 +160,7 @@ export async function leaveWorker(id: string, leaveDate: string, leaveReason: st
 
 /**
  * 员工复职
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function rejoinWorker(id: string, rejoinDate: string): Promise<boolean> {
   await enhancedApiClient.post(`/labor/workers/${id}/rejoin`, { rejoinDate });
@@ -208,7 +208,7 @@ export async function getWorkerTrainingRecords(workerId: string): Promise<any[]>
 
 /**
  * 添加培训记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTrainingRecord(workerId: string, record: Partial<TrainingRecord>): Promise<boolean> {
   await enhancedApiClient.post(`/labor/workers/${workerId}/training-records`, record);
@@ -225,7 +225,7 @@ export async function getWorkerAssessmentRecords(workerId: string): Promise<Asse
 
 /**
  * 添加考核记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addAssessmentRecord(workerId: string, record: Partial<AssessmentRecord>): Promise<boolean> {
   await enhancedApiClient.post(`/labor/workers/${workerId}/assessment-records`, record);
@@ -242,7 +242,7 @@ export async function getWorkerWorkExperiences(workerId: string): Promise<WorkEx
 
 /**
  * 添加工作经验
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addWorkExperience(workerId: string, experience: Partial<WorkExperience>): Promise<boolean> {
   await enhancedApiClient.post(`/labor/workers/${workerId}/work-experiences`, experience);
@@ -258,7 +258,7 @@ export async function generateWorkerId(): Promise<string> {
 
 /**
  * 批量导入员工
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function importWorkers(workers: CreateEmployeeParams[]): Promise<{ success: number; failed: number }> {
   return await enhancedApiClient.post('/labor/workers/import', { workers });

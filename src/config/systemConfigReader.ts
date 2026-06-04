@@ -105,7 +105,7 @@ export function getLegacyKey(newKey: string): string | undefined {
  *
  * 查找顺序: 新key查找 → 旧key兼容查找 → defaultValue兜底
  * 缓存策略: Map缓存 → getState()惰性快照 → API
- * 已彻底去除 IndexedDB / localStorage 三级降级（V2.1 架构铁律：直连 API）
+ * 已彻底去除 IndexedDB / localStorage 无缓存层（V2.1 铁律）（V2.1 架构铁律：直连 API）
  *
  * @param key - 命名空间配置键，如 'task.overtime.accept-warning-hours'
  * @param defaultValue - 配置缺失时的兜底值

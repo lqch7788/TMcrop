@@ -77,7 +77,7 @@ export const useCropVarietyStore = create<CropVarietyState>()(
 
     loadVarietyOptions: async () => {
       try {
-        // 清空现有数据，强制从API重新加载（避免IndexedDB缓存的旧数据含重复）
+        // 清空现有数据，强制从API重新加载（避免API的旧数据含重复）
         set({ items: [], varietyOptions: [], categoryOptions: [] });
         await get().loadItems();
         const items = get().items;

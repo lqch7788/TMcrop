@@ -197,7 +197,7 @@ export const usePersonnelStore = create<PersonnelState>()(
 
           return savedRecord;
         } catch (error) {
-          console.warn('[PersonnelStore] 创建人员API失败，已加入离线队列:', error);
+          console.warn('[PersonnelStore] 创建人员API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
@@ -215,7 +215,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         try {
           await enhancedApiClient.put(`/personnel/${id}`, updates);
         } catch (error) {
-          console.warn('[PersonnelStore] 更新人员API失败，已加入离线队列:', error);
+          console.warn('[PersonnelStore] 更新人员API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
@@ -230,7 +230,7 @@ export const usePersonnelStore = create<PersonnelState>()(
         try {
           await enhancedApiClient.delete(`/personnel/${id}`);
         } catch (error) {
-          console.warn('[PersonnelStore] 删除人员API失败，已加入离线队列:', error);
+          console.warn('[PersonnelStore] 删除人员API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));

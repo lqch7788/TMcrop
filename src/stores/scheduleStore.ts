@@ -294,7 +294,7 @@ export const useScheduleStore = create<ScheduleState>()(
 
           return normalizedRecord;
         } catch (error) {
-          console.warn('[ScheduleStore] 创建排班API失败，已加入离线队列:', error);
+          console.warn('[ScheduleStore] 创建排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
 
           // 离线队列会处理同步，无需额外操作
           // 标记为待同步
@@ -317,7 +317,7 @@ export const useScheduleStore = create<ScheduleState>()(
         try {
           await enhancedApiClient.put(`/schedules/${id}`, updates);
         } catch (error) {
-          console.warn('[ScheduleStore] 更新排班API失败，已加入离线队列:', error);
+          console.warn('[ScheduleStore] 更新排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
@@ -333,7 +333,7 @@ export const useScheduleStore = create<ScheduleState>()(
         try {
           await enhancedApiClient.delete(`/schedules/${id}`);
         } catch (error) {
-          console.warn('[ScheduleStore] 删除排班API失败，已加入离线队列:', error);
+          console.warn('[ScheduleStore] 删除排班API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));

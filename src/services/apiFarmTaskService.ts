@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -64,7 +64,7 @@ export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
 
 /**
  * 创建任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createTask(task: Omit<Task, 'id' | 'taskCode' | 'createdAt' | 'updatedAt'>): Promise<Task> {
   const result = await enhancedApiClient.post<Task>('/farm-tasks', task);
@@ -73,7 +73,7 @@ export async function createTask(task: Omit<Task, 'id' | 'taskCode' | 'createdAt
 
 /**
  * 更新任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTask(id: string, updates: Partial<Task>): Promise<Task | null> {
   const result = await enhancedApiClient.put<Task>(`/farm-tasks/${id}`, updates);
@@ -82,7 +82,7 @@ export async function updateTask(id: string, updates: Partial<Task>): Promise<Ta
 
 /**
  * 删除任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTask(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/farm-tasks/${id}`);
@@ -91,7 +91,7 @@ export async function deleteTask(id: string): Promise<boolean> {
 
 /**
  * 批量删除任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTasks(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/farm-tasks/batch?ids=${ids.join(',')}`);
@@ -100,7 +100,7 @@ export async function deleteTasks(ids: string[]): Promise<boolean> {
 
 /**
  * 发布任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function publishTask(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/publish`);
@@ -108,7 +108,7 @@ export async function publishTask(id: string): Promise<Task | null> {
 
 /**
  * 撤回任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function withdrawTask(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/withdraw`);
@@ -116,7 +116,7 @@ export async function withdrawTask(id: string): Promise<Task | null> {
 
 /**
  * 接受任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function acceptTask(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/accept`);
@@ -124,7 +124,7 @@ export async function acceptTask(id: string): Promise<Task | null> {
 
 /**
  * 开始执行任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function startTask(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/start`);
@@ -132,7 +132,7 @@ export async function startTask(id: string): Promise<Task | null> {
 
 /**
  * 提交进度
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function submitProgress(id: string, progress: number, feedback?: Record<string, unknown>): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/progress`, { progress, feedback });
@@ -140,7 +140,7 @@ export async function submitProgress(id: string, progress: number, feedback?: Re
 
 /**
  * 申请验收
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function submitForAcceptance(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/submit-acceptance`);
@@ -148,7 +148,7 @@ export async function submitForAcceptance(id: string): Promise<Task | null> {
 
 /**
  * 验收通过
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function completeTask(id: string, comments?: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/complete`, { comments });
@@ -156,7 +156,7 @@ export async function completeTask(id: string, comments?: string): Promise<Task 
 
 /**
  * 验收驳回（返工）
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function rejectTask(id: string, reason: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reject`, { reason });
@@ -164,7 +164,7 @@ export async function rejectTask(id: string, reason: string): Promise<Task | nul
 
 /**
  * 取消任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function cancelTask(id: string, reason: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/cancel`, { reason });
@@ -172,7 +172,7 @@ export async function cancelTask(id: string, reason: string): Promise<Task | nul
 
 /**
  * 放弃任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function abandonTask(id: string, reason: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/abandon`, { reason });
@@ -180,7 +180,7 @@ export async function abandonTask(id: string, reason: string): Promise<Task | nu
 
 /**
  * 超时继续
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function overtimeContinue(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-continue`);
@@ -188,7 +188,7 @@ export async function overtimeContinue(id: string): Promise<Task | null> {
 
 /**
  * 超时放弃
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function overtimeAbandon(id: string, reason: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/overtime-abandon`, { reason });
@@ -196,7 +196,7 @@ export async function overtimeAbandon(id: string, reason: string): Promise<Task 
 
 /**
  * 重新派发任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function reassignTask(id: string, assigneeId: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/reassign`, { assigneeId });
@@ -204,7 +204,7 @@ export async function reassignTask(id: string, assigneeId: string): Promise<Task
 
 /**
  * 延期任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function extendDeadline(id: string, newDeadline: string, reason: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/extend-deadline`, { newDeadline, reason });
@@ -212,7 +212,7 @@ export async function extendDeadline(id: string, newDeadline: string, reason: st
 
 /**
  * 催办任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function remindTask(id: string): Promise<boolean> {
   await enhancedApiClient.post(`/farm-tasks/${id}/remind`);
@@ -316,7 +316,7 @@ export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
 
 /**
  * 归档任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function archiveTask(id: string): Promise<Task | null> {
   return await enhancedApiClient.post<Task>(`/farm-tasks/${id}/archive`);
@@ -324,7 +324,7 @@ export async function archiveTask(id: string): Promise<Task | null> {
 
 /**
  * 批量归档任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function archiveTasks(ids: string[]): Promise<boolean> {
   await enhancedApiClient.post(`/farm-tasks/batch-archive`, { ids });

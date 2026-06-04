@@ -1,7 +1,7 @@
 /**
  * 调薪申请 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 架构：enhancedApiClient → API（无缓存层，V2.1 铁律）
  * 数据流：Store → 组件 (组件不直接读写localStorage)
  *
  * 对接后端: /api/salary_adjustment（后端可能无此接口，降级到本地存储）
@@ -183,7 +183,7 @@ export const useSalaryAdjustmentStore = create<SalaryAdjustmentState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          // logger.warn('[SalaryAdjustmentStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[SalaryAdjustmentStore] API获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           set({ isLoading: false });
         }
       },

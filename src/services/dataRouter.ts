@@ -147,7 +147,7 @@ class DataRouter {
     apiWrite?: (data: T) => Promise<T>,
     localWrite?: (data: T) => void
   ): Promise<T> {
-    // 先更新本地缓存（立即响应）
+    // API 直连模式（V2.1 铁律）
     if (localWrite) {
       localWrite(data);
     }

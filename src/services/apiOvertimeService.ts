@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -214,7 +214,7 @@ export async function getOvertimeById(id: string): Promise<OvertimeRecord | null
 
 /**
  * 创建加班记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createOvertimeRecord(overtime: CreateOvertimeParams): Promise<OvertimeRecord> {
   const snakeData = {
@@ -250,7 +250,7 @@ export async function createOvertimeRecord(overtime: CreateOvertimeParams): Prom
 
 /**
  * 更新加班记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateOvertimeRecord(id: string, updates: UpdateOvertimeParams): Promise<boolean> {
   const snakeData: Record<string, any> = {};
@@ -273,7 +273,7 @@ export async function updateOvertimeRecord(id: string, updates: UpdateOvertimePa
 
 /**
  * 删除加班记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteOvertimeRecord(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/overtime/${id}`);
@@ -282,7 +282,7 @@ export async function deleteOvertimeRecord(id: string): Promise<boolean> {
 
 /**
  * 批量删除加班记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteOvertimeRecords(ids: string[]): Promise<boolean> {
   for (const id of ids) {
@@ -293,7 +293,7 @@ export async function deleteOvertimeRecords(ids: string[]): Promise<boolean> {
 
 /**
  * 审批加班记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function approveOvertimeRecord(id: string, approved: boolean, comment?: string): Promise<boolean> {
   await enhancedApiClient.put(`/overtime/${id}`, {

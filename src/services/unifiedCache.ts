@@ -50,7 +50,7 @@ class UnifiedCache {
 
   /**
    * 获取数据（自动选择存储介质）
-   * 读取优先级：Memory → IndexedDB → localStorage
+   * 读取优先级：API 单源（V2.1 铁律）
    */
   async get<T>(key: string): Promise<T | null> {
     // 1. 检查内存缓存

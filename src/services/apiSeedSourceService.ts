@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -186,7 +186,7 @@ export async function getSeedSourcesByIds(ids: string[]): Promise<SeedSource[]> 
 
 /**
  * 创建种源
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  *
  * 注意：前端使用 camelCase，后端期望 snake_case，需要转换
  */
@@ -231,7 +231,7 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
 
 /**
  * 更新种源
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSeedSource(id: string, updates: Partial<SeedSource>): Promise<SeedSource | null> {
   // 转换为后端期望的 snake_case 格式
@@ -266,7 +266,7 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
 
 /**
  * 删除种源
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSeedSource(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/seed-sources/${id}`);
@@ -275,7 +275,7 @@ export async function deleteSeedSource(id: string): Promise<boolean> {
 
 /**
  * 批量删除种源
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSeedSources(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/seed-sources/batch?ids=${ids.join(',')}`);
@@ -284,7 +284,7 @@ export async function deleteSeedSources(ids: string[]): Promise<boolean> {
 
 /**
  * 减少可用数量
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function decreaseAvailableCount(id: string, count: number): Promise<boolean> {
   await enhancedApiClient.post(`/seed-sources/${id}/decrease-available`, { count });

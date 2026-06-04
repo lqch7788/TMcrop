@@ -420,7 +420,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       materials: executeMaterialPool
     };
 
-    // 保存到 Zustand Store → API → IndexedDB → localStorage（三级降级）
+    // 保存到 Zustand Store（写操作走 Store action，V2.1 铁律：API 直连无缓存）
     executeStore.createItem(newRecord);
 
     setExecuteShowAddModal(false);

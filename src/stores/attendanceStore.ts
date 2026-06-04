@@ -220,7 +220,7 @@ export const useAttendanceStore = create<AttendanceState>()(
 
           return savedRecord;
         } catch (error) {
-          console.warn('[AttendanceStore] 创建考勤API失败，已加入离线队列:', error);
+          console.warn('[AttendanceStore] 创建考勤API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
 
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
@@ -242,7 +242,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         try {
           await enhancedApiClient.post('/attendance/batch', { records });
         } catch (error) {
-          console.warn('[AttendanceStore] 批量创建考勤API失败，已加入离线队列:', error);
+          console.warn('[AttendanceStore] 批量创建考勤API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + records.length,
           }));
@@ -260,7 +260,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         try {
           await enhancedApiClient.put(`/attendance/${id}`, updates);
         } catch (error) {
-          console.warn('[AttendanceStore] 更新考勤API失败，已加入离线队列:', error);
+          console.warn('[AttendanceStore] 更新考勤API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
@@ -276,7 +276,7 @@ export const useAttendanceStore = create<AttendanceState>()(
         try {
           await enhancedApiClient.delete('/attendance/batch');
         } catch (error) {
-          console.warn('[AttendanceStore] 删除考勤API失败，已加入离线队列:', error);
+          console.warn('[AttendanceStore] 删除考勤API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + ids.length,
           }));

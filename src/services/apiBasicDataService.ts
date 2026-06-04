@@ -281,7 +281,7 @@ export async function getWarehouses(): Promise<Warehouse[]> {
 
 /**
  * 创建仓库
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createWarehouse(warehouse: Partial<Warehouse>): Promise<Warehouse> {
   const result = await enhancedApiClient.post<Warehouse>('/basic-data/warehouses', warehouse);
@@ -290,7 +290,7 @@ export async function createWarehouse(warehouse: Partial<Warehouse>): Promise<Wa
 
 /**
  * 更新仓库
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateWarehouse(id: string, warehouse: Partial<Warehouse>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/warehouses/${id}`, warehouse);
@@ -298,7 +298,7 @@ export async function updateWarehouse(id: string, warehouse: Partial<Warehouse>)
 
 /**
  * 删除仓库
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteWarehouse(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/warehouses/${id}`);
@@ -319,7 +319,7 @@ export async function getGreenhouses(): Promise<Greenhouse[]> {
 
 /**
  * 创建温室
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createGreenhouse(greenhouse: Partial<Greenhouse>): Promise<Greenhouse> {
   const result = await enhancedApiClient.post<Greenhouse>('/basic-data/greenhouses', greenhouse);
@@ -328,7 +328,7 @@ export async function createGreenhouse(greenhouse: Partial<Greenhouse>): Promise
 
 /**
  * 更新温室
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateGreenhouse(id: string, greenhouse: Partial<Greenhouse>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/greenhouses/${id}`, greenhouse);
@@ -336,7 +336,7 @@ export async function updateGreenhouse(id: string, greenhouse: Partial<Greenhous
 
 /**
  * 删除温室
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteGreenhouse(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/greenhouses/${id}`);
@@ -357,7 +357,7 @@ export async function getZones(): Promise<Zone[]> {
 
 /**
  * 创建区域
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createZone(zone: Partial<Zone>): Promise<Zone> {
   const result = await enhancedApiClient.post<Zone>('/basic-data/zones', zone);
@@ -366,7 +366,7 @@ export async function createZone(zone: Partial<Zone>): Promise<Zone> {
 
 /**
  * 更新区域
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateZone(id: string, zone: Partial<Zone>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/zones/${id}`, zone);
@@ -374,7 +374,7 @@ export async function updateZone(id: string, zone: Partial<Zone>): Promise<void>
 
 /**
  * 删除区域
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteZone(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/zones/${id}`);
@@ -395,7 +395,7 @@ export async function getBlocks(): Promise<Block[]> {
 
 /**
  * 创建地块
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createBlock(block: Partial<Block>): Promise<Block> {
   const result = await enhancedApiClient.post<Block>('/basic-data/blocks', block);
@@ -404,7 +404,7 @@ export async function createBlock(block: Partial<Block>): Promise<Block> {
 
 /**
  * 更新地块
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateBlock(id: string, block: Partial<Block>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/blocks/${id}`, block);
@@ -412,7 +412,7 @@ export async function updateBlock(id: string, block: Partial<Block>): Promise<vo
 
 /**
  * 删除地块
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteBlock(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/blocks/${id}`);
@@ -446,7 +446,7 @@ export async function getSystemConfigs(): Promise<SystemConfig[]> {
 
 /**
  * 创建系统配置
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createSystemConfig(config: Partial<SystemConfig>): Promise<SystemConfig> {
   const result = await enhancedApiClient.post<SystemConfig>('/basic-data/system-configs', config);
@@ -455,7 +455,7 @@ export async function createSystemConfig(config: Partial<SystemConfig>): Promise
 
 /**
  * 更新系统配置
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSystemConfig(id: string, config: Partial<SystemConfig>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/system-configs/${id}`, config);
@@ -463,7 +463,7 @@ export async function updateSystemConfig(id: string, config: Partial<SystemConfi
 
 /**
  * 删除系统配置
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSystemConfig(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/system-configs/${id}`);
@@ -525,7 +525,7 @@ export async function getTeams(): Promise<Team[]> {
 
 /**
  * 创建班组
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createTeam(team: Partial<Team>): Promise<Team> {
   const result = await enhancedApiClient.post<Team>('/basic-data/teams', team);
@@ -534,7 +534,7 @@ export async function createTeam(team: Partial<Team>): Promise<Team> {
 
 /**
  * 更新班组
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTeam(id: string, team: Partial<Team>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/teams/${id}`, team);
@@ -542,7 +542,7 @@ export async function updateTeam(id: string, team: Partial<Team>): Promise<void>
 
 /**
  * 删除班组
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTeam(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/teams/${id}`);
@@ -563,7 +563,7 @@ export async function getPositions(): Promise<Position[]> {
 
 /**
  * 创建职位
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createPosition(position: Partial<Position>): Promise<Position> {
   const result = await enhancedApiClient.post<Position>('/basic-data/positions', position);
@@ -572,7 +572,7 @@ export async function createPosition(position: Partial<Position>): Promise<Posit
 
 /**
  * 更新职位
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updatePosition(id: string, position: Partial<Position>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/positions/${id}`, position);
@@ -580,7 +580,7 @@ export async function updatePosition(id: string, position: Partial<Position>): P
 
 /**
  * 删除职位
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deletePosition(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/positions/${id}`);
@@ -601,7 +601,7 @@ export async function getDevices(): Promise<Device[]> {
 
 /**
  * 创建设备
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createDevice(device: Partial<Device>): Promise<Device> {
   const result = await enhancedApiClient.post<Device>('/basic-data/devices', device);
@@ -610,7 +610,7 @@ export async function createDevice(device: Partial<Device>): Promise<Device> {
 
 /**
  * 更新设备
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateDevice(id: string, device: Partial<Device>): Promise<void> {
   await enhancedApiClient.put(`/basic-data/devices/${id}`, device);
@@ -618,7 +618,7 @@ export async function updateDevice(id: string, device: Partial<Device>): Promise
 
 /**
  * 删除设备
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteDevice(id: string): Promise<void> {
   await enhancedApiClient.delete(`/basic-data/devices/${id}`);

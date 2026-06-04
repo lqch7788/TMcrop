@@ -1,7 +1,7 @@
 /**
  * 物料库存页面
  * 数据来源：Zustand Store → enhancedApiClient → API
- * 三级降级：API → IndexedDB → localStorage
+ * 无缓存层，直接调用 API（V2.1 铁律：禁用 IndexedDB / localStorage / persist）
  */
 
 import { useState, useMemo, useEffect } from 'react';

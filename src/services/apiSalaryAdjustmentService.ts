@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -109,7 +109,7 @@ export async function getSalaryAdjustmentById(id: string): Promise<SalaryAdjustm
 
 /**
  * 创建调薪记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createSalaryAdjustmentRecord(record: CreateSalaryAdjustmentParams): Promise<SalaryAdjustmentRecord> {
   try {
@@ -143,7 +143,7 @@ export async function createSalaryAdjustmentRecord(record: CreateSalaryAdjustmen
 
 /**
  * 更新调薪记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSalaryAdjustmentRecord(id: string, updates: UpdateSalaryAdjustmentParams): Promise<SalaryAdjustmentRecord | null> {
   try {
@@ -157,7 +157,7 @@ export async function updateSalaryAdjustmentRecord(id: string, updates: UpdateSa
 
 /**
  * 删除调薪记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSalaryAdjustmentRecord(id: string): Promise<boolean> {
   try {
@@ -171,7 +171,7 @@ export async function deleteSalaryAdjustmentRecord(id: string): Promise<boolean>
 
 /**
  * 批量删除调薪记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSalaryAdjustmentRecords(ids: string[]): Promise<boolean> {
   try {
@@ -185,7 +185,7 @@ export async function deleteSalaryAdjustmentRecords(ids: string[]): Promise<bool
 
 /**
  * 更新调薪状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSalaryAdjustmentStatus(id: string, status: 'approved' | 'rejected'): Promise<boolean> {
   try {

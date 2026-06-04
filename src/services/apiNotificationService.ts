@@ -61,7 +61,7 @@ export async function getChannels(): Promise<NotificationChannel[]> {
 
 /**
  * 创建通知渠道
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createChannel(channel: Partial<NotificationChannel>): Promise<NotificationChannel> {
   const result = await enhancedApiClient.post<NotificationChannel>('/notifications/channels', channel);
@@ -70,7 +70,7 @@ export async function createChannel(channel: Partial<NotificationChannel>): Prom
 
 /**
  * 更新通知渠道
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateChannel(id: string, channel: Partial<NotificationChannel>): Promise<void> {
   await enhancedApiClient.put(`/notifications/channels/${id}`, channel);
@@ -78,7 +78,7 @@ export async function updateChannel(id: string, channel: Partial<NotificationCha
 
 /**
  * 删除通知渠道
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteChannel(id: string): Promise<void> {
   await enhancedApiClient.delete(`/notifications/channels/${id}`);
@@ -86,7 +86,7 @@ export async function deleteChannel(id: string): Promise<void> {
 
 /**
  * 切换通知渠道状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function toggleChannel(id: string): Promise<void> {
   await enhancedApiClient.patch(`/notifications/channels/${id}/toggle`, undefined);
@@ -107,7 +107,7 @@ export async function getRules(): Promise<NotificationRule[]> {
 
 /**
  * 创建通知规则
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createRule(rule: Partial<NotificationRule>): Promise<NotificationRule> {
   const result = await enhancedApiClient.post<NotificationRule>('/notifications/rules', rule);
@@ -116,7 +116,7 @@ export async function createRule(rule: Partial<NotificationRule>): Promise<Notif
 
 /**
  * 更新通知规则
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateRule(id: string, rule: Partial<NotificationRule>): Promise<void> {
   await enhancedApiClient.put(`/notifications/rules/${id}`, rule);
@@ -124,7 +124,7 @@ export async function updateRule(id: string, rule: Partial<NotificationRule>): P
 
 /**
  * 删除通知规则
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteRule(id: string): Promise<void> {
   await enhancedApiClient.delete(`/notifications/rules/${id}`);
@@ -132,7 +132,7 @@ export async function deleteRule(id: string): Promise<void> {
 
 /**
  * 切换通知规则状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function toggleRule(id: string): Promise<void> {
   await enhancedApiClient.patch(`/notifications/rules/${id}/toggle`, undefined);

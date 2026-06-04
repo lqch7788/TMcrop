@@ -294,7 +294,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
     return bTime - aTime;
   };
 
-  // 使用 useTasks 作为统一数据源（通过 enhancedApiClient 三级降级）
+  // 使用 useTasks 作为统一数据源（通过 enhancedApiClient 无缓存层（V2.1 铁律））
   // 添加 refreshKey 依赖，当 hub.refresh() 被调用时会重新计算
   const tasks = useMemo(() => {
     // 从 useTasks 获取数据（useTasks 内部使用 farmTaskStore -> enhancedApiClient）
@@ -306,7 +306,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
         return dispatchMode === 'farm' && taskCode.startsWith('NS');
       })
       .sort(sortByCreatedAt);
-    // tasks from useTasks (三级降级)
+    // tasks from useTasks（V2.1 铁律：API 直连）
     return farmTasks;
   }, [useTasksData, refreshKey]);
 
@@ -362,7 +362,7 @@ export function useFarmHub(tasksHook: UseTasksReturn): UseFarmHubReturn {
   const loadData = useCallback(async () => {
     setIsLoading(true);
 
-    // 从 Zustand Store 加载数据（Store 内部处理 API → IndexedDB → localStorage 降级）
+    // 从 Zustand Store 加载数据（Store 内部处理 API 降级）
     try {
       // loadData 开始
       // 等待 fetchRecords 完成（确保 Store 有最新数据）

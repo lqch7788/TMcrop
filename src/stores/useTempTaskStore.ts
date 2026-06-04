@@ -259,7 +259,7 @@ export const useTempTaskStore = create<TempTaskState>()(
         try {
           await enhancedApiClient.put(`/temp-tasks/${realId}`, body);
         } catch (error) {
-          // logger.warn('[TempTaskStore] 更新任务API失败，已加入离线队列:', error);
+          // logger.warn('[TempTaskStore] 更新任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
         }
       },
 
@@ -272,7 +272,7 @@ export const useTempTaskStore = create<TempTaskState>()(
           await enhancedApiClient.delete(`/temp-tasks/${realId}`);
           return true;
         } catch (error) {
-          // logger.warn('[TempTaskStore] 删除任务API失败，已加入离线队列:', error);
+          // logger.warn('[TempTaskStore] 删除任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           return false;
         }
       },

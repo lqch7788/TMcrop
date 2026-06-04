@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -64,7 +64,7 @@ export async function getInspections(filters?: {
 
 /**
  * 创建巡查记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createInspection(inspection: Omit<InspectionRecord, 'id' | 'recordCode'>): Promise<InspectionRecord> {
   return await enhancedApiClient.post<InspectionRecord>('/inspections', inspection);
@@ -72,7 +72,7 @@ export async function createInspection(inspection: Omit<InspectionRecord, 'id' |
 
 /**
  * 更新巡查记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateInspection(id: string, updates: Partial<InspectionRecord>): Promise<InspectionRecord | null> {
   const result = await enhancedApiClient.put<InspectionRecord>(`/inspections/${id}`, updates);
@@ -81,7 +81,7 @@ export async function updateInspection(id: string, updates: Partial<InspectionRe
 
 /**
  * 删除巡查记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteInspection(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/inspections/${id}`);
@@ -90,7 +90,7 @@ export async function deleteInspection(id: string): Promise<boolean> {
 
 /**
  * 批量删除巡查记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteInspections(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/inspections/batch?ids=${ids.join(',')}`);
@@ -146,7 +146,7 @@ export async function generateInspectionCode(): Promise<string> {
 
 /**
  * 关联问题分派
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function assignProblem(inspectionId: string, problemId: number): Promise<boolean> {
   await enhancedApiClient.post(`/inspections/${inspectionId}/assign-problem`, { problemId });
@@ -155,7 +155,7 @@ export async function assignProblem(inspectionId: string, problemId: number): Pr
 
 /**
  * 创建问题并关联
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createProblemFromInspection(inspectionId: string, problemData: Record<string, unknown>): Promise<number> {
   const result = await enhancedApiClient.post<{ id: number }>(`/inspections/${inspectionId}/create-problem`, problemData);
@@ -194,7 +194,7 @@ export async function getInspectionsByBatch(batchId: string): Promise<Inspection
 
 /**
  * 关联任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function linkTask(inspectionId: string, taskId: string, taskCode: string): Promise<boolean> {
   await enhancedApiClient.post(`/inspections/${inspectionId}/link-task`, { taskId, taskCode });
