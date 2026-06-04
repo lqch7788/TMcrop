@@ -8,11 +8,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
-import { SourceType, StockStatus, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
+import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
 import { generateSeedCode } from '../../../../services/apiSeedSourceService';
-import { computeStockStatus } from '../../../../lib/stockStatus';
+// 2026-06-04: status 改为实时计算，AddModal 不再调用 computeStockStatus
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 // supplierService 已重写为兼容层（从 useSupplierStore 读内存数据，**不再用 localStorage**）
 // 业务代码应优先用 useSupplierStore 订阅
@@ -267,8 +267,7 @@ export function AddModal({
     const initialCount = formData.quantity;
     const availableCount = initialCount;
 
-    // 状态4 修复: 使用统一计算函数 computeStockStatus
-    const status = computeStockStatus(availableCount, initialCount);
+    // 2026-06-04: status 改为实时计算，AddModal 不再计算 status 传给 store
 
     // 生成溯源码
     const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
@@ -296,7 +295,7 @@ export function AddModal({
         availableCount,
         pictures: formData.pictures,
         remarks: formData.remarks,
-        status,
+        // status 字段已废弃（2026-06-04）
         traceabilityCode,
         printCount: 0,
         createBy: formData.createBy,

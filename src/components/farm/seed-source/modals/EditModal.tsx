@@ -7,9 +7,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { X, Upload } from 'lucide-react';
-import { SeedSource, SourceType, SourceOrigin, StockStatus } from '../../../../types/crop';
+import { SeedSource, SourceType, SourceOrigin } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
-import { computeStockStatus } from '../../../../lib/stockStatus';
+// 2026-06-04: status 改为实时计算，store 不再写入 status 字段，computeStockStatus 也不再需要
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
@@ -173,9 +173,9 @@ export function EditModal({
     // 计算总金额
     const totalAmount = formData.quantity * formData.unitPrice;
 
-    // 状态5 修复: 使用统一计算函数
+    // 2026-06-04: status 改为实时计算，store 不再写入 status 字段
     // 注意: 编辑时用 formData.quantity 作为"当前可用量"（采购数量编辑语义），initialCount 来自 record
-    const status = computeStockStatus(formData.quantity, record.initialCount, record.status as StockStatus);
+    // const status = computeStockStatus(formData.quantity, record.initialCount); // 不再需要，传给 store 也会被忽略
 
     try {
       await useSeedSourceStore.getState().updateItem(String(record.id), {
@@ -196,7 +196,7 @@ export function EditModal({
         totalAmount,
         pictures: formData.pictures,
         remarks: formData.remarks,
-        status,
+        // status 字段已废弃（2026-06-04）
         // P2 #9 修复: 提交时同时传递繁殖字段，避免编辑后丢失
         propagationType: formData.propagationType,
         propagationStatus: formData.propagationStatus,

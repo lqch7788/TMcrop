@@ -9,6 +9,7 @@ import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';
 import { STOCK_STATUS_MAP, UNIT_MAP, SOURCE_TYPE_MAP } from '../../../../constants/cropConstants';
+import { computeStockStatus } from '../../../../lib/stockStatus';
 import { PropagationType, PropagationStatus } from '../../../../types/crop';
 
 // 繁殖途径标签
@@ -34,7 +35,8 @@ export function DetailModal({
 
   const formatUnit = (unit: string) => UNIT_MAP[unit] || unit || '';
 
-  const status = STOCK_STATUS_MAP[record.status] || STOCK_STATUS_MAP['sufficient'];
+  // 2026-06-04: status 改为实时计算，不再依赖 record.status
+  const status = STOCK_STATUS_MAP[computeStockStatus(record.availableCount, record.initialCount)] || STOCK_STATUS_MAP['sufficient'];
 
   return (
     <UnifiedModal

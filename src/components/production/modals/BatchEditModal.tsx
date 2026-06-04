@@ -496,8 +496,8 @@ export function BatchEditModal({
             <Button variant="warning" onClick={onVoidWarning}>
               申请作废
             </Button>
-            <Button variant="blue" onClick={currentBatch.batchStatus === 'published' ? onSave : onPublish}>
-              {currentBatch.batchStatus === 'published' ? '保存' : '提交'}
+            <Button variant="blue" onClick={currentBatch?.batchStatus === 'published' ? onSave : onPublish}>
+              {currentBatch?.batchStatus === 'published' ? '保存' : '提交'}
             </Button>
           </div>
         </div>

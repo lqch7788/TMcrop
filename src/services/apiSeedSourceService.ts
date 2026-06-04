@@ -10,7 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { SeedSource, SourceType, SourceOrigin, StockStatus, PropagationType, PropagationStatus, PropagationRecord } from '../types/crop';
+import { SeedSource, SourceType, SourceOrigin, PropagationType, PropagationStatus, PropagationRecord } from '../types/crop';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendSeedSource {
@@ -96,15 +96,8 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     sourceType = SourceType.TISSUE_CULTURE;
   }
 
-  let status: StockStatus = StockStatus.SUFFICIENT;
-  if (item.status === 'low') {
-    status = StockStatus.LOW;
-  } else if (item.status === 'depleted') {
-    status = StockStatus.DEPLETED;
-  } else if (item.status === 'active') {
-    status = StockStatus.ACTIVE;
-  }
-  // 未知值（如旧数据 'inactive'）默认 SUFFICIENT
+  // 2026-06-04: status 改为实时计算，后端不再返回此字段，转换时不再读 item.status
+  // UI 渲染处统一用 computeStockStatus(item.availableCount, item.initialCount)
 
   return {
     id: item.id,
@@ -128,7 +121,7 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     availableCount: item.availableCount || 0,
     pictures: pictures,
     remarks: item.remarks || '',
-    status: status,
+    // status 字段已废弃（2026-06-04 改为实时计算），不再写入前端 SeedSource 对象
     printCount: item.printCount || 0,
     createBy: item.createBy || '',
     createTime: item.createTime ? item.createTime.split('T')[0] : '',
@@ -213,7 +206,7 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
     total_amount: source.totalAmount,
     remaining_quantity: source.quantity,
     used_quantity: source.usedQuantity || 0,
-    status: source.status,
+    // status 不再传给后端（2026-06-04 改为实时计算）
     remarks: source.remarks || '',
     create_by: source.createBy,
     // P0 #1: 传递 pictures 字段（后端 JSON 字符串）
@@ -255,7 +248,7 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
   if (updates.unitPrice !== undefined) backendUpdates.purchase_price = updates.unitPrice;
   if (updates.totalAmount !== undefined) backendUpdates.total_amount = updates.totalAmount;
   if (updates.availableCount !== undefined) backendUpdates.remaining_quantity = updates.availableCount;
-  if (updates.status !== undefined) backendUpdates.status = updates.status;
+  // status 不再传给后端（2026-06-04 改为实时计算）
   if (updates.remarks !== undefined) backendUpdates.remarks = updates.remarks;
   // P0 #1: 传递 pictures 字段
   if (updates.pictures !== undefined) backendUpdates.pictures = JSON.stringify(updates.pictures);
