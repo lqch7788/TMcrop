@@ -11,6 +11,7 @@ import { Modal } from '../components/ui/modal';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { useNotificationSettingsStore } from '../stores';
+import { useAuthStore } from '../stores';
 import type { NotificationChannel, NotificationRule } from '../services/apiNotificationService';
 import { showConfirm } from '@/lib/dialogService';
 
@@ -230,7 +231,8 @@ export default function NotificationSettings() {
 
   // 加载偏好
   useEffect(() => {
-    const uid = localStorage.getItem('yuanxingtu_user_oid') || 'default';
+    // 2026-06-04 V2.1 铁律：从 useAuthStore 读当前用户 oid（替代 localStorage 兜底）
+    const uid = useAuthStore.getState().currentUser?.oid || 'default';
     loadPreferences(uid);
   }, [loadPreferences]);
 
@@ -265,7 +267,8 @@ export default function NotificationSettings() {
   const getEventLabel = (event: string) => EVENT_OPTIONS.find((e) => e.value === event)?.label || event;
 
   const handleSavePrefs = async () => {
-    const uid = localStorage.getItem('yuanxingtu_user_oid') || 'default';
+    // 2026-06-04 V2.1 铁律：从 useAuthStore 读当前用户 oid（替代 localStorage 兜底）
+    const uid = useAuthStore.getState().currentUser?.oid || 'default';
     await saveUserPreferences(uid, localPrefs);
     setPrefsDirty(false);
   };
