@@ -2,11 +2,17 @@
  * 出库记录主页面 (V3.1)
  * 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md
  *
- * 组装 4 个组件 + 默认本月 + 6 维筛选 + 3 种导出
+ * 布局（按用户原话调整）：
+ * - 顶部：4 个紧凑型统计卡
+ * - 分类汇总（复用作物库存 InventoryStockTypeCards）
+ * - 6 维筛选
+ * - 列表标题 + 导出按钮（同行靠右）
+ *   按 Materials.tsx 模式：1 个"导出"按钮 + 弹窗（OutboundExportModal）选 CSV/XLSX/PDF
+ * - 数据表格
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Download, FileSpreadsheet, FileText, FileDown, FileDown as FilePdf } from 'lucide-react';
+import { Download, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -22,6 +28,7 @@ import {
   OutboundRecordsFilter,
   OutboundRecordsTable,
 } from '@/components/farm/inventory/OutboundRecordsComponents';
+import { OutboundExportModal } from '@/components/farm/inventory/OutboundExportModal';
 import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetailModal';
 import { exportOutboundPDF, exportOutboundXLSX } from '@/utils/outboundPdfExporter';
 
@@ -49,6 +56,8 @@ export default function OutboundRecordsPage() {
   const [loading, setLoading] = useState(false);
   const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // 导出弹窗 state
+  const [exportOpen, setExportOpen] = useState(false);
   const toast = useToast();
 
   // 数据加载（筛选条件变化即重查）
@@ -81,66 +90,52 @@ export default function OutboundRecordsPage() {
     setDetailOpen(true);
   }
 
-  async function handleExportCSV() {
+  // 弹窗选中格式后调起实际导出
+  async function handleExportConfirm(format: 'csv' | 'xlsx' | 'pdf') {
+    setExportOpen(false);
     try {
-      const blob = await exportOutboundCSV(query);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('CSV 下载已开始');
+      if (format === 'csv') {
+        const blob = await exportOutboundCSV(query);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('CSV 下载已开始');
+      } else if (format === 'xlsx') {
+        exportOutboundXLSX(rows, summary);
+        toast.success('XLSX 下载已开始');
+      } else if (format === 'pdf') {
+        await exportOutboundPDF(rows, summary);
+        toast.success('PDF 下载已开始');
+      }
     } catch (e: any) {
-      toast.error('CSV 导出失败：' + (e?.message || '未知错误'));
-    }
-  }
-
-  function handleExportXLSX() {
-    try {
-      exportOutboundXLSX(rows, summary);
-      toast.success('XLSX 下载已开始');
-    } catch (e: any) {
-      toast.error('XLSX 导出失败：' + (e?.message || '未知错误'));
-    }
-  }
-
-  async function handleExportPDF() {
-    try {
-      await exportOutboundPDF(rows, summary);
-      toast.success('PDF 下载已开始');
-    } catch (e: any) {
-      toast.error('PDF 导出失败：' + (e?.message || '未知错误'));
+      toast.error(`${format.toUpperCase()} 导出失败：${e?.message || '未知错误'}`);
     }
   }
 
   return (
     <div className="p-6 space-y-4">
-      {/* 页面标题 + 导出按钮 */}
+      {/* 顶部：4 个紧凑型统计卡 */}
+      <OutboundRecordsStats summary={summary} loading={loading} />
+
+      {/* 分类汇总（复用作物库存 InventoryStockTypeCards） */}
+      <OutboundRecordsStockTypeCards byStockType={summary?.byStockType ?? {}} loading={loading} />
+
+      {/* 6 维筛选 */}
+      <OutboundRecordsFilter value={query} onChange={handleFilterChange} onReset={handleReset} />
+
+      {/* 列表标题 + 导出按钮（同行靠右） */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Download className="w-6 h-6 text-emerald-600" />
-          出库记录
-        </h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
-            <FileText className="w-4 h-4 mr-1" />
-            CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportXLSX}>
-            <FileSpreadsheet className="w-4 h-4 mr-1" />
-            XLSX
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            <FilePdf className="w-4 h-4 mr-1" />
-            PDF
-          </Button>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900">出库记录列表</h2>
+        <Button variant="default" size="sm" onClick={() => setExportOpen(true)}>
+          <FileDown className="w-4 h-4 mr-1" />
+          导出
+        </Button>
       </div>
 
-      <OutboundRecordsStats summary={summary} loading={loading} />
-      <OutboundRecordsStockTypeCards byStockType={summary?.byStockType ?? {}} loading={loading} />
-      <OutboundRecordsFilter value={query} onChange={handleFilterChange} onReset={handleReset} />
+      {/* 数据表格 */}
       <OutboundRecordsTable
         data={rows}
         loading={loading}
@@ -155,6 +150,14 @@ export default function OutboundRecordsPage() {
         isOpen={detailOpen}
         stock={detailInstanceId ? ({ instanceId: detailInstanceId } as any) : null}
         onClose={() => setDetailOpen(false)}
+      />
+
+      {/* 导出格式选择弹窗（按 Materials.tsx 模式） */}
+      <OutboundExportModal
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+        rowCount={total}
+        onConfirm={handleExportConfirm}
       />
     </div>
   );
