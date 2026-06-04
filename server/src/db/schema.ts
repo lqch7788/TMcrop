@@ -3194,41 +3194,6 @@ export function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_farm_op_records_date ON farm_operation_records(operation_date)`);
   } catch (e) {}
 
-  // ========== 2026-06-04: 库存出库交易表（V3.1 出库记录主页面新增） ==========
-  db.run(`
-    CREATE TABLE IF NOT EXISTS inventory_transactions (
-      id TEXT PRIMARY KEY,
-      type TEXT NOT NULL DEFAULT 'outbound',
-      business_id TEXT,
-      business_code TEXT,
-      instance_id TEXT,
-      crop_id TEXT,
-      crop_name TEXT,
-      variety_id TEXT,
-      variety_name TEXT,
-      warehouse_id TEXT,
-      warehouse_name TEXT,
-      quantity REAL NOT NULL,
-      unit TEXT,
-      unit_price REAL,
-      total_amount REAL,
-      receiver TEXT,
-      operator_id TEXT,
-      operator_name TEXT,
-      outbound_date TEXT,
-      remarks TEXT,
-      status TEXT DEFAULT 'completed',
-      created_at TEXT NOT NULL,
-      updated_at TEXT
-    )
-  `);
-  try {
-    db.run(`CREATE INDEX IF NOT EXISTS idx_inv_tx_type ON inventory_transactions(type)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_inv_tx_date ON inventory_transactions(outbound_date)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_inv_tx_business ON inventory_transactions(business_id)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_inv_tx_crop ON inventory_transactions(crop_name)`);
-  } catch (e) {}
-
   // 创建索引
   try {
     createIndexes();
