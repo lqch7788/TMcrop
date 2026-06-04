@@ -3,13 +3,15 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import {
   produceCategories,
   getProduceTypesByCategory,
 } from '../../../data/produceCodeRule';
+// 一次性动作（生成编码/扣减数量/打印标签/追溯）按修订后铁律直接调 service，
+// 持久化数据（列表/详情/统计）走 Store。service 函数完整保留。
 import { generateHarvestCode as genHarvestCode } from '../../../services/apiHarvestService';
 import * as cropInstanceService from '../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';

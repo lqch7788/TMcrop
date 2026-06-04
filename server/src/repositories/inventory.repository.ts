@@ -17,7 +17,10 @@ export interface InventoryStockQuery {
 }
 
 /** 库存记录 */
+// 注意：findAll/findById/findByInstanceId 走 queryToObjects 自动转 camelCase，
+// create() 入参使用 snake_case（直接组装 SQL）。两种字段名都支持。
 export interface InventoryStock {
+  // 原始 snake_case（create/insert 用）
   id?: string;
   instance_id?: string;
   stock_type?: string;
@@ -42,14 +45,40 @@ export interface InventoryStock {
   version?: number;
   create_time?: string;
   update_time?: string;
-  // V3 扩展字段（采收入库对接）
-  crop_code?: string;          // 11 位品种库编码
-  planting_mode?: string;       // 种植模式
-  target_yield?: number;        // 目标产量
-  grade?: string;               // 品质等级 A/B/C
-  auditor?: string;             // 审核人
-  remarks?: string;             // 备注
-  greenhouse_name?: string;     // 采收区域
+  // V3 扩展字段
+  crop_code?: string;
+  planting_mode?: string;
+  target_yield?: number;
+  grade?: string;
+  auditor?: string;
+  remarks?: string;
+  greenhouse_name?: string;
+
+  // camelCase 别名（find/findBy 返回的格式，queryToObjects 自动转换）
+  instanceId?: string;
+  stockType?: string;
+  businessId?: string;
+  businessType?: string;
+  businessCode?: string;
+  cropId?: string;
+  cropName?: string;
+  varietyId?: string;
+  varietyName?: string;
+  currentQuantity?: number;
+  frozenQuantity?: number;
+  availableQuantity?: number;
+  warehouseId?: string;
+  warehouseName?: string;
+  inboundDate?: string;
+  sourceType?: string;
+  productionPlanCode?: string;
+  sourceInstanceId?: string;
+  createTime?: string;
+  updateTime?: string;
+  cropCode?: string;
+  plantingMode?: string;
+  targetYield?: number;
+  greenhouseName?: string;
 }
 
 /**

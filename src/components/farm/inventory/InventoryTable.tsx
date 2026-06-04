@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Package, Leaf, Sprout, ArrowUpCircle, History } from 'lucide-react';
+import { Package, Leaf, Sprout, ArrowUpCircle, Eye } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { Pagination } from '../../ui/Pagination';
@@ -17,7 +17,7 @@ import {
   DownstreamTraceResult,
 } from '../../../types/inventory';
 import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
-import { getPlantingModeLabel } from '../../../constants/cropConstants';
+import { getPlantingModeLabel, SOURCE_ORIGIN_MAP } from '../../../constants/cropConstants';
 
 interface InventoryTableProps {
   data: InventoryStock[];
@@ -25,7 +25,7 @@ interface InventoryTableProps {
   pagination: { current: number; pageSize: number };
   onChange: (pagination: { current: number; pageSize: number }) => void;
   onOutbound: (stock: InventoryStock) => void;
-  onTrace: (stock: InventoryStock) => void;
+  onViewDetail: (stock: InventoryStock) => void;
   // 批量操作相关（与 ActionToolbar 协同）
   selectedRows?: string[];
   onSelectionChange?: (instanceIds: string[]) => void;
@@ -109,7 +109,7 @@ export function InventoryTable({
   pagination,
   onChange,
   onOutbound,
-  onTrace,
+  onViewDetail,
   selectedRows = [],
   onSelectionChange,
   showCheckboxes = false,
@@ -212,8 +212,15 @@ export function InventoryTable({
                         />
                       </td>
                     )}
-                    <td className="px-4 py-3 text-sm font-mono text-gray-900 whitespace-nowrap">
-                      {stock.instanceId}
+                    <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => onViewDetail(stock)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-mono"
+                        title="点击查看详情"
+                      >
+                        {stock.instanceId}
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">
                       {stock.cropCode || cropCodeMap.get(stock.cropName || '') || '-'}
@@ -270,8 +277,23 @@ export function InventoryTable({
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap truncate max-w-xs" title={stock.warehouseName}>
                       {stock.warehouseName || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                      {stock.sourceType === SourceType.SELF_PRODUCED || stock.sourceType === 'self_produced' ? '自产' : '外购'}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {stock.sourceType ? (() => {
+                        const info = SOURCE_ORIGIN_MAP[stock.sourceType];
+                        if (info) {
+                          return (
+                            <span className={`px-2 py-1 ${info.bg} ${info.text} text-xs rounded-full font-medium`}>
+                              {info.label}
+                            </span>
+                          );
+                        }
+                        // 未知来源码：fallback 显示原文
+                        return (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                            {stock.sourceType}
+                          </span>
+                        );
+                      })() : <span className="text-gray-400">-</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {getStatusBadge(stock.status)}
@@ -281,6 +303,16 @@ export function InventoryTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => onViewDetail(stock)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="查看详情"
+                        >
+                          <Eye className="w-4 h-4" />
+                          详情
+                        </Button>
                         {canOutbound && (
                           <Button
                             variant="link"
@@ -293,15 +325,6 @@ export function InventoryTable({
                             出库
                           </Button>
                         )}
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => onTrace(stock)}
-                          title="追溯"
-                        >
-                          <History className="w-4 h-4" />
-                          追溯
-                        </Button>
                       </div>
                     </td>
                   </tr>
