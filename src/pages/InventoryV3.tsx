@@ -9,8 +9,8 @@ import { Boxes, Package, Leaf, Sprout } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '@/lib/utils';
 import ActionToolbar from '../components/warehouse/ActionToolbar';
-// 一次性动作（"非持久化数据"）：按修订后铁律直接调 service
-import { getInventoryList, getInventoryStats, deleteInventoryBatch } from '../services/inventoryService';
+// 2026-06-04 V2.1 铁律改造：持久化数据走 Store，删除走 Store action
+// 一次性动作（CSV 导出）保留直调 client-side
 import { useInventoryStore } from '../stores';
 import {
   StockType,
@@ -28,16 +28,13 @@ import { InventoryTable } from '../components/farm/inventory/InventoryTable';
 import { InventoryDetailModal } from '../components/farm/inventory/InventoryDetailModal';
 
 export default function InventoryV3Page() {
-  // 数据状态
-  const [stocks, setStocks] = useState<InventoryStock[]>([]);
-  const [stats, setStats] = useState<{
-    totalInstances: number;
-    totalQuantity: number;
-    byStockType: Record<string, { count: number; quantity: number }>;
-    lowStockCount: number;
-    expiringCount: number;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  // 持久化数据：list/stats/loading 全部从 useInventoryStore 读取
+  const stocks = useInventoryStore((s) => s.items);
+  const stats = useInventoryStore((s) => s.stats);
+  const loading = useInventoryStore((s) => s.loading);
+  const loadAll = useInventoryStore((s) => s.loadAll);
+  const setStoreFilters = useInventoryStore((s) => s.setFilters);
+  const deleteBatch = useInventoryStore((s) => s.deleteBatch);
 
   // 筛选
   const [filters, setFilters] = useState<InventoryFilterState>({
@@ -67,8 +64,14 @@ export default function InventoryV3Page() {
   const inventoryVersion = useInventoryStore((s) => s.version);
 
   useEffect(() => {
-    loadData();
-  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType]);
+    // 2026-06-04 V2.1 铁律改造：持久化数据加载走 Store action
+    setStoreFilters({
+      stockType: filters.stockType as StockType,
+      status: filters.status as InventoryStatus,
+      sourceType: filters.sourceType as SourceType,
+    });
+    loadAll();
+  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, setStoreFilters, loadAll]);
 
   const loadData = async () => {
     setLoading(true);
@@ -152,13 +155,12 @@ export default function InventoryV3Page() {
     }
     const ok = await showConfirm(`确定要删除选中的 ${selectedRows.length} 条库存记录吗？此操作不可撤销。`);
     if (!ok) return;
-    const result = await deleteInventoryBatch(selectedRows);
+    // 2026-06-04 V2.1 铁律改造：删除走 Store action（自动 notifyChange 跨页刷新）
+    const result = await deleteBatch(selectedRows);
     if (result.success) {
       showAlert(`已删除 ${result.deletedCount} 条记录`);
       setSelectedRows([]);
       setDeleteMode(false);
-      useInventoryStore.getState().notifyChange();
-      loadData();
     } else {
       showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
     }

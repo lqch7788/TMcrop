@@ -15,13 +15,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/Toast';
-import {
-  getOutboundList,
-  exportOutboundCSV,
-  OutboundQuery,
-  OutboundRow,
-  OutboundSummary,
-} from '@/services/inventoryTransactionService';
+// 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调
+import { exportOutboundCSV, OutboundQuery } from '@/services/inventoryTransactionService';
+import { useInventoryTransactionStore } from '@/stores/useInventoryTransactionStore';
 import {
   OutboundRecordsStats,
   OutboundRecordsFilter,
@@ -50,10 +46,12 @@ export default function OutboundRecordsPage() {
     page: 1,
     limit: 50,
   }));
-  const [rows, setRows] = useState<OutboundRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState<OutboundSummary | null>(null);
-  const [loading, setLoading] = useState(false);
+  // 2026-06-04 V2.1 铁律改造：持久化数据从 useState 迁到 Store
+  const rows = useInventoryTransactionStore((s) => s.rows);
+  const total = useInventoryTransactionStore((s) => s.total);
+  const summary = useInventoryTransactionStore((s) => s.summary);
+  const loading = useInventoryTransactionStore((s) => s.loading);
+  const loadOutbound = useInventoryTransactionStore((s) => s.loadOutbound);
   const [detailInstanceId, setDetailInstanceId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   // 导出：按 OrderPage 模式（先选行 exportMode，再确认弹窗）
@@ -62,22 +60,8 @@ export default function OutboundRecordsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const toast = useToast();
 
-  // 数据加载（筛选条件变化即重查）
-  useEffect(() => { loadData(); }, [query]);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const data = await getOutboundList(query);
-      setRows(data.rows);
-      setTotal(data.total);
-      setSummary(data.summary);
-    } catch (e: any) {
-      toast.error('加载失败：' + (e?.message || '未知错误'));
-    } finally {
-      setLoading(false);
-    }
-  }
+  // 数据加载：筛选条件变化即重查
+  useEffect(() => { loadOutbound(query); }, [query, loadOutbound]);
 
   function handleFilterChange(q: OutboundQuery) {
     setQuery({ ...q, page: 1 }); // 改筛选条件回到第 1 页
