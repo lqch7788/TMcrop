@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Download, FileDown } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -156,12 +156,12 @@ export default function OutboundRecordsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      {/* 页面标题卡片（对齐订单管理 OrderPage.tsx 顶部卡片样式） */}
+      {/* 页面标题卡片（100% 对齐 OrderPage.tsx 顶部卡片样式） */}
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <Download className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">出库记录</h1>
