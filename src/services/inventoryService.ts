@@ -4,7 +4,7 @@
  *
  * 架构铁律：
  * - 组件不直接调用 fetch/axios
- * - 不使用 localStorage / IndexedDB 任何缓存层
+ * 业务直连 API，无任何缓存层（V2.1 铁律）
  * - 所有数据操作通过 enhancedApiClient 直连后端 API
  */
 
