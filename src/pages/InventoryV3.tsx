@@ -257,7 +257,7 @@ export default function InventoryV3Page() {
       <InventoryFilter
         filters={filters}
         onChange={setFilters}
-        onRefresh={loadData}
+        onRefresh={loadAll}
         loading={loading}
       />
 
