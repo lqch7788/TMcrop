@@ -1731,6 +1731,23 @@ export async function fixMissingSchema(): Promise<void> {
       }
     }
   }
+
+  // 37.5 出库流水表索引（出库记录查询性能优化，V3.1）
+  // 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md §6.5
+  const outboundRecordIndexes = [
+    { name: 'idx_inventory_tx_type_date', sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_type_date ON inventory_transaction(transaction_type, operate_date DESC)' },
+    { name: 'idx_inventory_tx_instance',  sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_instance  ON inventory_transaction(instance_id)' },
+    { name: 'idx_inventory_tx_business',  sql: 'CREATE INDEX IF NOT EXISTS idx_inventory_tx_business  ON inventory_transaction(business_type)' },
+  ];
+  for (const idx of outboundRecordIndexes) {
+    try {
+      db.run(idx.sql);
+      console.log(`✓ 出库流水索引 ${idx.name} 创建成功`);
+    } catch (e: any) {
+      // 重复创建等错误静默
+    }
+  }
+
   saveDatabase();
 }
 
