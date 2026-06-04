@@ -16,6 +16,7 @@ import React, { useMemo } from 'react';
 import { Button } from '../../ui/button';
 import { Input, Select } from '../../ui/Modal';
 import { Pagination } from '../../ui/Pagination';
+import { Checkbox } from '../../ui/checkbox';
 import { Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
 import {
   OutboundRow,
@@ -257,40 +258,37 @@ export function OutboundRecordsTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="overflow-auto max-h-[calc(100vh-420px)]">
-        <table className="w-full text-sm">
+      <div className="overflow-auto max-h-[calc(100vh-280px)]">
+        <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
               {exportMode && (
-                <th className="px-3 py-2 text-center w-10">
-                  <input
-                    type="checkbox"
+                <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">
+                  <Checkbox
                     checked={allSelected}
-                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
-                    onChange={onSelectAll}
-                    className="w-4 h-4 rounded border-white/50 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                    title={allSelected ? '取消全选' : '全选'}
+                    onCheckedChange={onSelectAll}
+                    className="border-white rounded"
                   />
                 </th>
               )}
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">业务单号</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">操作时间</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">实例ID</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">类型</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">作物</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">品种</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">种植模式</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">采收区域</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">品质</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold whitespace-nowrap">出库量</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">仓库</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">业务</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">出库人</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">余额前→后</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">操作</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务单号</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作时间</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实例ID</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品种</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植模式</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">采收区域</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">品质</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap">出库量</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">仓库</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">出库人</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">余额前→后</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-300">
             {loading ? (
               <tr>
                 <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
@@ -310,18 +308,17 @@ export function OutboundRecordsTable({
               data.map((row) => (
                 <tr key={row.id} className="hover:bg-emerald-50 transition-colors">
                   {exportMode && (
-                    <td className="px-3 py-2 text-center w-10">
-                      <input
-                        type="checkbox"
+                    <td className="px-4 py-3">
+                      <Checkbox
                         checked={selectedRows.includes(row.instanceId)}
-                        onChange={() => toggleRow(row.instanceId)}
-                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        onCheckedChange={() => toggleRow(row.instanceId)}
+                        className="rounded"
                       />
                     </td>
                   )}
-                  <td className="px-3 py-2 text-xs font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.operateDate}</td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operateDate}</td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => onViewDetail(row.instanceId)}
@@ -330,30 +327,30 @@ export function OutboundRecordsTable({
                       {row.instanceId}
                     </button>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 ${stockColor(row.stockType)} text-white text-xs rounded font-medium`}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`px-2 py-1 ${stockColor(row.stockType)} text-white text-xs rounded-full`}>
                       {stockLabel(row.stockType)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-900 whitespace-nowrap">{row.cropName || '-'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{getPlantingModeLabel(row.plantingMode) || '-'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.greenhouseName}>{row.greenhouseName || '-'}</td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap">{row.grade || '-'}</td>
-                  <td className="px-3 py-2 text-xs font-medium text-right text-emerald-600 whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{row.cropName || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getPlantingModeLabel(row.plantingMode) || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.greenhouseName}>{row.greenhouseName || '-'}</td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">{row.grade || '-'}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-right text-emerald-600 whitespace-nowrap">
                     {row.quantityOut} {row.unit || ''}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.warehouseName}>{row.warehouseName || '-'}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 text-xs rounded ${bizMeta(row.businessType).color}`}>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.warehouseName}>{row.warehouseName || '-'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${bizMeta(row.businessType).color}`}>
                       {bizMeta(row.businessType).label}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.operatorName || '-'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap font-mono">
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{row.operatorName || '-'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap font-mono">
                     {row.balanceBefore} → {row.balanceAfter}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <Button variant="link" size="sm" onClick={() => onViewDetail(row.instanceId)} className="text-blue-600 hover:text-blue-800" title="查看详情">
                       <Eye className="w-4 h-4" />
                       详情
@@ -366,14 +363,13 @@ export function OutboundRecordsTable({
         </table>
       </div>
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-        <div className="text-xs text-gray-500">共 {total.toLocaleString()} 条</div>
         <Pagination
           currentPage={pagination.current}
           totalPages={Math.max(1, Math.ceil(total / pagination.pageSize))}
           onPageChange={(p) => onChange({ ...pagination, current: p })}
           pageSize={pagination.pageSize}
           onPageSizeChange={(s) => onChange({ current: 1, pageSize: s })}
-          pageSizeOptions={[20, 50, 100]}
+          pageSizeOptions={[10, 20, 50]}
           showPageSize
         />
       </div>
