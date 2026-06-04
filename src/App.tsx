@@ -129,7 +129,6 @@ const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
 const Customer = lazy(() => import('./components/farm/customer/CustomerPage'));
-const Instance = lazy(() => import('./pages/crop/Instance'));
 const CropHarvest = lazy(() => import('./pages/crop/Harvest'));
 const Fertilizer = lazy(() => import('./pages/crop/Fertilizer'));
 // 生产汇总表 V1.0 - 8页面重构 → V1.1 合并为5页面
@@ -272,7 +271,6 @@ function AppContent() {
           <Route path="/crop/outbound-records" element={<OutboundRecordsPage />} />
           <Route path="/crop/order" element={<Order />} />
           <Route path="/crop/customer" element={<Customer />} />
-          <Route path="/crop/instance" element={<Instance />} />
           <Route path="/production" element={<Production />} />
           <Route path="/tech-solution" element={<TechSolution />} />
           <Route path="/purchase-plan" element={<PurchasePlan />} />

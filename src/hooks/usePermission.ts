@@ -14,7 +14,7 @@ const PROCESS_MENU_MAP: Record<string, string[]> = {
   // 计划管理
   'PROC_PRODUCTION': ['/production', '/tech-solution', '/purchase-plan'],
   // 作物管理
-  'PROC_CROP': ['/crop/seed-source', '/crop/seedling', '/crop/planting', '/crop-inventory', '/crop/order', '/crop/instance'],
+  'PROC_CROP': ['/crop/seed-source', '/crop/seedling', '/crop/planting', '/crop-inventory', '/crop/order'],
   // 农事管理
   'PROC_FARM': ['/agriculture-record', '/farm-hub', '/task-center', '/daily-work-summary', '/daily-problem-summary', '/plan-summary'],
   // 库存管理

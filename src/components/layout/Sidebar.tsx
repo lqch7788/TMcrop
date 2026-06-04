@@ -50,7 +50,6 @@ const cropSubItems = [
   { icon: Bug, label: '病虫害管理', path: '/pest-control' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
-  { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
 
 // 人工管理4大模块（离职申请、招聘申请、工资预算已整合到人事管理）

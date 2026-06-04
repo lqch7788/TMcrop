@@ -139,7 +139,6 @@ const rolePermissions = {
       { label: '园区导览', icon: MapPin, path: '/park-archive', desc: '查看园区分布' },
       { label: '环境监测', icon: Activity, path: '/environment-monitor', desc: '环境数据展示' },
       { label: '生产概览', icon: BarChart3, path: '/production', desc: '生产进度总览' },
-      { label: '溯源查询', icon: Leaf, path: '/crop/instance', desc: '农产品溯源' },
     ]
   }
 };

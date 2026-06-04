@@ -33,7 +33,6 @@ const processRouteMap: Record<string, string> = {
   '/crop/planting': 'PROC_PLANTING',
   '/crop/harvest': 'PROC_CROP_HARVEST',
   '/crop-inventory': 'PROC_CROP_INVENTORY',
-  '/crop/instance': 'PROC_CROP_INSTANCE',
 
   // 农事管理子菜单
   '/task-center': 'PROC_TASK_CENTER',
