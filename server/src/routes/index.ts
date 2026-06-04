@@ -31,6 +31,7 @@ import operationLogRouter from './operationLog';
 import workLogRouter from './workLog';
 import reminderRouter from './reminder';
 import farmOperationRecordsRouter from './farmOperationRecords';
+import inventoryTransactionsRouter from './inventoryTransactions';
 import cropOrderRouter from './cropOrder';
 import productionPlanRouter from './productionPlan';
 import techSolutionRouter from './techSolution';
@@ -192,6 +193,7 @@ router.use('/operation-logs', requireAuth, operationLogRouter);
 router.use('/work-logs', requireAuth, workLogRouter);
 router.use('/reminders', requireAuth, reminderRouter);
 router.use('/farm-operation-records', requireAuth, farmOperationRecordsRouter);
+router.use('/inventory-transactions', requireAuth, inventoryTransactionsRouter);
 
 // 订单路由 - 需要认证
 router.use('/crop-orders', requireAuth, cropOrderRouter);

@@ -53,6 +53,11 @@ interface InventoryState {
   notifyChange: () => void;
   /** 重置 store */
   reset: () => void;
+  /**
+   * 2026-06-04 V2.1 铁律改造：批量删除（写操作走 Store action）
+   * 薄包装 inventoryService.deleteInventoryBatch，写后 notifyChange 跨页刷新
+   */
+  deleteBatch: (ids: string[]) => Promise<{ success: boolean; deletedCount: number; error?: string }>;
 }
 
 export const useInventoryStore = create<InventoryState>()((set, get) => ({
@@ -131,5 +136,16 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
 
   reset: () => {
     set({ items: [], stats: null, loading: false, error: null, filters: {}, version: 0 });
+  },
+
+  deleteBatch: async (ids) => {
+    const { deleteInventoryBatch: svc } = await import('../services/inventoryService');
+    const result = await svc(ids);
+    if (result.success) {
+      get().notifyChange();
+      // 立即从 items 移除被删项（乐观更新）
+      set((s) => ({ items: s.items.filter(it => !ids.includes(it.instanceId)) }));
+    }
+    return result;
   },
 }));
