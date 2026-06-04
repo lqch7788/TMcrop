@@ -26,10 +26,13 @@ import { InventoryDetailModal } from '@/components/farm/inventory/InventoryDetai
 import { exportOutboundPDF, exportOutboundXLSX } from '@/utils/outboundPdfExporter';
 
 /** 默认本月 1 号到今天（V3.1 关键：useEffect 同步设值避免 400） */
-function getThisMonthRange(): { from: string; to: string } {
+export function getThisMonthRange(): { from: string; to: string } {
   const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const to = now.toISOString().slice(0, 10);
+  // 用本地时间格式化（不用 toISOString，避免 UTC 时区漂移）
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+  const to = fmt(now);
   return { from, to };
 }
 
