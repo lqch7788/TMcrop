@@ -5,6 +5,7 @@
  */
 
 import { getDatabase, saveDatabase, initDatabase } from './index';
+import { seedLog } from '../lib/seedLogger';
 
 /**
  * 修复数据库结构 - 添加缺失的列和表
@@ -12,27 +13,27 @@ import { getDatabase, saveDatabase, initDatabase } from './index';
 export async function fixMissingSchema(): Promise<void> {
   const db = getDatabase();
 
-  console.log('开始修复数据库结构...\n');
+  seedLog.info('开始修复数据库结构...\n');
 
   // 1. 修复 positions 表 - 添加 description 和 sort_order 列
   try {
     db.run(`ALTER TABLE positions ADD COLUMN description TEXT`);
-    console.log('✓ positions 表添加 description 列');
+    seedLog.info('✓ positions 表添加 description 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• positions.description 列已存在');
+      seedLog.skip('• positions.description 列已存在');
     } else {
-      console.log('• positions.description:', e.message);
+      seedLog.skip('• positions.description:', e.message);
     }
   }
   try {
     db.run(`ALTER TABLE positions ADD COLUMN sort_order INTEGER DEFAULT 0`);
-    console.log('✓ positions 表添加 sort_order 列');
+    seedLog.info('✓ positions 表添加 sort_order 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• positions.sort_order 列已存在');
+      seedLog.skip('• positions.sort_order 列已存在');
     } else {
-      console.log('• positions.sort_order:', e.message);
+      seedLog.skip('• positions.sort_order:', e.message);
     }
   }
 
@@ -53,7 +54,7 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of orgColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ organizations 表添加 ${col.name} 列`);
+      seedLog.info(`✓ organizations 表添加 ${col.name} 列`);
     } catch (addErr: any) {
       if (!addErr.message.includes('duplicate column')) {
         // 列已存在或表未创建（由 schema.ts 负责）
@@ -101,11 +102,11 @@ export async function fixMissingSchema(): Promise<void> {
           INSERT OR IGNORE INTO departments (id, oid, name, code, parent_oid, manager_id, manager_name, sort_number, description, status, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
         `, [deptId, deptId, name, deptId, parentOid, '', contactPerson, 0, description, now, now]);
-        console.log(`✓ 回填组织 "${name}" → 部门 ${deptId}`);
+        seedLog.info(`✓ 回填组织 "${name}" → 部门 ${deptId}`);
       }
     }
   } catch (fixErr: any) {
-    console.log('回填 department_id 数据修复跳过:', fixErr.message);
+    seedLog.info('回填 department_id 数据修复跳过:', fixErr.message);
   }
 
   // 2.6 数据修复：回填部门编码（code），根据部门名称映射
@@ -134,12 +135,12 @@ export async function fixMissingSchema(): Promise<void> {
           db.run('UPDATE departments SET code = ? WHERE id = ?', [mappedCode, id]);
           // 同步更新关联组织的 department_id（组织用 department_id 关联部门记录）
           db.run('UPDATE organizations SET department_id = ? WHERE department_id = ?', [mappedCode, currentCode || id]);
-          console.log(`✓ 回填部门编码: "${name}" → ${mappedCode}`);
+          seedLog.info(`✓ 回填部门编码: "${name}" → ${mappedCode}`);
         }
       }
     }
   } catch (codeFixErr: any) {
-    console.log('回填部门编码跳过:', codeFixErr.message);
+    seedLog.info('回填部门编码跳过:', codeFixErr.message);
   }
 
   // 3. 创建 devices 表（完整结构匹配 basicData.ts 的查询和操作）
@@ -167,7 +168,7 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ devices 表创建成功');
+    seedLog.info('✓ devices 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) {
       // 表已存在，尝试添加缺失的列
@@ -185,16 +186,16 @@ export async function fixMissingSchema(): Promise<void> {
       for (const col of columnsToAdd) {
         try {
           db.run(col.sql);
-          console.log(`✓ devices 表添加 ${col.name} 列`);
+          seedLog.info(`✓ devices 表添加 ${col.name} 列`);
         } catch (addErr: any) {
           if (!addErr.message.includes('duplicate column')) {
-            // console.log(`• devices.${col.name}:`, addErr.message);
+            // seedLog.skip(`• devices.${col.name}:`, addErr.message);
           }
         }
       }
-      console.log('• devices 表已存在，已补充缺失列');
+      seedLog.skip('• devices 表已存在，已补充缺失列');
     } else {
-      console.log('• devices:', e.message);
+      seedLog.skip('• devices:', e.message);
     }
   }
 
@@ -217,7 +218,7 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ sys_code_rules 表创建成功');
+    seedLog.info('✓ sys_code_rules 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) {
       // 表已存在，尝试添加缺失的列
@@ -232,16 +233,16 @@ export async function fixMissingSchema(): Promise<void> {
       for (const col of columnsToAdd) {
         try {
           db.run(col.sql);
-          console.log(`✓ sys_code_rules 表添加 ${col.name} 列`);
+          seedLog.info(`✓ sys_code_rules 表添加 ${col.name} 列`);
         } catch (addErr: any) {
           if (!addErr.message.includes('duplicate column')) {
-            // console.log(`• sys_code_rules.${col.name}:`, addErr.message);
+            // seedLog.skip(`• sys_code_rules.${col.name}:`, addErr.message);
           }
         }
       }
-      console.log('• sys_code_rules 表已存在，已补充缺失列');
+      seedLog.skip('• sys_code_rules 表已存在，已补充缺失列');
     } else {
-      console.log('• sys_code_rules:', e.message);
+      seedLog.skip('• sys_code_rules:', e.message);
     }
   }
 
@@ -261,7 +262,7 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ sys_dictionary_categories 表创建成功');
+    seedLog.info('✓ sys_dictionary_categories 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) {
       // 表已存在，尝试添加缺失的列
@@ -273,16 +274,16 @@ export async function fixMissingSchema(): Promise<void> {
       for (const col of columnsToAdd) {
         try {
           db.run(col.sql);
-          console.log(`✓ sys_dictionary_categories 表添加 ${col.name} 列`);
+          seedLog.info(`✓ sys_dictionary_categories 表添加 ${col.name} 列`);
         } catch (addErr: any) {
           if (!addErr.message.includes('duplicate column')) {
-            // console.log(`• sys_dictionary_categories.${col.name}:`, addErr.message);
+            // seedLog.skip(`• sys_dictionary_categories.${col.name}:`, addErr.message);
           }
         }
       }
-      console.log('• sys_dictionary_categories 表已存在');
+      seedLog.skip('• sys_dictionary_categories 表已存在');
     } else {
-      console.log('• sys_dictionary_categories:', e.message);
+      seedLog.skip('• sys_dictionary_categories:', e.message);
     }
   }
 
@@ -302,12 +303,12 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ sys_approval_rules 表创建成功');
+    seedLog.info('✓ sys_approval_rules 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) {
-      console.log('• sys_approval_rules 表已存在');
+      seedLog.skip('• sys_approval_rules 表已存在');
     } else {
-      console.log('• sys_approval_rules:', e.message);
+      seedLog.skip('• sys_approval_rules:', e.message);
     }
   }
 
@@ -322,17 +323,17 @@ export async function fixMissingSchema(): Promise<void> {
   for (const table of tablesNeedSortNumber) {
     try {
       db.run(`ALTER TABLE ${table} ADD COLUMN sort_number INTEGER DEFAULT 0`);
-      console.log(`✓ ${table} 表添加 sort_number 列`);
+      seedLog.info(`✓ ${table} 表添加 sort_number 列`);
     } catch (e: any) {
       if (e.message.includes('duplicate column') || e.message.includes('no such column')) {
         // 列已存在或表不存在
         if (e.message.includes('no such table')) {
-          console.log(`• ${table} 表不存在，跳过`);
+          seedLog.skip(`• ${table} 表不存在，跳过`);
         } else {
-          console.log(`• ${table}.sort_number 列已存在`);
+          seedLog.skip(`• ${table}.sort_number 列已存在`);
         }
       } else {
-        console.log(`• ${table}.sort_number:`, e.message);
+        seedLog.skip(`• ${table}.sort_number:`, e.message);
       }
     }
   }
@@ -346,16 +347,16 @@ export async function fixMissingSchema(): Promise<void> {
   for (const table of tablesNeedSortOrder) {
     try {
       db.run(`ALTER TABLE ${table} ADD COLUMN sort_order INTEGER DEFAULT 0`);
-      console.log(`✓ ${table} 表添加 sort_order 列`);
+      seedLog.info(`✓ ${table} 表添加 sort_order 列`);
     } catch (e: any) {
       if (e.message.includes('duplicate column') || e.message.includes('no such column')) {
         if (e.message.includes('no such table')) {
-          console.log(`• ${table} 表不存在，跳过`);
+          seedLog.skip(`• ${table} 表不存在，跳过`);
         } else {
-          console.log(`• ${table}.sort_order 列已存在`);
+          seedLog.skip(`• ${table}.sort_order 列已存在`);
         }
       } else {
-        console.log(`• ${table}.sort_order:`, e.message);
+        seedLog.skip(`• ${table}.sort_order:`, e.message);
       }
     }
   }
@@ -364,58 +365,58 @@ export async function fixMissingSchema(): Promise<void> {
   try {
     db.run(`ALTER TABLE purchase_plans ADD COLUMN approval_code TEXT`);
     db.run(`ALTER TABLE purchase_plans ADD COLUMN approved_at TEXT`);
-    console.log('✓ purchase_plans 表添加 approval_code / approved_at 列');
+    seedLog.info('✓ purchase_plans 表添加 approval_code / approved_at 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• purchase_plans.approval_code / approved_at 列已存在');
+      seedLog.skip('• purchase_plans.approval_code / approved_at 列已存在');
     } else {
-      console.log('• purchase_plans 列添加失败:', e.message);
+      seedLog.skip('• purchase_plans 列添加失败:', e.message);
     }
   }
   // 7.0.1 为 purchase_plans 表添加 execution_status 列（采购执行状态：待执行/采购中/已完成/已取消）
   try {
     db.run(`ALTER TABLE purchase_plans ADD COLUMN execution_status TEXT DEFAULT 'pending_execution'`);
-    console.log('✓ purchase_plans 表添加 execution_status 列');
+    seedLog.info('✓ purchase_plans 表添加 execution_status 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• purchase_plans.execution_status 列已存在');
+      seedLog.skip('• purchase_plans.execution_status 列已存在');
     } else {
-      console.log('• purchase_plans.execution_status:', e.message);
+      seedLog.skip('• purchase_plans.execution_status:', e.message);
     }
   }
   // 7.0.2 为 purchase_plans 表添加 otherBatchReason 列（关联批次=其他时的说明）
   try {
     db.run(`ALTER TABLE purchase_plans ADD COLUMN otherBatchReason TEXT`);
-    console.log('✓ purchase_plans 表添加 otherBatchReason 列');
+    seedLog.info('✓ purchase_plans 表添加 otherBatchReason 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• purchase_plans.otherBatchReason 列已存在');
+      seedLog.skip('• purchase_plans.otherBatchReason 列已存在');
     } else {
-      console.log('• purchase_plans.otherBatchReason:', e.message);
+      seedLog.skip('• purchase_plans.otherBatchReason:', e.message);
     }
   }
   try {
     db.run(`ALTER TABLE dictionaries ADD COLUMN display_name TEXT`);
-    console.log('✓ dictionaries 表添加 display_name 列');
+    seedLog.info('✓ dictionaries 表添加 display_name 列');
     // 同步已有数据：display_name 初始值 = dict_label
     db.run(`UPDATE dictionaries SET display_name = dict_label WHERE display_name IS NULL OR display_name = ''`);
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• dictionaries.display_name 列已存在');
+      seedLog.skip('• dictionaries.display_name 列已存在');
     } else {
-      console.log('• dictionaries.display_name:', e.message);
+      seedLog.skip('• dictionaries.display_name:', e.message);
     }
   }
 
   // 7.1 为 notification_rules 表添加 conditions 列（basicData.ts 查询需要）
   try {
     db.run(`ALTER TABLE notification_rules ADD COLUMN conditions TEXT`);
-    console.log('✓ notification_rules 表添加 conditions 列');
+    seedLog.info('✓ notification_rules 表添加 conditions 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• notification_rules.conditions 列已存在');
+      seedLog.skip('• notification_rules.conditions 列已存在');
     } else {
-      console.log('• notification_rules.conditions:', e.message);
+      seedLog.skip('• notification_rules.conditions:', e.message);
     }
   }
 
@@ -427,16 +428,16 @@ export async function fixMissingSchema(): Promise<void> {
   for (const table of tablesNeedTemplateId) {
     try {
       db.run(`ALTER TABLE ${table} ADD COLUMN template_id TEXT`);
-      console.log(`✓ ${table} 表添加 template_id 列`);
+      seedLog.info(`✓ ${table} 表添加 template_id 列`);
     } catch (e: any) {
       if (e.message.includes('duplicate column') || e.message.includes('no such column')) {
         if (e.message.includes('no such table')) {
-          console.log(`• ${table} 表不存在，跳过`);
+          seedLog.skip(`• ${table} 表不存在，跳过`);
         } else {
-          console.log(`• ${table}.template_id 列已存在`);
+          seedLog.skip(`• ${table}.template_id 列已存在`);
         }
       } else {
-        console.log(`• ${table}.template_id:`, e.message);
+        seedLog.skip(`• ${table}.template_id:`, e.message);
       }
     }
   }
@@ -463,22 +464,22 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ approval_nodes 表创建成功');
+    seedLog.info('✓ approval_nodes 表创建成功');
   } catch (e: any) {
     if (e.message.includes('already exists')) {
-      console.log('• approval_nodes 表已存在');
+      seedLog.skip('• approval_nodes 表已存在');
     } else {
-      console.log('• approval_nodes:', e.message);
+      seedLog.skip('• approval_nodes:', e.message);
     }
   }
 
   // 10. RBAC 权限系统列补建 — roles 表添加 org_oid
   try {
     db.run(`ALTER TABLE roles ADD COLUMN org_oid TEXT`);
-    console.log('✓ roles 表添加 org_oid 列');
+    seedLog.info('✓ roles 表添加 org_oid 列');
   } catch (e: any) {
     if (!e.message.includes('duplicate column')) {
-      console.log('• roles.org_oid:', e.message);
+      seedLog.skip('• roles.org_oid:', e.message);
     }
   }
 
@@ -491,10 +492,10 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of processColumns) {
     try {
       db.run(col.sql);
-      console.log(`✓ processes 表添加 ${col.name} 列`);
+      seedLog.info(`✓ processes 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
-        console.log(`• processes.${col.name}:`, e.message);
+        seedLog.skip(`• processes.${col.name}:`, e.message);
       }
     }
   }
@@ -510,9 +511,9 @@ export async function fixMissingSchema(): Promise<void> {
         UNIQUE(role_oid, org_oid)
       )
     `);
-    console.log('✓ roles_data_authority 表创建成功');
+    seedLog.info('✓ roles_data_authority 表创建成功');
   } catch (e: any) {
-    console.log('• roles_data_authority:', e.message);
+    seedLog.skip('• roles_data_authority:', e.message);
   }
 
   // 13. 创建 users_authority 表（用户特殊权限覆盖）
@@ -529,9 +530,9 @@ export async function fixMissingSchema(): Promise<void> {
         UNIQUE(user_oid, process_oid, action_oid)
       )
     `);
-    console.log('✓ users_authority 表创建成功');
+    seedLog.info('✓ users_authority 表创建成功');
   } catch (e: any) {
-    console.log('• users_authority:', e.message);
+    seedLog.skip('• users_authority:', e.message);
   }
 
   // 14. 创建 projects 表（多项目/APP 配置）
@@ -551,9 +552,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ projects 表创建成功');
+    seedLog.info('✓ projects 表创建成功');
   } catch (e: any) {
-    console.log('• projects:', e.message);
+    seedLog.skip('• projects:', e.message);
   }
 
   // V10.0: IoT设备白名单表
@@ -568,9 +569,9 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ iot_devices 表创建成功');
+    seedLog.info('✓ iot_devices 表创建成功');
   } catch (e: any) {
-    console.log('• iot_devices:', e.message);
+    seedLog.skip('• iot_devices:', e.message);
   }
 
   // V10.1: IoT传感器表（iotMonitor.ts 路由使用）
@@ -590,9 +591,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ iot_sensors 表创建成功');
+    seedLog.info('✓ iot_sensors 表创建成功');
   } catch (e: any) {
-    console.log('• iot_sensors:', e.message);
+    seedLog.skip('• iot_sensors:', e.message);
   }
 
   // 18.5 确保 material_code_categories 表存在
@@ -612,25 +613,25 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ material_code_categories 表创建成功');
+    seedLog.info('✓ material_code_categories 表创建成功');
   } catch (e: any) {
-    console.log('• material_code_categories:', e.message);
+    seedLog.skip('• material_code_categories:', e.message);
   }
 
   // 19. material_code_categories 表添加 rule_type 列（区分物料/供应商编码规则）
   try {
     db.run(`ALTER TABLE material_code_categories ADD COLUMN rule_type TEXT DEFAULT 'material'`);
-    console.log('✓ material_code_categories 表添加 rule_type 列');
+    seedLog.info('✓ material_code_categories 表添加 rule_type 列');
     // SQLite ALTER TABLE ADD COLUMN 不向已有行填充默认值，需手动更新 NULL 行
     const nullCount = db.exec(`SELECT COUNT(*) as cnt FROM material_code_categories WHERE rule_type IS NULL`);
     const cnt = nullCount.length > 0 && nullCount[0].values.length > 0 ? Number(nullCount[0].values[0][0] ?? 0) : 0;
     if (cnt > 0) {
       db.run(`UPDATE material_code_categories SET rule_type = 'material' WHERE rule_type IS NULL`);
-      console.log(`✓ 已更新 ${cnt} 条旧记录的 rule_type = 'material'`);
+      seedLog.info(`✓ 已更新 ${cnt} 条旧记录的 rule_type = 'material'`);
     }
   } catch (e: any) {
     if (!e.message.includes('duplicate column')) {
-      console.log('• material_code_categories.rule_type:', e.message);
+      seedLog.skip('• material_code_categories.rule_type:', e.message);
     }
   }
 
@@ -663,9 +664,9 @@ export async function fixMissingSchema(): Promise<void> {
         deleted_at TEXT
       )
     `);
-    console.log('✓ bases 表创建成功');
+    seedLog.info('✓ bases 表创建成功');
   } catch (e: any) {
-    console.log('• bases:', e.message);
+    seedLog.skip('• bases:', e.message);
   }
 
   // 21. ALTER greenhouses 表添加设施管理新字段（基地空间架构 V1.0）
@@ -681,10 +682,10 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of ghColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ greenhouses 表添加 ${col.name} 列`);
+      seedLog.info(`✓ greenhouses 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
-        console.log(`• greenhouses.${col.name}:`, e.message);
+        seedLog.skip(`• greenhouses.${col.name}:`, e.message);
       }
     }
   }
@@ -696,7 +697,7 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of zoneColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ zones 表添加 ${col.name} 列`);
+      seedLog.info(`✓ zones 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
         // 可能已存在
@@ -728,13 +729,13 @@ export async function fixMissingSchema(): Promise<void> {
         deleted_at TEXT
       )
     `);
-    console.log('✓ planting_records 表创建成功');
+    seedLog.info('✓ planting_records 表创建成功');
     // 创建索引
     try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_facility ON planting_records(facility_oid)'); } catch {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_season ON planting_records(season_code)'); } catch {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_pr_status ON planting_records(status)'); } catch {}
   } catch (e: any) {
-    console.log('• planting_records:', e.message);
+    seedLog.skip('• planting_records:', e.message);
   }
 
   // ========== Phase 0: iAGS 系统设置集成 — 新增数据库表 ==========
@@ -765,9 +766,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ farm_partitions 表创建成功（分区管理）');
+    seedLog.info('✓ farm_partitions 表创建成功（分区管理）');
   } catch (e: any) {
-    console.log('• farm_partitions:', e.message);
+    seedLog.skip('• farm_partitions:', e.message);
   }
 
   // 24. 创建 device_systems 表（系统管理 — iAGS deviceSystem）
@@ -786,9 +787,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ device_systems 表创建成功（系统管理）');
+    seedLog.info('✓ device_systems 表创建成功（系统管理）');
   } catch (e: any) {
-    console.log('• device_systems:', e.message);
+    seedLog.skip('• device_systems:', e.message);
   }
 
   // 25. 创建 area_system_mappings 表（区域系统 — iAGS AreaSystem）
@@ -806,9 +807,9 @@ export async function fixMissingSchema(): Promise<void> {
         UNIQUE(partition_oid, system_oid)
       )
     `);
-    console.log('✓ area_system_mappings 表创建成功（区域系统）');
+    seedLog.info('✓ area_system_mappings 表创建成功（区域系统）');
   } catch (e: any) {
-    console.log('• area_system_mappings:', e.message);
+    seedLog.skip('• area_system_mappings:', e.message);
   }
 
   // 26. 创建 camera_devices 表（视频管理 — iAGS Camera）
@@ -833,9 +834,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ camera_devices 表创建成功（视频管理）');
+    seedLog.info('✓ camera_devices 表创建成功（视频管理）');
   } catch (e: any) {
-    console.log('• camera_devices:', e.message);
+    seedLog.skip('• camera_devices:', e.message);
   }
 
   // 27. 创建 energy_configs 表（能耗管理 — iAGS AreaEnery）
@@ -856,9 +857,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ energy_configs 表创建成功（能耗管理）');
+    seedLog.info('✓ energy_configs 表创建成功（能耗管理）');
   } catch (e: any) {
-    console.log('• energy_configs:', e.message);
+    seedLog.skip('• energy_configs:', e.message);
   }
 
   // 28. 创建 alarm_level_configs 表（警报级别配置 — iAGS Warning）
@@ -874,9 +875,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ alarm_level_configs 表创建成功（警报级别）');
+    seedLog.info('✓ alarm_level_configs 表创建成功（警报级别）');
   } catch (e: any) {
-    console.log('• alarm_level_configs:', e.message);
+    seedLog.skip('• alarm_level_configs:', e.message);
   }
 
   // 29. 创建 alarm_contacts 表（警报联系人 — iAGS Warning）
@@ -893,9 +894,9 @@ export async function fixMissingSchema(): Promise<void> {
         created_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ alarm_contacts 表创建成功（警报联系人）');
+    seedLog.info('✓ alarm_contacts 表创建成功（警报联系人）');
   } catch (e: any) {
-    console.log('• alarm_contacts:', e.message);
+    seedLog.skip('• alarm_contacts:', e.message);
   }
 
   // 30. 创建 water_fertilizer_configs 表（水肥一体机 — iAGS WaterFertilizer）
@@ -924,9 +925,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ water_fertilizer_configs 表创建成功（水肥一体机）');
+    seedLog.info('✓ water_fertilizer_configs 表创建成功（水肥一体机）');
   } catch (e: any) {
-    console.log('• water_fertilizer_configs:', e.message);
+    seedLog.skip('• water_fertilizer_configs:', e.message);
   }
 
   // 31. 创建 debug_logs 表（工程调试 — iAGS ProjectDebug）
@@ -943,9 +944,9 @@ export async function fixMissingSchema(): Promise<void> {
         created_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ debug_logs 表创建成功（工程调试）');
+    seedLog.info('✓ debug_logs 表创建成功（工程调试）');
   } catch (e: any) {
-    console.log('• debug_logs:', e.message);
+    seedLog.skip('• debug_logs:', e.message);
   }
 
   // 32. 创建 plant_settings 表（种植设置 — iAGS Plantset）
@@ -964,9 +965,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ plant_settings 表创建成功（种植设置）');
+    seedLog.info('✓ plant_settings 表创建成功（种植设置）');
   } catch (e: any) {
-    console.log('• plant_settings:', e.message);
+    seedLog.skip('• plant_settings:', e.message);
   }
 
   // 33. 创建 device_distributions 表（设备分配 — iAGS DeviceDistribution 预留端口）
@@ -996,78 +997,78 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ device_distributions 表创建成功（设备分配）');
+    seedLog.info('✓ device_distributions 表创建成功（设备分配）');
   } catch (e: any) {
-    console.log('• device_distributions:', e.message);
+    seedLog.skip('• device_distributions:', e.message);
   }
 
   // 34. fertilizer_records 表添加 unit 列
   try {
     db.run(`ALTER TABLE fertilizer_records ADD COLUMN unit TEXT DEFAULT '千克'`);
-    console.log('✓ fertilizer_records 表添加 unit 列');
+    seedLog.info('✓ fertilizer_records 表添加 unit 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• fertilizer_records.unit 列已存在');
+      seedLog.skip('• fertilizer_records.unit 列已存在');
     } else {
-      console.log('• fertilizer_records.unit:', e.message);
+      seedLog.skip('• fertilizer_records.unit:', e.message);
     }
   }
 
   // 35. production_plans 表添加 planting_area_unit 列（种植面积单位）
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN planting_area_unit TEXT DEFAULT 'm²'`);
-    console.log('✓ production_plans 表添加 planting_area_unit 列');
+    seedLog.info('✓ production_plans 表添加 planting_area_unit 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• production_plans.planting_area_unit 列已存在');
+      seedLog.skip('• production_plans.planting_area_unit 列已存在');
     } else {
-      console.log('• production_plans.planting_area_unit:', e.message);
+      seedLog.skip('• production_plans.planting_area_unit:', e.message);
     }
   }
 
   // 36. production_plans 表添加关联订单字段（生产计划可关联订单）
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN order_id TEXT`);
-    console.log('✓ production_plans 表添加 order_id 列');
+    seedLog.info('✓ production_plans 表添加 order_id 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• production_plans.order_id 列已存在');
+      seedLog.skip('• production_plans.order_id 列已存在');
     } else {
-      console.log('• production_plans.order_id:', e.message);
+      seedLog.skip('• production_plans.order_id:', e.message);
     }
   }
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN order_code TEXT`);
-    console.log('✓ production_plans 表添加 order_code 列');
+    seedLog.info('✓ production_plans 表添加 order_code 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• production_plans.order_code 列已存在');
+      seedLog.skip('• production_plans.order_code 列已存在');
     } else {
-      console.log('• production_plans.order_code:', e.message);
+      seedLog.skip('• production_plans.order_code:', e.message);
     }
   }
 
   // 36.5 production_plans 表添加 execution_status 执行状态字段
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN execution_status TEXT DEFAULT 'pending_execution'`);
-    console.log('✓ production_plans 表添加 execution_status 列');
+    seedLog.info('✓ production_plans 表添加 execution_status 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• production_plans.execution_status 列已存在');
+      seedLog.skip('• production_plans.execution_status 列已存在');
     } else {
-      console.log('• production_plans.execution_status:', e.message);
+      seedLog.skip('• production_plans.execution_status:', e.message);
     }
   }
 
   // 36.6 production_plans 表添加 greenhouse_id 字段（种植区域ID）
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN greenhouse_id TEXT`);
-    console.log('✓ production_plans 表添加 greenhouse_id 列');
+    seedLog.info('✓ production_plans 表添加 greenhouse_id 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• production_plans.greenhouse_id 列已存在');
+      seedLog.skip('• production_plans.greenhouse_id 列已存在');
     } else {
-      console.log('• production_plans.greenhouse_id:', e.message);
+      seedLog.skip('• production_plans.greenhouse_id:', e.message);
     }
   }
 
@@ -1081,10 +1082,10 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of farmTaskColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ farm_tasks 表添加 ${col.name} 列`);
+      seedLog.info(`✓ farm_tasks 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
-        console.log(`• farm_tasks.${col.name}:`, e.message);
+        seedLog.skip(`• farm_tasks.${col.name}:`, e.message);
       }
     }
   }
@@ -1104,14 +1105,16 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'harvest_area', sql: 'ALTER TABLE harvest_records ADD COLUMN harvest_area REAL DEFAULT 0' },   // 采收面积（FIELD_MAP 第 39 行）
     // V3.1 1:N 产品明细：1 条主单 + products JSON 数组存 N 个产品（修复"主单被拆成 N 条"bug）
     { name: 'products', sql: 'ALTER TABLE harvest_records ADD COLUMN products TEXT' },                 // 产品明细 JSON 数组字符串
+    // 2026-06-04: 软删除列 — 修复"用户删除后重启被 seed 复活"bug。删除时只标 deleted_at，物理行保留
+    { name: 'deleted_at', sql: 'ALTER TABLE harvest_records ADD COLUMN deleted_at TEXT' },
   ];
   for (const col of harvestColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ harvest_records 表添加 ${col.name} 列`);
+      seedLog.info(`✓ harvest_records 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
-        // console.log(`• harvest_records.${col.name}:`, e.message);
+        // seedLog.skip(`• harvest_records.${col.name}:`, e.message);
       }
     }
   }
@@ -1131,10 +1134,10 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of tempTaskColumnsToAdd) {
     try {
       db.run(col.sql);
-      console.log(`✓ temp_tasks 表添加 ${col.name} 列`);
+      seedLog.info(`✓ temp_tasks 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
-        console.log(`• temp_tasks.${col.name}:`, e.message);
+        seedLog.skip(`• temp_tasks.${col.name}:`, e.message);
       }
     }
   }
@@ -1155,10 +1158,10 @@ export async function fixMissingSchema(): Promise<void> {
         update_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ pesticide_library 表创建成功');
+    seedLog.info('✓ pesticide_library 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• pesticide_library 已存在');
-    else console.error('pesticide_library:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• pesticide_library 已存在');
+    else seedLog.error('pesticide_library:', e.message);
   }
 
   try {
@@ -1176,10 +1179,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ pesticide_specs 表创建成功');
+    seedLog.info('✓ pesticide_specs 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• pesticide_specs 已存在');
-    else console.error('pesticide_specs:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• pesticide_specs 已存在');
+    else seedLog.error('pesticide_specs:', e.message);
   }
 
   // V12.0: 肥料库表（如果从旧版本升级）
@@ -1201,10 +1204,10 @@ export async function fixMissingSchema(): Promise<void> {
         update_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ fertilizer_library 表创建成功');
+    seedLog.info('✓ fertilizer_library 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• fertilizer_library 已存在');
-    else console.error('fertilizer_library:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• fertilizer_library 已存在');
+    else seedLog.error('fertilizer_library:', e.message);
   }
 
   try {
@@ -1223,73 +1226,73 @@ export async function fixMissingSchema(): Promise<void> {
         FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE CASCADE
       )
     `);
-    console.log('✓ fertilizer_specs 表创建成功');
+    seedLog.info('✓ fertilizer_specs 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• fertilizer_specs 已存在');
-    else console.error('fertilizer_specs:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• fertilizer_specs 已存在');
+    else seedLog.error('fertilizer_specs:', e.message);
   }
 
   // 为 fertilizer_specs 表添加品牌名称字段
   try {
     db.run(`ALTER TABLE fertilizer_specs ADD COLUMN brand_name TEXT`);
-    console.log('✓ fertilizer_specs 表添加 brand_name 列成功');
+    seedLog.info('✓ fertilizer_specs 表添加 brand_name 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• brand_name 列已存在');
-    else console.log('• brand_name 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• brand_name 列已存在');
+    else seedLog.skip('• brand_name 列添加: ' + e.message);
   }
 
   // V12.0: 为 fertilizer_library 表添加 application_timing 字段（替换 fertilizer_category）
   try {
     db.run(`ALTER TABLE fertilizer_library ADD COLUMN application_timing TEXT`);
-    console.log('✓ fertilizer_library 表添加 application_timing 列成功');
+    seedLog.info('✓ fertilizer_library 表添加 application_timing 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• application_timing 列已存在');
-    else console.log('• application_timing 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• application_timing 列已存在');
+    else seedLog.skip('• application_timing 列添加: ' + e.message);
   }
 
   // 为 pesticide_specs 表添加作用机制字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN mechanism TEXT`);
-    console.log('✓ pesticide_specs 表添加 mechanism 列成功');
+    seedLog.info('✓ pesticide_specs 表添加 mechanism 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• mechanism 列已存在');
-    else console.log('• mechanism 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• mechanism 列已存在');
+    else seedLog.skip('• mechanism 列添加: ' + e.message);
   }
 
   // 为 pesticide_specs 表添加品牌名称字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN brand_name TEXT`);
-    console.log('✓ pesticide_specs 表添加 brand_name 列成功');
+    seedLog.info('✓ pesticide_specs 表添加 brand_name 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• brand_name 列已存在');
-    else console.log('• brand_name 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• brand_name 列已存在');
+    else seedLog.skip('• brand_name 列添加: ' + e.message);
   }
 
   // 为 pesticide_library 表添加药剂成分字段
   try {
     db.run(`ALTER TABLE pesticide_library ADD COLUMN ingredient TEXT`);
-    console.log('✓ pesticide_library 表添加 ingredient 列成功');
+    seedLog.info('✓ pesticide_library 表添加 ingredient 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• ingredient 列已存在');
-    else console.log('• ingredient 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• ingredient 列已存在');
+    else seedLog.skip('• ingredient 列添加: ' + e.message);
   }
 
   // 为 pesticide_library 表添加作用机制字段
   try {
     db.run(`ALTER TABLE pesticide_library ADD COLUMN mechanism TEXT`);
-    console.log('✓ pesticide_library 表添加 mechanism 列成功');
+    seedLog.info('✓ pesticide_library 表添加 mechanism 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• mechanism 列已存在');
-    else console.log('• mechanism 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• mechanism 列已存在');
+    else seedLog.skip('• mechanism 列添加: ' + e.message);
   }
 
   // 为 pesticide_specs 表添加备注字段
   try {
     db.run(`ALTER TABLE pesticide_specs ADD COLUMN remark TEXT`);
-    console.log('✓ pesticide_specs 表添加 remark 列成功');
+    seedLog.info('✓ pesticide_specs 表添加 remark 列成功');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• remark 列已存在');
-    else console.log('• remark 列添加: ' + e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• remark 列已存在');
+    else seedLog.skip('• remark 列添加: ' + e.message);
   }
 
   // 为 plantings 表添加缺失的列
@@ -1314,10 +1317,10 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of plantingsColumns) {
     try {
       db.run(col.sql);
-      console.log(`✓ plantings 表添加 ${col.name} 列成功`);
+      seedLog.info(`✓ plantings 表添加 ${col.name} 列成功`);
     } catch (e: any) {
-      if (e.message.includes('duplicate column')) console.log(`• plantings.${col.name} 列已存在`);
-      else console.log(`• plantings.${col.name} 列添加: ${e.message}`);
+      if (e.message.includes('duplicate column')) seedLog.skip(`• plantings.${col.name} 列已存在`);
+      else seedLog.skip(`• plantings.${col.name} 列添加: ${e.message}`);
     }
   }
 
@@ -1334,10 +1337,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ pest_disease_dict 表创建成功');
+    seedLog.info('✓ pest_disease_dict 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• pest_disease_dict 已存在');
-    else console.error('pest_disease_dict:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• pest_disease_dict 已存在');
+    else seedLog.error('pest_disease_dict:', e.message);
   }
 
   try {
@@ -1378,45 +1381,45 @@ export async function fixMissingSchema(): Promise<void> {
         update_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ pesticide_records 表创建成功');
+    seedLog.info('✓ pesticide_records 表创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• pesticide_records 已存在');
-    else console.error('pesticide_records:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• pesticide_records 已存在');
+    else seedLog.error('pesticide_records:', e.message);
   }
 
   // V12.0: 为 pesticide_records 表添加 pesticide_list 列（支持多药剂）
   try {
     db.run(`ALTER TABLE pesticide_records ADD COLUMN pesticide_list TEXT`);
-    console.log('✓ pesticide_records 表添加 pesticide_list 列');
+    seedLog.info('✓ pesticide_records 表添加 pesticide_list 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• pesticide_records.pesticide_list 列已存在');
+      seedLog.skip('• pesticide_records.pesticide_list 列已存在');
     } else {
-      console.log('• pesticide_records.pesticide_list:', e.message);
+      seedLog.skip('• pesticide_records.pesticide_list:', e.message);
     }
   }
 
   // V12.0: 为 pesticide_records 表添加 bio_agent_list 列（支持多生物制剂）
   try {
     db.run(`ALTER TABLE pesticide_records ADD COLUMN bio_agent_list TEXT`);
-    console.log('✓ pesticide_records 表添加 bio_agent_list 列');
+    seedLog.info('✓ pesticide_records 表添加 bio_agent_list 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• pesticide_records.bio_agent_list 列已存在');
+      seedLog.skip('• pesticide_records.bio_agent_list 列已存在');
     } else {
-      console.log('• pesticide_records.bio_agent_list:', e.message);
+      seedLog.skip('• pesticide_records.bio_agent_list:', e.message);
     }
   }
 
   // V12.0: 为 pesticide_records 表添加 equipment_list 列（支持多设备/方式）
   try {
     db.run(`ALTER TABLE pesticide_records ADD COLUMN equipment_list TEXT`);
-    console.log('✓ pesticide_records 表添加 equipment_list 列');
+    seedLog.info('✓ pesticide_records 表添加 equipment_list 列');
   } catch (e: any) {
     if (e.message.includes('duplicate column')) {
-      console.log('• pesticide_records.equipment_list 列已存在');
+      seedLog.skip('• pesticide_records.equipment_list 列已存在');
     } else {
-      console.log('• pesticide_records.equipment_list:', e.message);
+      seedLog.skip('• pesticide_records.equipment_list:', e.message);
     }
   }
 
@@ -1431,14 +1434,14 @@ export async function fixMissingSchema(): Promise<void> {
         UNIQUE(pesticide_id, pest_id)
       )
     `);
-    console.log('✓ pesticide_pest_relation 表创建成功');
+    seedLog.info('✓ pesticide_pest_relation 表创建成功');
     // 创建索引
     try { db.run('CREATE INDEX IF NOT EXISTS idx_relation_pesticide ON pesticide_pest_relation(pesticide_id);'); } catch {}
     try { db.run('CREATE INDEX IF NOT EXISTS idx_relation_pest ON pesticide_pest_relation(pest_id);'); } catch {}
-    console.log('✓ pesticide_pest_relation 索引创建成功');
+    seedLog.info('✓ pesticide_pest_relation 索引创建成功');
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• pesticide_pest_relation 已存在');
-    else console.error('pesticide_pest_relation:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• pesticide_pest_relation 已存在');
+    else seedLog.error('pesticide_pest_relation:', e.message);
   }
 
   // V13.0: 种源打印记录表
@@ -1455,38 +1458,38 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT DEFAULT (datetime('now','localtime'))
       )
     `);
-    console.log('✓ seed_source_print_records 表创建成功');
+    seedLog.info('✓ seed_source_print_records 表创建成功');
     try { db.run('CREATE INDEX IF NOT EXISTS idx_sspr_seed_source ON seed_source_print_records(seed_source_id)'); } catch {}
   } catch (e: any) {
-    if (e.message.includes('already exists')) console.log('• seed_source_print_records 已存在');
-    else console.error('seed_source_print_records:', e.message);
+    if (e.message.includes('already exists')) seedLog.skip('• seed_source_print_records 已存在');
+    else seedLog.error('seed_source_print_records:', e.message);
   }
 
   // 为 seed_sources 表添加打印相关列
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN print_count INTEGER DEFAULT 0`);
-    console.log('✓ seed_sources 表添加 print_count 列');
+    seedLog.info('✓ seed_sources 表添加 print_count 列');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• seed_sources.print_count 列已存在');
-    else console.log('• seed_sources.print_count:', e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.print_count 列已存在');
+    else seedLog.skip('• seed_sources.print_count:', e.message);
   }
 
   // P0 #1: 为 seed_sources 表添加 pictures 列（种源图片）
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN pictures TEXT DEFAULT '[]'`);
-    console.log('✓ seed_sources 表添加 pictures 列');
+    seedLog.info('✓ seed_sources 表添加 pictures 列');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• seed_sources.pictures 列已存在');
-    else console.log('• seed_sources.pictures:', e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.pictures 列已存在');
+    else seedLog.skip('• seed_sources.pictures:', e.message);
   }
 
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
-    console.log('✓ seedlings 表添加 print_count 列');
+    seedLog.info('✓ seedlings 表添加 print_count 列');
   } catch (e: any) {
-    if (e.message.includes('duplicate column')) console.log('• seedlings.print_count 列已存在');
-    else console.log('• seedlings.print_count:', e.message);
+    if (e.message.includes('duplicate column')) seedLog.skip('• seedlings.print_count 列已存在');
+    else seedLog.skip('• seedlings.print_count:', e.message);
   }
 
   // 创建 daily_plans 表（每日计划持久化）
@@ -1501,9 +1504,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ daily_plans 表创建成功');
+    seedLog.info('✓ daily_plans 表创建成功');
   } catch (e: any) {
-    console.log('• daily_plans:', e.message);
+    seedLog.skip('• daily_plans:', e.message);
   }
 
   // 创建 monthly_plans 表（月度计划持久化）
@@ -1518,9 +1521,9 @@ export async function fixMissingSchema(): Promise<void> {
         updated_at TEXT
       )
     `);
-    console.log('✓ monthly_plans 表创建成功');
+    seedLog.info('✓ monthly_plans 表创建成功');
   } catch (e: any) {
-    console.log('• monthly_plans:', e.message);
+    seedLog.skip('• monthly_plans:', e.message);
   }
 
   // ========== 订单管理扩展表 (Order Management V2) ==========
@@ -1541,10 +1544,10 @@ export async function fixMissingSchema(): Promise<void> {
         update_time TEXT
       )
     `);
-    console.log('✓ customers 表创建成功');
+    seedLog.info('✓ customers 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• customers:', e.message);
+      seedLog.skip('• customers:', e.message);
     }
   }
 
@@ -1565,10 +1568,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ inventory_freeze 表创建成功');
+    seedLog.info('✓ inventory_freeze 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• inventory_freeze:', e.message);
+      seedLog.skip('• inventory_freeze:', e.message);
     }
   }
 
@@ -1590,10 +1593,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ delivery_records 表创建成功');
+    seedLog.info('✓ delivery_records 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• delivery_records:', e.message);
+      seedLog.skip('• delivery_records:', e.message);
     }
   }
 
@@ -1612,10 +1615,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ quality_check_records 表创建成功');
+    seedLog.info('✓ quality_check_records 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• quality_check_records:', e.message);
+      seedLog.skip('• quality_check_records:', e.message);
     }
   }
 
@@ -1633,10 +1636,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ acceptance_records 表创建成功');
+    seedLog.info('✓ acceptance_records 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• acceptance_records:', e.message);
+      seedLog.skip('• acceptance_records:', e.message);
     }
   }
 
@@ -1655,10 +1658,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ production_batch_orders 表创建成功');
+    seedLog.info('✓ production_batch_orders 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• production_batch_orders:', e.message);
+      seedLog.skip('• production_batch_orders:', e.message);
     }
   }
 
@@ -1676,10 +1679,10 @@ export async function fixMissingSchema(): Promise<void> {
         create_time TEXT
       )
     `);
-    console.log('✓ order_change_logs 表创建成功');
+    seedLog.info('✓ order_change_logs 表创建成功');
   } catch (e: any) {
     if (!e.message.includes('already exists')) {
-      console.log('• order_change_logs:', e.message);
+      seedLog.skip('• order_change_logs:', e.message);
     }
   }
 
@@ -1694,22 +1697,22 @@ export async function fixMissingSchema(): Promise<void> {
     try {
       db.run(sql);
       const fieldName = sql.split('ADD COLUMN ')[1].split(' ')[0];
-      console.log(`✓ crop_orders 表添加 ${fieldName} 列`);
+      seedLog.info(`✓ crop_orders 表添加 ${fieldName} 列`);
     } catch (e: any) {
       if (!e.message.includes('duplicate column')) {
         const fieldName = sql.split('ADD COLUMN ')[1].split(' ')[0];
-        console.log(`• crop_orders.${fieldName}: ${e.message}`);
+        seedLog.skip(`• crop_orders.${fieldName}: ${e.message}`);
       }
     }
   }
 
   saveDatabase();
-  console.log('\n数据库结构修复完成！');
+  seedLog.info('\n数据库结构修复完成！');
 
   // ========== 库存中心表 (inventory_stock) 扩展字段（V3.0 关联采收入库）==========
   // 这些字段由采收入库 API 在调用 inventoryInbound 时一起传入并落库，
   // 让"作物库存"页能展示完整的采收元数据（品级 / 区域 / 编码 / 备注等）
-  console.log('\n检查 inventory_stock 扩展字段...');
+  seedLog.info('\n检查 inventory_stock 扩展字段...');
   const inventoryStockExtColumns = [
     { name: 'crop_code', sql: "ALTER TABLE inventory_stock ADD COLUMN crop_code TEXT" },          // 11 位品种库编码
     { name: 'planting_mode', sql: "ALTER TABLE inventory_stock ADD COLUMN planting_mode TEXT" },   // 种植模式
@@ -1722,12 +1725,12 @@ export async function fixMissingSchema(): Promise<void> {
   for (const col of inventoryStockExtColumns) {
     try {
       db.run(col.sql);
-      console.log(`✓ inventory_stock 表添加 ${col.name} 列`);
+      seedLog.info(`✓ inventory_stock 表添加 ${col.name} 列`);
     } catch (e: any) {
       if (e.message.includes('duplicate column')) {
-        console.log(`• inventory_stock.${col.name} 列已存在`);
+        seedLog.skip(`• inventory_stock.${col.name} 列已存在`);
       } else {
-        console.log(`• inventory_stock.${col.name}: ${e.message}`);
+        seedLog.skip(`• inventory_stock.${col.name}: ${e.message}`);
       }
     }
   }
@@ -1742,7 +1745,7 @@ export async function fixMissingSchema(): Promise<void> {
   for (const idx of outboundRecordIndexes) {
     try {
       db.run(idx.sql);
-      console.log(`✓ 出库流水索引 ${idx.name} 创建成功`);
+      seedLog.info(`✓ 出库流水索引 ${idx.name} 创建成功`);
     } catch (e: any) {
       // 重复创建等错误静默
     }
@@ -1776,11 +1779,11 @@ export function deduplicateDictionaries(): void {
   stmt.free();
 
   if (duplicates.length === 0) {
-    console.log('字典数据无重复，跳过去重');
+    seedLog.info('字典数据无重复，跳过去重');
     return;
   }
 
-  console.log(`发现 ${duplicates.length} 组重复字典数据，开始去重...`);
+  seedLog.info(`发现 ${duplicates.length} 组重复字典数据，开始去重...`);
 
   for (const dup of duplicates) {
     const categoryCode = dup.category_code;
@@ -1844,11 +1847,11 @@ export function deduplicateDictionaries(): void {
       db.run(`DELETE FROM dictionaries WHERE id = ?`, [row.id as string]);
     }
 
-    console.log(`  去重: ${categoryCode}/${dictCode} → 保留 ${keeper.id}, 删除 ${toDelete.map(r => r.id).join(', ')}`);
+    seedLog.info(`  去重: ${categoryCode}/${dictCode} → 保留 ${keeper.id}, 删除 ${toDelete.map(r => r.id).join(', ')}`);
   }
 
   saveDatabase();
-  console.log('字典数据去重完成');
+  seedLog.info('字典数据去重完成');
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

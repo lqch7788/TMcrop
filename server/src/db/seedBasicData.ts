@@ -6,6 +6,7 @@
  */
 
 import { getDatabase, saveDatabase } from './index';
+import { seedLog } from '../lib/seedLogger';
 
 /**
  * 部门数据结构
@@ -1171,7 +1172,7 @@ export function seedDepartments() {
     ]);
   }
 
-  console.log(`已导入 ${defaultDepartments.length} 条部门数据`);
+  seedLog.info(`已导入 ${defaultDepartments.length} 条部门数据`);
 }
 
 /**
@@ -1200,7 +1201,7 @@ export function seedWarehouses() {
     ]);
   }
 
-  console.log(`已导入 ${defaultWarehouses.length} 条仓库数据`);
+  seedLog.info(`已导入 ${defaultWarehouses.length} 条仓库数据`);
 }
 
 /**
@@ -1240,7 +1241,7 @@ export function seedGreenhouses() {
     ]);
   }
 
-  console.log(`已导入 ${defaultGreenhouses.length} 条温室大棚数据`);
+  seedLog.info(`已导入 ${defaultGreenhouses.length} 条温室大棚数据`);
 }
 
 /**
@@ -1268,7 +1269,7 @@ export function seedPositions() {
     ]);
   }
 
-  console.log(`已导入 ${defaultPositions.length} 条职位数据`);
+  seedLog.info(`已导入 ${defaultPositions.length} 条职位数据`);
 }
 
 /**
@@ -1299,7 +1300,7 @@ export function seedTeams() {
     ]);
   }
 
-  console.log(`已导入 ${defaultTeams.length} 条班组数据`);
+  seedLog.info(`已导入 ${defaultTeams.length} 条班组数据`);
 }
 
 /**
@@ -1326,7 +1327,7 @@ export function seedDictionaryCategories() {
     ]);
   }
 
-  console.log(`已导入 ${defaultDictionaryCategories.length} 条字典分类数据`);
+  seedLog.info(`已导入 ${defaultDictionaryCategories.length} 条字典分类数据`);
 }
 
 /**
@@ -1394,7 +1395,7 @@ export function seedDictionaries() {
     inserted++;
   }
 
-  console.log(`已处理 ${defaultDictionaries.length} 条字典项数据（新增 ${inserted}，跳过 ${skipped}）`);
+  seedLog.skip(`已处理 ${defaultDictionaries.length} 条字典项数据（新增 ${inserted}，跳过 ${skipped}）`);
 }
 
 /**
@@ -1421,7 +1422,7 @@ export function seedNotificationChannels() {
     ]);
   }
 
-  console.log(`已导入 ${defaultNotificationChannels.length} 条通知渠道数据`);
+  seedLog.info(`已导入 ${defaultNotificationChannels.length} 条通知渠道数据`);
 }
 
 /**
@@ -1452,7 +1453,7 @@ export function seedNotificationRules() {
     ]);
   }
 
-  console.log(`已导入 ${defaultNotificationRules.length} 条通知规则数据`);
+  seedLog.info(`已导入 ${defaultNotificationRules.length} 条通知规则数据`);
 }
 
 /**
@@ -1480,7 +1481,7 @@ export function seedApprovalWorkflows() {
     ]);
   }
 
-  console.log(`已导入 ${defaultApprovalWorkflows.length} 条审批工作流数据`);
+  seedLog.info(`已导入 ${defaultApprovalWorkflows.length} 条审批工作流数据`);
 }
 
 /**
@@ -1779,9 +1780,9 @@ export function seedCodeRuleCategories() {
   }
 
   if (added > 0) {
-    console.log(`✓ 种子数据：编码规则分类已添加 ${added} 条`);
+    seedLog.info(`✓ 种子数据：编码规则分类已添加 ${added} 条`);
   } else {
-    console.log('• 编码规则分类：数据已存在，跳过');
+    seedLog.skip('• 编码规则分类：数据已存在，跳过');
   }
 }
 
@@ -1823,7 +1824,7 @@ export function seedIndicatorEvaluations() {
     inserted++;
   }
 
-  if (inserted > 0) console.log(`已导入 ${inserted} 条指标评估数据`);
+  if (inserted > 0) seedLog.info(`已导入 ${inserted} 条指标评估数据`);
 }
 
 /**
@@ -1837,7 +1838,7 @@ function seedFertilizerLibrary() {
   const existing = db.exec('SELECT COUNT(*) FROM fertilizer_library WHERE fertilizer_type IN (\'organic\', \'inorganic\')');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`肥料知识库有机肥/无机肥已存在 (${count}条)，跳过导入`);
+    seedLog.skip(`肥料知识库有机肥/无机肥已存在 (${count}条)，跳过导入`);
     return;
   }
 
@@ -1876,7 +1877,7 @@ function seedFertilizerLibrary() {
     codeIndex++;
   }
 
-  console.log(`已导入 ${fertilizers.length} 条肥料知识库种子数据`);
+  seedLog.info(`已导入 ${fertilizers.length} 条肥料知识库种子数据`);
 }
 
 export function exportBasicData() {
@@ -1894,7 +1895,7 @@ export function exportBasicData() {
   seedCodeRuleCategories();
   seedFertilizerLibrary();
   saveDatabase();
-  console.log('基础数据导入完成');
+  seedLog.info('基础数据导入完成');
 }
 
 /**

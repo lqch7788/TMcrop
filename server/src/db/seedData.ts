@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { seedPesticideLibrary } from './seedPesticideLibrary';
 import { seedPestDiseaseDict } from './seedPestDiseaseDict';
+import { seedLog } from '../lib/seedLogger';
 
 /**
  * 导入作物品种数据
@@ -22,7 +23,7 @@ function seedCropVarieties() {
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
 
   if (count > 0) {
-    console.log(`作物品种数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`作物品种数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -124,7 +125,7 @@ function seedCropVarieties() {
     ]);
   }
 
-  console.log(`已导入 ${cropVarieties.length} 条作物品种数据`);
+  seedLog.info(`已导入 ${cropVarieties.length} 条作物品种数据`);
 }
 
 /**
@@ -207,7 +208,7 @@ function seedInventory() {
     ]);
   }
 
-  console.log(`已导入 ${inventoryData.length} 条库存数据`);
+  seedLog.info(`已导入 ${inventoryData.length} 条库存数据`);
 }
 
 /**
@@ -252,7 +253,7 @@ function seedSuppliers() {
     ]);
   }
 
-  console.log(`已导入 ${suppliers.length} 条供应商数据`);
+  seedLog.info(`已导入 ${suppliers.length} 条供应商数据`);
 }
 
 /**
@@ -267,7 +268,7 @@ function seedSeedSources() {
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
 
   if (count > 0) {
-    console.log(`种源数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`种源数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -482,7 +483,7 @@ function seedSeedSources() {
     ]);
   }
 
-  console.log(`已导入 ${seedSources.length} 条种源数据`);
+  seedLog.info(`已导入 ${seedSources.length} 条种源数据`);
 }
 
 /**
@@ -496,7 +497,7 @@ function seedPropagationSeedSources() {
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
 
   if (count > 0) {
-    console.log(`繁殖途径种源数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`繁殖途径种源数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -628,7 +629,7 @@ function seedPropagationSeedSources() {
     ]);
   }
 
-  console.log(`已导入 ${propagationSources.length} 条繁殖途径种源数据`);
+  seedLog.info(`已导入 ${propagationSources.length} 条繁殖途径种源数据`);
 }
 
 /**
@@ -641,7 +642,7 @@ function seedProductionPlans() {
   const existingCount = db.exec('SELECT COUNT(*) as count FROM production_plans');
   const count = Number(existingCount[0]?.values[0]?.[0] || 0);
   if (count > 0) {
-    console.log(`[seedData] production_plans 表已有 ${count} 条数据，跳过种子数据导入`);
+    seedLog.skip(`[seedData] production_plans 表已有 ${count} 条数据，跳过种子数据导入`);
     return;
   }
 
@@ -1003,7 +1004,7 @@ function seedProductionPlans() {
     ]);
   }
 
-  console.log(`已导入 ${productionPlans.length} 条生产计划数据`);
+  seedLog.info(`已导入 ${productionPlans.length} 条生产计划数据`);
 }
 
 /**
@@ -1016,7 +1017,7 @@ function seedSeedlings() {
   const existing = db.exec('SELECT COUNT(*) FROM seedlings');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`育苗数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`育苗数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -1147,7 +1148,7 @@ function seedSeedlings() {
     ]);
   }
 
-  console.log(`已导入 ${seedlings.length} 条育苗数据`);
+  seedLog.info(`已导入 ${seedlings.length} 条育苗数据`);
 }
 
 /**
@@ -1245,14 +1246,26 @@ function seedPlantings() {
     ]);
   }
 
-  console.log(`已导入 ${plantings.length} 条种植数据`);
+  seedLog.info(`已导入 ${plantings.length} 条种植数据`);
 }
 
 /**
  * 导入采收记录
+ * 2026-06-04: 改为"表非空即跳过"策略
+ * - 解决"用户删除采收记录 → 重启后被 seedHarvestRecords INSERT OR IGNORE 复活"bug
+ * - 副作用：用户清空整个表后，下次启动也不会自动重填（用户意图保护）
+ * - 实际项目里种源/采收等表应只在初始化空 DB 时填一次；后续都是用户真实数据
  */
 function seedHarvestRecords() {
   const db = getDatabase();
+
+  // 已有任何采收记录（含软删），都视为"用户已用过这个表"，跳过种子导入
+  const existing = db.exec('SELECT COUNT(*) AS c FROM harvest_records');
+  const existingCount = Number(existing[0]?.values?.[0]?.[0]) || 0;
+  if (existingCount > 0) {
+    console.log(`seedHarvestRecords: harvest_records 已有 ${existingCount} 条记录（含软删），跳过种子导入`);
+    return;
+  }
 
   const harvests = [
     // 2026年1月
@@ -1495,7 +1508,7 @@ function seedHarvestRecords() {
     ]);
   }
 
-  console.log(`已导入 ${harvests.length} 条采收记录`);
+  seedLog.info(`已导入 ${harvests.length} 条采收记录`);
 }
 
 /**
@@ -1506,7 +1519,7 @@ function seedFarmTasks() {
   const db = getDatabase();
 
   // 已移除 TK001, TK002 种子数据
-  console.log('seedFarmTasks: 无需导入农事任务（已清空）');
+  seedLog.skip('seedFarmTasks: 无需导入农事任务（已清空）');
 }
 
 /**
@@ -1583,7 +1596,7 @@ function seedLaborRecords() {
     ]);
   }
 
-  console.log(`已导入 ${records.length} 条人工记录`);
+  seedLog.info(`已导入 ${records.length} 条人工记录`);
 }
 
 /**
@@ -1594,7 +1607,7 @@ function seedInspections() {
 
   // 注：旧版巡查记录种子数据（XC202604xxx格式）已移除
   // 如需添加新的巡查记录种子数据，请使用新的 XT 前缀格式
-  console.log('已跳过巡查记录种子数据导入（使用新编码规则XT）');
+  seedLog.skip('已跳过巡查记录种子数据导入（使用新编码规则XT）');
 }
 
 /**
@@ -1651,7 +1664,7 @@ function seedProblems() {
     ]);
   }
 
-  console.log(`已导入 ${problems.length} 条问题记录`);
+  seedLog.info(`已导入 ${problems.length} 条问题记录`);
 }
 
 /**
@@ -1665,7 +1678,7 @@ function seedCropOrders() {
   const existingCount = db.exec('SELECT COUNT(*) as count FROM crop_orders');
   const count = Number(existingCount[0]?.values[0]?.[0] || 0);
   if (count > 0) {
-    console.log(`[seedData] crop_orders 表已有 ${count} 条数据，跳过种子数据导入`);
+    seedLog.skip(`[seedData] crop_orders 表已有 ${count} 条数据，跳过种子数据导入`);
     return;
   }
 
@@ -1818,7 +1831,7 @@ function seedCropOrders() {
     ]);
   }
 
-  console.log(`已导入 ${orders.length} 条作物订单记录`);
+  seedLog.info(`已导入 ${orders.length} 条作物订单记录`);
 }
 
 /**
@@ -1902,7 +1915,7 @@ function seedCropInstances() {
     ]);
   }
 
-  console.log(`已导入 ${instances.length} 条作物实例`);
+  seedLog.info(`已导入 ${instances.length} 条作物实例`);
 }
 
 /**
@@ -1938,7 +1951,7 @@ function seedGreenhouses() {
     const colName = colDef.split(' ')[0];
     try {
       db.run(`ALTER TABLE greenhouses ADD COLUMN ${colDef}`);
-      console.log(`已添加 greenhouses 表缺失的列: ${colName}`);
+      seedLog.info(`已添加 greenhouses 表缺失的列: ${colName}`);
     } catch (e) {
       // 列可能已存在，忽略错误
     }
@@ -1951,7 +1964,7 @@ function seedGreenhouses() {
       const colName = colDef.split(' ')[0];
       try {
         db.run(`ALTER TABLE seedlings ADD COLUMN ${colDef}`);
-        console.log(`已添加 seedlings 表缺失的列: ${colName}`);
+        seedLog.info(`已添加 seedlings 表缺失的列: ${colName}`);
       } catch (e) {
         // 列可能已存在，忽略错误
       }
@@ -2087,7 +2100,7 @@ function seedGreenhouses() {
     ]);
   }
 
-  console.log(`已导入 ${greenhouses.length} 条温室/基地数据`);
+  seedLog.info(`已导入 ${greenhouses.length} 条温室/基地数据`);
 }
 
 /**
@@ -2159,7 +2172,7 @@ function seedZones() {
     ]);
   }
 
-  console.log(`已导入 ${zones.length} 条区域/区块数据`);
+  seedLog.info(`已导入 ${zones.length} 条区域/区块数据`);
 }
 
 /**
@@ -2569,7 +2582,7 @@ function seedDictionaries() {
     inserted++;
   }
 
-  console.log(`已处理 ${dictionaries.length} 条字典数据（新增 ${inserted}，跳过 ${skipped}）`);
+  seedLog.skip(`已处理 ${dictionaries.length} 条字典数据（新增 ${inserted}，跳过 ${skipped}）`);
 }
 
 /**
@@ -2777,7 +2790,7 @@ function seedSystemConfigs() {
     ]);
   }
 
-  console.log(`已导入 ${configs.length} 条系统配置数据`);
+  seedLog.info(`已导入 ${configs.length} 条系统配置数据`);
 }
 
 /**
@@ -3024,9 +3037,9 @@ function seedUsersAndRoles() {
     VALUES (?, 'USER_REGULAR_001', 'ROLE_USER', ?)
   `, ['ur-user-001', now]);
 
-  console.log(`已导入 ${roles.length} 个角色`);
-  console.log(`已导入 ${permissions.length} 个权限`);
-  console.log('已导入3个用户：陆启闯(管理员)、张俊生(经理)、王建国(普通用户)');
+  seedLog.info(`已导入 ${roles.length} 个角色`);
+  seedLog.info(`已导入 ${permissions.length} 个权限`);
+  seedLog.info('已导入3个用户：陆启闯(管理员)、张俊生(经理)、王建国(普通用户)');
 }
 
 /**
@@ -3199,10 +3212,10 @@ function seedAuthorityData() {
     `, [`rda-manager-${orgOid}`, 'ROLE_MANAGER', orgOid, now]);
   });
 
-  console.log(`已导入 ${orgs.length} 个组织`);
-  console.log(`已导入 ${actions.length} 个动作`);
-  console.log(`已导入 ${processes.length} 个工序`);
-  console.log(`已导入 ${allProcessOids.length * allActionOids.length} 条管理员角色权限`);
+  seedLog.info(`已导入 ${orgs.length} 个组织`);
+  seedLog.info(`已导入 ${actions.length} 个动作`);
+  seedLog.info(`已导入 ${processes.length} 个工序`);
+  seedLog.info(`已导入 ${allProcessOids.length * allActionOids.length} 条管理员角色权限`);
 }
 
 /**
@@ -3360,7 +3373,7 @@ function seedBusinessCropBatches() {
     ]);
   }
 
-  console.log(`已导入 ${cropBatches.length} 条作物批次数据`);
+  seedLog.info(`已导入 ${cropBatches.length} 条作物批次数据`);
 }
 
 /**
@@ -3371,7 +3384,7 @@ function seedBusinessTasks() {
   const db = getDatabase();
 
   // 已移除 T001, T002 种子数据
-  console.log('seedBusinessTasks: 无需导入农事任务（已清空）');
+  seedLog.skip('seedBusinessTasks: 无需导入农事任务（已清空）');
 }
 
 /**
@@ -3386,7 +3399,7 @@ function seedBusinessInspectionRecords() {
   const count = existingCount.length > 0 && existingCount[0].values.length > 0
     ? Number(existingCount[0].values[0][0]) : 0;
   if (count > 0) {
-    console.log(`巡查记录表已有 ${count} 条数据，跳过种子数据导入`);
+    seedLog.skip(`巡查记录表已有 ${count} 条数据，跳过种子数据导入`);
     return;
   }
 
@@ -3440,7 +3453,7 @@ function seedBusinessInspectionRecords() {
     ]);
   }
 
-  console.log(`已导入 ${inspections.length} 条巡查记录`);
+  seedLog.info(`已导入 ${inspections.length} 条巡查记录`);
 }
 
 /**
@@ -3471,7 +3484,7 @@ function seedBusinessTempTasks() {
     ]);
   }
 
-  console.log(`已导入 ${tempTasks.length} 条临时任务`);
+  seedLog.info(`已导入 ${tempTasks.length} 条临时任务`);
 }
 
 /**
@@ -3516,7 +3529,7 @@ function seedBusinessWorkers() {
     ]);
   }
 
-  console.log(`已导入 ${workers.length} 条员工数据`);
+  seedLog.info(`已导入 ${workers.length} 条员工数据`);
 }
 
 /**
@@ -3529,7 +3542,7 @@ function seedBusinessWorkers() {
  * 重新写回 DB。函数体保留作为历史参考，恢复时移除 return 即可。
  */
 function seedBusinessPurchasePlans() {
-  console.log('[seedData] purchase_plans 业务种子已停用（前端 Store 直连 API）');
+  seedLog.skip('[seedData] purchase_plans 业务种子已停用（前端 Store 直连 API）');
   return;
   const db = getDatabase();
 
@@ -3783,7 +3796,7 @@ function seedBusinessPurchasePlans() {
     ]);
   }
 
-  console.log(`已导入 ${purchasePlans.length} 条采购计划`);
+  seedLog.info(`已导入 ${purchasePlans.length} 条采购计划`);
 }
 
 /**
@@ -3812,7 +3825,7 @@ function seedBusinessMaterialRequests() {
     ]);
   }
 
-  console.log(`已导入 ${materialRequests.length} 条物料申请`);
+  seedLog.info(`已导入 ${materialRequests.length} 条物料申请`);
 }
 
 /**
@@ -3853,7 +3866,7 @@ function seedBusinessProduceInventory() {
     ]);
   }
 
-  console.log(`已导入 ${produceInventory.length} 条产品库存`);
+  seedLog.info(`已导入 ${produceInventory.length} 条产品库存`);
 }
 
 /**
@@ -3887,7 +3900,7 @@ function seedBusinessHarvestRecords() {
     ]);
   }
 
-  console.log(`已导入 ${harvestRecords.length} 条采收记录`);
+  seedLog.info(`已导入 ${harvestRecords.length} 条采收记录`);
 }
 
 /**
@@ -3976,7 +3989,7 @@ function seedBusinessApprovals() {
     ]);
   }
 
-  console.log(`已导入 ${approvals.length} 条业务审批数据`);
+  seedLog.info(`已导入 ${approvals.length} 条业务审批数据`);
 }
 
 /**
@@ -3987,7 +4000,7 @@ function seedMaterialReturns() {
   const existing = db.exec('SELECT COUNT(*) FROM material_returns');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`退料数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`退料数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4019,7 +4032,7 @@ function seedMaterialReturns() {
     ]);
   }
 
-  console.log(`已导入 ${returns.length} 条退料数据`);
+  seedLog.info(`已导入 ${returns.length} 条退料数据`);
 }
 
 /**
@@ -4042,7 +4055,7 @@ export function seedAllBusinessData() {
   seedMaterialReturns();
 
   saveDatabase();
-  console.log('业务数据种子数据导入完成');
+  seedLog.info('业务数据种子数据导入完成');
 }
 
 /**
@@ -4222,7 +4235,7 @@ function seedMaterialCosts() {
     ]);
   }
 
-  console.log(`已导入 ${records.length} 条物料成本记录`);
+  seedLog.info(`已导入 ${records.length} 条物料成本记录`);
 }
 
 /**
@@ -4366,7 +4379,7 @@ function seedEnergyCosts() {
     ]);
   }
 
-  console.log(`已导入 ${records.length} 条能源成本记录`);
+  seedLog.info(`已导入 ${records.length} 条能源成本记录`);
 }
 
 /**
@@ -4421,7 +4434,7 @@ function seedFertilizerAndMarks() {
         [mark.id, mark.name, mark.color, mark.icon, mark.parent_id, mark.mark_aid, mark.is_use, mark.sort_order]
       );
     }
-    console.log(`已导入 ${marks.length} 条种植标记数据`);
+    seedLog.info(`已导入 ${marks.length} 条种植标记数据`);
   }
 
   // === iot_devices IoT设备种子数据 ===
@@ -4440,7 +4453,7 @@ function seedFertilizerAndMarks() {
         [d.device_id, d.device_name, d.api_key, d.is_active, d.create_time]
       );
     }
-    console.log(`已导入 ${devices.length} 条IoT设备种子数据`);
+    seedLog.info(`已导入 ${devices.length} 条IoT设备种子数据`);
   }
 }
 
@@ -4454,7 +4467,7 @@ function seedRegionData() {
   const existing = db.exec('SELECT COUNT(*) FROM region_data');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 40) {
-    console.log(`行政区划数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`行政区划数据已存在 (${count} 条)，跳过导入`);
     return;
   }
   if (count > 0) db.run('DELETE FROM region_data');
@@ -4525,7 +4538,7 @@ function seedRegionData() {
     }
   }
 
-  console.log(`已导入行政区划种子数据: 1个国家, ${provinces.length}个省, ${totalCities}个市`);
+  seedLog.info(`已导入行政区划种子数据: 1个国家, ${provinces.length}个省, ${totalCities}个市`);
 }
 
 /**
@@ -4562,7 +4575,7 @@ function seedProcessDefinitions() {
   }
   stmt.free();
 
-  console.log(`已导入工序定义种子数据: ${items.length}条`);
+  seedLog.info(`已导入工序定义种子数据: ${items.length}条`);
 }
 
 /**
@@ -4593,7 +4606,7 @@ function seedApprovalLevelConfigs() {
   }
   stmt.free();
 
-  console.log(`已导入审批级别配置种子数据: ${configs.length}条`);
+  seedLog.info(`已导入审批级别配置种子数据: ${configs.length}条`);
 }
 
 /**
@@ -4623,7 +4636,7 @@ function seedApprovalAmountThresholds() {
   }
   stmt.free();
 
-  console.log(`已导入审批金额阈值种子数据: ${thresholds.length}条`);
+  seedLog.info(`已导入审批金额阈值种子数据: ${thresholds.length}条`);
 }
 
 /**
@@ -4695,7 +4708,7 @@ function seedApprovalTypeRules() {
   }
   stmt.free();
 
-  console.log(`已导入审批类型规则种子数据: ${rules.length}条`);
+  seedLog.info(`已导入审批类型规则种子数据: ${rules.length}条`);
 }
 
 /**
@@ -4725,7 +4738,7 @@ function seedCostCategories() {
     stmt.run([c.oid, c.code, c.name, c.type, c.unit, c.description]);
   }
   stmt.free();
-  console.log(`已导入成本类别种子数据: ${categories.length}条`);
+  seedLog.info(`已导入成本类别种子数据: ${categories.length}条`);
 }
 
 /**
@@ -4752,7 +4765,7 @@ function seedCostBudgets() {
     stmt.run([b.oid, b.name, b.categoryOid, b.year, b.month, b.amount, b.used]);
   }
   stmt.free();
-  console.log(`已导入成本预算种子数据: ${budgets.length}条`);
+  seedLog.info(`已导入成本预算种子数据: ${budgets.length}条`);
 }
 
 /**
@@ -4779,13 +4792,13 @@ function seedShifts() {
     stmt.run([s.oid, s.code, s.name, s.startTime, s.endTime, s.type, s.description]);
   }
   stmt.free();
-  console.log(`已导入班次种子数据: ${shifts.length}条`);
+  seedLog.info(`已导入班次种子数据: ${shifts.length}条`);
 }
 
 function seedFarmActivities() {
   const db = getDatabase();
   const count = Number(db.exec("SELECT COUNT(*) FROM farm_activities")[0]?.values[0][0] || 0);
-  if (count > 0) { console.log(`农事活动数据已存在 (${count}条)，跳过种子导入`); return; }
+  if (count > 0) { seedLog.skip(`农事活动数据已存在 (${count}条)，跳过种子导入`); return; }
 
   const now = new Date().toISOString();
   const items = [
@@ -4800,13 +4813,13 @@ function seedFarmActivities() {
     stmt.run([item.oid, item.code, item.name, item.type, item.priority, item.branchOid, item.startTime, item.endTime, item.assigneeIds, item.description, item.status, now, now]);
   }
   stmt.free();
-  console.log(`已导入农事活动种子数据: ${items.length}条`);
+  seedLog.info(`已导入农事活动种子数据: ${items.length}条`);
 }
 
 function seedMaterialTypes() {
   const db = getDatabase();
   const count = Number(db.exec("SELECT COUNT(*) FROM material_types")[0]?.values[0][0] || 0);
-  if (count > 0) { console.log(`物料类型数据已存在 (${count}条)，跳过种子导入`); return; }
+  if (count > 0) { seedLog.skip(`物料类型数据已存在 (${count}条)，跳过种子导入`); return; }
 
   const now = new Date().toISOString();
   const items = [
@@ -4827,7 +4840,7 @@ function seedMaterialTypes() {
     stmt.run([item.oid, item.code, item.name, item.category, item.unit, item.price, item.spec, item.desc, item.status, now, now]);
   }
   stmt.free();
-  console.log(`已导入物料类型种子数据: ${items.length}条`);
+  seedLog.info(`已导入物料类型种子数据: ${items.length}条`);
 }
 
 /**
@@ -4839,7 +4852,7 @@ function seedAnnouncements() {
   const existing = db.exec('SELECT COUNT(*) FROM announcements');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`公告数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`公告数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4862,7 +4875,7 @@ function seedAnnouncements() {
     stmt.run([item.id, item.code, item.title, item.type, item.category, item.priority, item.status, item.sender, item.date, item.deadline, item.readCount, item.recipients, item.content, now, now]);
   }
   stmt.free();
-  console.log(`已导入公告种子数据: ${announcements.length}条`);
+  seedLog.info(`已导入公告种子数据: ${announcements.length}条`);
 }
 
 /**
@@ -4874,7 +4887,7 @@ function seedTechSolutions() {
   const existing = db.exec('SELECT COUNT(*) FROM tech_solutions');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`技术方案数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`技术方案数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4892,7 +4905,7 @@ function seedTechSolutions() {
     stmt.run([item.id, item.solution_code, item.solution_title, item.crop_name, item.crop_code, item.planting_mode, item.stage, item.version, item.content, item.author, item.author_id, item.status, item.batch_status, item.priority, item.remarks, now, now]);
   }
   stmt.free();
-  console.log(`已导入技术方案种子数据: ${techSolutions.length}条`);
+  seedLog.info(`已导入技术方案种子数据: ${techSolutions.length}条`);
 }
 
 /**
@@ -4904,7 +4917,7 @@ function seedIndicators() {
   const existing = db.exec('SELECT COUNT(*) FROM indicators');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`指标数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`指标数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4925,7 +4938,7 @@ function seedIndicators() {
     stmt.run([item.id, item.code, item.name, item.category, item.unit, item.target, item.actual, item.trend, item.frequency, item.source, item.warning, item.weight, now, now]);
   }
   stmt.free();
-  console.log(`已导入指标种子数据: ${indicators.length}条`);
+  seedLog.info(`已导入指标种子数据: ${indicators.length}条`);
 }
 
 /**
@@ -4937,7 +4950,7 @@ function seedFertilizerRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM fertilizer_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`施肥记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`施肥记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4955,7 +4968,7 @@ function seedFertilizerRecords() {
     stmt.run([item.id, item.fertilizer_code, item.farm_task_id, item.production_plan_code, item.planting_id, item.planting_code, item.greenhouse_id, item.greenhouse_name, item.area_name, item.crop_name, item.crop_variety, item.fertilizer_name, item.fertilizer_type, item.dilution_ratio, item.quantity, item.unit, item.unit_price, item.total_cost, item.fertilize_time, item.operator_id, item.operator_name, item.data_source, item.status, now, now]);
   }
   stmt.free();
-  console.log(`已导入施肥记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入施肥记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -4967,7 +4980,7 @@ function seedPesticideRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM pesticide_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`病虫害防治记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`病虫害防治记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -4981,7 +4994,7 @@ function seedPesticideRecords() {
   for (const item of records) {
     db.run(`INSERT INTO pesticide_records (id, record_code, spray_time, operator_id, operator_name, crop_name, greenhouse_name, control_type, pesticide_id, pesticide_name, pesticide_type, spec_id, spec_content, dosage, dosage_unit, dilution_ratio, target_pest, application_method, bio_agent_id, bio_agent_name, bio_agent_type, equipment_name, equipment_count, use_leaf_fertilizer, leaf_fertilizer_name, leaf_fertilizer_dosage, leaf_fertilizer_unit, description, photos, status, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [item.id, item.record_code, item.spray_time, item.operator_id, item.operator_name, item.crop_name, item.greenhouse_name, item.control_type, item.pesticide_id, item.pesticide_name, item.pesticide_type, item.spec_id, item.spec_content, item.dosage, item.dosage_unit, item.dilution_ratio, item.target_pest, item.application_method, item.bio_agent_id, item.bio_agent_name, item.bio_agent_type, item.equipment_name, item.equipment_count, item.use_leaf_fertilizer, item.leaf_fertilizer_name, item.leaf_fertilizer_dosage, item.leaf_fertilizer_unit, item.description, item.photos, item.status, now, now]);
   }
-  console.log(`已导入病虫害防治记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入病虫害防治记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -4993,7 +5006,7 @@ function seedMaterials() {
   const existing = db.exec('SELECT COUNT(*) FROM materials');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`物料数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`物料数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5014,7 +5027,7 @@ function seedMaterials() {
     stmt.run([item.id, item.code, item.name, item.category, item.specification, item.unit, item.quantity, item.minStock, item.maxStock, item.price, item.supplier, item.location, item.barcode, item.batchNo, item.productionDate, item.expiryDate, item.lastUpdateTime, item.dataStatus]);
   }
   stmt.free();
-  console.log(`已导入物料种子数据: ${materials.length}条`);
+  seedLog.info(`已导入物料种子数据: ${materials.length}条`);
 }
 
 /**
@@ -5026,7 +5039,7 @@ function seedSchedules() {
   const existing = db.exec('SELECT COUNT(*) FROM schedules');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`排班数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`排班数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5047,7 +5060,7 @@ function seedSchedules() {
     stmt.run([item.id, item.staff_id, item.staff_name, item.date, item.shift, item.work_zone, item.status, item.check_in, item.check_out, item.remarks, 1, now, now]);
   }
   stmt.free();
-  console.log(`已导入排班种子数据: ${schedules.length}条`);
+  seedLog.info(`已导入排班种子数据: ${schedules.length}条`);
 }
 
 /**
@@ -5059,7 +5072,7 @@ function seedAttendanceRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM attendance_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`考勤记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`考勤记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5078,7 +5091,7 @@ function seedAttendanceRecords() {
     stmt.run([item.id, item.worker_id, item.name, item.dept, item.date, item.check_in, item.check_out, item.hours, item.status, item.status_class, item.task_id, item.batch_id, item.remarks, 1, now, now]);
   }
   stmt.free();
-  console.log(`已导入考勤记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入考勤记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5090,7 +5103,7 @@ function seedEmployees() {
   const existing = db.exec('SELECT COUNT(*) FROM employees');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`员工数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`员工数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5109,7 +5122,7 @@ function seedEmployees() {
     stmt.run([item.id, item.employee_code, item.name, item.gender, item.phone, item.id_card, item.position_id, item.position_name, item.department_id, item.department_name, item.employee_type, item.hire_date, item.status, item.skills, item.remarks, 'system', now, now]);
   }
   stmt.free();
-  console.log(`已导入员工种子数据: ${employees.length}条`);
+  seedLog.info(`已导入员工种子数据: ${employees.length}条`);
 }
 
 /**
@@ -5121,7 +5134,7 @@ function seedOvertimeRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM overtime_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`加班记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`加班记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5136,7 +5149,7 @@ function seedOvertimeRecords() {
     stmt.run([item.id, item.worker_id, item.worker_name, item.overtime_type, item.work_date, item.start_time, item.end_time, item.hours, item.base_salary, item.hourly_rate, item.overtime_pay, item.reason, item.status, item.approval_code, item.approved_at, item.department_id, item.department_name, item.greenhouse_id, item.greenhouse_name, item.remarks, 1, now, now]);
   }
   stmt.free();
-  console.log(`已导入加班记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入加班记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5148,7 +5161,7 @@ function seedLeaveRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM leave_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`请假记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`请假记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5163,7 +5176,7 @@ function seedLeaveRecords() {
     stmt.run([item.id, item.worker_id, item.worker_name, item.leave_type, item.start_date, item.end_date, item.days, item.reason, item.status, item.approval_code, item.approved_at, item.department_id, item.department_name, item.remarks, 1, now, now]);
   }
   stmt.free();
-  console.log(`已导入请假记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入请假记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5175,7 +5188,7 @@ function seedSalaryBudgetRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM salary_budget_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`工资预算记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`工资预算记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5190,7 +5203,7 @@ function seedSalaryBudgetRecords() {
     stmt.run([item.id, item.budget_code, item.dept_id, item.dept_name, item.budget_month, item.total_base_salary, item.total_overtime_pay, item.total_bonus, item.grand_total, item.status, item.status_label, item.applicant_id, item.applicant_name, item.apply_date, item.remark, now, now]);
   }
   stmt.free();
-  console.log(`已导入工资预算记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入工资预算记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5202,7 +5215,7 @@ function seedOnboardingRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM onboarding_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`入职管理记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`入职管理记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5217,7 +5230,7 @@ function seedOnboardingRecords() {
     stmt.run([item.id, item.oid, item.name, item.id_card, item.phone, item.position, item.department, item.department_oid, item.contract_type, item.daily_wage, item.hourly_wage, item.join_date, item.status, item.progress, item.request_code, item.recruitment_id, item.operator_id, item.operator_name, item.approved_at, item.remarks, now, now]);
   }
   stmt.free();
-  console.log(`已导入入职管理记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入入职管理记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5229,7 +5242,7 @@ function seedResignationRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM resignation_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`离职管理记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`离职管理记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5243,7 +5256,7 @@ function seedResignationRecords() {
     stmt.run([item.id, item.resignation_code, item.worker_id, item.worker_name, item.department, item.position, item.resignation_type, item.reason, item.expected_last_day, item.actual_last_day, item.handover_user_id, item.handover_user_name, item.handover_note, item.status, item.status_label, item.approver, item.approve_time, item.remarks, now, now]);
   }
   stmt.free();
-  console.log(`已导入离职管理记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入离职管理记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5255,7 +5268,7 @@ function seedRecruitmentRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM recruitment_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`招聘管理记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`招聘管理记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5270,7 +5283,7 @@ function seedRecruitmentRecords() {
     stmt.run([item.id, item.recruitment_code, item.dept_id, item.dept_name, item.position_id, item.position, item.headcount, item.employment_type, item.salary_min, item.salary_max, item.priority, item.priority_label, item.status, item.status_label, item.reason, item.remarks, item.applicant_id, item.applicant_name, item.apply_date, item.approve_time, item.approver, item.create_time, now]);
   }
   stmt.free();
-  console.log(`已导入招聘管理记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入招聘管理记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5282,7 +5295,7 @@ function seedContractRenewalRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM contract_renewal_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`合同续签记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`合同续签记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5296,7 +5309,7 @@ function seedContractRenewalRecords() {
     stmt.run([item.id, item.employee_id, item.employee_name, item.department, item.position, item.current_contract_end, item.new_contract_start, item.new_contract_end, item.renewal_period, item.new_salary, item.terms_change, item.status, item.status_label, item.approver, item.approve_time, item.remarks, now]);
   }
   stmt.free();
-  console.log(`已导入合同续签记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入合同续签记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5308,7 +5321,7 @@ function seedPlantLabels() {
   const existing = db.exec('SELECT COUNT(*) FROM plant_labels');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`种植标签已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`种植标签已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5324,7 +5337,7 @@ function seedPlantLabels() {
     stmt.run([item.id, item.label_number, item.planting_id, item.seedling_id, item.move_in_area_id, item.move_in_area_name, item.move_in_date, item.move_out_area_id, item.move_out_area_name, item.move_out_date, item.create_time]);
   }
   stmt.free();
-  console.log(`已导入种植标签种子数据: ${labels.length}条`);
+  seedLog.info(`已导入种植标签种子数据: ${labels.length}条`);
 }
 
 /**
@@ -5336,7 +5349,7 @@ function seedPlantSettings() {
   const existing = db.exec('SELECT COUNT(*) FROM plant_settings');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`种植设置已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`种植设置已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5352,7 +5365,7 @@ function seedPlantSettings() {
     stmt.run([item.id, item.oid, item.setting_key, item.setting_value, item.crop_variety_oid, item.icon_url, item.description, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入种植设置种子数据: ${settings.length}条`);
+  seedLog.info(`已导入种植设置种子数据: ${settings.length}条`);
 }
 
 /**
@@ -5364,7 +5377,7 @@ function seedWaterFertilizerConfigs() {
   const existing = db.exec('SELECT COUNT(*) FROM water_fertilizer_configs');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`水肥配置已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`水肥配置已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5379,7 +5392,7 @@ function seedWaterFertilizerConfigs() {
     stmt.run([item.id, item.oid, item.partition_oid, item.device_oid, item.device_code, item.machine_addr, item.mac_addr, item.start_time, item.end_time, item.interval_value, item.interval_unit, item.mix_ratio_a, item.mix_ratio_b, item.mix_ratio_c, item.total_water, item.water_unit, item.description, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入水肥配置种子数据: ${configs.length}条`);
+  seedLog.info(`已导入水肥配置种子数据: ${configs.length}条`);
 }
 
 /**
@@ -5391,7 +5404,7 @@ function seedEnergyConfigs() {
   const existing = db.exec('SELECT COUNT(*) FROM energy_configs');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`能源配置已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`能源配置已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5407,7 +5420,7 @@ function seedEnergyConfigs() {
     stmt.run([item.id, item.oid, item.partition_oid, item.energy_type, item.device_oid, item.device_name, item.meter_code, item.unit, item.description, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入能源配置种子数据: ${configs.length}条`);
+  seedLog.info(`已导入能源配置种子数据: ${configs.length}条`);
 }
 
 /**
@@ -5419,7 +5432,7 @@ function seedDeviceSystems() {
   const existing = db.exec('SELECT COUNT(*) FROM device_systems');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`设备系统已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`设备系统已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5435,7 +5448,7 @@ function seedDeviceSystems() {
     stmt.run([item.id, item.oid, item.system_code, item.system_name, item.system_type, item.idc_oid, item.description, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入设备系统种子数据: ${systems.length}条`);
+  seedLog.info(`已导入设备系统种子数据: ${systems.length}条`);
 }
 
 /**
@@ -5447,7 +5460,7 @@ function seedFarmPartitions() {
   const existing = db.exec('SELECT COUNT(*) FROM farm_partitions');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`分区管理已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`分区管理已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5463,7 +5476,7 @@ function seedFarmPartitions() {
     stmt.run([item.id, item.oid, item.parent_oid, item.name, item.area_type, item.greenhouse_type, item.area, item.area_unit, item.manager_oid, item.manager_name, item.hmi_device_oid, item.sensor_config, item.camera_config, item.water_fertilizer_config, item.address, item.description, item.sort_order, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入分区管理种子数据: ${partitions.length}条`);
+  seedLog.info(`已导入分区管理种子数据: ${partitions.length}条`);
 }
 
 /**
@@ -5475,7 +5488,7 @@ function seedBases() {
   const existing = db.exec('SELECT COUNT(*) FROM bases');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`基地数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`基地数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5489,7 +5502,7 @@ function seedBases() {
     stmt.run([item.id, item.oid, item.code, item.name, item.company_oid, item.company_name, item.area, item.unit, item.province, item.city, item.lng, item.lat, item.manager, item.phone, item.soil_type, item.ph, item.status, item.intro, item.greenhouse_count, item.field_area, item.created_at, item.updated_at, item.deleted_at]);
   }
   stmt.free();
-  console.log(`已导入基地种子数据: ${bases.length}条`);
+  seedLog.info(`已导入基地种子数据: ${bases.length}条`);
 }
 
 /**
@@ -5501,7 +5514,7 @@ function seedBlocks() {
   const existing = db.exec('SELECT COUNT(*) FROM blocks');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`地块数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`地块数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5517,7 +5530,7 @@ function seedBlocks() {
     stmt.run([item.id, item.oid, item.block_code, item.block_name, item.zone_oid, item.zone_name, item.block_type, item.area, item.sort_order, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入地块种子数据: ${blocks.length}条`);
+  seedLog.info(`已导入地块种子数据: ${blocks.length}条`);
 }
 
 /**
@@ -5529,7 +5542,7 @@ function seedTeams() {
   const existing = db.exec('SELECT COUNT(*) FROM teams');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`班组数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`班组数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5544,7 +5557,7 @@ function seedTeams() {
     stmt.run([item.id, item.oid, item.team_code, item.team_name, item.department_oid, item.department_name, item.leader_id, item.leader_name, item.shift_type, item.member_count, item.status, item.created_at, item.updated_at]);
   }
   stmt.free();
-  console.log(`已导入班组种子数据: ${teams.length}条`);
+  seedLog.info(`已导入班组种子数据: ${teams.length}条`);
 }
 
 /**
@@ -5556,7 +5569,7 @@ function seedTeamMembers() {
   const existing = db.exec('SELECT COUNT(*) FROM team_members');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`班组分配已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`班组分配已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5574,7 +5587,7 @@ function seedTeamMembers() {
     stmt.run([item.id, item.team_id, item.worker_id, item.role, item.joined_at, item.created_at, item.updated_at, item.version]);
   }
   stmt.free();
-  console.log(`已导入班组分配种子数据: ${members.length}条`);
+  seedLog.info(`已导入班组分配种子数据: ${members.length}条`);
 }
 
 /**
@@ -5586,7 +5599,7 @@ function seedInboundRecords() {
   const existing = db.exec('SELECT COUNT(*) FROM inbound_records');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`入库记录已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`入库记录已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5601,7 +5614,7 @@ function seedInboundRecords() {
   for (const record of records) {
     db.run(`INSERT INTO inbound_records (code, inboundDate, supplier, operator, status, materials, voidedDate) VALUES (?, ?, ?, ?, ?, ?, ?)`, [record.code, record.inboundDate, record.supplier, record.operator, record.status, record.materials, null]);
   }
-  console.log(`已导入入库记录种子数据: ${records.length}条`);
+  seedLog.info(`已导入入库记录种子数据: ${records.length}条`);
 }
 
 /**
@@ -5613,7 +5626,7 @@ function seedInventoryStock() {
   const existing = db.exec('SELECT COUNT(*) FROM inventory_stock');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`库存数据已存在 (${count} 条)，跳过导入`);
+    seedLog.skip(`库存数据已存在 (${count} 条)，跳过导入`);
     return;
   }
 
@@ -5629,7 +5642,7 @@ function seedInventoryStock() {
   for (const stock of stocks) {
     db.run(`INSERT INTO inventory_stock (id, instance_id, stock_type, business_id, business_type, business_code, crop_id, crop_name, variety_id, variety_name, current_quantity, frozen_quantity, available_quantity, unit, warehouse_id, warehouse_name, inbound_date, source_type, production_plan_code, source_instance_id, status, version, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [stock.id, stock.instance_id, stock.stock_type, stock.business_id, stock.business_type, stock.business_code, stock.crop_id, stock.crop_name, stock.variety_id, stock.variety_name, stock.current_quantity, stock.frozen_quantity, stock.available_quantity, stock.unit, stock.warehouse_id, stock.warehouse_name, stock.inbound_date, stock.source_type, stock.production_plan_code, stock.source_instance_id, stock.status, stock.version, stock.create_time, stock.update_time]);
   }
-  console.log(`已导入库存种子数据: ${stocks.length}条`);
+  seedLog.info(`已导入库存种子数据: ${stocks.length}条`);
 }
 
 /**
@@ -5706,7 +5719,7 @@ export function exportDatabase() {
   seedWorkLogInitialData();
 
   saveDatabase();
-  console.log('数据库种子数据导入完成');
+  seedLog.info('数据库种子数据导入完成');
 }
 
 /**
@@ -5727,7 +5740,7 @@ function seedWorkLogInitialData() {
   const existing = db.exec('SELECT COUNT(*) as count FROM work_logs');
   const count = Number(existing[0]?.values[0]?.[0]) || 0;
   if (count > 0) {
-    console.log(`[seedData] work_logs 已有 ${count} 条数据，跳过种子迁移`);
+    seedLog.skip(`[seedData] work_logs 已有 ${count} 条数据，跳过种子迁移`);
     return;
   }
 
@@ -5763,5 +5776,5 @@ function seedWorkLogInitialData() {
     db.run('UPDATE work_logs SET created_at = ?, updated_at = ? WHERE id = ?', [now, now, log.id]);
   }
   stmt.free();
-  console.log(`[seedData] workLog 种子数据已迁移: ${INITIAL_WORK_LOGS.length} 条`);
+  seedLog.info(`[seedData] workLog 种子数据已迁移: ${INITIAL_WORK_LOGS.length} 条`);
 }
