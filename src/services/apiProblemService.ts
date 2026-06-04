@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -111,7 +111,7 @@ export async function getProblems(filters?: {
 
 /**
  * 创建问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' | 'createTime' | 'updateTime'>): Promise<Problem> {
   return await enhancedApiClient.post<Problem>('/problems', problem);
@@ -119,7 +119,7 @@ export async function createProblem(problem: Omit<Problem, 'id' | 'problemCode' 
 
 /**
  * 更新问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateProblem(id: number, updates: Partial<Problem>): Promise<Problem | null> {
   const result = await enhancedApiClient.put<Problem>(`/problems/${id}`, updates);
@@ -128,7 +128,7 @@ export async function updateProblem(id: number, updates: Partial<Problem>): Prom
 
 /**
  * 删除问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteProblem(id: number): Promise<boolean> {
   await enhancedApiClient.delete(`/problems/${id}`);
@@ -137,7 +137,7 @@ export async function deleteProblem(id: number): Promise<boolean> {
 
 /**
  * 批量删除问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteProblems(ids: number[]): Promise<boolean> {
   await enhancedApiClient.delete(`/problems/batch?ids=${ids.join(',')}`);
@@ -146,7 +146,7 @@ export async function deleteProblems(ids: number[]): Promise<boolean> {
 
 /**
  * 分派问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function assignProblem(id: number, handlerId: string, handlerName: string): Promise<Problem | null> {
   return await enhancedApiClient.post<Problem>(`/problems/${id}/assign`, { handlerId, handlerName });
@@ -154,7 +154,7 @@ export async function assignProblem(id: number, handlerId: string, handlerName: 
 
 /**
  * 开始处理问题
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function startProcessing(id: number): Promise<Problem | null> {
   return await enhancedApiClient.post<Problem>(`/problems/${id}/start-processing`, undefined);
@@ -162,7 +162,7 @@ export async function startProcessing(id: number): Promise<Problem | null> {
 
 /**
  * 标记问题为已处理
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function resolveProblem(id: number, handleResult?: string): Promise<Problem | null> {
   return await enhancedApiClient.post<Problem>(`/problems/${id}/resolve`, { handleResult });
@@ -257,7 +257,7 @@ export async function getProblemStats(filters?: {
 
 /**
  * 关联任务
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function linkTask(problemId: number, taskId: string, taskCode: string): Promise<boolean> {
   await enhancedApiClient.post(`/problems/${problemId}/link-task`, { taskId, taskCode });
@@ -266,7 +266,7 @@ export async function linkTask(problemId: number, taskId: string, taskCode: stri
 
 /**
  * 添加问题处理记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addProblemHandleRecord(problemId: number, record: {
   handlerId: string;

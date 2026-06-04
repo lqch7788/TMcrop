@@ -5,7 +5,7 @@
  * 数据流：GET/POST/PUT/DELETE /api/material-code-categories?rule_type=supplier
  *
  * 对接后端: /api/material-code-categories（复用 material_code_categories 表，rule_type='supplier'）
- * 三级降级: API → IndexedDB → localStorage (zustand persist)
+ * 无缓存层，直接调用 API（V2.1 铁律）
  */
 
 import { create } from 'zustand';
@@ -227,7 +227,7 @@ export const useSupplierCodeRuleStore = create<SupplierCodeRuleState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          // logger.warn('[SupplierCodeRuleStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[SupplierCodeRuleStore] API 获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           // zustand persist 自动从 localStorage 恢复
           set({ error: (error as Error).message, isLoading: false });
         }

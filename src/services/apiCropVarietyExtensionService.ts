@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -131,7 +131,7 @@ export async function getTypeExtensionsByCategory(categoryCode: string): Promise
 
 /**
  * 创建类型扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTypeExtension(
   categoryCode: string,
@@ -149,7 +149,7 @@ export async function addTypeExtension(
 
 /**
  * 删除类型扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTypeExtension(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`${API_BASE}/types/${id}`);
@@ -158,7 +158,7 @@ export async function deleteTypeExtension(id: string): Promise<boolean> {
 
 /**
  * 更新类型扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTypeExtension(
   id: string,
@@ -194,7 +194,7 @@ export async function getVarietyExtensionsByType(categoryCode: string, typeCode:
 
 /**
  * 创建品种扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addVarietyExtension(
   categoryCode: string,
@@ -212,7 +212,7 @@ export async function addVarietyExtension(
 
 /**
  * 删除品种扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteVarietyExtension(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`${API_BASE}/varieties/${id}`);
@@ -221,7 +221,7 @@ export async function deleteVarietyExtension(id: string): Promise<boolean> {
 
 /**
  * 更新品种扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateVarietyExtension(
   id: string,
@@ -261,7 +261,7 @@ export async function getSubVariety1ExtensionsByVariety(
 
 /**
  * 创建子品种1扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addSubVariety1Extension(
   categoryCode: string,
@@ -281,7 +281,7 @@ export async function addSubVariety1Extension(
 
 /**
  * 删除子品种1扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteSubVariety1Extension(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`${API_BASE}/subvariety1/${id}`);
@@ -290,7 +290,7 @@ export async function deleteSubVariety1Extension(id: string): Promise<boolean> {
 
 /**
  * 更新子品种1扩展
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSubVariety1Extension(
   id: string,

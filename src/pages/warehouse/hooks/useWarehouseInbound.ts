@@ -2,7 +2,7 @@
  * 仓库入库数据管理 Hook
  * 从 WarehouseInboundPage 拆分出来，集中管理状态和业务逻辑
  * 数据来源：Zustand Store → enhancedApiClient → API
- * 三级降级：API → IndexedDB → localStorage
+ * 无缓存层，直接调用 API（V2.1 铁律：禁用 IndexedDB / localStorage / persist）
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
@@ -33,7 +33,7 @@ import { showAlert } from '@/lib/dialogService';
 /**
  * 仓库入库 Hook
  * 集中管理入库页面的所有状态和业务逻辑
- * 数据从 Zustand Store 获取，支持三级降级
+ * 数据从 Zustand Store 获取，无缓存层，直接调用 API（V2.1 铁律）
  */
 export function useWarehouseInbound() {
   const navigate = useNavigate();

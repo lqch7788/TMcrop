@@ -226,7 +226,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
 
           return savedTask;
         } catch (error) {
-          console.warn('[FarmTaskStore] 创建任务API失败，已加入离线队列:', error);
+          console.warn('[FarmTaskStore] 创建任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
 
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
@@ -247,7 +247,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           await enhancedApiClient.put(`/farm-tasks/${id}`, updates);
         } catch (error) {
-          console.warn('[FarmTaskStore] 更新任务API失败，已加入离线队列:', error);
+          console.warn('[FarmTaskStore] 更新任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));
@@ -263,7 +263,7 @@ export const useFarmTaskStore = create<FarmTaskState>()(
         try {
           await enhancedApiClient.delete(`/farm-tasks/${id}`);
         } catch (error) {
-          console.warn('[FarmTaskStore] 删除任务API失败，已加入离线队列:', error);
+          console.warn('[FarmTaskStore] 删除任务API失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set(state => ({
             pendingSyncCount: state.pendingSyncCount + 1,
           }));

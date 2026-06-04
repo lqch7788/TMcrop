@@ -1,7 +1,7 @@
 /**
  * 离职申请 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 架构：enhancedApiClient → API（无缓存层，V2.1 铁律）
  * 数据流：Store → Hook → 组件 (组件不直接读写 localStorage)
  *
  * 对接后端: /api/resignation
@@ -151,7 +151,7 @@ export const useResignationStore = create<ResignationState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          // logger.warn('[ResignationStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[ResignationStore] API 获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -171,7 +171,7 @@ export const useResignationStore = create<ResignationState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          // logger.warn('[ResignationStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 创建失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -190,7 +190,7 @@ export const useResignationStore = create<ResignationState>()(
         try {
           await enhancedApiClient.put(`/resignation/${id}`, body);
         } catch (error) {
-          // logger.warn('[ResignationStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 更新失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
         }
       },
 
@@ -204,7 +204,7 @@ export const useResignationStore = create<ResignationState>()(
           await enhancedApiClient.delete(`/resignation/${id}`);
           return true;
         } catch (error) {
-          // logger.warn('[ResignationStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[ResignationStore] 删除失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           return false;
         }
       },

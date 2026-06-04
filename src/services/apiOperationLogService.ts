@@ -124,7 +124,7 @@ export async function getOperationLogStats(): Promise<OperationLogStats> {
 
 /**
  * 删除操作日志
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteOperationLog(id: string): Promise<void> {
   await enhancedApiClient.delete(`/operation-logs/${id}`);
@@ -132,7 +132,7 @@ export async function deleteOperationLog(id: string): Promise<void> {
 
 /**
  * 创建操作日志（用于记录用户操作）
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createOperationLog(log: {
   userId?: string;

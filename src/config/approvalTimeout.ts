@@ -2,7 +2,7 @@
 // 审批超时与委托配置 — V3.0 Store化
 // 文件路径：src/config/approvalTimeout.ts
 // V3.0改造：localStorage读取 → getSystemConfigValue()从Store/API读取
-// 所有配置优先从Store（API→IndexedDB→localStorage三级降级），硬编码兜底
+// 所有配置优先从Store（API 直连（V2.1 铁律：无无缓存层（V2.1 铁律））），硬编码兜底
 // ============================================================
 
 import { ApprovalType } from '../types/approval';

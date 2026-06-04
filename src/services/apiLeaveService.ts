@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -171,7 +171,7 @@ export async function getLeaveById(id: string): Promise<LeaveRecord | null> {
 
 /**
  * 创建请假记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createLeaveRecord(leave: CreateLeaveParams): Promise<LeaveRecord> {
   const snakeData = {
@@ -200,7 +200,7 @@ export async function createLeaveRecord(leave: CreateLeaveParams): Promise<Leave
 
 /**
  * 更新请假记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateLeaveRecord(id: string, updates: UpdateLeaveParams): Promise<boolean> {
   const snakeData: Record<string, any> = {};
@@ -219,7 +219,7 @@ export async function updateLeaveRecord(id: string, updates: UpdateLeaveParams):
 
 /**
  * 删除请假记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteLeaveRecord(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/leave/${id}`);
@@ -228,7 +228,7 @@ export async function deleteLeaveRecord(id: string): Promise<boolean> {
 
 /**
  * 批量删除请假记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteLeaveRecords(ids: string[]): Promise<boolean> {
   for (const id of ids) {

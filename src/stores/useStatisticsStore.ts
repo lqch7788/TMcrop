@@ -1,7 +1,7 @@
 /**
  * 领料统计 Zustand Store
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 架构：enhancedApiClient → API（无缓存层，V2.1 铁律）
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  *
  * 对接后端: /api/material-statistics
@@ -283,7 +283,7 @@ export const useStatisticsStore = create<StatisticsState>()(
             set({ isLoading: false });
           }
         } catch (error) {
-          // logger.warn('[StatisticsStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[StatisticsStore] API获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           set({ error: (error as Error).message, isLoading: false });
         }
       },

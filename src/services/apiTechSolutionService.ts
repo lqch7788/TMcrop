@@ -115,7 +115,7 @@ export async function getTechSolutionById(id: string): Promise<TechSolution | un
 
 /**
  * 创建技术方案
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
   const result = await enhancedApiClient.post<{ success: boolean; data?: TechSolution }>('/tech-solutions', solution);
@@ -129,7 +129,7 @@ export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promi
 
 /**
  * 更新技术方案
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
   const result = await enhancedApiClient.put<{ success: boolean; data?: TechSolution }>(`/tech-solutions/${id}`, updates);
@@ -141,7 +141,7 @@ export async function updateTechSolution(id: string, updates: Partial<TechSoluti
 
 /**
  * 删除技术方案
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTechSolution(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/tech-solutions/${id}`);
@@ -150,7 +150,7 @@ export async function deleteTechSolution(id: string): Promise<boolean> {
 
 /**
  * 批量删除技术方案
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteTechSolutions(ids: string[]): Promise<boolean> {
   await enhancedApiClient.post('/tech-solutions/batch-delete', { ids });

@@ -217,7 +217,7 @@ export const useIndicatorDataStore = create<IndicatorDataState>()(
             isLoading: false,
           });
         } catch (error) {
-          // logger.warn('[IndicatorDataStore] API获取失败，使用本地缓存:', error);
+          // logger.warn('[IndicatorDataStore] API获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           // persist 中间件自动从 localStorage 恢复 indicators
           const fallback = get().indicators;
           set({

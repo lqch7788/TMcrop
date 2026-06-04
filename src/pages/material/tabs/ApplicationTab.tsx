@@ -147,7 +147,8 @@ export default function ApplicationTab() {
           recordsList={hook.materialData}
           onClose={() => hook.setShowBatchEditModal(false)}
           onSaveAll={async () => {
-            // 批量编辑保存：刷新数据后关闭
+            // 2026-06-04 V2.1 铁律：批量编辑保存后调 loadItems 刷新列表（DB 唯一真相）
+            await hook.loadItems();
             hook.setShowBatchEditModal(false);
             hook.setBatchEditMode(null);
             hook.setSelectedRows([]);

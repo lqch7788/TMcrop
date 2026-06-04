@@ -1,7 +1,7 @@
 /**
  * 系统配置 Zustand Store — V2.1 架构标准
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 架构：enhancedApiClient → API（无缓存层，V2.1 铁律）
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  * 对接后端: /api/basic-data/system-configs
  */
@@ -137,7 +137,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           const normalized = rawData.map(normalize);
           set({ configs: normalized, loading: false, lastFetch: now, isReady: true });
         } catch (error) {
-          // logger.warn('[SystemConfigStore] API 获取失败，使用本地缓存:', error);
+          // logger.warn('[SystemConfigStore] API 获取失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', error);
           set({ error: (error as Error).message, loading: false });
         }
       },
@@ -167,7 +167,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
           return newItem;
         } catch (error) {
-          // logger.warn('[SystemConfigStore] 创建失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 创建失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set({ error: (error as Error).message, loading: false });
           return null;
         }
@@ -188,7 +188,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           );
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
         } catch (error) {
-          // logger.warn('[SystemConfigStore] 更新失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 更新失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
         }
       },
 
@@ -203,7 +203,7 @@ export const useSystemConfigStore = create<SystemConfigState>()(
           notifyConfigChanged(); // ★ V3.0: API成功后派发事件，清除Reader缓存
           return true;
         } catch (error) {
-          // logger.warn('[SystemConfigStore] 删除失败，已加入离线队列:', error);
+          // logger.warn('[SystemConfigStore] 删除失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           return false;
         }
       },

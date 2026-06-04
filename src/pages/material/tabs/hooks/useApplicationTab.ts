@@ -34,7 +34,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
   // 获取审批上下文（用于联动）
   const approvalContext = useApprovalContext();
 
-  // 数据从 Zustand Store 获取（三级降级：API → IndexedDB → localStorage）
+  // 数据从 Zustand Store 获取（无缓存层，直接调 API，V2.1 铁律）
   const {
     items: materialData,
     isLoading,
@@ -580,7 +580,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
     const applicantName = userMap[addForm.applicant] || addForm.applicant;
     const reviewerName = userMap[addForm.reviewer] || addForm.reviewer;
 
-    // 通过 Zustand Store 调用 API 创建记录（三级降级）
+    // 通过 Zustand Store 调用 API 创建记录（V2.1 铁律：API 直连无缓存）
     const newRecord = await storeAddItem({
       date: addForm.date,
       applicant: applicantName,
@@ -787,5 +787,8 @@ export function useApplicationTab(): UseApplicationTabReturn {
     handleGenerateAddCode,
     handleSaveAdd,
     handleCancelAdd,
+
+    // 2026-06-04 V2.1 铁律：批量编辑保存后调 loadItems 刷新（DB 唯一真相）
+    loadItems,
   };
 }

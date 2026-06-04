@@ -2,7 +2,7 @@
  * 工人考勤数据 Hook
  * 统一管理考勤相关的数据和操作逻辑
  *
- * Phase 2: 支持三级降级：API → IndexedDB缓存 → localStorage种子数据
+ * 无缓存层（V2.1 铁律）
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
@@ -90,7 +90,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 使用 AttendanceStore（支持三级降级：API → IndexedDB → localStorage）
+  // 使用 AttendanceStore（支持无缓存层（V2.1 铁律）：API）
   const attendanceRecords = useAttendanceStore(state => state.attendanceRecords);
   const isLoading = useAttendanceStore(state => state.isLoading);
   const fetchAttendance = useAttendanceStore(state => state.fetchAttendance);

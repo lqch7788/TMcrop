@@ -3,7 +3,7 @@
  * 展示核心 KPI 指标、趋势图表和预警信息
  *
  * 数据源：useSummaryDataStore（Zustand Store）
- * 架构：Store → API → IndexedDB → localStorage（三级降级）
+ * 架构：Store → API（无缓存层，V2.1 铁律）
  */
 
 import { useEffect, useState, useMemo } from 'react';

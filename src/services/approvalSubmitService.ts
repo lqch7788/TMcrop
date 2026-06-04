@@ -90,7 +90,7 @@ class ApprovalSubmitService {
         status: 'pending' as const,
       };
 
-      // 4. 调用 API 保存审批数据（使用 enhancedApiClient，走三级降级）
+      // 4. 调用 API 保存审批数据（使用 enhancedApiClient，走无缓存层（V2.1 铁律））
       const { enhancedApiClient } = await import('../lib/apiClient');
       const response = await enhancedApiClient.post<{ success: boolean; id: string; code: string; error?: string }>(
         '/approvals',

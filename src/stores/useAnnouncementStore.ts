@@ -3,7 +3,8 @@
  * 数据获取：从 /api/announcements 获取公告列表
  * 审批联动：审批通过后更新公告状态为已发布
  */
-import { create } from 'zustand';import { enhancedApiClient } from '../lib/apiClient';
+import { create } from 'zustand';
+import { enhancedApiClient } from '../lib/apiClient';
 
 export interface AnnouncementStatusUpdate {
   announcementId: string;
@@ -90,7 +91,7 @@ export const useAnnouncementStore = create<AnnouncementStore>()(
             console.warn('[AnnouncementStore] API返回数据无效');
           }
         } catch (err) {
-          console.warn('[AnnouncementStore] 获取公告失败，使用本地缓存:', err);
+          console.warn('[AnnouncementStore] 获取公告失败，API 失败抛错（V2.1 铁律：无缓存兜底）:', err);
           set({ error: (err as Error).message, isLoading: false });
         }
       },

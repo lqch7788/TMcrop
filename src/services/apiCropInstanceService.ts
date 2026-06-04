@@ -7,7 +7,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -55,7 +55,7 @@ export async function getInstancesByOrderId(orderId: string): Promise<CropInstan
 
 /**
  * 创建作物实例
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createInstance(
   cropInfo: {
@@ -82,7 +82,7 @@ export async function createInstance(
 
 /**
  * 更新作物实例
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateInstance(id: string, updates: Partial<CropInstance>): Promise<CropInstance | null> {
   const result = await enhancedApiClient.put<{ id: string }>(`/crop-instances/${id}`, updates);
@@ -91,7 +91,7 @@ export async function updateInstance(id: string, updates: Partial<CropInstance>)
 
 /**
  * 删除作物实例
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteInstance(id: string): Promise<boolean> {
   await enhancedApiClient.delete(`/crop-instances/${id}`);
@@ -100,7 +100,7 @@ export async function deleteInstance(id: string): Promise<boolean> {
 
 /**
  * 批量删除作物实例
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteInstances(ids: string[]): Promise<boolean> {
   await enhancedApiClient.delete(`/crop-instances/batch?ids=${ids.join(',')}`);
@@ -109,7 +109,7 @@ export async function deleteInstances(ids: string[]): Promise<boolean> {
 
 /**
  * 更新实例数量
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateQuantity(id: string, type: 'seedling' | 'plant' | 'harvest', quantity: number): Promise<boolean> {
   await enhancedApiClient.post(`/crop-instances/${id}/update-quantity`, { type, quantity });
@@ -118,7 +118,7 @@ export async function updateQuantity(id: string, type: 'seedling' | 'plant' | 'h
 
 /**
  * 更新实例状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateStatus(id: string, status: CropInstanceStatus): Promise<boolean> {
   await enhancedApiClient.put(`/crop-instances/${id}/status`, { status });

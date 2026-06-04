@@ -394,7 +394,7 @@ export const useOvertimeStore = create<OvertimeState>()(
           set((state) => ({ overtimeRecords: [newItem, ...state.overtimeRecords] }));
           return newItem;
         } catch (error) {
-          console.warn('[OvertimeStore] 创建加班记录失败，已加入离线队列:', error);
+          console.warn('[OvertimeStore] 创建加班记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           set({ error: (error as Error).message });
           return null;
         }
@@ -425,7 +425,7 @@ export const useOvertimeStore = create<OvertimeState>()(
         try {
           await enhancedApiClient.put(`/overtime/${id}`, body);
         } catch (error) {
-          console.warn('[OvertimeStore] 更新加班记录失败，已加入离线队列:', error);
+          console.warn('[OvertimeStore] 更新加班记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
         }
       },
 
@@ -439,7 +439,7 @@ export const useOvertimeStore = create<OvertimeState>()(
           await enhancedApiClient.delete(`/overtime/${id}`);
           return true;
         } catch (error) {
-          console.warn('[OvertimeStore] 删除加班记录失败，已加入离线队列:', error);
+          console.warn('[OvertimeStore] 删除加班记录失败，API 失败抛错（V2.1 铁律：无离线队列）:', error);
           return false;
         }
       },

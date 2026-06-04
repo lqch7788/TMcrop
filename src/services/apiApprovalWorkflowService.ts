@@ -104,7 +104,7 @@ export async function getWorkflowById(id: string): Promise<ApprovalWorkflow | nu
 
 /**
  * 创建审批工作流
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createWorkflow(workflow: Partial<ApprovalWorkflow>): Promise<ApprovalWorkflow> {
   const result = await enhancedApiClient.post<ApprovalWorkflow>('/approval-workflows', workflow);
@@ -113,7 +113,7 @@ export async function createWorkflow(workflow: Partial<ApprovalWorkflow>): Promi
 
 /**
  * 更新审批工作流
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateWorkflow(id: string, workflow: Partial<ApprovalWorkflow>): Promise<void> {
   await enhancedApiClient.put(`/approval-workflows/${id}`, workflow);
@@ -121,7 +121,7 @@ export async function updateWorkflow(id: string, workflow: Partial<ApprovalWorkf
 
 /**
  * 删除审批工作流
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteWorkflow(id: string): Promise<void> {
   await enhancedApiClient.delete(`/approval-workflows/${id}`);
@@ -129,7 +129,7 @@ export async function deleteWorkflow(id: string): Promise<void> {
 
 /**
  * 切换审批工作流状态
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function toggleWorkflow(id: string): Promise<string> {
   const result = await enhancedApiClient.patch<{ status: string }>(`/approval-workflows/${id}/toggle`);
@@ -138,7 +138,7 @@ export async function toggleWorkflow(id: string): Promise<string> {
 
 /**
  * 复制审批工作流
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function cloneWorkflow(id: string, newCode?: string, newName?: string): Promise<{ id: string }> {
   const result = await enhancedApiClient.post<{ id: string }>(`/approval-workflows/${id}/clone`, { newCode, newName });

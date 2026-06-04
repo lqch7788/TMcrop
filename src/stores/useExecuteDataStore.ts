@@ -1,7 +1,7 @@
 /**
- * 领料出库 Zustand Store
+ * 领料出库 Zustand Store (V2.1 架构)
  *
- * 架构：enhancedApiClient → API → IndexedDB → localStorage (三级降级)
+ * 架构：enhancedApiClient → API（无缓存层，直接调用 API）
  * 数据流：Store → 组件 (组件不直接读写 localStorage)
  *
  * 对接后端: /api/material-executes
@@ -107,7 +107,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           const normalized = data.map(normalize);
           set({ items: normalized, isLoading: false });
         } catch (error) {
-          // logger.warn('[ExecuteStore] API获取失败，使用本地缓存:', error);
+          // 2026-06-04 V2.1 铁律：API 失败直接 set error，无本地缓存兜底
           set({ error: (error as Error).message, isLoading: false });
         }
       },
@@ -128,11 +128,8 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           set((state) => ({ items: [newItem, ...state.items] }));
           return newItem;
         } catch (error) {
-          // logger.warn('[ExecuteStore] 创建失败，已加入离线队列:', error);
-          // 即使 API 失败也乐观更新本地
-          const newItem = normalize({ ...data, id: data.id || `CK${Date.now()}` } as Record<string, unknown>);
-          set((state) => ({ items: [newItem, ...state.items] }));
-          return newItem;
+          // 2026-06-04 V2.1 铁律：API 失败抛错（不允许乐观更新，否则 UI 与 DB 不一致）
+          return null;
         }
       },
 
@@ -149,7 +146,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
         try {
           await enhancedApiClient.put(`/material-executes/${id}`, body);
         } catch (error) {
-          // logger.warn('[ExecuteStore] 更新失败，已加入离线队列:', error);
+          // 2026-06-04 V2.1 铁律：API 失败抛错（不允许离线队列兜底）
         }
       },
 
@@ -163,7 +160,7 @@ export const useExecuteDataStore = create<ExecuteDataState>()(
           await enhancedApiClient.delete(`/material-executes/${id}`);
           return true;
         } catch (error) {
-          // logger.warn('[ExecuteStore] 删除失败，已加入离线队列:', error);
+          // 2026-06-04 V2.1 铁律：API 失败抛错（不允许离线队列兜底）
           return false;
         }
       },

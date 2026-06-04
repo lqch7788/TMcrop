@@ -6,7 +6,7 @@
  *
  * 降级策略：
  * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
- * - POST/PUT/DELETE：API → 离线队列（网络断开时加入队列，联网后自动同步）
+ * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -84,7 +84,7 @@ export async function getInboundRecords(): Promise<InboundRecord[]> {
 
 /**
  * 创建入库记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Promise<InboundRecord> {
   return await enhancedApiClient.post<InboundRecord>('/materials/inbound', record);
@@ -92,7 +92,7 @@ export async function createInboundRecord(record: Omit<InboundRecord, 'id'>): Pr
 
 /**
  * 更新入库记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateInboundRecord(id: number, updates: Partial<InboundRecord>): Promise<InboundRecord | null> {
   return await enhancedApiClient.put<InboundRecord>(`/materials/inbound/${id}`, updates);
@@ -100,7 +100,7 @@ export async function updateInboundRecord(id: number, updates: Partial<InboundRe
 
 /**
  * 创建物料
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  * 修复：返回完整物料记录（后端 POST 已改为 SELECT * 后返回），符合"POST 必须返回完整记录"铁律
  */
 export async function createMaterial(material: Omit<Material, 'id'>): Promise<Material> {
@@ -114,7 +114,7 @@ export async function createMaterial(material: Omit<Material, 'id'>): Promise<Ma
 
 /**
  * 更新物料
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateMaterial(id: number, updates: Partial<Material>): Promise<Material | null> {
   const result = await enhancedApiClient.put<Material>(`/materials/${id}`, updates);
@@ -123,7 +123,7 @@ export async function updateMaterial(id: number, updates: Partial<Material>): Pr
 
 /**
  * 删除物料
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteMaterial(id: number): Promise<boolean> {
   await enhancedApiClient.delete(`/materials/${id}`);
@@ -132,7 +132,7 @@ export async function deleteMaterial(id: number): Promise<boolean> {
 
 /**
  * 删除入库记录
- * 降级策略：API → 离线队列
+ * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function deleteInboundRecord(id: number): Promise<boolean> {
   await enhancedApiClient.delete(`/materials/inbound/${id}`);
