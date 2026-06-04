@@ -5705,9 +5705,6 @@ export function exportDatabase() {
   // 前端 usePersistentWorkLogs.ts INITIAL_WORK_LOGS 7 条同步到后端
   seedWorkLogInitialData();
 
-  // 2026-06-04: 库存出库交易 mock 数据（库存管理 OutboundRecordsPage 改造）
-  seedInventoryTransactionsInitialData();
-
   saveDatabase();
   console.log('数据库种子数据导入完成');
 }
@@ -5716,51 +5713,14 @@ export function exportDatabase() {
  * 库存出库交易初始数据（V3.1 OutboundRecordsPage 改造）
  * 数据源：原 V1 库存管理 mock（无源码残留）——新建 8 条代表性数据
  * 行为：先 count 检查 → 有数据跳过；无则插入 8 条
+ *
+ * 2026-06-04 撤销：用户要求"彻底清除 8 条"，函数定义保留为参考但 exportDatabase 不再调用。
+ * 表 schema + Store 改造已 commit，表初始化由 schema.ts 的 CREATE TABLE IF NOT EXISTS 保证。
  */
 function seedInventoryTransactionsInitialData() {
-  const db = getDatabase();
-  const existing = db.exec('SELECT COUNT(*) as count FROM inventory_transactions');
-  const count = Number(existing[0]?.values[0]?.[0]) || 0;
-  if (count > 0) {
-    console.log(`[seedData] inventory_transactions 已有 ${count} 条数据，跳过种子迁移`);
-    return;
-  }
-
-  const now = new Date().toISOString();
-  // 8 条出库交易：覆盖本月内不同日期/作物/出库方
-  const SEED = [
-    { id: 'itx_seed_001', type: 'outbound', business_id: 'BIZ001', business_code: 'OB20260601-001', instance_id: 'INV001', crop_id: 'CROP_TOMATO', crop_name: '番茄', variety_name: '红盛802', warehouse_id: 'WH001', warehouse_name: '1号仓库', quantity: 50, unit: 'kg', unit_price: 8.5, total_amount: 425, receiver: '市场A-张老板', operator_name: '陆启闯', outbound_date: '2026-06-01', remarks: '红盛802 番茄出库', status: 'completed' },
-    { id: 'itx_seed_002', type: 'outbound', business_id: 'BIZ002', business_code: 'OB20260603-001', instance_id: 'INV002', crop_id: 'CROP_CUCUMBER', crop_name: '黄瓜', variety_name: '津优35', warehouse_id: 'WH001', warehouse_name: '1号仓库', quantity: 30, unit: 'kg', unit_price: 6, total_amount: 180, receiver: '市场B-李老板', operator_name: '陆启闯', outbound_date: '2026-06-03', remarks: '津优35 黄瓜出库', status: 'completed' },
-    { id: 'itx_seed_003', type: 'outbound', business_id: 'BIZ003', business_code: 'OB20260605-001', instance_id: 'INV003', crop_id: 'CROP_STRAWBERRY', crop_name: '草莓', variety_name: '红颜', warehouse_id: 'WH002', warehouse_name: '2号仓库', quantity: 20, unit: 'kg', unit_price: 25, total_amount: 500, receiver: '水果连锁-王经理', operator_name: '陆启闯', outbound_date: '2026-06-05', remarks: '草莓红颜出库', status: 'completed' },
-    { id: 'itx_seed_004', type: 'outbound', business_id: 'BIZ004', business_code: 'OB20260608-001', instance_id: 'INV004', crop_id: 'CROP_LETTUCE', crop_name: '生菜', variety_name: '罗马生菜', warehouse_id: 'WH001', warehouse_name: '1号仓库', quantity: 15, unit: 'kg', unit_price: 5, total_amount: 75, receiver: '餐厅供应-赵老板', operator_name: '陆启闯', outbound_date: '2026-06-08', remarks: '罗马生菜出库', status: 'completed' },
-    { id: 'itx_seed_005', type: 'outbound', business_id: 'BIZ005', business_code: 'OB20260612-001', instance_id: 'INV005', crop_id: 'CROP_PEPPER', crop_name: '辣椒', variety_name: '尖椒王', warehouse_id: 'WH002', warehouse_name: '2号仓库', quantity: 25, unit: 'kg', unit_price: 10, total_amount: 250, receiver: '市场A-张老板', operator_name: '陆启闯', outbound_date: '2026-06-12', remarks: '尖椒王辣椒出库', status: 'completed' },
-    { id: 'itx_seed_006', type: 'outbound', business_id: 'BIZ006', business_code: 'OB20260615-001', instance_id: 'INV006', crop_id: 'CROP_TOMATO', crop_name: '番茄', variety_name: '粉冠808', warehouse_id: 'WH001', warehouse_name: '1号仓库', quantity: 60, unit: 'kg', unit_price: 9, total_amount: 540, receiver: '电商-天猫旗舰店', operator_name: '陆启闯', outbound_date: '2026-06-15', remarks: '粉冠808番茄出库电商订单', status: 'completed' },
-    { id: 'itx_seed_007', type: 'outbound', business_id: 'BIZ007', business_code: 'OB20260620-001', instance_id: 'INV007', crop_id: 'CROP_CUCUMBER', crop_name: '黄瓜', variety_name: '津优35', warehouse_id: 'WH001', warehouse_name: '1号仓库', quantity: 40, unit: 'kg', unit_price: 6.5, total_amount: 260, receiver: '市场B-李老板', operator_name: '陆启闯', outbound_date: '2026-06-20', remarks: '津优35黄瓜二次出库', status: 'completed' },
-    { id: 'itx_seed_008', type: 'outbound', business_id: 'BIZ008', business_code: 'OB20260625-001', instance_id: 'INV008', crop_id: 'CROP_STRAWBERRY', crop_name: '草莓', variety_name: '红颜', warehouse_id: 'WH002', warehouse_name: '2号仓库', quantity: 35, unit: 'kg', unit_price: 24, total_amount: 840, receiver: '水果连锁-王经理', operator_name: '陆启闯', outbound_date: '2026-06-25', remarks: '红颜草莓批量出库', status: 'completed' },
-  ];
-
-  const stmt = db.prepare(`
-    INSERT INTO inventory_transactions (
-      id, type, business_id, business_code, instance_id,
-      crop_id, crop_name, variety_id, variety_name,
-      warehouse_id, warehouse_name,
-      quantity, unit, unit_price, total_amount,
-      receiver, operator_id, operator_name, outbound_date, remarks, status,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  for (const t of SEED) {
-    stmt.run([
-      t.id, t.type, t.business_id, t.business_code, t.instance_id,
-      t.crop_id, t.crop_name, null, t.variety_name,
-      t.warehouse_id, t.warehouse_name,
-      t.quantity, t.unit, t.unit_price, t.total_amount,
-      t.receiver, null, t.operator_name, t.outbound_date, t.remarks, t.status,
-      now, now,
-    ]);
-  }
-  stmt.free();
-  console.log(`[seedData] inventory_transactions 种子数据已导入: ${SEED.length} 条`);
+  // 函数体保留作为历史参考；不再被 exportDatabase 调用。
+  // 如需恢复：在此处恢复 SEED 数组 + 在 exportDatabase 末尾加调用。
+  void 0;
 }
 
 /**
