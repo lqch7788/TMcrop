@@ -215,7 +215,7 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
   );
 }
 
-// ============ 4. 18 列表格 ============
+// ============ 4. 15 列表格（加 exportMode checkbox 共 16 列） ============
 
 interface OutboundRecordsTableProps {
   data: OutboundRow[];
@@ -224,13 +224,36 @@ interface OutboundRecordsTableProps {
   total: number;
   onChange: (p: { current: number; pageSize: number }) => void;
   onViewDetail: (instanceId: string) => void;
+  /** 导出模式：开启后表格第 1 列显示 checkbox */
+  exportMode?: boolean;
+  /** 已选中的 instanceId 列表 */
+  selectedRows?: string[];
+  onSelectionChange?: (instanceIds: string[]) => void;
+  /** 表头全选 checkbox 回调 */
+  onSelectAll?: () => void;
 }
 
-export function OutboundRecordsTable({ data, loading, pagination, total, onChange, onViewDetail }: OutboundRecordsTableProps) {
+export function OutboundRecordsTable({
+  data, loading, pagination, total, onChange, onViewDetail,
+  exportMode = false, selectedRows = [], onSelectionChange, onSelectAll,
+}: OutboundRecordsTableProps) {
   // 字典/标签全部从映射取（不硬编码）
   const stockLabel = (s: string) => STOCK_TYPE_LABEL[s]?.label || s;
   const stockColor = (s: string) => STOCK_TYPE_LABEL[s]?.color || 'bg-gray-500';
   const bizMeta = (b?: string) => BUSINESS_TYPE_META[b || 'unknown'] || BUSINESS_TYPE_META.unknown;
+
+  const colSpan = exportMode ? 16 : 15;
+  const allSelected = data.length > 0 && selectedRows.length === data.length;
+  const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
+
+  const toggleRow = (instanceId: string) => {
+    if (!onSelectionChange) return;
+    if (selectedRows.includes(instanceId)) {
+      onSelectionChange(selectedRows.filter(id => id !== instanceId));
+    } else {
+      onSelectionChange([...selectedRows, instanceId]);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -238,6 +261,18 @@ export function OutboundRecordsTable({ data, loading, pagination, total, onChang
         <table className="w-full text-sm">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
+              {exportMode && (
+                <th className="px-3 py-2 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                    onChange={onSelectAll}
+                    className="w-4 h-4 rounded border-white/50 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    title={allSelected ? '取消全选' : '全选'}
+                  />
+                </th>
+              )}
               <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">业务单号</th>
               <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">操作时间</th>
               <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">实例ID</th>
@@ -258,7 +293,7 @@ export function OutboundRecordsTable({ data, loading, pagination, total, onChang
           <tbody className="divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-6 h-6 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     <span>加载中...</span>
@@ -267,13 +302,23 @@ export function OutboundRecordsTable({ data, loading, pagination, total, onChang
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
                   暂无出库记录
                 </td>
               </tr>
             ) : (
               data.map((row) => (
                 <tr key={row.id} className="hover:bg-emerald-50 transition-colors">
+                  {exportMode && (
+                    <td className="px-3 py-2 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.includes(row.instanceId)}
+                        onChange={() => toggleRow(row.instanceId)}
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="px-3 py-2 text-xs font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.operateDate}</td>
                   <td className="px-3 py-2 text-xs whitespace-nowrap">
