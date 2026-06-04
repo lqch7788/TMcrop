@@ -18,6 +18,8 @@ import {
   InventoryStock,
 } from '../types/inventory';
 import * as inventoryService from './inventoryService';
+import { enhancedApiClient } from '../lib/apiClient';
+import { OutboundBusinessType } from '../constants/outboundConstants';
 import { SeedSource } from '../types/crop';
 import { Seedling } from '../types/crop';
 import { Planting } from '../types/crop';
@@ -98,7 +100,7 @@ export async function outboundSeedSource(
   const request: OutboundRequest = {
     instanceId: stock.instanceId,
     businessId,
-    businessType: BusinessType.SEEDLING,
+    businessType: OutboundBusinessType.INTERNAL_PLANTING,
     businessCode,
     quantity,
     operatorId,
@@ -106,7 +108,10 @@ export async function outboundSeedSource(
     remarks: '种源出库至育苗',
   };
 
-  return inventoryService.outbound(request);
+  // 2026-06-04 V2.1 铁律：service 层写操作走 /api/inventory-transactions（Store action 仅用于 React 组件）
+  const result = await enhancedApiClient.post<{ currentQuantity: number; availableQuantity: number }>('/inventory-transactions', request);
+  if (!result) return { success: false, error: '出库失败' };
+  return { success: true, newQuantity: result.currentQuantity };
 }
 
 // ============================================
@@ -184,7 +189,7 @@ export async function outboundSeedling(
   const request: OutboundRequest = {
     instanceId: stock.instanceId,
     businessId,
-    businessType: BusinessType.PLANTING,
+    businessType: OutboundBusinessType.INTERNAL_PLANTING,
     businessCode,
     quantity,
     operatorId,
@@ -192,7 +197,10 @@ export async function outboundSeedling(
     remarks: '育苗出库至种植',
   };
 
-  return inventoryService.outbound(request);
+  // 2026-06-04 V2.1 铁律：service 层写操作走 /api/inventory-transactions
+  const result = await enhancedApiClient.post<{ currentQuantity: number; availableQuantity: number }>('/inventory-transactions', request);
+  if (!result) return { success: false, error: '出库失败' };
+  return { success: true, newQuantity: result.currentQuantity };
 }
 
 // ============================================
@@ -326,7 +334,7 @@ export async function outboundHarvest(
   const request: OutboundRequest = {
     instanceId: stock.instanceId,
     businessId,
-    businessType: BusinessType.OTHER,
+    businessType: OutboundBusinessType.CUSTOMER_SALE,
     businessCode,
     quantity,
     operatorId,
@@ -334,7 +342,10 @@ export async function outboundHarvest(
     remarks: '产品销售出库',
   };
 
-  return inventoryService.outbound(request);
+  // 2026-06-04 V2.1 铁律：service 层写操作走 /api/inventory-transactions
+  const result = await enhancedApiClient.post<{ currentQuantity: number; availableQuantity: number }>('/inventory-transactions', request);
+  if (!result) return { success: false, error: '出库失败' };
+  return { success: true, newQuantity: result.currentQuantity };
 }
 
 // ============================================

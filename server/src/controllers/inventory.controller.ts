@@ -104,24 +104,9 @@ export class InventoryController {
   // ============================================
   // V3.0 新增端点
   // ============================================
-
-  /**
-   * POST /api/inventory/outbound
-   * 出库操作
-   */
-  async outbound(req: Request, res: Response): Promise<void> {
-    try {
-      const result = await inventoryService.outbound(req.body);
-      if (!result.success) {
-        res.status(400).json({ success: false, error: result.error });
-        return;
-      }
-      res.json({ success: true, data: result });
-    } catch (error) {
-      console.error('[InventoryController] outbound 错误:', error);
-      res.status(500).json({ success: false, error: '出库失败' });
-    }
-  }
+  // 注：2026-06-04 V2.1 铁律改造后，POST /api/inventory/outbound 端点已迁移到
+  //      /api/inventory-transactions 路由（routes/inventoryTransactions.ts）。
+  //      本控制器不再包含出库方法。
 
   /**
    * GET /api/inventory/available/:instanceId

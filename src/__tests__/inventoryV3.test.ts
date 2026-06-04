@@ -18,6 +18,8 @@ import {
   FreezeStatus,
 } from '../types/inventory';
 import * as inventoryService from '../services/inventoryService';
+import { enhancedApiClient } from '../lib/apiClient';
+import { OutboundBusinessType } from '../constants/outboundConstants';
 
 // 检测后端是否可用
 async function checkBackendAvailable(): Promise<boolean> {
@@ -144,19 +146,21 @@ describeIfBackend('V3.0 统一库存服务', () => {
         '测试用户'
       );
 
-      // 再出库
-      const outboundResult = await inventoryService.outbound({
+      // 再出库（V2.1 铁律：走 /api/inventory-transactions）
+      const outboundResult = await enhancedApiClient.post<{ data: { currentQuantity: number } }>('/inventory-transactions', {
         instanceId: inboundResult.instanceId!,
         businessId: 'SD001',
-        businessType: BusinessType.SEEDLING,
+        businessType: OutboundBusinessType.INTERNAL_PLANTING,
         businessCode: 'YM20260401-001',
         quantity: 300,
         operatorId: 'U001',
         operatorName: '测试用户',
       });
 
-      expect(outboundResult.success).toBe(true);
-      expect(outboundResult.newQuantity).toBe(700);
+      expect(outboundResult).toBeTruthy();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newQty = (outboundResult as any)?.data?.currentQuantity ?? (outboundResult as any)?.currentQuantity;
+      expect(newQty).toBe(700);
     });
 
     it('应该拒绝超过可用数量的出库', async () => {
@@ -178,11 +182,11 @@ describeIfBackend('V3.0 统一库存服务', () => {
         '测试用户'
       );
 
-      // 尝试出库超过可用数量
-      const outboundResult = await inventoryService.outbound({
+      // 尝试出库超过可用数量（V2.1 铁律：走 /api/inventory-transactions）
+      const outboundResult = await enhancedApiClient.post('/inventory-transactions', {
         instanceId: inboundResult.instanceId!,
         businessId: 'SD001',
-        businessType: BusinessType.SEEDLING,
+        businessType: OutboundBusinessType.INTERNAL_PLANTING,
         quantity: 150,
         operatorId: 'U001',
         operatorName: '测试用户',
@@ -417,11 +421,11 @@ describeIfBackend('V3.0 统一库存服务', () => {
       );
       expect(seedInbound.success).toBe(true);
 
-      // 2. 出库到种植
-      await inventoryService.outbound({
+      // 2. 出库到种植（V2.1 铁律：走 /api/inventory-transactions）
+      await enhancedApiClient.post('/inventory-transactions', {
         instanceId: seedInbound.instanceId!,
         businessId: 'PL001',
-        businessType: BusinessType.PLANTING,
+        businessType: OutboundBusinessType.INTERNAL_PLANTING,
         quantity: 800,
         operatorId: 'U001',
         operatorName: '测试用户',

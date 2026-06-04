@@ -15,9 +15,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/Toast';
-// 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调
-import { exportOutboundCSV, OutboundQuery } from '@/services/inventoryTransactionService';
-import { useInventoryTransactionStore } from '@/stores/useInventoryTransactionStore';
+// 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
+import { exportOutboundCSV } from '@/services/inventoryTransactionService';
+import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
 // 2026-06-04 紧急修复：跨页刷新订阅（任何写操作 → useInventoryStore.notifyChange()
 // → version 自增 → 此 useEffect 重跑 → 重新加载最新数据）
 import { useInventoryStore } from '@/stores/useInventoryStore';

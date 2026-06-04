@@ -11,28 +11,46 @@ import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 
 export interface OutboundRow {
+  // 主键
   id: string;
-  type: string;
-  businessId?: string;
-  businessCode?: string;
   instanceId?: string;
+  // 类型/状态
+  stockType?: string;
+  transactionType?: string;
+  type?: string;
+  status?: string;
+  // 数量
+  quantity: number;
+  quantityOut: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  unit?: string;
+  // 业务
+  businessId?: string;
+  businessType?: string;
+  businessCode?: string;
+  // 操作
+  operatorId?: string;
+  operatorName?: string;
+  operatorDate?: string;
+  outboundDate?: string;
+  createdAt: string;
+  // 关联信息（后端 LEFT JOIN）
   cropId?: string;
   cropName?: string;
   varietyId?: string;
   varietyName?: string;
+  cropCode?: string;
   warehouseId?: string;
   warehouseName?: string;
-  quantity: number;
-  unit?: string;
+  greenhouseName?: string;
+  plantingMode?: string;
+  grade?: string;
+  // 备注/其他
+  remarks?: string;
+  receiver?: string;
   unitPrice?: number;
   totalAmount?: number;
-  receiver?: string;
-  operatorId?: string;
-  operatorName?: string;
-  outboundDate?: string;
-  remarks?: string;
-  status?: string;
-  createdAt: string;
   updatedAt?: string;
 }
 
@@ -111,7 +129,13 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
   addTransaction: async (payload) => {
     try {
       const result = await enhancedApiClient.post<OutboundRow>('/inventory-transactions', payload);
-      if (result) set((s) => ({ rows: [result, ...s.rows], total: s.total + 1 }));
+      if (result) {
+        set((s) => ({ rows: [result, ...s.rows], total: s.total + 1 }));
+        // 2026-06-04 V2.1 铁律：写后跨页刷新（订阅 useInventoryStore.version 的页面会自动 reload）
+        // 动态 import 避免循环依赖
+        const { useInventoryStore } = await import('./useInventoryStore');
+        useInventoryStore.getState().notifyChange();
+      }
       return result;
     } catch {
       return null;
