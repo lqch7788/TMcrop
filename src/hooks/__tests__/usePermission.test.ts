@@ -34,7 +34,7 @@ const ACTION_CODE_TO_OID: Record<string, string> = {
 // 工序与菜单路径的映射关系
 const PROCESS_MENU_MAP: Record<string, string[]> = {
   'PROC_PRODUCTION': ['/production', '/tech-solution', '/purchase-plan'],
-  'PROC_CROP': ['/crop/seed-source', '/crop/seedling', '/crop/planting', '/crop-inventory', '/crop/order', '/crop/instance'],
+  'PROC_CROP': ['/crop/seed-source', '/crop/seedling', '/crop/planting', '/crop-inventory', '/crop/order'],
   'PROC_FARM': ['/agriculture-record', '/farm-hub', '/task-center', '/daily-work-summary', '/daily-problem-summary', '/plan-summary'],
   'PROC_MATERIALS': ['/materials', '/warehouse-overview', '/warehouse-inbound', '/produce-inventory', '/supplier-management', '/material-receiving', '/material-return'],
   'PROC_LABOR': ['/labor/attendance', '/labor/personnel', '/labor/compensation', '/labor/analytics', '/labor/resignation', '/labor/recruitment', '/labor/salary-budget'],
