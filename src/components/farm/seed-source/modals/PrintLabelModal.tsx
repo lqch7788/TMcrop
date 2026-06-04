@@ -331,7 +331,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
           <div>
             <Label className="text-gray-700">模板选择</Label>
             <Select value={template} onValueChange={(val) => setTemplate(val as 'small' | 'large' | 'detail')}>
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="border-gray-200 rounded-lg text-sm">
                 <SelectValue placeholder="详情标签" />
               </SelectTrigger>
               <SelectContent>
