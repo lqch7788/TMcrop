@@ -8,7 +8,7 @@
  * - 自动重试：指数退避
  */
 
-import { storageGet } from './storageService';
+import { storageGet, storageRemove } from './storageService';
 import { getSystemConfigValueNumber } from '../config/systemConfigReader';
 
 // API基础配置
@@ -184,6 +184,15 @@ class EnhancedApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // 401 自动清过期 token：演示模式允许无 token 访问
+        // 不清会导致 401 持续 3 次重试 + 后续所有请求都失败
+        if (response.status === 401) {
+          try {
+            storageRemove('token');
+          } catch {
+            // 忽略清理错误，避免遮蔽真正的 401 错误信息
+          }
+        }
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
           const errorResult = await response.json();
