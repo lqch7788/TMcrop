@@ -23,6 +23,7 @@ import Materials from './pages/Materials';
 import EnvironmentMonitor from './pages/EnvironmentMonitor';
 import Harvest from './pages/Harvest';
 import InventoryV3 from './pages/InventoryV3';
+import OutboundRecordsPage from './pages/OutboundRecordsPage';
 import ProduceCodeRule from './pages/ProduceCodeRule';
 // Reports 已迁移至 /summary/overview（生产汇总表 V1.0）
 import MaterialApproval from './pages/MaterialApproval';
@@ -268,6 +269,7 @@ function AppContent() {
           <Route path="/crop/harvest" element={<CropHarvest />} />
 <Route path="/crop/fertilizer" element={<Fertilizer />} />
           <Route path="/crop-inventory" element={<InventoryV3 />} />
+          <Route path="/crop/outbound-records" element={<OutboundRecordsPage />} />
           <Route path="/crop/order" element={<Order />} />
           <Route path="/crop/customer" element={<Customer />} />
           <Route path="/crop/instance" element={<Instance />} />

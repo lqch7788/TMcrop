@@ -11,7 +11,8 @@ import {
   Briefcase, GraduationCap, Clipboard, Play, Bot,
   Leaf, Flower2, Trees, CheckCircle,
   DollarSign, Layers, Link as LinkIcon,
-  Bug
+  Bug,
+  FileDown
 } from 'lucide-react';
 import { useAuthStore } from '@/stores';
 
@@ -48,6 +49,7 @@ const cropSubItems = [
   { icon: Sprout, label: '施肥管理', path: '/crop/fertilizer' },
   { icon: Bug, label: '病虫害管理', path: '/pest-control' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
+  { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
   { icon: Eye, label: '实例追溯', path: '/crop/instance' },
 ];
 
