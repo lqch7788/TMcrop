@@ -60,7 +60,8 @@ export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsP
     { label: '品种数',       value: Object.keys(summary?.byStockType ?? {}).length, color: 'bg-purple-500', Icon: Sprout },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    // V3.1 用户调整：4 个统计卡强制同一行（grid-cols-4 不受屏幕宽度影响）
+    <div className="grid grid-cols-4 gap-3">
       {cards.map((card, i) => {
         const IconComponent = card.Icon;
         return (
