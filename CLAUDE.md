@@ -36,17 +36,38 @@ npm run electron:pack     # 打包为目录 (调试用)
 
 ## 项目架构
 
-### 数据流 (V2.1 架构铁律)
+### 数据流 (V2.1 架构铁律 — 禁止任何缓存降级)
 
 ```
-组件 → Zustand Store → apiBasicDataService / enhancedApiClient → Backend API
-                                                                    ↓
-                                                               SQLite DB
+组件 → Zustand Store (纯内存) → enhancedApiClient → Backend API
+                                                       ↓
+                                                  SQLite DB
 ```
 
-**铁律**: 组件**绝不**直接读写 localStorage、直接调用 fetch/axios、或直接 import apiService。所有数据操作必须走 Zustand Store。
+**铁律**:
+- 组件**绝不**直接读写 localStorage、直接调用 fetch/axios、或直接 import apiService。
+- **数据源唯一**：后端 API 是数据唯一来源；Store 内存只是临时态，刷新即丢失。
+- **网络失败处理**：直接抛错并提示用户，**禁止**用 IndexedDB / localStorage / SessionStorage 兜底。
 
-**三级降级策略**: API → IndexedDB (enhancedApiClient 缓存) → localStorage (persist 兜底)
+**数据访问分层**（修订 2026-06-04）：
+- **持久化数据**（列表/详情/统计/订阅）→ **必须**走 Zustand Store。理由：跨页刷新、状态共享、订阅一致性。
+- **一次性动作**（生成编码、扣减数量、打印标签、追溯查询、审批提交）→ **直接**调 service 即可。理由：KISS；不维护 state；加 Store 中转层是**没价值的薄包装**（无缓存、无 loading、无 retry、无聚合，徒增间接层）。
+- 持久化数据的写操作（addItem/updateItem/deleteItem）走 Store action；写后由 action 内部更新 state。**禁止**让组件直调 service 后再手动 setState（数据流分裂）。
+
+**严禁使用的旧 V1 缓存模式**（2026-06-04 立为铁律）：
+- ❌ 禁止 IndexedDB / Dexie 离线缓存
+- ❌ 禁止 localStorage 持久化兜底（包括 Zustand `persist` 中间件）
+- ❌ 禁止 API → localStorage 直写工具（`syncToLocalStorage.ts` 等死代码已于 2026-06-04 删除）
+- ❌ 禁止 "API → IndexedDB → localStorage" 三级降级策略
+- ✅ 允许：`enhancedApiClient` 自带的"3 次重试 + 错误抛错"是网络层重试，不算缓存
+
+**为什么禁缓存**：
+1. 缓存与 DB 不同步 → 出现"删了又回来""看不到最新数据"等假 bug
+2. 缓存命中导致 SQL 写后无法立即被前端感知
+3. V2.0/V1.1 双前端版本同时操作同一 DB 时缓存状态分裂
+4. 增加心智负担：新写一个 store 要先想清缓存策略
+
+
 
 ### 目录结构
 
@@ -87,7 +108,7 @@ V1.1/
 | UI 组件 | Radix UI + Tailwind CSS 3.4 + shadcn/ui 风格 |
 | 图表 | Recharts |
 | 文档处理 | xlsx, file-saver, docx, jspdf, pptxgenjs |
-| 状态管理 | Zustand 5 (主) + TanStack Query (辅) + IndexedDB (Dexie) |
+| 状态管理 | Zustand 5 (**唯一**，纯内存，**禁止** persist/IndexedDB/TanStack Query 缓存) |
 | 路由 | React Router v6 |
 | 后端 | Express 4 + TypeScript 5.3 |
 | 数据库 | SQLite (sql.js + better-sqlite3) |
@@ -137,7 +158,7 @@ function denormalize(data: Partial<MyData>): Record<string, any> {
 // 4. Store 配置
 // - 使用 enhancedApiClient 调 API (非直接 fetch)
 // - 乐观更新模式：先改本地，再调 API
-// - persist + partialize 仅持久化数据数组
+// - **禁止 persist / IndexedDB / localStorage 兜底**（V2.1 铁律：API 直连）
 // - API 响应格式容错 (嵌套 {success, data} + 扁平数组)
 // - 零 any 类型
 ```
