@@ -19,7 +19,8 @@ const router = Router();
 
 // ========== V3.0 写入操作（必须在 /:id 之前） ==========
 router.post('/inbound', inventoryController.inbound.bind(inventoryController));
-router.post('/outbound', inventoryController.outbound.bind(inventoryController));
+// 注：2026-06-04 V2.1 铁律改造后，POST /api/inventory/outbound 端点已迁移到 /api/inventory-transactions
+//      （routes/inventoryTransactions.ts）。本路由不再注册 /outbound。
 
 // ========== V3.0 查询操作（必须在 /:id 之前） ==========
 router.get('/list', inventoryController.getList.bind(inventoryController));

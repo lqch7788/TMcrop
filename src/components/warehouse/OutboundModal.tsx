@@ -1,11 +1,14 @@
 /**
  * 出库弹窗组件
- * 基于 inventoryService.ts 的 outbound() API 实现
+ * 2026-06-04 V2.1 铁律改造：写操作走 useInventoryTransactionStore.addTransaction()
+ *                  → POST /api/inventory-transactions → 路由内扣减库存 + 写 inventory_transaction 老表
  */
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { outbound } from '../../services/inventoryService';
-import { InventoryStock, BusinessType } from '../../types/inventory';
+import { InventoryStock } from '../../types/inventory';
+import { useInventoryTransactionStore } from '../../stores/useInventoryTransactionStore';
+import { useInventoryStore } from '../../stores/useInventoryStore';
+import { OutboundBusinessType, OUTBOUND_BUSINESS_TYPE_META } from '../../constants/outboundConstants';
 import { UnifiedModal } from '../ui/UnifiedModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -26,7 +29,7 @@ interface OutboundModalProps {
 
 export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundModalProps) {
   const [quantity, setQuantity] = useState<string>('');
-  const [businessType, setBusinessType] = useState<BusinessType>(BusinessType.OTHER);
+  const [businessType, setBusinessType] = useState<OutboundBusinessType>(OutboundBusinessType.OTHER);
   const [businessCode, setBusinessCode] = useState<string>('');
   const [remarks, setRemarks] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +56,8 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
     setError('');
 
     try {
-      const result = await outbound({
+      // 2026-06-04 V2.1 铁律改造：写操作走 Store action（addTransaction 内部已 notifyChange 跨页刷新）
+      const result = await useInventoryTransactionStore.getState().addTransaction({
         instanceId: stock.instanceId,
         businessId: stock.businessId,
         businessType: businessType,
@@ -62,13 +66,15 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
         operatorId: 'system',
         operatorName: '系统操作员',
         remarks: remarks || undefined,
-      });
+      } as any);
 
-      if (result.success) {
+      if (result) {
+        // 防御性兜底：Store action 内部已调 notifyChange，但若未生效则手动调一次
+        useInventoryStore.getState().notifyChange();
         onSuccess();
         handleClose();
       } else {
-        setError(result.error || '出库失败');
+        setError('出库失败：Store action 返回 null');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '出库失败');
@@ -80,7 +86,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
   // 关闭弹窗并重置表单
   const handleClose = () => {
     setQuantity('');
-    setBusinessType(BusinessType.OTHER);
+    setBusinessType(OutboundBusinessType.OTHER);
     setBusinessCode('');
     setRemarks('');
     setError('');
@@ -178,17 +184,35 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
         {/* 业务类型 */}
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">业务类型</Label>
-          <Select value={businessType} onValueChange={(val) => setBusinessType(val as BusinessType)}>
+          <Select value={businessType} onValueChange={(val) => setBusinessType(val as OutboundBusinessType)}>
             <SelectTrigger className={deepInputClass}>
               <SelectValue placeholder="其他" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={BusinessType.SEED_SOURCE}>种源管理</SelectItem>
-              <SelectItem value={BusinessType.SEEDLING}>育苗管理</SelectItem>
-              <SelectItem value={BusinessType.PLANTING}>种植管理</SelectItem>
-              <SelectItem value={BusinessType.HARVEST}>采收入库</SelectItem>
-              <SelectItem value={BusinessType.PURCHASE}>采购入库</SelectItem>
-              <SelectItem value={BusinessType.OTHER}>其他</SelectItem>
+              <SelectItem value={OutboundBusinessType.CUSTOMER_SALE}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.CUSTOMER_SALE].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.TRANSFER_OUT}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.TRANSFER_OUT].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.DAMAGE_LOSS}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.DAMAGE_LOSS].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.RETURN_INBOUND}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.RETURN_INBOUND].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.INVENTORY_ADJUST}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INVENTORY_ADJUST].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.OTHER}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.OTHER].label}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

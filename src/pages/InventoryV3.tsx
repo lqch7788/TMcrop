@@ -73,29 +73,6 @@ export default function InventoryV3Page() {
     loadAll();
   }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, setStoreFilters, loadAll]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const apiFilters: { stockType?: StockType; status?: InventoryStatus; sourceType?: SourceType } = {};
-      if (filters.stockType) apiFilters.stockType = filters.stockType as StockType;
-      if (filters.status) apiFilters.status = filters.status as InventoryStatus;
-      if (filters.sourceType) apiFilters.sourceType = filters.sourceType as SourceType;
-
-      const [stockList, statsData] = await Promise.all([
-        getInventoryList(apiFilters),
-        getInventoryStats(),
-      ]);
-
-      setStocks(stockList);
-      setStats(statsData);
-    } catch (error) {
-      console.error('[InventoryV3] 加载库存数据失败:', error);
-      showAlert('加载库存数据失败：' + (error instanceof Error ? error.message : '未知错误'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 关键字过滤（前端）+ 低库存过滤
   const filteredStocks = useMemo(() => {
     let result = stocks;
@@ -248,10 +225,9 @@ export default function InventoryV3Page() {
     setOutboundModalOpen(true);
   };
 
-  // 出库成功回调
+  // 出库成功回调（V2.1 铁律：仅触发跨页刷新订阅，具体 reload 由 useEffect 监 inventoryVersion 自动触发）
   const handleOutboundSuccess = () => {
     useInventoryStore.getState().notifyChange();
-    loadData();
   };
 
   // 打开详情弹窗（合并原"追溯"功能）

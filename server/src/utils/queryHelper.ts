@@ -64,6 +64,9 @@ export function execCount(db: Database, sql: string, params: any[] = []): number
     // 任意 SELECT 列表，统一替换为 COUNT(*)
     countSql = sql.replace(/^\s*SELECT\s+.+?\s+FROM\s+/is, 'SELECT COUNT(*) AS total FROM ');
   }
+  console.log('[execCount DEBUG] input SQL:', JSON.stringify(sql));
+  console.log('[execCount DEBUG] final SQL:', JSON.stringify(countSql));
+  console.log('[execCount DEBUG] db type:', db?.constructor?.name);
   const stmt = db.prepare(countSql);
 
   if (params.length > 0) {

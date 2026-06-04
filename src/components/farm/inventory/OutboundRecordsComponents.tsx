@@ -24,8 +24,13 @@ import { RotateCcw, Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react'
 import {
   OutboundRow,
   OutboundSummary,
-  OutboundQuery,
-} from '../../../services/inventoryTransactionService';
+} from '../../../stores/useInventoryTransactionStore';
+import type { OutboundQuery } from '../../../services/inventoryTransactionService';
+import {
+  OutboundBusinessType,
+  OUTBOUND_BUSINESS_TYPE_META,
+  mapLegacyBusinessType,
+} from '../../../constants/outboundConstants';
 import {
   getPlantingModeLabel,
 } from '../../../constants/cropConstants';
@@ -41,15 +46,6 @@ const STOCK_TYPE_LABEL: Record<string, { label: string; color: string; icon: str
   seed:     { label: '种源', color: 'bg-amber-500',   icon: '🌱' },
   seedling: { label: '种苗', color: 'bg-green-500',   icon: '🌿' },
   product:  { label: '成品', color: 'bg-emerald-500', icon: '📦' },
-};
-
-const BUSINESS_TYPE_META: Record<string, { label: string; color: string }> = {
-  harvest:     { label: '采收入库', color: 'bg-orange-100 text-orange-700' },
-  purchase:    { label: '采购入库', color: 'bg-blue-100 text-blue-700' },
-  manual:      { label: '手动新建', color: 'bg-slate-100 text-slate-700' },
-  transfer:    { label: '调拨入库', color: 'bg-cyan-100 text-cyan-700' },
-  other:       { label: '其他',     color: 'bg-gray-100 text-gray-700' },
-  unknown:     { label: '未知',     color: 'bg-gray-100 text-gray-500' },
 };
 
 export function OutboundRecordsStats({ summary, loading }: OutboundRecordsStatsProps) {
@@ -194,10 +190,30 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              <SelectItem value="harvest">采收入库</SelectItem>
-              <SelectItem value="purchase">采购入库</SelectItem>
-              <SelectItem value="manual">手动新建</SelectItem>
-              <SelectItem value="transfer">调拨入库</SelectItem>
+              <SelectItem value={OutboundBusinessType.CUSTOMER_SALE}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.CUSTOMER_SALE].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.TRANSFER_OUT}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.TRANSFER_OUT].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.DAMAGE_LOSS}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.DAMAGE_LOSS].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.RETURN_INBOUND}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.RETURN_INBOUND].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.INVENTORY_ADJUST}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INVENTORY_ADJUST].label}
+              </SelectItem>
+              <SelectItem value={OutboundBusinessType.OTHER}>
+                {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.OTHER].label}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -258,7 +274,10 @@ export function OutboundRecordsTable({
   // 字典/标签全部从映射取（不硬编码）
   const stockLabel = (s: string) => STOCK_TYPE_LABEL[s]?.label || s;
   const stockColor = (s: string) => STOCK_TYPE_LABEL[s]?.color || 'bg-gray-500';
-  const bizMeta = (b?: string) => BUSINESS_TYPE_META[b || 'unknown'] || BUSINESS_TYPE_META.unknown;
+  const bizMeta = (b?: string) => {
+    const normalized = mapLegacyBusinessType(b);
+    return OUTBOUND_BUSINESS_TYPE_META[normalized];
+  };
 
   const colSpan = exportMode ? 16 : 15;
   const allSelected = data.length > 0 && selectedRows.length === data.length;
