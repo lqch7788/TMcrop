@@ -577,7 +577,7 @@ export default function WarehouseMaterialsPage() {
 
           {/* 表头行：标题 + 操作按钮 */}
           <ActionToolbar
-            title="库存总览"
+            title="物料库存"
             batchEditMode={batchEditMode}
             deleteMode={deleteMode}
             exportMode={exportMode}

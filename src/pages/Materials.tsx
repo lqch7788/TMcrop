@@ -135,7 +135,7 @@ export default function Materials() {
           variant={activeTab === 'overview' ? 'default' : 'secondary'}
           onClick={() => { setActiveTab('overview'); setCurrentPage(1); }}
         >
-          库存总览
+          物料库存
         </Button>
         <Button
           variant={activeTab === 'inbound' ? 'default' : 'secondary'}
@@ -145,7 +145,7 @@ export default function Materials() {
         </Button>
       </div>
 
-      {/* 库存总览 */}
+      {/* 物料库存 */}
       {activeTab === 'overview' && (
         <>
           {/* 筛选器 */}

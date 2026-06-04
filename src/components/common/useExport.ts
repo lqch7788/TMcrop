@@ -1,7 +1,7 @@
 /**
  * 统一导出Hook
  * 所有页面导出功能统一使用此Hook
- * 流程与库存总览完全一致
+ * 流程与物料库存完全一致
  */
 
 import { useState, useCallback } from 'react';

@@ -26,7 +26,7 @@ export default function TabSwitch({ activeTab, onTabChange, codeGenExpanded, onC
           variant={activeTab === 'overview' ? 'default' : 'outline'}
           onClick={() => onTabChange('overview')}
         >
-          库存总览
+          物料库存
         </Button>
       </div>
       {showCodeGen && (

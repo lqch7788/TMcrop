@@ -1,11 +1,11 @@
 /**
- * 新建物料 Modal（库存总览页面用）
+ * 新建物料 Modal（物料库存页面用）
  *
  * 数据流：useWarehouseMaterialStore.addItem → API → 写回 Store
  * 编码规则：复用 src/pages/warehouse/utils/warehouseInbound.utils.ts 里的 handleCodeGen
  * 编码生成器 UI：复用 src/pages/warehouse/components/WarehouseInboundCodeGen
  *
- * 业务约束：与库存总览分离"主数据维护"语义，避免和出库交易混淆
+ * 业务约束：与物料库存分离"主数据维护"语义，避免和出库交易混淆
  */
 import React, { useEffect, useState } from 'react';
 import { UnifiedModal } from '@/components/ui/UnifiedModal';
