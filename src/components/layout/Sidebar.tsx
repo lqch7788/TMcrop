@@ -27,7 +27,7 @@ const menuItems = [
   { icon: Sprout, label: '计划管理', path: '/production', category: 'production' },
   { icon: Leaf, label: '作物管理', path: '/crop/seed-source', category: 'crop' },
   { icon: ClipboardList, label: '农事管理', path: '/agriculture-record', category: 'farm' },
-  { icon: Package, label: '库存管理', path: '/materials', category: 'materials' },
+  { icon: Package, label: '物资管理', path: '/materials', category: 'materials' },
   { icon: Users, label: '人工管理', path: '/labor/task-center', category: 'labor' },
   { icon: BarChart3, label: '生产汇总表', path: '/reports', category: 'summary' },
   { icon: CheckSquare, label: '审批管理', path: '/approvals', category: 'workflow' },
@@ -77,9 +77,9 @@ const approvalSubItems = [
   { icon: Users, label: '人事审批', path: '/hr-approval' },
 ];
 
-// 库存管理子菜单（仓库物料拆分为库存总览和物料入库，产品库存已迁移到作物管理）
+// 物资管理子菜单（仓库物料拆分为物料库存和物料入库，产品库存已迁移到作物管理）
 const materialsSubItems = [
-  { icon: Archive, label: '库存总览', path: '/warehouse-overview' },
+  { icon: Archive, label: '物料库存', path: '/warehouse-overview' },
   { icon: Warehouse, label: '物料入库', path: '/warehouse-inbound' },
   { icon: Truck, label: '供应商管理', path: '/supplier-management' },
   { icon: ClipboardList, label: '生产领料', path: '/material-receiving' },
@@ -303,7 +303,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
                     )}
                   </>
                   )
-                ) : item.label === '库存管理' ? (
+                ) : item.label === '物资管理' ? (
                   filteredMaterialsSubItems.length > 0 && (
                   <>
                     <button

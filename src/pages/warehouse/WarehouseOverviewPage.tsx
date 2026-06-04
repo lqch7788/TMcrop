@@ -1,5 +1,5 @@
 /**
- * 库存总览页面
+ * 物料库存页面
  * 数据来源：Zustand Store → enhancedApiClient → API
  * 三级降级：API → IndexedDB → localStorage
  */
@@ -228,7 +228,7 @@ export default function WarehouseOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="库存总览" subtitle="仓库物料库存总览" />
+      <PageHeader title="物料库存" subtitle="仓库物料库存一览" />
 
       <MaterialFilters
         filters={filters}
