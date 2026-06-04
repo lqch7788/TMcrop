@@ -2,7 +2,7 @@
  * 供应商服务 (V2.1 架构 - 直连 API)
  *
  * 兼容层：保持原函数签名（同步返回），但内部数据源从 useSupplierStore 内存读
- * 业务数据**不落 localStorage / IndexedDB**（违反 CLAUDE.md 铁律）
+ * 业务数据不落任何缓存层（V2.1 铁律：API 直连）
  *
  * 数据流：API → useSupplierStore（内存） → supplierService（兼容层） → 组件
  *

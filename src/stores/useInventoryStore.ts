@@ -2,7 +2,7 @@
  * 库存 Store（V3.0 纯 API）
  *
  * 数据流：组件 → Store → enhancedApiClient → 后端 Express → SQLite
- * 不用 localStorage / IndexedDB 任何缓存层
+ * 业务直连 API，无任何缓存层（V2.1 铁律）
  *
  * 跨页刷新机制：
  * - 任何"写"操作（inbound / outbound / freeze）成功后调用 notifyChange()
