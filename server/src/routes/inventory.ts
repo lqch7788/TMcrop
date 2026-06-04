@@ -31,6 +31,79 @@ router.get('/available/:instanceId', inventoryController.getAvailableQuantity.bi
 router.get('/by-business/:businessId', inventoryController.getByBusinessId.bind(inventoryController));
 router.get('/transaction/:instanceId', inventoryController.getTransactions.bind(inventoryController));
 
+// ========== V3.1 出库流水 3 端点（出库记录独立页） ==========
+// 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md §4
+// 注意：必须在 GET /:id 通配之前（虽然 /transactions 与 /:id 不冲突，但保持顺序安全）
+import { inventoryTransactionService } from '../services/inventoryTransaction.service';
+import { toCSV } from '../utils/csvExporter';
+
+// GET /api/inventory/transactions?from=...&to=...&stock_type=...&...
+// 返回 rows + total + summary（一次拿到列表+统计，前端不用发两次请求）
+router.get('/transactions', async (req: Request, res: Response) => {
+  try {
+    const { from, to, stock_type, warehouse_id, crop_name, operator_name, business_type, page, limit } = req.query as any;
+    const query = {
+      from, to,
+      stockType: stock_type,
+      warehouseId: warehouse_id,
+      cropName: crop_name,
+      operatorName: operator_name,
+      businessType: business_type,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 50,
+    };
+    const [list, stats] = await Promise.all([
+      inventoryTransactionService.listOutbound(query),
+      inventoryTransactionService.getStats(query),
+    ]);
+    res.json({ success: true, data: { ...list, summary: stats } });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/inventory/transactions/stats?from=...&to=...&...
+// 单独统计接口（页面刷新统计时用，不重查 rows）
+router.get('/transactions/stats', async (req: Request, res: Response) => {
+  try {
+    const q = req.query as any;
+    const stats = await inventoryTransactionService.getStats({
+      from: q.from, to: q.to,
+      stockType: q.stock_type, warehouseId: q.warehouse_id,
+      cropName: q.crop_name, operatorName: q.operator_name, businessType: q.business_type,
+    });
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/inventory/transactions/export?from=...&to=...&format=csv
+// V3.1 后端只出 CSV（XLSX/PDF 走前端，避免后端 +1MB xlsx 依赖）
+router.get('/transactions/export', async (req: Request, res: Response) => {
+  try {
+    const { format, ...rest } = req.query as any;
+    if (format && format !== 'csv') {
+      res.status(400).json({ success: false, error: `format=${format} 不支持，后端仅提供 csv（xlsx/pdf 由前端生成）` });
+      return;
+    }
+    const query = {
+      from: rest.from, to: rest.to,
+      stockType: rest.stock_type, warehouseId: rest.warehouse_id,
+      cropName: rest.crop_name, operatorName: rest.operator_name, businessType: rest.business_type,
+      page: 1, limit: 100000, // 导出上限 10 万
+    };
+    const list = await inventoryTransactionService.listOutbound(query);
+    const csv = toCSV(list.rows);
+    const filename = `outbound-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.send(csv);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ========== 兼容老 ProduceInventoryPage 的路由 ==========
 // 这些路由从 V3 inventory_stock 表读，但字段映射到老 ProduceInventory 期望的 shape
 // 缺失字段（grade / storage_location / expiration_date / harvest_date 等）以空值返回
