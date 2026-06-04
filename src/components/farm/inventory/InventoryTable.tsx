@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Package, Leaf, Sprout, ArrowUpCircle, Eye } from 'lucide-react';
+import { Package, Leaf, Sprout, ArrowUpCircle } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { Pagination } from '../../ui/Pagination';
@@ -303,16 +303,6 @@ export function InventoryTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => onViewDetail(stock)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="查看详情"
-                        >
-                          <Eye className="w-4 h-4" />
-                          详情
-                        </Button>
                         {canOutbound && (
                           <Button
                             variant="link"
