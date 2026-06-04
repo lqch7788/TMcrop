@@ -3522,8 +3522,15 @@ function seedBusinessWorkers() {
 /**
  * 导入采购计划数据（完整版）
  * 注意：字段名必须与数据库schema保持一致
+ *
+ * [2026-06-04] 停用种子预填
+ * 原因：采购计划改为"前端 Store → API → SQLite"实时读写，不依赖任何种子数据。
+ * 重启服务器不会再复活已删除的采购计划，也避免 INSERT OR IGNORE 把"被删的种子"
+ * 重新写回 DB。函数体保留作为历史参考，恢复时移除 return 即可。
  */
 function seedBusinessPurchasePlans() {
+  console.log('[seedData] purchase_plans 业务种子已停用（前端 Store 直连 API）');
+  return;
   const db = getDatabase();
 
   // 计算总金额
