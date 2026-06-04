@@ -9,7 +9,6 @@ import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import GlobalDialog from './components/common/GlobalDialog';
-import { autoInitializeData } from './utils/dataInitializer';
 import { syncManager } from './services/syncManager';
 import { useAuthStore, useSystemConfigStore, useCropVarietyStore } from './stores';
 import { useThemeConfig } from './hooks/useThemeConfig';
@@ -372,10 +371,9 @@ function AppContent() {
 }
 
 function App() {
-  // 应用启动时自动初始化作物管理模拟数据
-  useEffect(() => {
-    autoInitializeData().catch(console.error);
-  }, []);
+  // 2026-06-04 V2.1 铁律：删除 V1 模拟数据初始化（后端 seedBasicData 替代）
+  // 之前调 autoInitializeData() 写入 localStorage/IndexedDB；现前后端都直连 API，
+  // 前端不需要再初始化模拟数据。
 
   // 应用启动时恢复登录状态（token持久化验证）
   useEffect(() => {
