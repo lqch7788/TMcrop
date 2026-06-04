@@ -49,9 +49,21 @@ export function queryToObjects<T = any>(db: Database, sql: string, params: any[]
 
 /**
  * 执行计数查询
+ * 兼容 3 种 SQL 形式：
+ *  1. SELECT * FROM t           → SELECT COUNT(*) AS total FROM t
+ *  2. SELECT id FROM t          → SELECT COUNT(*) AS total FROM t
+ *  3. SELECT COUNT(*) FROM t    → 直接加 AS total 别名
+ * 修复：原版用 'SELECT *' 字符串 replace，对已含 COUNT(*) 的 SQL 不生效
  */
 export function execCount(db: Database, sql: string, params: any[] = []): number {
-  const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as total');
+  let countSql: string;
+  if (/count\s*\(\s*\*\s*\)/i.test(sql)) {
+    // 已含 COUNT(*)，加 AS total 别名
+    countSql = sql.replace(/count\s*\(\s*\*\s*\)/i, 'COUNT(*) AS total');
+  } else {
+    // 任意 SELECT 列表，统一替换为 COUNT(*)
+    countSql = sql.replace(/^\s*SELECT\s+.+?\s+FROM\s+/is, 'SELECT COUNT(*) AS total FROM ');
+  }
   const stmt = db.prepare(countSql);
 
   if (params.length > 0) {
