@@ -2,10 +2,10 @@
  * 育苗数据 API 服务
  * 对接后端 /api/seedlings
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -151,7 +151,7 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
 
 /**
  * 获取所有育苗记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlings(): Promise<Seedling[]> {
   const data = await enhancedApiClient.get<BackendSeedling[]>('/seedlings');
@@ -160,7 +160,7 @@ export async function getSeedlings(): Promise<Seedling[]> {
 
 /**
  * 根据ID获取单个育苗记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlingById(id: string): Promise<Seedling | undefined> {
   const data = await enhancedApiClient.get<BackendSeedling>(`/seedlings/${id}`);
@@ -169,7 +169,7 @@ export async function getSeedlingById(id: string): Promise<Seedling | undefined>
 
 /**
  * 根据ID数组获取多个育苗记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlingsByIds(ids: string[]): Promise<Seedling[]> {
   const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/batch?ids=${ids.join(',')}`);
@@ -178,7 +178,7 @@ export async function getSeedlingsByIds(ids: string[]): Promise<Seedling[]> {
 
 /**
  * 根据种源ID获取育苗记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSeedlingsBySourceId(sourceId: string): Promise<Seedling[]> {
   const data = await enhancedApiClient.get<BackendSeedling[]>(`/seedlings/source/${sourceId}`);
@@ -316,7 +316,7 @@ export async function increasePlantedCount(id: string, count: number): Promise<b
 
 /**
  * 获取可移栽的育苗记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTransplantReadySeedlings(): Promise<Seedling[]> {
   const data = await enhancedApiClient.get<Seedling[]>('/seedlings/transplant-ready');
@@ -393,7 +393,7 @@ export async function batchPrintLabel(seedlingIds: string[], operator: string): 
 
 /**
  * 获取打印记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getPrintRecords(seedlingId: string): Promise<PrintRecord[]> {
   try {
@@ -428,7 +428,7 @@ export async function addTransplantRecord(seedlingId: string, record: Omit<Trans
 
 /**
  * 获取栽种记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTransplantRecords(seedlingId: string): Promise<TransplantRecord[]> {
   try {
@@ -471,7 +471,7 @@ export async function addTransplantHistoryItem(
 
 /**
  * 获取栽种履历
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTransplantHistory(seedlingId: string): Promise<TransplantHistory[]> {
   try {
@@ -483,7 +483,7 @@ export async function getTransplantHistory(seedlingId: string): Promise<Transpla
 
 /**
  * 获取标签栽种履历
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getLabelTransplantHistory(seedlingId: string, labelNumber: string): Promise<TransplantHistory | undefined> {
   try {

@@ -2,7 +2,7 @@
  * 通知设置 API 服务
  * 对接后端 /api/notifications (channels + rules)
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -52,7 +52,7 @@ export interface NotificationRule {
 
 /**
  * 获取所有通知渠道
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getChannels(): Promise<NotificationChannel[]> {
   const data = await enhancedApiClient.get<NotificationChannel[]>('/notifications/channels');
@@ -98,7 +98,7 @@ export async function toggleChannel(id: string): Promise<void> {
 
 /**
  * 获取所有通知规则
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getRules(): Promise<NotificationRule[]> {
   const data = await enhancedApiClient.get<NotificationRule[]>('/notifications/rules');

@@ -2,7 +2,7 @@
  * 操作日志 API 服务
  * 对接后端 /api/operation-logs
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
@@ -77,7 +77,7 @@ export interface OperationLogResult {
 
 /**
  * 获取操作日志列表（支持分页和筛选）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOperationLogs(filters?: OperationLogFilters): Promise<OperationLogResult> {
   const params: Record<string, string> = {};
@@ -102,7 +102,7 @@ export async function getOperationLogs(filters?: OperationLogFilters): Promise<O
 
 /**
  * 获取单个操作日志详情
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOperationLogById(id: string): Promise<OperationLog | null> {
   try {
@@ -115,7 +115,7 @@ export async function getOperationLogById(id: string): Promise<OperationLog | nu
 
 /**
  * 获取操作日志统计
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOperationLogStats(): Promise<OperationLogStats> {
   const data = await enhancedApiClient.get<OperationLogStats>('/operation-logs/stats/summary');

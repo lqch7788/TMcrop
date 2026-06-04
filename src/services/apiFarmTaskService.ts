@@ -2,10 +2,10 @@
  * 农事任务 API 服务
  * 对接后端 /api/farm-tasks
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -14,7 +14,7 @@ import { Task, TaskFilters, TaskStats, TaskStatus } from '../types/task';
 
 /**
  * 获取所有农事任务
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllTasks(): Promise<Task[]> {
   const data = await enhancedApiClient.get<Task[]>('/farm-tasks');
@@ -23,7 +23,7 @@ export async function getAllTasks(): Promise<Task[]> {
 
 /**
  * 根据ID获取任务
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTaskById(id: string): Promise<Task | undefined> {
   return await enhancedApiClient.get<Task>(`/farm-tasks/${id}`);
@@ -31,7 +31,7 @@ export async function getTaskById(id: string): Promise<Task | undefined> {
 
 /**
  * 根据任务编码获取任务
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTaskByCode(taskCode: string): Promise<Task | undefined> {
   return await enhancedApiClient.get<Task>(`/farm-tasks/code/${taskCode}`);
@@ -39,7 +39,7 @@ export async function getTaskByCode(taskCode: string): Promise<Task | undefined>
 
 /**
  * 获取任务列表（支持筛选）
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTasks(filters?: TaskFilters): Promise<Task[]> {
   const queryParams = new URLSearchParams();
@@ -221,7 +221,7 @@ export async function remindTask(id: string): Promise<boolean> {
 
 /**
  * 获取任务统计
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTaskStats(filters?: TaskFilters): Promise<TaskStats> {
   return await enhancedApiClient.get<TaskStats>('/farm-tasks/stats');
@@ -229,7 +229,7 @@ export async function getTaskStats(filters?: TaskFilters): Promise<TaskStats> {
 
 /**
  * 根据状态获取任务数量
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTaskCountByStatus(status: TaskStatus): Promise<number> {
   return await enhancedApiClient.get<number>(`/farm-tasks/count?status=${status}`);
@@ -237,7 +237,7 @@ export async function getTaskCountByStatus(status: TaskStatus): Promise<number> 
 
 /**
  * 获取任务操作记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTaskRecords(taskId: string): Promise<any[]> {
   return await enhancedApiClient.get<any[]>(`/farm-tasks/${taskId}/records`);
@@ -280,7 +280,7 @@ export async function getAllTaskRecords(): Promise<any[]> {
 
 /**
  * 获取逾期任务列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOverdueTasks(): Promise<Task[]> {
   const data = await enhancedApiClient.get<Task[]>('/farm-tasks/overdue');
@@ -289,7 +289,7 @@ export async function getOverdueTasks(): Promise<Task[]> {
 
 /**
  * 获取待接受的任务列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getPendingTasks(): Promise<Task[]> {
   const data = await enhancedApiClient.get<Task[]>('/farm-tasks/pending');
@@ -298,7 +298,7 @@ export async function getPendingTasks(): Promise<Task[]> {
 
 /**
  * 获取进行中的任务列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getInProgressTasks(): Promise<Task[]> {
   const data = await enhancedApiClient.get<Task[]>('/farm-tasks/in-progress');
@@ -307,7 +307,7 @@ export async function getInProgressTasks(): Promise<Task[]> {
 
 /**
  * 获取待验收的任务列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getWaitingAcceptanceTasks(): Promise<Task[]> {
   const data = await enhancedApiClient.get<Task[]>('/farm-tasks/waiting-acceptance');

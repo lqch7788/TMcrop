@@ -6,7 +6,7 @@
  *
  * 缓存策略（已确认无三级缓存）：
  * - L1：Zustand Store 内存数组
- * - L2：（未使用）无 IndexedDB 缓存
+ * - L2：（未使用）无 API
  * - L3：（未使用）techSolution 页面不读取 localStorage 中的方案数据
  *
  * 网络策略：

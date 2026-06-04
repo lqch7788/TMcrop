@@ -2,10 +2,10 @@
  * 离职管理 API 服务
  * 对接后端 /api/resignation
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 

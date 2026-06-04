@@ -2,10 +2,10 @@
  * 入职管理 API 服务
  * 对接后端 /api/onboarding
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -101,7 +101,7 @@ export interface UpdateStatusParams {
 
 /**
  * 获取入职记录列表
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOnboardingRecords(
   filters?: { status?: string; keyword?: string },
@@ -120,7 +120,7 @@ export async function getOnboardingRecords(
 
 /**
  * 获取单个入职记录
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getOnboardingById(id: string): Promise<OnboardingRecord | null> {
   return await enhancedApiClient.get<OnboardingRecord>(`/onboarding/${id}`);

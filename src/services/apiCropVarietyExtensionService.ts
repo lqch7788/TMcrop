@@ -2,10 +2,10 @@
  * 作物品种库扩展 API 服务
  * 对接后端 API 存储用户新增的类型、品种，子品种
  *
- * 数据流：API → enhancedApiClient (IndexedDB 缓存) → 组件
+ * 数据流：API → enhancedApiClient → 组件（无缓存层，V2.1 铁律）
  *
  * 降级策略：
- * - GET 请求：API → IndexedDB 缓存（API 失败时自动降级）
+ * - GET 请求：API 直连（V2.1 铁律：无缓存降级）
  * - POST/PUT/DELETE：API 直连（无离线队列）
  */
 
@@ -115,7 +115,7 @@ export async function updateCategoryExtension(
 
 /**
  * 获取所有类型扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllTypeExtensions(): Promise<TypeExtension[]> {
   return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types`);
@@ -123,7 +123,7 @@ export async function getAllTypeExtensions(): Promise<TypeExtension[]> {
 
 /**
  * 获取指定类别的类型扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getTypeExtensionsByCategory(categoryCode: string): Promise<TypeExtension[]> {
   return await enhancedApiClient.get<TypeExtension[]>(`${API_BASE}/types/${categoryCode}`);
@@ -178,7 +178,7 @@ export async function updateTypeExtension(
 
 /**
  * 获取所有品种扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
   return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties`);
@@ -186,7 +186,7 @@ export async function getAllVarietyExtensions(): Promise<VarietyExtension[]> {
 
 /**
  * 获取指定类型的品种扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getVarietyExtensionsByType(categoryCode: string, typeCode: string): Promise<VarietyExtension[]> {
   return await enhancedApiClient.get<VarietyExtension[]>(`${API_BASE}/varieties/${categoryCode}/${typeCode}`);
@@ -241,7 +241,7 @@ export async function updateVarietyExtension(
 
 /**
  * 获取所有子品种1扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getAllSubVariety1Extensions(): Promise<SubVariety1Extension[]> {
   return await enhancedApiClient.get<SubVariety1Extension[]>(`${API_BASE}/subvariety1`);
@@ -249,7 +249,7 @@ export async function getAllSubVariety1Extensions(): Promise<SubVariety1Extensio
 
 /**
  * 获取指定品种的子品种1扩展
- * 降级策略：API → IndexedDB 缓存
+ * 网络策略：API 直连（V2.1 铁律：无缓存）
  */
 export async function getSubVariety1ExtensionsByVariety(
   categoryCode: string,
