@@ -33,6 +33,8 @@ function mapFieldsToFrontend(item: Record<string, unknown>): Record<string, unkn
     planName: 'batchName',
     planType: 'planType',
     cropName: 'cropName',
+    // 2026-06-05: 新增 cropCode 字段映射（修复弹窗作物品种显示空）
+    cropCode: 'cropCode',
     // cropVariety -> variety (前端期望)
     cropVariety: 'variety',
     greenhouseName: 'greenhouseName',

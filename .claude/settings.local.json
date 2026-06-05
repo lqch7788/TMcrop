@@ -307,7 +307,8 @@
       "Bash(rm \"D:\\\\test_root_write.tmp\")",
       "mcp__plugin_playwright_playwright__browser_close",
       "WebSearch",
-      "Bash(mcp__codegraph__codegraph_explore *)"
+      "Bash(mcp__codegraph__codegraph_explore *)",
+      "Bash(grep -n \"UnifiedModal\\\\|Modal\\\\s*$\\\\|isOpen\" src/components/production/modals/BatchEditModal.tsx)"
     ]
   }
 }
