@@ -522,11 +522,16 @@ export async function getAllPropagationRecords(params: PropagationRecordQueryPar
   query.push(`limit=${params.limit || 20}`);
   const qs = query.join('&');
 
-  const res = await enhancedApiClient.get<{ success: boolean; data: any[]; total: number }>(
+  const res = await enhancedApiClient.get<{ success: boolean; data: { items: any[]; total: number } }>(
     `/seed-sources/propagation-records?${qs}`
   );
-  const raw = (res && (res as any).data) || res || [];
-  const items: PropagationRecordWithSource[] = (Array.isArray(raw) ? raw : []).map((it: any) => ({
+  // 2026-06-05: enhancedApiClient 已自动解包 data 字段；res 实际是 {items, total}，不要二次 .data
+  const payload = (res && (res as any).data) || res || {};
+  const raw = Array.isArray(payload) ? payload : (payload.items || []);
+  const total = typeof (res as any).total === 'number'
+    ? (res as any).total
+    : (payload.total || 0);
+  const items: PropagationRecordWithSource[] = (raw as any[]).map((it: any) => ({
     id: it.id,
     seedSourceId: it.seedSourceId,
     seedCode: it.seedCode || '',

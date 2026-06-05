@@ -36,9 +36,15 @@ const STAGE_OPTIONS = [
   { value: 'completed', label: '已完成' },
 ];
 
-const STAGE_LABEL_MAP: Record<string, string> = Object.fromEntries(
-  STAGE_OPTIONS.map((o) => [o.value, o.label])
-);
+// 2026-06-05: 补全 6 个 stage 映射（与 PropagationStageModal STAGE_LABELS 一致），避免 harvested/quality_checked/failed 落英文
+const STAGE_LABEL_MAP: Record<string, string> = {
+  planned: '已计划',
+  in_progress: '进行中',
+  harvested: '已采收',
+  quality_checked: '已质检',
+  completed: '已入库',
+  failed: '失败',
+};
 
 const PROPAGATION_TYPE_LABEL: Record<string, string> = {
   external: '外购入库',

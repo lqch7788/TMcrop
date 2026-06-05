@@ -4,7 +4,7 @@
  * 不同繁殖途径显示不同的阶段流程标签
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
 import { ChevronRight, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
@@ -91,10 +91,20 @@ export function PropagationStageModal({
   const { updatePropagationStage, completePropagation, loadItems } = useSeedSourceStore();
   const [confirming, setConfirming] = useState(false);
   const [harvestQuantity, setHarvestQuantity] = useState(0);
+  // 2026-06-05: 内部维护 currentStage，否则推进后 prop 不变导致 UI 阶段流转路径不刷新
+  const [currentStage, setCurrentStage] = useState<string>(
+    record?.propagationStatus || PropagationStatus.PLANNED
+  );
+
+  // 每次打开弹窗或 record 变化时同步 initial stage
+  useEffect(() => {
+    if (record) {
+      setCurrentStage(record.propagationStatus || PropagationStatus.PLANNED);
+    }
+  }, [record?.id, record?.propagationStatus, isOpen]);
 
   if (!record) return null;
 
-  const currentStage = record.propagationStatus || PropagationStatus.PLANNED;
   const currentIndex = STAGE_ORDER.indexOf(currentStage as PropagationStatus);
   const descriptions = getStageDescriptions(record.propagationType);
 
@@ -110,6 +120,8 @@ export function PropagationStageModal({
     const success = await updatePropagationStage(record.id, nextStage);
     setConfirming(false);
     if (success) {
+      // 2026-06-05: 立即更新本地 stage 状态，否则 modal 内阶段路径不刷新
+      setCurrentStage(nextStage);
       onSuccess?.();
     }
   };
