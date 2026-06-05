@@ -1,13 +1,15 @@
 /**
  * 技术方案批量编辑弹窗
+ * 2026-06-05 字段形式与 CreateModal/EditModal 完全一致
  * 父组件传：selectedRows、techSolutions、selectedTechCode、setSelectedTechCode、editedTechCodes、editedTechs、setEditedTechs、onSave、onCancel
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Upload } from 'lucide-react';
-import { Modal } from '../ui/Modal';
+import { Modal, FormField, Textarea } from '../ui/Modal';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import { Checkbox } from '../ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -16,16 +18,26 @@ import {
   SelectValue,
 } from '../ui/select';
 import { DictSelect } from '../common/settings/DictSelect';
+import CropCodeSelector from '../farm/common/CropCodeSelector';
+import { CropVariety } from '../../types/cropVariety';
 import { TechSolution } from '../../types/techSolution';
+import { TECH_SOLUTION_SCOPES } from './constants';
 
 export interface BatchEditData {
   version?: string;
   title?: string;
   crop?: string;
+  cropCode?: string;
   plantingMode?: string;
-  stage?: string;
-  planDetailFileName?: string;
+  // V9.0: 适用范围数组（与 CreateModal/EditModal 一致）
+  scopes?: string[];
+  // 2026-06-05: 与 CreateModal/EditModal 字段对齐
+  relatedBatchCode?: string;
+  author?: string;
+  remarks?: string;
+  isValid?: string;
   content?: string;
+  planDetailFileName?: string;
 }
 
 export interface BatchEditModalProps {
@@ -35,13 +47,27 @@ export interface BatchEditModalProps {
   selectedTechCode: string;
   editedTechCodes: string[];
   editedTechs: Record<string, BatchEditData>;
+  operatorOptions: { value: string; label: string }[];
   onClose: () => void;
   onSelectTechCode: (code: string) => void;
-  onEditField: (code: string, field: keyof BatchEditData, value: string) => void;
+  // 2026-06-05: 放宽签名支持 string[]（scopes 数组用）
+  onEditField: (code: string, field: keyof BatchEditData, value: string | string[]) => void;
   onUploadFile: (code: string, file: File) => void;
   onCancel: () => void;
   onSave: () => Promise<void>;
 }
+
+// 与 CreateModal/EditModal 一致的关联生产批次号 Select 选项
+const RELATED_BATCH_OPTIONS = [
+  { value: '', label: '不关联' },
+  { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
+  { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
+  { value: 'ZZB2026-003', label: 'ZZB2026-003 - 生菜种植批次' },
+  { value: 'ZZB2026-004', label: 'ZZB2026-004 - 辣椒种植批次' },
+  { value: 'ZZB2026-005', label: 'ZZB2026-005 - 茄子种植批次' },
+  { value: 'ZZB2026-006', label: 'ZZB2026-006 - 番茄种植批次' },
+  { value: 'ZZB2026-007', label: 'ZZB2026-007 - 百合种植批次' },
+];
 
 export function BatchEditModal({
   isOpen,
@@ -50,6 +76,7 @@ export function BatchEditModal({
   selectedTechCode,
   editedTechCodes,
   editedTechs,
+  operatorOptions,
   onClose,
   onSelectTechCode,
   onEditField,
@@ -59,14 +86,36 @@ export function BatchEditModal({
 }: BatchEditModalProps) {
   const currentTech = techSolutions.find((t) => t.code === selectedTechCode);
   const editedData = (selectedTechCode ? editedTechs[selectedTechCode] : undefined) || {};
-  const crops = Array.from(new Set(techSolutions.map((t) => t.crop).filter(Boolean)));
+  // 2026-06-05: 编辑弹窗的当前选中的品种（与 CreateModal/EditModal 一致基于 CropVariety）
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
+  // 2026-06-05: scopes 折叠状态
+  const [scopeExpanded, setScopeExpanded] = useState(false);
+
+  const currentScopes: string[] = useMemo(() => {
+    // 优先取编辑中的 scopes，否则取原 tech 的 scopes
+    if (editedData.scopes !== undefined) return editedData.scopes;
+    return (currentTech as any)?.scopes || [];
+  }, [editedData.scopes, currentTech]);
+
+  const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
+    setSelectedCrop(varietyInfo);
+    onEditField(selectedTechCode, 'cropCode', code);
+    onEditField(selectedTechCode, 'crop', varietyInfo ? (varietyInfo.subVariety1Name || varietyInfo.varietyName) : '');
+  };
+
+  const toggleScope = (scope: string) => {
+    const next = currentScopes.includes(scope)
+      ? currentScopes.filter(s => s !== scope)
+      : [...currentScopes, scope];
+    onEditField(selectedTechCode, 'scopes', next);
+  };
 
   const handleUploadClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.md,.docx,.txt';
     input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const file = (e.target as unknown as HTMLInputElement).files?.[0];
       if (file && selectedTechCode) {
         onUploadFile(selectedTechCode, file);
       }
@@ -115,26 +164,46 @@ export function BatchEditModal({
 
         {/* Edit Form */}
         {selectedTechCode && currentTech && (
-          <div className="grid grid-cols-4 gap-3">
-            {/* 方案编号 - 不可编辑 */}
-            <div className="bg-gray-100 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">方案编号</div>
-              <div className="text-sm font-medium text-gray-900">{currentTech.code}</div>
+          <div className="space-y-3">
+            {/* 第一行：方案编号 + 版本 + 编制人 + 创建日期 */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-gray-100 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">方案编号</div>
+                <div className="text-sm font-medium text-gray-900">{currentTech.code}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">版本</div>
+                <Input
+                  value={editedData.version ?? currentTech.version}
+                  onChange={(e) => onEditField(selectedTechCode, 'version', e.target.value)}
+                  className="h-7 py-0 text-xs"
+                />
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">编制人</div>
+                <Select
+                  value={editedData.author ?? currentTech.author}
+                  onValueChange={(v) => onEditField(selectedTechCode, 'author', v)}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {operatorOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">创建日期</div>
+                <div className="text-sm text-gray-700">{currentTech.createDate}</div>
+              </div>
             </div>
 
-            {/* 版本 - 可编辑 */}
+            {/* 第二行：方案标题（横跨） */}
             <div className="bg-gray-50 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">版本</div>
-              <Input
-                value={editedData.version ?? currentTech.version}
-                onChange={(e) => onEditField(selectedTechCode, 'version', e.target.value)}
-                className="h-7 py-0 text-xs"
-              />
-            </div>
-
-            {/* 方案标题 - 可编辑 */}
-            <div className="bg-gray-50 rounded-lg p-2 col-span-2">
-              <div className="text-xs text-gray-500 mb-1">方案标题</div>
+              <div className="text-xs text-gray-500 mb-1">方案标题 <span className="text-red-500">*</span></div>
               <Input
                 value={editedData.title ?? currentTech.title}
                 onChange={(e) => onEditField(selectedTechCode, 'title', e.target.value)}
@@ -142,61 +211,117 @@ export function BatchEditModal({
               />
             </div>
 
-            {/* 作物品种 - 可编辑 */}
+            {/* 第三行：作物品种 + 种植模式 + 关联批次号 + 方案是否有效 */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">作物品种 <span className="text-red-500">*</span></div>
+                <CropCodeSelector
+                  value={editedData.cropCode ?? currentTech.cropCode ?? ''}
+                  onChange={handleCropChange}
+                  placeholder="搜索或选择作物品种..."
+                  size="sm"
+                  showFullPath
+                />
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">种植模式</div>
+                <DictSelect
+                  category="planting_mode"
+                  value={editedData.plantingMode ?? currentTech.plantingMode}
+                  onChange={(v) => onEditField(selectedTechCode, 'plantingMode', v)}
+                  placeholder="选择种植模式"
+                />
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">关联生产批次号</div>
+                <Select
+                  value={editedData.relatedBatchCode ?? currentTech.relatedBatchCode ?? ''}
+                  onValueChange={(v) => onEditField(selectedTechCode, 'relatedBatchCode', v)}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELATED_BATCH_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">方案是否有效</div>
+                <Select
+                  value={editedData.isValid ?? currentTech.isValid ?? '有效'}
+                  onValueChange={(v) => onEditField(selectedTechCode, 'isValid', v)}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="有效">有效</SelectItem>
+                    <SelectItem value="作废" className="text-red-600">作废</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 第四行：适用范围（多选 Checkbox） */}
             <div className="bg-gray-50 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">作物品种</div>
-              <Select
-                value={editedData.crop ?? currentTech.crop}
-                onValueChange={(v) => onEditField(selectedTechCode, 'crop', v)}
-              >
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {crops.map((crop) => (
-                    <SelectItem key={crop} value={crop}>
-                      {crop}
-                    </SelectItem>
+              <div className="text-xs text-gray-500 mb-1 flex items-center justify-between">
+                <span>适用范围（可多选）</span>
+                <button
+                  type="button"
+                  onClick={() => setScopeExpanded(!scopeExpanded)}
+                  className="text-emerald-600 text-xs hover:underline"
+                >
+                  {scopeExpanded ? '收起' : '展开'}
+                </button>
+              </div>
+              {scopeExpanded ? (
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                  {TECH_SOLUTION_SCOPES.map((option) => (
+                    <label key={option} className="flex items-center gap-1 cursor-pointer">
+                      <Checkbox
+                        checked={currentScopes.includes(option)}
+                        onCheckedChange={() => toggleScope(option)}
+                      />
+                      <span className="text-xs">{option}</span>
+                    </label>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              ) : (
+                <div className="h-7 px-2 border border-gray-300 rounded-lg text-xs text-gray-600 bg-white flex items-center">
+                  {currentScopes.length === 0 ? '请选择' : currentScopes.join(', ')}
+                </div>
+              )}
             </div>
 
-            {/* 种植模式 - 可编辑 */}
+            {/* 第五行：备注 + 方案内容 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">备注</div>
+                <Textarea
+                  value={editedData.remarks ?? currentTech.remarks ?? ''}
+                  onChange={(e) => onEditField(selectedTechCode, 'remarks', e.target.value)}
+                  placeholder="请输入备注信息"
+                  rows={2}
+                  className="text-xs"
+                />
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-500 mb-1">方案内容</div>
+                <Textarea
+                  value={editedData.content ?? currentTech.content ?? ''}
+                  onChange={(e) => onEditField(selectedTechCode, 'content', e.target.value)}
+                  placeholder="请输入方案内容"
+                  rows={4}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {/* 第六行：方案详情文件 */}
             <div className="bg-gray-50 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">种植模式</div>
-              <DictSelect
-                category="planting_mode"
-                value={editedData.plantingMode ?? currentTech.plantingMode}
-                onChange={(v) => onEditField(selectedTechCode, 'plantingMode', v)}
-                placeholder="选择种植模式"
-              />
-            </div>
-
-            {/* 适用范围 - 可编辑 */}
-            <div className="bg-gray-50 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">适用范围</div>
-              <Input
-                value={editedData.stage ?? currentTech.stage}
-                onChange={(e) => onEditField(selectedTechCode, 'stage', e.target.value)}
-                className="h-7 py-0 text-xs"
-              />
-            </div>
-
-            {/* 编制人 - 不可编辑 */}
-            <div className="bg-gray-100 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">编制人</div>
-              <div className="text-sm text-gray-700">{currentTech.author}</div>
-            </div>
-
-            {/* 创建日期 - 不可编辑 */}
-            <div className="bg-gray-100 rounded-lg p-2">
-              <div className="text-xs text-gray-500 mb-1">创建日期</div>
-              <div className="text-sm text-gray-700">{currentTech.createDate}</div>
-            </div>
-
-            {/* 方案详情文件 - 可编辑 */}
-            <div className="bg-gray-50 rounded-lg p-2 col-span-4">
               <div className="text-xs text-gray-500 mb-1">方案详情文件</div>
               <div className="flex items-center gap-4">
                 {(editedData.planDetailFileName ?? currentTech.planDetailFileName) ? (

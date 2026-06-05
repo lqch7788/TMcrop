@@ -37,6 +37,8 @@ export interface EditModalProps {
   form: EditForm;
   scopeExpanded: boolean;
   selectedCrop: CropVariety | null;
+  // 2026-06-05: 与 CreateModal 一致——编制人改为 Select 可编辑
+  operatorOptions: { value: string; label: string }[];
   onClose: () => void;
   onSubmit: () => void;
   onFormChange: (form: EditForm) => void;
@@ -50,6 +52,7 @@ export function EditModal({
   form,
   scopeExpanded,
   selectedCrop,
+  operatorOptions,
   onClose,
   onSubmit,
   onFormChange,
@@ -89,7 +92,7 @@ export function EditModal({
       cancelText="取消"
     >
       {tech && (
-        <div className="space-y-4">
+        <div className="space-y-4 [&_input]:!border-gray-500 [&_textarea]:!border-gray-500 [&_button[role='combobox']]:!border-gray-500">
           {/* 方案编号 + 版本 */}
           <div className="grid grid-cols-2 gap-4">
             <FormField label="方案编号">
@@ -180,28 +183,32 @@ export function EditModal({
             </div>
           </FormField>
 
-          {/* 关联生产批次号 */}
+          {/* 关联生产批次号（label 与 CreateModal 一致：编码 - 作物名） */}
           <FormField label="关联生产批次号">
             <Select
               value={form.relatedBatchCode}
               onChange={(e) => onFormChange({ ...form, relatedBatchCode: e.target.value })}
               options={[
-                { value: '', label: '不关联生产批次' },
-                { value: 'ZZB2026-001', label: 'ZZB2026-001' },
-                { value: 'ZZB2026-002', label: 'ZZB2026-002' },
-                { value: 'ZZB2026-003', label: 'ZZB2026-003' },
-                { value: 'YMB2026-001', label: 'YMB2026-001' },
-                { value: 'YMB2026-002', label: 'YMB2026-002' },
-                { value: 'JZB2026-001', label: 'JZB2026-001' },
-                { value: 'JZB2026-002', label: 'JZB2026-002' },
+                { value: '', label: '不关联' },
+                { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
+                { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
+                { value: 'ZZB2026-003', label: 'ZZB2026-003 - 生菜种植批次' },
+                { value: 'ZZB2026-004', label: 'ZZB2026-004 - 辣椒种植批次' },
+                { value: 'ZZB2026-005', label: 'ZZB2026-005 - 茄子种植批次' },
+                { value: 'ZZB2026-006', label: 'ZZB2026-006 - 番茄种植批次' },
+                { value: 'ZZB2026-007', label: 'ZZB2026-007 - 百合种植批次' },
               ]}
             />
           </FormField>
 
-          {/* 编制人 + 创建日期 */}
+          {/* 编制人 + 创建日期（编制人改为 Select 可编辑，与 CreateModal 一致） */}
           <div className="grid grid-cols-2 gap-4">
             <FormField label="编制人">
-              <Input value={tech.author} disabled className="bg-gray-50" />
+              <Select
+                value={form.author}
+                onChange={(e) => onFormChange({ ...form, author: e.target.value })}
+                options={operatorOptions}
+              />
             </FormField>
             <FormField label="创建日期">
               <Input value={tech.createDate} disabled className="bg-gray-50" />

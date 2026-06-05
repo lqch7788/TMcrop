@@ -68,8 +68,13 @@ export function TechSolutionPage() {
   const currentUserId = currentUser?.oid || '';
   const currentDepartment = currentUser?.orgOid || '';
 
-  // 操作人员选项（从数据字典获取）
-  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([]);
+  // 操作人员选项（从数据字典获取）— 2026-06-05: 初始值直接放 4 个默认人，防止 useEffect 异步跑导致第一帧下拉空
+  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([
+    { value: '陆启闯', label: '陆启闯' },
+    { value: '郭靖', label: '郭靖' },
+    { value: '黄蓉', label: '黄蓉' },
+    { value: '张无忌', label: '张无忌' },
+  ]);
 
   // 作物品种选择（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
@@ -77,38 +82,39 @@ export function TechSolutionPage() {
   // 字典加载状态 - 确保字典加载完成后再渲染
   const [dictReady, setDictReady] = useState(false);
 
-  // 加载操作人员数据（从数据字典获取）
+  // 2026-06-05: 合并字典 + tech.author 到 operatorOptions（防止字典收录不全时下拉空）
   useEffect(() => {
-    async function loadOperators() {
+    let cancelled = false;
+    async function loadAndMerge() {
+      let base: { value: string; label: string }[] = [];
       try {
         const dictionaries = await getDictionaries('operator');
-        const options = dictionaries.map(d => ({
-          value: d.name,
-          label: d.name,
-        }));
-        // 如果数据字典为空，使用默认选项
-        if (options.length === 0) {
-          options.push(
-            { value: '陆启闯', label: '陆启闯' },
-            { value: '郭靖', label: '郭靖' },
-            { value: '黄蓉', label: '黄蓉' },
-            { value: '张无忌', label: '张无忌' }
-          );
-        }
-        setOperatorOptions(options);
-      } catch (error) {
-        // logger.error('加载操作人员失败:', error);
-        // 使用默认选项
-        setOperatorOptions([
+        base = dictionaries.map(d => ({ value: d.name, label: d.name }));
+      } catch {
+        // 忽略错误走默认
+      }
+      // 字典为空时使用默认 4 人
+      if (base.length === 0) {
+        base = [
           { value: '陆启闯', label: '陆启闯' },
           { value: '郭靖', label: '郭靖' },
           { value: '黄蓉', label: '黄蓉' },
-          { value: '张无忌', label: '张无忌' }
-        ]);
+          { value: '张无忌', label: '张无忌' },
+        ];
       }
+      // 合并列表里所有 author（去重）
+      const known = new Set(base.map(o => o.value));
+      techSolutions.forEach(t => {
+        if (t.author && !known.has(t.author)) {
+          base.push({ value: t.author, label: t.author });
+          known.add(t.author);
+        }
+      });
+      if (!cancelled) setOperatorOptions(base);
     }
-    loadOperators();
-  }, []);
+    loadAndMerge();
+    return () => { cancelled = true; };
+  }, [techSolutions]);
 
   // 组件挂载时加载数据
   useEffect(() => {
@@ -210,6 +216,7 @@ export function TechSolutionPage() {
     plantingMode: '',
     stage: '',
     scopes: [] as string[], // V9.0: 适用范围数组
+    author: '', // 2026-06-05: 补 author 字段，否则 EditModal 编制人 Select 显示空
     version: '',
     content: '',
     remarks: '',
@@ -310,6 +317,7 @@ export function TechSolutionPage() {
       plantingMode: tech.plantingMode,
       stage: tech.stage,
       scopes: tech.scopes || [], // V9.0: 适用范围数组
+      author: tech.author || '', // 2026-06-05: 打开编辑时带原编制人
       version: tech.version,
       content: tech.content,
       remarks: tech.remarks || '',
@@ -333,6 +341,7 @@ export function TechSolutionPage() {
       stage: editForm.stage,
       // V9.0: 传 scopes 数组（替代 stage 字符串拼接）
       scopeNames: editForm.scopes,
+      author: editForm.author, // 2026-06-05: 补 author，否则编制人编辑不保存
       version: editForm.version,
       content: editForm.content,
       remarks: editForm.remarks,
@@ -430,6 +439,8 @@ export function TechSolutionPage() {
         cropCode: '',
         plantingMode: '水培',
         stage: '',
+        scopes: [] as string[], // 2026-06-05: 补回 scopes，否则再次打开会 .includes 崩
+        author: currentUsername, // 2026-06-05: 补回 author
         version: 'V1.0',
         content: '',
         remarks: '',
@@ -589,6 +600,8 @@ export function TechSolutionPage() {
       cropCode: '',
       plantingMode: '水培',
       stage: '',
+      scopes: [] as string[], // V9.0: 适用范围数组（之前漏了导致 .includes 崩溃）
+      author: currentUsername,  // 之前漏了
       version: 'V1.0',
       content: '',
       remarks: '',
@@ -738,6 +751,7 @@ export function TechSolutionPage() {
         form={editForm}
         scopeExpanded={scopeExpandedEdit}
         selectedCrop={selectedCropEdit}
+        operatorOptions={operatorOptions}
         onClose={() => setEditModalOpen(false)}
         onSubmit={handleEditSubmit}
         onFormChange={setEditForm}
@@ -769,6 +783,7 @@ export function TechSolutionPage() {
         selectedTechCode={selectedTechCode}
         editedTechCodes={editedTechCodes}
         editedTechs={editedTechs as Record<string, BatchEditData>}
+        operatorOptions={operatorOptions}
         onClose={() => {
           setShowBatchEditModal(false);
           setBatchEditMode(false);
