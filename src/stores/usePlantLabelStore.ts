@@ -110,11 +110,9 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
       if (plantingId) params.set('planting_id', plantingId);
       params.set('limit', '200');
       const res = await enhancedApiClient.get(`/plant-labels?${params.toString()}`);
-      if (res.success) {
-        set({ labels: res.data, labelsLoading: false });
-      } else {
-        set({ labelsLoading: false });
-      }
+      // 2026-06-05: enhancedApiClient 已自动解包 data 字段；res 实际是数组或 {success, data, meta}，兼容两种
+      const list: any[] = Array.isArray(res) ? res : ((res as any)?.data || []);
+      set({ labels: list, labelsLoading: false });
     } catch {
       set({ labelsLoading: false });
     }

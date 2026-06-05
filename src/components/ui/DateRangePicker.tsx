@@ -188,7 +188,9 @@ const DateRangePicker = React.forwardRef<HTMLDivElement, DateRangePickerProps>(
           type="button"
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={cn(
-            "inline-flex items-center gap-2 h-10 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm transition-colors min-w-[200px]",
+            "w-full inline-flex items-center gap-2 h-10 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm transition-colors",
+            // 2026-06-05: 默认 min-w 200px，调用方传 min-w-[xxx] 时按调用方为准
+            !/min-w-\[/.test(className || '') && "min-w-[200px]",
             disabled && "opacity-50 cursor-not-allowed",
             !disabled && "hover:bg-gray-50",
             isOpen && "ring-2 ring-emerald-500 ring-offset-2"
