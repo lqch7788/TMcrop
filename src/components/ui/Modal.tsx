@@ -437,7 +437,8 @@ export function Select({ error, options, className = '', value, onChange, placeh
           <SelectValue placeholder={placeholder || '请选择'} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
+          {/* 2026-06-05: 加 ?.map 兜底，防 caller 漏传 options 时崩 */}
+          {options?.map((option) => (
             <RadixSelectItem key={option.value} value={option.value}>
               {option.label}
             </RadixSelectItem>

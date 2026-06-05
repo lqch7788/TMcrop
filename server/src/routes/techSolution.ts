@@ -342,8 +342,10 @@ router.put('/:id', (req: Request, res: Response) => {
     const {
       solutionTitle = '',
       cropName = '',
+      cropCode = '',  // 2026-06-05: 修复单编辑保存后数据没变化（之前漏读导致 crop_code 列不更新）
       plantingMode = '',
       stage = '',
+      author = '', // 2026-06-05: 补 author，编制人编辑才落地
       version = 'V1.0',
       content = '',
       relatedBatchCode = '',
@@ -361,13 +363,13 @@ router.put('/:id', (req: Request, res: Response) => {
 
     // 动态构建更新字段
     const fields = [
-      'solution_title = ?', 'crop_name = ?', 'planting_mode = ?', 'stage = ?',
-      'version = ?', 'content = ?', 'related_batch_code = ?', 'plan_detail_file_name = ?',
+      'solution_title = ?', 'crop_name = ?', 'crop_code = ?', 'planting_mode = ?', 'stage = ?',
+      'author = ?', 'version = ?', 'content = ?', 'related_batch_code = ?', 'plan_detail_file_name = ?',
       'priority = ?', 'remarks = ?', 'update_time = ?', 'is_valid = ?', 'last_submit_time = ?'
     ];
     const values = [
-      solutionTitle, cropName, plantingMode, stage,
-      version, content, relatedBatchCode, planDetailFileName,
+      solutionTitle, cropName, cropCode, plantingMode, stage,
+      author, version, content, relatedBatchCode, planDetailFileName,
       priority, remarks, now, isValid, lastSubmitTime || now
     ];
 

@@ -92,6 +92,10 @@ function transformSingle(item: BackendTechSolution): TechSolution {
     remarks: item.remarks || '',
     lastSubmitTime: item.lastSubmitTime || '',
     isValid: item.isValid || '有效',
+    // 2026-06-05: V9.0 scopes 数组必须保留（关联表 tech_solution_scopes），否则表格回退到 stage 显示
+    scopes: Array.isArray((item as Record<string, unknown>).scopes)
+      ? ((item as Record<string, unknown>).scopes as string[])
+      : [],
   };
 }
 
