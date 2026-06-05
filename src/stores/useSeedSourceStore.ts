@@ -54,20 +54,16 @@ export const useSeedSourceStore = create<SeedSourceState>()(
     },
 
     updateItem: async (id, updates) => {
-      try {
-        const result = await seedSourceService.updateSeedSource(id, updates);
-        if (result) {
-          set((state) => ({
-            items: state.items.map((item) =>
-              item.id === id ? { ...item, ...updates } : item
-            ),
-          }));
-        }
-        return result;
-      } catch (error) {
-        // logger.error('[useSeedSourceStore] 更新种源失败:', error);
-        return null;
+      // 2026-06-05: 错误直接向上冒（强结/编辑需要看到具体原因，不再吞错返回 null）
+      const result = await seedSourceService.updateSeedSource(id, updates);
+      if (result) {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
+          ),
+        }));
       }
+      return result;
     },
 
     deleteItem: async (id) => {

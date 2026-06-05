@@ -192,6 +192,27 @@ export class SeedSourceController {
   }
 
   /**
+   * GET /seed-sources/propagation-records
+   * 全量查询繁殖过程记录（带筛选+分页+JOIN seed_sources）
+   */
+  async getAllPropagationRecords(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { seedSourceId, stage, startDate, endDate, page, limit } = req.query;
+      const data = await this.service.getAllPropagationRecords({
+        seedSourceId: seedSourceId as string | undefined,
+        stage: stage as string | undefined,
+        startDate: startDate as string | undefined,
+        endDate: endDate as string | undefined,
+        page: page ? Number(page) : 1,
+        limit: limit ? Number(limit) : 20,
+      });
+      res.json({ success: true, ...data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * PUT /seed-sources/:id/propagation-stage
    * 推进繁殖阶段
    */

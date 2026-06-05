@@ -69,7 +69,7 @@ export default function PlantingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取种植数据
-  const { items: plantings, isLoading: loading, loadItems, deleteItem, deleteItems } = usePlantingStore();
+  const { items: plantings, isLoading: loading, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
 
   // 从标签 Store 获取标签/标记数据
   const {
@@ -228,7 +228,26 @@ export default function PlantingPage() {
 
     const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
     if (!batch) {
-      await showAlert('未找到关联的生产计划');
+      // 2026-06-05: 强结分支 — 关联生产计划被删/查不到时引导用户强制结束
+      const confirmed = await showConfirm(
+        `未找到关联的生产计划 [${record.productionPlanCode}]，可能已被删除。\n` +
+        `是否强制结束该种植记录？\n（结束后将解除生产计划关联，并记录结束标记）`
+      );
+      if (!confirmed) return;
+
+      // 走 Store action（V2.1 铁律：写持久化数据走 Store）
+      const isNormal = endType === 'normal';
+      const result = await updateItem(record.id, {
+        endType,
+        endTime: new Date().toISOString(),
+        productionPlanCode: null as unknown as string, // 清空关联（解幽灵引用）
+      });
+      if (result) {
+        await showAlert(isNormal ? '种植记录已正常结束（强结）' : '种植记录已异常结束（强结）');
+        await loadItems();
+      } else {
+        await showAlert('强结失败');
+      }
       return;
     }
 

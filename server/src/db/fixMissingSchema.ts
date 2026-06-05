@@ -1312,6 +1312,9 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'pictures', sql: 'ALTER TABLE plantings ADD COLUMN pictures TEXT' },
     { name: 'production_plan_id', sql: 'ALTER TABLE plantings ADD COLUMN production_plan_id TEXT' },
     { name: 'production_plan_code', sql: 'ALTER TABLE plantings ADD COLUMN production_plan_code TEXT' },
+    // 2026-06-05: 强结分支写入
+    { name: 'end_type', sql: 'ALTER TABLE plantings ADD COLUMN end_type TEXT' },
+    { name: 'end_time', sql: 'ALTER TABLE plantings ADD COLUMN end_time TEXT' },
   ];
 
   for (const col of plantingsColumns) {
@@ -1483,6 +1486,23 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• seed_sources.pictures:', e.message);
   }
 
+  // 2026-06-05: 为 seed_sources 表添加 end_type / end_time 字段
+  // 用途：种源"正常/异常结束"时记录，强结分支绕过生产计划联动
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN end_type TEXT`);
+    seedLog.info('✓ seed_sources 表添加 end_type 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.end_type 列已存在');
+    else seedLog.skip('• seed_sources.end_type:', e.message);
+  }
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN end_time TEXT`);
+    seedLog.info('✓ seed_sources 表添加 end_time 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.end_time 列已存在');
+    else seedLog.skip('• seed_sources.end_time:', e.message);
+  }
+
   // 为 seedlings 表添加打印相关列
   try {
     db.run(`ALTER TABLE seedlings ADD COLUMN print_count INTEGER DEFAULT 0`);
@@ -1490,6 +1510,23 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('duplicate column')) seedLog.skip('• seedlings.print_count 列已存在');
     else seedLog.skip('• seedlings.print_count:', e.message);
+  }
+
+  // 2026-06-05: 为 seedlings 表添加 end_type / end_time 字段
+  // 用途：育苗"正常/异常结束"时记录，强结分支绕过生产计划联动
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN end_type TEXT`);
+    seedLog.info('✓ seedlings 表添加 end_type 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seedlings.end_type 列已存在');
+    else seedLog.skip('• seedlings.end_type:', e.message);
+  }
+  try {
+    db.run(`ALTER TABLE seedlings ADD COLUMN end_time TEXT`);
+    seedLog.info('✓ seedlings 表添加 end_time 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seedlings.end_time 列已存在');
+    else seedLog.skip('• seedlings.end_time:', e.message);
   }
 
   // 创建 daily_plans 表（每日计划持久化）

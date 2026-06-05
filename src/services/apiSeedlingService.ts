@@ -253,7 +253,17 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSeedling(id: string, updates: Partial<Seedling>): Promise<Seedling | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, updates);
+  // 2026-06-05: 强结分支写入 end_type/end_time（后端 PUT 用 Object.keys 原样拼字段，需 snake_case）
+  const backendUpdates: Record<string, any> = { ...updates };
+  if (updates.endType !== undefined) {
+    backendUpdates.end_type = updates.endType;
+    delete backendUpdates.endType;
+  }
+  if (updates.endTime !== undefined) {
+    backendUpdates.end_time = updates.endTime;
+    delete backendUpdates.endTime;
+  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, backendUpdates);
   return result ? { ...updates, id } as Seedling : null;
 }
 

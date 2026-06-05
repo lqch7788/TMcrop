@@ -216,6 +216,9 @@ export interface SeedSource {
   // 生产计划关联（V3.0 必填）
   productionPlanId?: string;   // 关联生产计划ID
   productionPlanCode?: string; // 关联生产计划批次号
+  // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
+  endType?: 'normal' | 'abnormal'; // 结束类型
+  endTime?: string;                // 结束时间（ISO）
   // 来源类型（V3.0 用于区分自产/外购）
   supplierIsInternal?: boolean; // true=自产, false=外购
   // 基地信息（V3.0 自产时必填）
@@ -405,6 +408,9 @@ export interface Seedling {
   varietyName?: string;     // 品种名称（如：辣椒）
   subVarietyName?: string; // 子品种名称（如：尖椒）
   varietyPath?: string;     // 完整品种路径（categoryName > typeName > varietyName > subVarietyName）
+  // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
+  endType?: 'normal' | 'abnormal'; // 结束类型
+  endTime?: string;                // 结束时间（ISO）
 }
 
 // ========== 种植类型 ==========
@@ -451,6 +457,9 @@ export interface Planting {
   // 来源信息（V3.0 追溯用）
   sourceInstanceId?: string;   // 来源库存实例ID
   seedlingInstanceId?: string; // 育苗实例ID（如果来源是种苗）
+  // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
+  endType?: 'normal' | 'abnormal'; // 结束类型
+  endTime?: string;                // 结束时间（ISO）
 }
 
 // ========== 筛选状态类型 ==========

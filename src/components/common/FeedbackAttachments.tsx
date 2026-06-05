@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { MapPin, Camera, Package, Mic, X, ChevronLeft, ChevronRight, Copy, ExternalLink } from 'lucide-react';
-import type { ProblemAttachment, AttachmentType } from '../../hooks/useProblemAttachments';
+import type { ProblemAttachment, AttachmentType } from '../../types/problemAttachment';
 
 // 附件类型配置
 const ATTACHMENT_CONFIG: Record<AttachmentType, { label: string; icon: typeof MapPin; color: string }> = {

@@ -63,7 +63,7 @@ export default function SeedlingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取育苗数据
-  const { items: seedlings, isLoading: loading, loadItems, deleteItem, deleteItems } = useSeedlingStore();
+  const { items: seedlings, isLoading: loading, loadItems, deleteItem, deleteItems, updateItem } = useSeedlingStore();
   // 种源数据（用于筛选和关联）
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
 
@@ -282,7 +282,26 @@ export default function SeedlingPage() {
 
     const batch = await cropBatchService.getCropBatchByCode(planCode);
     if (!batch) {
-      await showAlert('未找到关联的生产计划 [' + planCode + ']，请检查生产计划是否存在');
+      // 2026-06-05: 强结分支 — 关联生产计划被删/查不到时引导用户强制结束
+      const confirmed = await showConfirm(
+        `未找到关联的生产计划 [${planCode}]，可能已被删除。\n` +
+        `是否强制结束该育苗记录？\n（结束后将解除生产计划关联，并记录结束标记）`
+      );
+      if (!confirmed) return;
+
+      // 走 Store action（V2.1 铁律：写持久化数据走 Store）
+      const isNormal = endType === 'normal';
+      const result = await updateItem(record.id, {
+        endType,
+        endTime: new Date().toISOString(),
+        productionPlanCode: null as unknown as string, // 清空关联（解幽灵引用）
+      });
+      if (result) {
+        await showAlert(isNormal ? '育苗记录已正常结束（强结）' : '育苗记录已异常结束（强结）');
+        await loadItems();
+      } else {
+        await showAlert('强结失败');
+      }
       return;
     }
 

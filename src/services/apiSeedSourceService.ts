@@ -62,6 +62,9 @@ interface BackendSeedSource {
   breedingLocation?: string;
   targetTraits?: string;
   generation?: string;
+  // 结束标记（2026-06-05：强结分支写入）
+  endType?: string;
+  endTime?: string;
   [key: string]: unknown;
 }
 
@@ -147,6 +150,9 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     breedingLocation: item.breedingLocation || undefined,
     targetTraits: item.targetTraits || undefined,
     generation: item.generation || undefined,
+    // 结束标记（2026-06-05：强结分支读取）
+    endType: (item.endType as 'normal' | 'abnormal') || undefined,
+    endTime: item.endTime || undefined,
   };
 }
 
@@ -209,6 +215,24 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
     // status 不再传给后端（2026-06-04 改为实时计算）
     remarks: source.remarks || '',
     create_by: source.createBy,
+    // 2026-06-05: 修复「繁殖字段」白名单缺失（之前不传 → DB 默认 'external' → 过程记录/阶段推进按钮永远不显示）
+    propagation_type: source.propagationType,
+    propagation_status: source.propagationStatus,
+    propagation_method: source.propagationMethod,
+    parent_male_id: source.parentMaleId,
+    parent_male_code: source.parentMaleCode,
+    parent_female_id: source.parentFemaleId,
+    parent_female_code: source.parentFemaleCode,
+    mother_plant_id: source.motherPlantId,
+    mother_plant_code: source.motherPlantCode,
+    linked_planting_id: source.linkedPlantingId,
+    linked_planting_code: source.linkedPlantingCode,
+    propagation_start_date: source.propagationStartDate,
+    expected_harvest_date: source.expectedHarvestDate,
+    actual_harvest_date: source.actualHarvestDate,
+    breeding_location: source.breedingLocation,
+    target_traits: source.targetTraits,
+    generation: source.generation,
     // P0 #1: 传递 pictures 字段（后端 JSON 字符串）
     pictures: JSON.stringify(source.pictures || []),
   };
@@ -235,6 +259,29 @@ export async function updateSeedSource(id: string, updates: Partial<SeedSource>)
   if (updates.sourceType !== undefined) backendUpdates.source_type = updates.sourceType;
   if (updates.sourceOrigin !== undefined) backendUpdates.source_origin = updates.sourceOrigin;
   if (updates.productionPlanCode !== undefined) backendUpdates.production_plan_code = updates.productionPlanCode;
+  // 2026-06-05: 修复繁殖字段白名单缺失（与 addSeedSource 同步）
+  if (updates.propagationType !== undefined) backendUpdates.propagation_type = updates.propagationType;
+  if (updates.propagationStatus !== undefined) backendUpdates.propagation_status = updates.propagationStatus;
+  if (updates.propagationMethod !== undefined) backendUpdates.propagation_method = updates.propagationMethod;
+  if (updates.parentMaleId !== undefined) backendUpdates.parent_male_id = updates.parentMaleId;
+  if (updates.parentMaleCode !== undefined) backendUpdates.parent_male_code = updates.parentMaleCode;
+  if (updates.parentFemaleId !== undefined) backendUpdates.parent_female_id = updates.parentFemaleId;
+  if (updates.parentFemaleCode !== undefined) backendUpdates.parent_female_code = updates.parentFemaleCode;
+  if (updates.motherPlantId !== undefined) backendUpdates.mother_plant_id = updates.motherPlantId;
+  if (updates.motherPlantCode !== undefined) backendUpdates.mother_plant_code = updates.motherPlantCode;
+  if (updates.linkedPlantingId !== undefined) backendUpdates.linked_planting_id = updates.linkedPlantingId;
+  if (updates.linkedPlantingCode !== undefined) backendUpdates.linked_planting_code = updates.linkedPlantingCode;
+  if (updates.propagationStartDate !== undefined) backendUpdates.propagation_start_date = updates.propagationStartDate;
+  if (updates.expectedHarvestDate !== undefined) backendUpdates.expected_harvest_date = updates.expectedHarvestDate;
+  if (updates.actualHarvestDate !== undefined) backendUpdates.actual_harvest_date = updates.actualHarvestDate;
+  if (updates.breedingLocation !== undefined) backendUpdates.breeding_location = updates.breedingLocation;
+  if (updates.targetTraits !== undefined) backendUpdates.target_traits = updates.targetTraits;
+  if (updates.generation !== undefined) backendUpdates.generation = updates.generation;
+  // 结束标记（2026-06-05：强结分支写入；注意不写 status 字段，符合 V2.1 铁律"status 实时计算"）
+  if (updates.endType !== undefined) backendUpdates.end_type = updates.endType;
+  if (updates.endTime !== undefined) backendUpdates.end_time = updates.endTime;
+  // 2026-06-05: 修复强结 bug — 强结时把 productionPlanCode 置 null 的字段名映射
+  // （后端 repository.update 用 Object.keys 原样拼 SQL，需要 snake_case）
   if (updates.cropCategory !== undefined) backendUpdates.crop_category = updates.cropCategory;
   if (updates.typeName !== undefined) backendUpdates.type_name = updates.typeName;
   if (updates.varietyName !== undefined) backendUpdates.variety_name = updates.varietyName;
@@ -413,6 +460,103 @@ export async function getPropagationRecords(seedSourceId: string): Promise<Propa
     rootedRate: item.rooted_rate,
     graftSuccessRate: item.graft_success_rate,
   }));
+}
+
+/**
+ * 扩展的繁殖过程记录（含 JOIN 种源基础信息）
+ */
+export interface PropagationRecordWithSource {
+  id: string;
+  seedSourceId: string;
+  seedCode: string;          // JOIN 自 seed_sources
+  cropName: string;          // JOIN
+  cropVariety: string;       // JOIN
+  propagationType: string;   // JOIN
+  recordDate: string;
+  stage: string;
+  temperature: number | null;
+  humidity: number | null;
+  abnormality: string | null;
+  operator: string | null;
+  remarks: string | null;
+  pollinationType: string | null;
+  pollinatorCrop: string | null;
+  flowerCount: number | null;
+  fruitSetCount: number | null;
+  harvestSeedCount: number | null;
+  seedWeight: number | null;
+  harvestPlantCount: number | null;
+  germinationRate: number | null;
+  purity: number | null;
+  moisture: number | null;
+  survivalRate: number | null;
+  rootedRate: number | null;
+  graftSuccessRate: number | null;
+  createTime: string;
+  updateTime: string;
+}
+
+/**
+ * 全量查询繁殖过程记录（JOIN seed_sources）
+ * 用于"繁殖过程记录"全量查看页
+ */
+export interface PropagationRecordQueryParams {
+  seedSourceId?: string;
+  stage?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function getAllPropagationRecords(params: PropagationRecordQueryParams = {}): Promise<{
+  items: PropagationRecordWithSource[];
+  total: number;
+}> {
+  const query: string[] = [];
+  if (params.seedSourceId) query.push(`seedSourceId=${encodeURIComponent(params.seedSourceId)}`);
+  if (params.stage) query.push(`stage=${encodeURIComponent(params.stage)}`);
+  if (params.startDate) query.push(`startDate=${encodeURIComponent(params.startDate)}`);
+  if (params.endDate) query.push(`endDate=${encodeURIComponent(params.endDate)}`);
+  query.push(`page=${params.page || 1}`);
+  query.push(`limit=${params.limit || 20}`);
+  const qs = query.join('&');
+
+  const res = await enhancedApiClient.get<{ success: boolean; data: any[]; total: number }>(
+    `/seed-sources/propagation-records?${qs}`
+  );
+  const raw = (res && (res as any).data) || res || [];
+  const items: PropagationRecordWithSource[] = (Array.isArray(raw) ? raw : []).map((it: any) => ({
+    id: it.id,
+    seedSourceId: it.seedSourceId,
+    seedCode: it.seedCode || '',
+    cropName: it.cropName || '',
+    cropVariety: it.cropVariety || '',
+    propagationType: it.propagationType || '',
+    recordDate: it.recordDate || '',
+    stage: it.stage || '',
+    temperature: it.temperature,
+    humidity: it.humidity,
+    abnormality: it.abnormality,
+    operator: it.operator,
+    remarks: it.remarks,
+    pollinationType: it.pollinationType,
+    pollinatorCrop: it.pollinatorCrop,
+    flowerCount: it.flowerCount,
+    fruitSetCount: it.fruitSetCount,
+    harvestSeedCount: it.harvestSeedCount,
+    seedWeight: it.seedWeight,
+    harvestPlantCount: it.harvestPlantCount,
+    germinationRate: it.germinationRate,
+    purity: it.purity,
+    moisture: it.moisture,
+    survivalRate: it.survivalRate,
+    rootedRate: it.rootedRate,
+    graftSuccessRate: it.graftSuccessRate,
+    createTime: it.createTime || '',
+    updateTime: it.updateTime || '',
+  }));
+  return { items, total: (res as any).total ?? items.length };
 }
 
 /**
