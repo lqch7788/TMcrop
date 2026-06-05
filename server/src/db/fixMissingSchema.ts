@@ -1132,6 +1132,30 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• 数据迁移（crop_varieties→production_plans）失败:', e.message);
   }
 
+  // 2026-06-05: 数据迁移 — 给 plant_labels 空 seedling_id 关联到真实 seedlings
+  // 原因：种子数据漏填 seedling_id，导致育苗管理→标签管理弹窗按 seedling_id 过滤时 0 条匹配
+  // 兜底策略：按 plant_labels.id 顺序 round-robin 分配到现有 seedlings
+  try {
+    db.run(`
+      UPDATE plant_labels
+      SET seedling_id = (
+        SELECT id FROM seedlings
+        WHERE id IS NOT NULL AND id != ''
+        ORDER BY create_time, id
+        LIMIT 1 OFFSET (
+          SELECT (ROW_NUMBER() OVER (ORDER BY id) - 1) % (SELECT COUNT(*) FROM seedlings WHERE id IS NOT NULL AND id != '')
+          FROM plant_labels pl2
+          WHERE pl2.id = plant_labels.id
+        )
+      )
+      WHERE (seedling_id IS NULL OR seedling_id = '')
+        AND EXISTS (SELECT 1 FROM seedlings WHERE id IS NOT NULL AND id != '')
+    `);
+    seedLog.info('✓ plant_labels 存量空 seedling_id 已 round-robin 关联到现有 seedlings');
+  } catch (e: any) {
+    seedLog.skip('• 数据迁移（plant_labels→seedlings）失败:', e.message);
+  }
+
   // 37. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
   const farmTaskColumnsToAdd = [
     { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },

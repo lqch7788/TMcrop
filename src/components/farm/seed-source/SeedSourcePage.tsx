@@ -184,32 +184,7 @@ export default function SeedSourcePage() {
     });
   }, [filters, seedSources]);
 
-  // 统计卡片数据
-  // P1 #6 修复: 依赖 [seedSources]，store 更新时自动重算
-  // 状态9: 告警分两档（高度=DEPLETED，中度=LOW 或完成比例<50%）
-  const statsData = useMemo(() => {
-    const total = seedSources.length;
-    const totalQuantity = seedSources.reduce((sum, item) => sum + item.availableCount, 0);
-    const monthCount = seedSources.filter(item => {
-      const date = new Date(item.createTime);
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length;
-    // 2026-06-04: status 改为实时计算，告警判断用 computeStockStatus
-    const mediumAlertCount = seedSources.filter(item => {
-      const liveStatus = computeStockStatus(item.availableCount, item.initialCount);
-      if (liveStatus === StockStatus.DEPLETED) return true;
-      if (liveStatus === StockStatus.LOW) return true;
-      // 兜底：可用量/初始量 < 50% 也算中度告警
-      if (item.initialCount > 0 && item.availableCount / item.initialCount < 0.5) return true;
-      return false;
-    }).length;
-    // 高度告警：仅 DEPLETED
-    const highAlertCount = seedSources.filter(item =>
-      computeStockStatus(item.availableCount, item.initialCount) === StockStatus.DEPLETED
-    ).length;
-    return { total, totalQuantity, monthCount, mediumAlertCount, highAlertCount };
-  }, [seedSources]);
+  // 2026-06-05: 顶部统计卡片已删除（user 要求）
 
   // 处理搜索
   const handleSearch = () => {
@@ -560,10 +535,10 @@ export default function SeedSourcePage() {
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
           </div>
-          {/* 2026-06-05: 繁殖过程记录全量查看入口 */}
+          {/* 2026-06-05: 繁殖过程记录全量查看入口 — 2026-06-05 改蓝色背景 */}
           <div className="flex items-center gap-2">
             <Button
-              variant="secondary"
+              variant="blue"
               onClick={() => navigate('/crop/propagation-records')}
             >
               <ClipboardList className="w-4 h-4 mr-1" />
@@ -573,31 +548,7 @@ export default function SeedSourcePage() {
         </div>
       </div>
 
-      {/* 状态9: 顶部统计卡片（3 档告警：充足 / 中度 / 高度） */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs text-gray-500 mb-1">种源总数</div>
-          <div className="text-2xl font-bold text-gray-900">{statsData.total}</div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs text-gray-500 mb-1">总可用数量</div>
-          <div className="text-2xl font-bold text-emerald-600">{statsData.totalQuantity.toLocaleString()}</div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs text-gray-500 mb-1">本月新增</div>
-          <div className="text-2xl font-bold text-blue-600">{statsData.monthCount}</div>
-        </div>
-        <div className="bg-white rounded-lg border border-amber-200 p-4 bg-amber-50">
-          <div className="text-xs text-amber-700 mb-1">中度预警</div>
-          <div className="text-2xl font-bold text-amber-600">{statsData.mediumAlertCount}</div>
-          <div className="text-xs text-amber-500 mt-1">状态=不足 或 完成比例&lt;50%</div>
-        </div>
-        <div className="bg-white rounded-lg border border-red-200 p-4 bg-red-50">
-          <div className="text-xs text-red-700 mb-1">高度预警</div>
-          <div className="text-2xl font-bold text-red-600">{statsData.highAlertCount}</div>
-          <div className="text-xs text-red-500 mt-1">状态=耗尽，可用=0</div>
-        </div>
-      </div>
+      {/* 2026-06-05: 顶部统计卡片已删除（user 要求） */}
 
       {/* 2026-06-04: 移除重算库存状态按钮，status 改为实时计算无需手动重算 */}
       <SeedSourceFilter

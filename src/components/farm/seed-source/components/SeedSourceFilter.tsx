@@ -30,9 +30,10 @@ export function SeedSourceFilter({
 }: SeedSourceFilterProps) {
   return (
     <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
-      <div className="flex flex-wrap gap-4 items-end">
+      {/* 2026-06-05: 强制单行布局，搜索/重置按键放最后（日期选择器 160px，避免按键换行） */}
+      <div className="flex flex-nowrap gap-3 items-end">
         {/* 作物品种 */}
-        <div className="flex-1 min-w-[150px]">
+        <div className="flex-1 min-w-[120px]">
           <Label className="text-gray-700">作物品种</Label>
           <Input
             type="text"
@@ -44,7 +45,7 @@ export function SeedSourceFilter({
         </div>
 
         {/* 种源批号 */}
-        <div className="flex-1 min-w-[150px]">
+        <div className="flex-1 min-w-[120px]">
           <Label className="text-gray-700">种源批号</Label>
           <Input
             type="text"
@@ -56,7 +57,7 @@ export function SeedSourceFilter({
         </div>
 
         {/* 种源类型 */}
-        <div className="min-w-[120px]">
+        <div className="min-w-[100px] flex-shrink-0">
           <Label className="text-gray-700">种源类型</Label>
           <Select
             value={filters.sourceType}
@@ -74,7 +75,7 @@ export function SeedSourceFilter({
         </div>
 
         {/* 供应商 */}
-        <div className="min-w-[150px]">
+        <div className="min-w-[120px] flex-shrink-0">
           <Label className="text-gray-700">供应商</Label>
           <Select
             value={filters.supplierName}
@@ -93,7 +94,7 @@ export function SeedSourceFilter({
         </div>
 
         {/* 状态 */}
-        <div className="min-w-[120px]">
+        <div className="min-w-[100px] flex-shrink-0">
           <Label className="text-gray-700">状态</Label>
           <Select
             value={filters.status}
@@ -111,8 +112,8 @@ export function SeedSourceFilter({
           </Select>
         </div>
 
-        {/* 采购/入库日期 */}
-        <div className="min-w-[220px]">
+        {/* 采购/入库日期 — 窄一点 (160px) */}
+        <div className="min-w-[160px] flex-shrink-0">
           <Label className="text-gray-700">采购/入库日期</Label>
           <DateRangePicker
             startDate={filters.startDate ? new Date(filters.startDate) : undefined}
@@ -124,12 +125,12 @@ export function SeedSourceFilter({
                 endDate: end ? end.toISOString().split('T')[0] : ''
               });
             }}
-            className="w-full"
+            className="w-full !min-w-[160px]"
           />
         </div>
 
-        {/* 按钮行：重置、搜索 */}
-        <div className="flex gap-2 items-end">
+        {/* 按钮行：重置、搜索 — 放在所有搜索框之后，固定不缩小 */}
+        <div className="flex gap-2 items-end flex-shrink-0 ml-auto">
           <Button
             variant="secondary"
             size="sm"

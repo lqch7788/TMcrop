@@ -5325,11 +5325,13 @@ function seedPlantLabels() {
     return;
   }
 
+  // 2026-06-05: seedling_id 不再留空（之前漏填导致育苗管理标签管理弹窗按 seedling_id 过滤时 0 条匹配）
+  // PLT_001 关联到 YM20260521-673, PLT_002 关联到 YM20260521-186（按现有真实 seedlings 分配）
   const now = new Date().toISOString();
   const labels = [
-    { id: 1, label_number: 'LBL_20260501_001', planting_id: 'PLT_001', seedling_id: '', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
-    { id: 2, label_number: 'LBL_20260501_002', planting_id: 'PLT_001', seedling_id: '', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
-    { id: 3, label_number: 'LBL_20260502_001', planting_id: 'PLT_002', seedling_id: '', move_in_area_id: 2, move_in_area_name: '2号温室-B区', move_in_date: '2026-05-02', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+    { id: 1, label_number: 'LBL_20260501_001', planting_id: 'PLT_001', seedling_id: 'SD177932270429930qnqjtrv', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+    { id: 2, label_number: 'LBL_20260501_002', planting_id: 'PLT_001', seedling_id: 'SD177932270429930qnqjtrv', move_in_area_id: 1, move_in_area_name: '1号温室-A区', move_in_date: '2026-05-01', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
+    { id: 3, label_number: 'LBL_20260502_001', planting_id: 'PLT_002', seedling_id: 'SD1779322704299u4bkkrc1f', move_in_area_id: 2, move_in_area_name: '2号温室-B区', move_in_date: '2026-05-02', move_out_area_id: null, move_out_area_name: '', move_out_date: '', create_time: now },
   ];
 
   const stmt = db.prepare(`INSERT INTO plant_labels (id, label_number, planting_id, seedling_id, move_in_area_id, move_in_area_name, move_in_date, move_out_area_id, move_out_area_name, move_out_date, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);

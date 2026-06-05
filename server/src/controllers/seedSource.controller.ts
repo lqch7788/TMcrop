@@ -206,7 +206,8 @@ export class SeedSourceController {
         page: page ? Number(page) : 1,
         limit: limit ? Number(limit) : 20,
       });
-      res.json({ success: true, ...data });
+      // 2026-06-05: 统一 data 包装（V2.1 铁律：所有列表接口走 {success, data:{items,total}}）
+      res.json({ success: true, data });
     } catch (error) {
       next(error);
     }
