@@ -51,6 +51,7 @@ export interface CropBatch {
   batchCode: string;
   cropName: string;
   cropType: string;
+  cropCode?: string;          // 2026-06-05: 作物品种编码（11位），用于 CropCodeSelector 精准显示
   variety: string;
   greenhouseId: string;
   greenhouseName: string;

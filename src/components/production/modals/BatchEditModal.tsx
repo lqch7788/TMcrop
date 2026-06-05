@@ -3,18 +3,19 @@
  * 字段来源与新建弹窗保持一致
  */
 
-import { X, Upload } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Upload } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Modal } from '@/components/ui/Modal';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
-import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
+import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/DatePicker';
 import { Checkbox } from '@/components/ui/checkbox';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { CropVariety } from '../../../types/cropVariety';
+import { getVarietyByCode, searchVarieties } from '../../../services/cropVarietyService';
 import { DictSelect } from '../../common/settings/DictSelect';
 
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -61,10 +62,68 @@ export function BatchEditModal({
   // 种植模式展开状态
   const [plantingModeExpanded, setPlantingModeExpanded] = useState(false);
 
-  // 获取当前编辑的批次（在条件返回之前获取，供 useMemo 使用）
+  // 获取当前编辑的批次（在条件返回之前获取）
   const selectedBatches = selectedRows.map(id => batches.find(b => b.id === id)).filter(Boolean) as CropBatch[];
   const currentBatch = selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) : null;
   const editedData = selectedBatchCode ? editedBatches[selectedBatchCode] || {} : {};
+
+  // 2026-06-05: 切换行 / 重新打开弹窗时反向查表初始化 selectedCrop
+  // 3 重兜底，保证**所有行**都能显示（不挑名字、不依赖 crop_varieties 表是否完整）
+  // 注意：必须在 `if (!isOpen) return null` 之前调用，遵守 Hooks 顺序规则
+  useEffect(() => {
+    if (!isOpen || !currentBatch) {
+      setSelectedCrop(null);
+      return;
+    }
+
+    const cropName = currentBatch.cropName || '';
+    const variety = currentBatch.variety || '';
+
+    // 兜底 1：按 cropCode 精准匹配（修复后新数据/灌上 crop_code 的存量会走这条）
+    if (currentBatch.cropCode) {
+      const byCode = getVarietyByCode(currentBatch.cropCode);
+      if (byCode) { setSelectedCrop(byCode); return; }
+    }
+
+    // 兜底 2：用 cropName + variety 联合模糊搜索 crop_varieties 表
+    const keyword = `${cropName} ${variety}`.trim();
+    if (keyword) {
+      const results = searchVarieties(keyword);
+      if (results.length > 0) {
+        const hit = results[0];
+        setSelectedCrop({
+          id: '',
+          cropCode: hit.value,
+          categoryName: '',
+          typeName: '',
+          varietyName: hit.label,
+          subVariety1Name: '',
+          fullPath: hit.fullPath,
+        });
+        return;
+      }
+    }
+
+    // 兜底 3：**完全脱离 crop_varieties 表**直接用 currentBatch 自身字段拼路径
+    // 确保即使 crop_varieties 表里没数据，老数据也没灌上 cropCode，也能显示
+    if (cropName || variety) {
+      const fallbackPath = [cropName, variety].filter(Boolean).join(' > ');
+      setSelectedCrop({
+        id: '',
+        cropCode: currentBatch.cropCode || '',
+        categoryName: '',
+        typeName: '',
+        varietyName: variety || cropName,
+        subVariety1Name: '',
+        fullPath: fallbackPath,
+      });
+      return;
+    }
+
+    setSelectedCrop(null);
+    // 依赖故意拆字段而非 currentBatch 整体（更精准触发）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBatch?.batchCode, currentBatch?.variety, currentBatch?.cropCode, currentBatch?.cropName, isOpen]);
 
   if (!isOpen) return null;
 
@@ -74,13 +133,6 @@ export function BatchEditModal({
     : currentBatch?.greenhouseName
       ? currentBatch.greenhouseName.split(',').map(n => n.trim()).filter(Boolean)
       : [];
-
-  // 种植区域ID列表
-  const currentGreenhouseIds = editedData.greenhouseId
-    ? [editedData.greenhouseId].flat()
-    : currentBatch?.greenhouseId
-      ? [currentBatch.greenhouseId]
-      : currentGreenhouseNames;
 
   // 获取当前批次的计划类型，用于种植模式选项
   const currentPlanType = editedData.planType || currentBatch?.planType || PlanType.PLANTING;
@@ -122,20 +174,26 @@ export function BatchEditModal({
 
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl shadow-xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-300 flex items-center justify-between bg-blue-600 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-white">批量编辑生产计划</h3>
-            <span className="px-2 py-0.5 bg-blue-500 text-white text-xs rounded">
-              已选择 {selectedRows.length} 条
-            </span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-blue-700">
-            <X className="w-5 h-5" />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="批量编辑生产计划"
+      size="xl"
+      showFooter={true}
+      footer={
+        <div className="flex gap-3">
+          <Button onClick={onConfirmNext}>
+            确认（下一个）
+          </Button>
+          <Button variant="warning" onClick={onVoidWarning}>
+            申请作废
+          </Button>
+          <Button variant="blue" onClick={currentBatch?.batchStatus === 'published' ? onSave : onPublish}>
+            {currentBatch?.batchStatus === 'published' ? '保存' : '提交'}
           </Button>
         </div>
+      }
+    >
 
         {/* Info Banner */}
         <div className="p-4 bg-gray-50 border-b border-gray-300 flex-shrink-0">
@@ -183,7 +241,7 @@ export function BatchEditModal({
                 <div>
                   <div className="text-xs text-gray-500 mb-1">作物品种</div>
                   <CropCodeSelector
-                    value={(editedData.cropCode || currentBatch.cropCode || '')}
+                    value={(editedData.cropCode || currentBatch.cropCode || selectedCrop?.cropCode || '')}
                     onChange={handleCropChange}
                     placeholder="搜索或选择作物品种..."
                     size="sm"
@@ -486,22 +544,6 @@ export function BatchEditModal({
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-300 flex justify-end flex-shrink-0">
-          <div className="flex gap-3">
-            <Button onClick={onConfirmNext}>
-              确认（下一个）
-            </Button>
-            <Button variant="warning" onClick={onVoidWarning}>
-              申请作废
-            </Button>
-            <Button variant="blue" onClick={currentBatch?.batchStatus === 'published' ? onSave : onPublish}>
-              {currentBatch?.batchStatus === 'published' ? '保存' : '提交'}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

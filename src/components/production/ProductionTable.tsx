@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/ui/Pagination';
@@ -226,19 +226,6 @@ export function ProductionTable({
                         <Pencil className="w-4 h-4" />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={async () => {
-                        if (await showConfirm(`确定要删除生产计划 ${batch.batchCode} 吗？`)) {
-                          onDelete(batch);
-                        }
-                      }}
-                      className="text-gray-600 hover:text-red-600"
-                      title="删除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 </td>
               </tr>
