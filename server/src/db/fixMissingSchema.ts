@@ -1072,6 +1072,66 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2026-06-05: production_plans 表添加 crop_code 字段（修复弹窗作物品种显示空的根因）
+  // 此前只存 cropName/variety/cropVariety，没有 cropCode；现统一加 cropCode 用于精准关联
+  try {
+    db.run(`ALTER TABLE production_plans ADD COLUMN crop_code TEXT`);
+    seedLog.info('✓ production_plans 表添加 crop_code 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• production_plans.crop_code 列已存在');
+    } else {
+      seedLog.skip('• production_plans.crop_code:', e.message);
+    }
+  }
+
+  // 2026-06-05: 数据迁移 — 给存量 production_plans 灌 crop_code
+  // 优先路径：通过 plantings 表（plantings.crop_code 通过 production_plan_code 关联）
+  // 兜底路径：直接通过 production_plans.crop_name + crop_variety 查 crop_varieties 表
+  try {
+    db.run(`
+      UPDATE production_plans
+      SET crop_code = (
+        SELECT p.crop_code FROM plantings p
+        WHERE p.production_plan_code = production_plans.plan_code
+          AND p.crop_code IS NOT NULL AND p.crop_code != ''
+        LIMIT 1
+      )
+      WHERE (crop_code IS NULL OR crop_code = '')
+        AND EXISTS (
+          SELECT 1 FROM plantings p
+          WHERE p.production_plan_code = production_plans.plan_code
+            AND p.crop_code IS NOT NULL AND p.crop_code != ''
+        )
+    `);
+    seedLog.info('✓ 通过 plantings 关联为存量生产计划灌入 crop_code');
+  } catch (e: any) {
+    seedLog.skip('• 数据迁移（plantings→production_plans）失败:', e.message);
+  }
+
+  try {
+    // 兜底：未灌上的记录用 crop_name + crop_variety 反查 crop_varieties
+    // 仅匹配 variety_name 命中，subVariety1Name 命中留给前端 useMemo 兜底
+    db.run(`
+      UPDATE production_plans
+      SET crop_code = (
+        SELECT cv.crop_code FROM crop_varieties cv
+        WHERE cv.variety_name = production_plans.crop_variety
+           OR cv.crop_code = production_plans.crop_name
+        LIMIT 1
+      )
+      WHERE (crop_code IS NULL OR crop_code = '')
+        AND EXISTS (
+          SELECT 1 FROM crop_varieties cv
+          WHERE cv.variety_name = production_plans.crop_variety
+             OR cv.crop_code = production_plans.crop_name
+        )
+    `);
+    seedLog.info('✓ 通过 crop_varieties 表兜底为存量生产计划灌入 crop_code');
+  } catch (e: any) {
+    seedLog.skip('• 数据迁移（crop_varieties→production_plans）失败:', e.message);
+  }
+
   // 37. farm_tasks 表添加缺失的关联字段（问题分派/巡查关联）
   const farmTaskColumnsToAdd = [
     { name: 'source_problem_id', sql: 'ALTER TABLE farm_tasks ADD COLUMN source_problem_id TEXT' },

@@ -1758,6 +1758,7 @@ export function initializeDatabase() {
       plan_type TEXT,
       crop_name TEXT,
       crop_variety TEXT,
+      crop_code TEXT,
       greenhouse_name TEXT,
       greenhouse_id TEXT,
       area_name TEXT,
