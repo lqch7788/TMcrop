@@ -21,6 +21,8 @@ router.delete('/batch', (req, res, next) => seedSourceController.deleteBatch(req
 router.get('/available-for-seed-saving', (req, res, next) => seedSourceController.getPlantingsForSeedSaving(req, res, next));
 
 // 繁殖阶段操作（带 :id 参数）
+// 注意：全量查询路由 GET /propagation-records 必须注册在 :id 路由之前，否则 :id 会吞掉 propagation-records 字面量
+router.get('/propagation-records', (req, res, next) => seedSourceController.getAllPropagationRecords(req, res, next));
 router.get('/:id/propagation-records', (req, res, next) => seedSourceController.getPropagationRecords(req, res, next));
 router.post('/:id/propagation-records', (req, res, next) => seedSourceController.addPropagationRecord(req, res, next));
 router.put('/:id/propagation-stage', (req, res, next) => seedSourceController.updatePropagationStage(req, res, next));

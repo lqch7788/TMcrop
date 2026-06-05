@@ -50,6 +50,9 @@ export class SeedSourceRepository {
       -- ss.status 2026-06-04 改为实时计算：status 由 availableCount/initialCount 派生，不再 DB 存储
       ss.remarks,
       ss.production_plan_code AS productionPlanCode,
+      -- 2026-06-05: 强结分支字段（与 fixMissingSchema ALTER TABLE 同步）
+      ss.end_type AS endType,
+      ss.end_time AS endTime,
       0 AS printCount,
       ss.create_by AS createBy,
       ss.create_time AS createTime,
@@ -172,6 +175,24 @@ export class SeedSourceRepository {
       data.remarks || '',
       data.create_by || '',
       data.create_by_id || '',
+      // 2026-06-05: 修复繁殖字段缺失（与 list SQL/前端 service 同步）
+      data.propagation_type || 'external',
+      data.propagation_status || null,
+      data.propagation_method || '',
+      data.parent_male_id || '',
+      data.parent_male_code || '',
+      data.parent_female_id || '',
+      data.parent_female_code || '',
+      data.mother_plant_id || '',
+      data.mother_plant_code || '',
+      data.linked_planting_id || '',
+      data.linked_planting_code || '',
+      data.propagation_start_date || '',
+      data.expected_harvest_date || '',
+      data.actual_harvest_date || '',
+      data.breeding_location || '',
+      data.target_traits || '',
+      data.generation || '',
       now,
       now
     ];
@@ -180,8 +201,14 @@ export class SeedSourceRepository {
       INSERT INTO seed_sources (id, source_code, source_name, source_type, source_origin,
         production_plan_code, crop_category, type_name, variety_name, crop_name, crop_variety, crop_code,
         supplier_id, supplier_name, quantity, unit, purchase_date, purchase_price,
-        total_amount, used_quantity, remaining_quantity, remarks, create_by, create_by_id, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        total_amount, used_quantity, remaining_quantity, remarks, create_by, create_by_id,
+        propagation_type, propagation_status, propagation_method,
+        parent_male_id, parent_male_code, parent_female_id, parent_female_code,
+        mother_plant_id, mother_plant_code, linked_planting_id, linked_planting_code,
+        propagation_start_date, expected_harvest_date, actual_harvest_date,
+        breeding_location, target_traits, generation,
+        create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, params);
 
     // P0 #1: 单独 UPDATE pictures 列（避免破坏既有 INSERT 字段顺序）
@@ -357,6 +384,103 @@ export class SeedSourceRepository {
       records.push(record);
     }
     return records;
+  }
+
+  /**
+   * 全量查询繁殖过程记录（JOIN seed_sources，支持筛选+分页）
+   * 用于"繁殖过程记录"全量查看页
+   */
+  async findAllPropagationRecords(filters: {
+    seedSourceId?: string;
+    stage?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: any[]; total: number }> {
+    const db = getDatabase();
+    const { seedSourceId, stage, startDate, endDate } = filters;
+    const page = Number(filters.page) || 1;
+    const limit = Number(filters.limit) || 20;
+
+    let baseSql = `
+      SELECT
+        pr.id, pr.seed_source_id AS seedSourceId, pr.record_date AS recordDate, pr.stage,
+        pr.temperature, pr.humidity, pr.abnormality, pr.operator, pr.remarks,
+        pr.pollination_type AS pollinationType, pr.pollinator_crop AS pollinatorCrop,
+        pr.flower_count AS flowerCount, pr.fruit_set_count AS fruitSetCount,
+        pr.harvest_seed_count AS harvestSeedCount, pr.seed_weight AS seedWeight,
+        pr.harvest_plant_count AS harvestPlantCount,
+        pr.germination_rate AS germinationRate, pr.purity, pr.moisture,
+        pr.survival_rate AS survivalRate, pr.rooted_rate AS rootedRate,
+        pr.graft_success_rate AS graftSuccessRate,
+        pr.create_time AS createTime, pr.update_time AS updateTime,
+        ss.source_code AS seedCode,
+        ss.crop_name AS cropName,
+        ss.crop_variety AS cropVariety,
+        ss.propagation_type AS propagationType
+      FROM propagation_records pr
+      LEFT JOIN seed_sources ss ON pr.seed_source_id = ss.id
+      WHERE 1=1`;
+
+    const params: any[] = [];
+
+    if (seedSourceId) {
+      baseSql += ' AND pr.seed_source_id = ?';
+      params.push(seedSourceId);
+    }
+    if (stage) {
+      baseSql += ' AND pr.stage = ?';
+      params.push(stage);
+    }
+    if (startDate) {
+      baseSql += ' AND pr.record_date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      baseSql += ' AND pr.record_date <= ?';
+      params.push(endDate);
+    }
+
+    let countSql = `SELECT COUNT(*) AS total FROM propagation_records pr WHERE 1=1`;
+    const countParams: any[] = [];
+    if (seedSourceId) {
+      countSql += ' AND pr.seed_source_id = ?';
+      countParams.push(seedSourceId);
+    }
+    if (stage) {
+      countSql += ' AND pr.stage = ?';
+      countParams.push(stage);
+    }
+    if (startDate) {
+      countSql += ' AND pr.record_date >= ?';
+      countParams.push(startDate);
+    }
+    if (endDate) {
+      countSql += ' AND pr.record_date <= ?';
+      countParams.push(endDate);
+    }
+
+    baseSql += ' ORDER BY pr.record_date DESC, pr.create_time DESC';
+
+    const total = execCount(db, countSql, countParams);
+    const offset = (page - 1) * limit;
+    baseSql += ' LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const result = db.exec(baseSql, params);
+    if (!result || result.length === 0) return { items: [], total };
+
+    const { columns, values } = result[0];
+    const items: any[] = [];
+    for (const row of values) {
+      const rec: any = {};
+      columns.forEach((col: string, i: number) => {
+        rec[col] = row[i];
+      });
+      items.push(rec);
+    }
+    return { items, total };
   }
 
   /**

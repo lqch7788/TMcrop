@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch } from 'lucide-react';
+import { Edit2, Trash2, Printer, Image, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch, Info } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
@@ -486,27 +486,34 @@ export function SeedSourceTable({
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    {(() => {
-                      // 2026-06-04: 实时计算 status，不再依赖 record.status
-                      const liveStatus = computeStockStatus(record.availableCount, record.initialCount);
-                      return (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[liveStatus]?.color || ''}`}>
-                          {STOCK_STATUS_MAP[liveStatus]?.label || liveStatus}
+                    <div className="flex items-center gap-1.5">
+                      {(() => {
+                        // 2026-06-04: 实时计算 status，不再依赖 record.status
+                        const liveStatus = computeStockStatus(record.availableCount, record.initialCount);
+                        return (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STOCK_STATUS_MAP[liveStatus]?.color || ''}`}>
+                            {STOCK_STATUS_MAP[liveStatus]?.label || liveStatus}
+                          </span>
+                        );
+                      })()}
+                      {/* 2026-06-05: 强结后显示"已结束"角标（区分正常/异常） */}
+                      {record.endTime && (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            record.endType === 'abnormal'
+                              ? 'text-amber-600 bg-amber-50'
+                              : 'text-gray-500 bg-gray-100'
+                          }`}
+                          title={`${record.endType === 'abnormal' ? '异常' : '正常'}结束于 ${record.endTime}`}
+                        >
+                          {record.endType === 'abnormal' ? '已异常结束' : '已结束'}
                         </span>
-                      );
-                    })()}
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDetail(record)}
-                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                        title="查看详情"
-                      >
-                        <Image className="w-4 h-4" />
-                      </Button>
+                      {/* 2026-06-05: 删除操作列的「查看详情」按钮（与点击种源批号重复） */}
                       {/* 繁殖途径操作按钮（非外购 + 未完成时显示） */}
                       {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && (
                         <>
@@ -530,8 +537,20 @@ export function SeedSourceTable({
                           </Button>
                         </>
                       )}
-                      {/* P2 #11 修复: 仅有关联生产计划的种源才显示"结束"按钮 */}
-                      {record.productionPlanCode && (
+                      {/* 2026-06-05: 外购种源无繁殖过程，显示置灰提示（hover 解释为何无『过程记录/阶段推进』） */}
+                      {(!record.propagationType || record.propagationType === PropagationType.EXTERNAL) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled
+                          className="text-gray-300 cursor-not-allowed"
+                          title="外购种源无繁殖过程。如需追踪繁殖阶段，请编辑种源把『来源途径』改为：育种 / 留种 / 无性繁殖"
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* 2026-06-05: 去掉 productionPlanCode 守卫 — 新建未关联生产计划的种源也要能结束（强结） */}
+                      {!record.endTime && (
                         <>
                           <Button
                             variant="ghost"

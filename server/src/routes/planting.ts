@@ -51,6 +51,9 @@ router.get('/', (req: Request, res: Response) => {
       p.remarks,
       p.production_plan_id AS productionPlanId,
       p.production_plan_code AS productionPlanCode,
+      -- 2026-06-05: 强结分支字段（与 fixMissingSchema ALTER TABLE 同步）
+      p.end_type AS endType,
+      p.end_time AS endTime,
       p.create_by AS createBy,
       p.create_time AS createTime,
       p.update_time AS updateTime

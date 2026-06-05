@@ -74,11 +74,26 @@ export function AddModal({
   const storePlans = useProductionPlanStore((s) => s.plans);
   // P2 #16 修复: 当前用户从 useAuthStore.currentUser 读取（认证已登录的用户），不再用 localStorage
   const authCurrentUser = useAuthStore((s) => s.currentUser);
-  const currentUser = authCurrentUser
-    ? { id: authCurrentUser.id || authCurrentUser.oid, name: authCurrentUser.name || authCurrentUser.username, department: authCurrentUser.department || authCurrentUser.orgName || '生产部' }
-    : (storeUsers.length > 0
-        ? { id: storeUsers[0].oid, name: storeUsers[0].name, department: storeUsers[0].orgOid || '生产部' }
-        : { id: 'U013', name: '未知用户', department: '生产部' });
+  // 2026-06-05: 修复创建人显示"未知用户"/空白
+  // 根因：CurrentUser 没有 name 字段（只有 realName/username），原 fallback 取 .name 永远 undefined
+  const currentUser = (() => {
+    if (authCurrentUser) {
+      return {
+        id: authCurrentUser.oid,
+        name: authCurrentUser.realName || authCurrentUser.username || '',
+        department: authCurrentUser.orgName || authCurrentUser.orgOid || '生产部',
+      };
+    }
+    // auth 没拿到时按 storeUsers 第一个兜底（演示模式）
+    if (storeUsers.length > 0) {
+      return {
+        id: storeUsers[0].oid,
+        name: storeUsers[0].name || storeUsers[0].username || '',
+        department: storeUsers[0].orgOid || '生产部',
+      };
+    }
+    return { id: 'U013', name: '未知用户', department: '生产部' };
+  })();
   const cropBatches = storePlans.length > 0
     ? storePlans.map(p => ({ id: p.id, batchCode: p.batchCode, batchStatus: (p as any).batchStatus || (p as any).status, planType: (p as any).planType, planTypeName: (p as any).planTypeName || '育种计划', cropName: (p as any).cropName }))
     : [];

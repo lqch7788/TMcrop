@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient, configureQueryClient } from './lib/queryClient';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import MainLayout from './components/layout/MainLayout';
 import { ApprovalProvider } from './contexts/ApprovalContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { OrganizationProvider } from './contexts/OrganizationContext';
@@ -124,6 +125,7 @@ const AnalyticsPage = lazy(() => import('./pages/labor/AnalyticsPage'));
 const DispatchPage = lazy(() => import('./components/dispatch').then(module => ({ default: module.DispatchPage })));
 const MyTasksPage = lazy(() => import('./components/labor/myTasks/MyTasksPage'));
 const SeedSource = lazy(() => import('./pages/crop/SeedSource'));
+const PropagationRecordsPage = lazy(() => import('./pages/PropagationRecordsPage'));
 const Seedling = lazy(() => import('./pages/crop/Seedling'));
 const Planting = lazy(() => import('./pages/crop/Planting'));
 const Order = lazy(() => import('./pages/crop/Order'));
@@ -152,33 +154,7 @@ function PageLoader() {
   );
 }
 
-// 带侧边栏的布局组件（种植管理系统）
-function MainLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      {/* Header 固定在顶部 */}
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-      </div>
-
-      <div className={sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-52'}>
-        <main className="pt-12 p-4 lg:p-6 mt-6">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
-}
+// 带侧边栏的布局组件已抽到 src/components/layout/MainLayout.tsx（2026-06-05）
 
 // 简单布局组件（只有Header，没有侧边栏）
 function SimpleLayout({ children }: { children: React.ReactNode }) {
@@ -262,6 +238,7 @@ function AppContent() {
 
           {/* 作物管理 */}
           <Route path="/crop/seed-source" element={<SeedSource />} />
+          <Route path="/crop/propagation-records" element={<PropagationRecordsPage />} />
           <Route path="/crop/seedling" element={<Seedling />} />
           <Route path="/crop/planting" element={<Planting />} />
           <Route path="/crop/harvest" element={<CropHarvest />} />

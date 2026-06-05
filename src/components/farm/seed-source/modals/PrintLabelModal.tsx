@@ -208,8 +208,9 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       isOpen={isOpen}
       onClose={onClose}
       title="标签打印与导出"
-      size="lg"
-      height={650}
+      size="xxl"
+      width={1080}
+      height={975}
       showFooter={true}
       footer={
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">

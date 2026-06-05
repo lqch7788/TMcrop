@@ -435,22 +435,26 @@ export function PlantingTable({
                 <Image className="w-4 h-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEnd(record, 'normal')}
-              title="正常结束"
-            >
-              <CheckCircle className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEnd(record, 'abnormal')}
-              title="异常结束"
-            >
-              <XCircle className="w-4 h-4" />
-            </Button>
+            {!record.endTime && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEnd(record, 'normal')}
+                  title="正常结束"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEnd(record, 'abnormal')}
+                  title="异常结束"
+                >
+                  <XCircle className="w-4 h-4" />
+                </Button>
+              </>
+            )}
             {onLabelDetail && (
               <Button
                 variant="ghost"
@@ -880,9 +884,24 @@ export function PlantingTable({
                     })()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}>
-                      {statusMap[record.status as keyof typeof statusMap]?.label || record.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusMap[record.status as keyof typeof statusMap]?.color || ''}`}>
+                        {statusMap[record.status as keyof typeof statusMap]?.label || record.status}
+                      </span>
+                      {/* 2026-06-05: 强结后显示"已结束"角标 */}
+                      {record.endTime && (
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            record.endType === 'abnormal'
+                              ? 'text-amber-600 bg-amber-50'
+                              : 'text-gray-500 bg-gray-100'
+                          }`}
+                          title={`${record.endType === 'abnormal' ? '异常' : '正常'}结束于 ${record.endTime}`}
+                        >
+                          {record.endType === 'abnormal' ? '已异常结束' : '已结束'}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex gap-1">
@@ -906,22 +925,26 @@ export function PlantingTable({
                           <Image className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEnd(record, 'normal')}
-                        title="正常结束"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEnd(record, 'abnormal')}
-                        title="异常结束"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </Button>
+                      {!record.endTime && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'normal')}
+                            title="正常结束"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEnd(record, 'abnormal')}
+                            title="异常结束"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                       {onLabelDetail && (
                         <Button
                           variant="ghost"

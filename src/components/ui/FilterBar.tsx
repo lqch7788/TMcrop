@@ -11,10 +11,29 @@ export interface FilterBarProps extends React.HTMLAttributes<HTMLDivElement> {
   onSearch?: () => void
   onReset?: () => void
   children?: React.ReactNode
+  /**
+   * 筛选字段等宽列数（默认 4）
+   * - 默认 4: 1 列移动 / 2 列平板 / 4 列桌面（按 sm/md/lg 断点）
+   * - 传 0/undefined → 不强制 grid，fallback 到 flex-wrap
+   */
+  columns?: number
 }
 
 const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
-  ({ onSearch, onReset, children, className, ...props }, ref) => {
+  ({ onSearch, onReset, children, columns = 4, className, ...props }, ref) => {
+    // 2026-06-05: 支持 columns 等宽分布（默认 4 列），按钮容器保持在右侧不变
+    // 注意：Tailwind JIT 需要完整 class 字符串，不能用模板字符串拼接，所以这里穷举
+    const gridClass =
+      columns === 1
+        ? 'grid grid-cols-1 gap-3 flex-1'
+        : columns === 2
+        ? 'grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1'
+        : columns === 3
+        ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-1'
+        : columns === 4
+        ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 flex-1'
+        : 'flex-1 flex flex-wrap items-end justify-between gap-3'
+
     return (
       <div
         ref={ref}
@@ -24,12 +43,12 @@ const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
         )}
         {...props}
       >
-        {/* 筛选项容器 */}
-        <div className="flex-1 flex flex-wrap items-end justify-between gap-3">
+        {/* 筛选项容器（等宽 grid，按列数分配） */}
+        <div className={gridClass}>
           {children}
         </div>
 
-        {/* 操作按钮 */}
+        {/* 操作按钮（始终保持在筛选栏后，位置不变） */}
         <div className="flex items-center gap-2">
           {onReset && (
             <Button

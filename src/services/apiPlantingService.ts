@@ -175,7 +175,17 @@ export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' |
  * 数据流：API → SQLite DB
  */
 export async function updatePlanting(id: string, updates: Partial<Planting>): Promise<Planting | null> {
-  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates);
+  // 2026-06-05: 强结分支写入 end_type/end_time（后端 PUT 用 Object.keys 原样拼字段，需 snake_case）
+  const backendUpdates: Record<string, any> = { ...updates };
+  if (updates.endType !== undefined) {
+    backendUpdates.end_type = updates.endType;
+    delete backendUpdates.endType;
+  }
+  if (updates.endTime !== undefined) {
+    backendUpdates.end_time = updates.endTime;
+    delete backendUpdates.endTime;
+  }
+  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, backendUpdates);
   return result ? { ...updates, id } as Planting : null;
 }
 

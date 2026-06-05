@@ -158,6 +158,21 @@ export class SeedSourceService {
   }
 
   /**
+   * 全量查询繁殖过程记录（JOIN seed_sources）
+   * 用于"繁殖过程记录"全量查看页
+   */
+  async getAllPropagationRecords(filters: {
+    seedSourceId?: string;
+    stage?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    return this.repository.findAllPropagationRecords(filters);
+  }
+
+  /**
    * 推进繁殖阶段
    */
   async updatePropagationStage(seedSourceId: string, data: UpdatePropagationStageDTO) {

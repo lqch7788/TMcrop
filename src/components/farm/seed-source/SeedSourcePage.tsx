@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
@@ -35,6 +36,8 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
+  // 2026-06-05: 跳转到繁殖过程记录全量查看页
+  const navigate = useNavigate();
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
   // 种源模块权限 - 已取消，直接设置为 true
@@ -321,46 +324,60 @@ export default function SeedSourcePage() {
 
   // 处理结束计划
   const handleEnd = async (record: SeedSource, endType: 'normal' | 'abnormal') => {
-    // 获取关联的生产计划批次号
-    if (!record.productionPlanCode) {
-      await showAlert('该种源没有关联的生产计划，无法结束');
+    // 2026-06-05: 统一强结 — 不管有没有关联生产计划，都走强结逻辑
+    // （生产计划存在时由用户选择联动结束或强结；查不到时直接强结）
+    const hasPlan = !!record.productionPlanCode;
+    let batch: Awaited<ReturnType<typeof cropBatchService.getCropBatchByCode>> | null = null;
+    if (hasPlan) {
+      batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode!);
+    }
+
+    // 分支 1: 有生产计划且能找到 → 走原"结束生产计划"流程
+    if (hasPlan && batch) {
+      if (batch.batchStatus === 'completed') {
+        await showAlert('该生产计划已完成结束，不能重复结束');
+        return;
+      }
+      const completionRate = cropBatchService.getCompletionRate(batch, record.initialCount);
+      const isNormal = endType === 'normal';
+      const confirmMsg = isNormal
+        ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
+        : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
+
+      if (!await showConfirm(confirmMsg)) return;
+
+      const result = await cropBatchService.endCropBatch(batch.id, endType);
+      if (result) {
+        await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
+        await loadItems();
+      } else {
+        await showAlert('结束失败');
+      }
       return;
     }
 
-    // 查找对应的生产计划
-    const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
-    if (!batch) {
-      await showAlert('未找到关联的生产计划');
-      return;
-    }
-
-    // 检查是否已完成
-    if (batch.batchStatus === 'completed') {
-      await showAlert('该生产计划已完成结束，不能重复结束');
-      return;
-    }
-
-    // 计算完成比例
-    const completionRate = cropBatchService.getCompletionRate(batch, record.initialCount);
-
-    // 确认对话框
+    // 分支 2: 没有生产计划 / 查不到 → 强结种源本身
     const isNormal = endType === 'normal';
-    const confirmMsg = isNormal
-      ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
-      : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
+    const reason = !hasPlan
+      ? '该种源未关联生产计划。'
+      : `未找到关联的生产计划 [${record.productionPlanCode}]，可能已被删除。`;
+    const confirmed = await showConfirm(
+      `${reason}\n是否${isNormal ? '正常' : '异常'}结束该种源订单？\n` +
+      `（结束后将${hasPlan ? '解除生产计划关联并' : ''}记录结束标记）`
+    );
+    if (!confirmed) return;
 
-    if (!await showConfirm(confirmMsg)) {
-      return;
-    }
-
-    // 执行结束
-    const result = await cropBatchService.endCropBatch(batch.id, endType);
-    if (result) {
-      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
-      // P2 #12 修复: 改用 store.refresh() 而非整页 reload，保留筛选/分页/滚动位置
+    try {
+      await updateItem(record.id, {
+        endType,
+        endTime: new Date().toISOString(),
+        ...(hasPlan ? { productionPlanCode: null as unknown as string } : {}), // 有生产计划才清空
+      });
+      await showAlert(isNormal ? '种源订单已正常结束（强结）' : '种源订单已异常结束（强结）');
       await loadItems();
-    } else {
-      await showAlert('结束失败');
+    } catch (e: any) {
+      console.error('[强结失败]', e);
+      await showAlert(`强结失败：${e?.message || String(e)}`);
     }
   };
 
@@ -542,6 +559,16 @@ export default function SeedSourcePage() {
               <h1 className="text-2xl font-bold text-gray-900">种源管理</h1>
               <p className="text-gray-500">管理种源批次、采购入库和库存记录</p>
             </div>
+          </div>
+          {/* 2026-06-05: 繁殖过程记录全量查看入口 */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => navigate('/crop/propagation-records')}
+            >
+              <ClipboardList className="w-4 h-4 mr-1" />
+              繁殖过程记录
+            </Button>
           </div>
         </div>
       </div>
