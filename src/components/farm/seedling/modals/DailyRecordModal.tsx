@@ -3,10 +3,11 @@
  * 支持：添加记录、编辑记录、删除记录、导出记录
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Seedling, DailyRecord } from '../../../../types/crop';
 import { useDictionaryStore, getDictItems, useSeedlingStore } from '../../../../stores';
+import { getDailyRecords } from '../../../../services/apiSeedlingService';
 import { Input } from '../../../ui/input';
 import { DatePicker } from '../../../ui/DatePicker';
 import { Label } from '@/components/ui/label';
@@ -34,6 +35,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const deleteDailyRecord = useSeedlingStore((state) => state.deleteDailyRecord);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  // 2026-06-05: 独立 local state 拉 daily-records（之前读 store.dailyRecords 永远 undefined）
+  const [dailyRecords, setDailyRecords] = useState<DailyRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // 拉取每日记录历史
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    const list = await getDailyRecords(String(record.id));
+    setDailyRecords(list);
+    setLoadingHistory(false);
+  }, [record.id]);
 
   useEffect(() => {
     if (dictionaries.length === 0) {
@@ -41,11 +53,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     }
   }, [dictionaries.length, loadDictionaries]);
 
+  // 弹窗打开时 + refreshKey 变化时重新拉
+  useEffect(() => {
+    if (isOpen) {
+      void loadHistory();
+    }
+  }, [isOpen, refreshKey, loadHistory]);
+
   const latestDailyRecords = useMemo(() => {
     void refreshKey;
-    const latestRecord = useSeedlingStore.getState().items.find(s => s.id === record.id);
-    return latestRecord?.dailyRecords || record.dailyRecords || [];
-  }, [record.id, refreshKey]);
+    return dailyRecords;
+  }, [dailyRecords, refreshKey]);
 
   const handleSuccess = () => {
     setRefreshKey(k => k + 1);
@@ -65,6 +83,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     survivalCountChange: undefined as number | undefined,
     plantedCountChange: undefined as number | undefined,
     lossCountChange: undefined as number | undefined,
+    runnerIncreaseCount: undefined as number | undefined,
     remarks: '',
     phValue: undefined as number | undefined,
     ecValue: undefined as number | undefined,
@@ -82,8 +101,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     }
 
     try {
-      const result = await useSeedlingStore.getState().addDailyRecord(String(record.id), {
-        recordDate: formData.recordDate,
+      // 2026-06-05: 把业务字段打包成 data 对象（后端会 JSON.stringify 一次并存到 data 列，GET 时再 JSON.parse 还原）
+      const bizData = {
         temperature: formData.temperature,
         humidity: formData.humidity,
         watering: formData.watering,
@@ -91,11 +110,16 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         survivalCountChange: formData.survivalCountChange,
         plantedCountChange: formData.plantedCountChange,
         lossCountChange: formData.lossCountChange,
-        remarks: formData.remarks || undefined,
+        runnerIncreaseCount: formData.runnerIncreaseCount,
         phValue: formData.phValue,
         ecValue: formData.ecValue,
-        operator: formData.operator || undefined
-      });
+        operator: formData.operator || undefined,
+      };
+      const result = await useSeedlingStore.getState().addDailyRecord(String(record.id), {
+        recordDate: formData.recordDate,
+        data: bizData,  // 后端 JSON.stringify 一次存到 data 列
+        remarks: formData.remarks || undefined,
+      } as any);
       if (!result) {
         await showAlert('添加记录失败，请重试');
         return;
@@ -110,6 +134,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         survivalCountChange: undefined,
         plantedCountChange: undefined,
         lossCountChange: undefined,
+        runnerIncreaseCount: undefined,
         remarks: '',
         phValue: undefined,
         ecValue: undefined,
@@ -185,6 +210,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       'EC值(mS/cm)': r.ecValue ?? '',
       '浇水': r.watering ? '是' : '否',
       '成活变化': r.survivalCountChange ?? '',
+      '扩繁小苗数量': r.runnerIncreaseCount ?? '',
       '定植变化': r.plantedCountChange ?? '',
       '损耗变化': r.lossCountChange ?? '',
       '操作员': r.operator ?? '',
@@ -249,6 +275,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     }
     if (field === 'lossCountChange' && value !== undefined) {
       return <span className="text-red-600">+{value}</span>;
+    }
+    if (field === 'runnerIncreaseCount' && value !== undefined) {
+      return (
+        <span className="text-emerald-600">
+          {value > 0 ? '+' : ''}{value}
+        </span>
+      );
     }
     if (value === undefined || value === null || value === '') return '-';
     if (field === 'temperature') return `${value}℃`;
@@ -385,8 +418,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
-            {/* 第四行：操作人员（占2列） */}
-            <div className="col-span-2">
+            {/* 第四行：操作人员（占1列） + 异常情况 + 扩繁小苗数量 — 3 个一排 */}
+            <div>
               <Label className="text-gray-700">操作人员</Label>
               <Select
                 value={formData.operator}
@@ -410,6 +443,20 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 value={formData.abnormality}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
                 placeholder="无异常请留空"
+                className={deepInputClass}
+              />
+            </div>
+            {/* 第四行：扩繁小苗数量（2026-06-05 草莓匍匐茎育苗等无性繁殖场景，可选） */}
+            <div>
+              <Label className="text-gray-700">扩繁小苗数量</Label>
+              <Input
+                type="number"
+                value={formData.runnerIncreaseCount ?? ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  runnerIncreaseCount: e.target.value ? Number(e.target.value) : undefined
+                })}
+                placeholder="每日新增的小苗数量统计"
                 className={deepInputClass}
               />
             </div>
@@ -458,6 +505,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold">EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
                     <th className="px-2 py-2 text-left font-semibold">成活变化</th>
+                    <th className="px-2 py-2 text-left font-semibold">扩繁小苗数量</th>
                     <th className="px-2 py-2 text-left font-semibold">定植变化</th>
                     <th className="px-2 py-2 text-left font-semibold">损耗变化</th>
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
@@ -495,6 +543,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       </td>
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
                       </td>
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'plantedCountChange', r.plantedCountChange)}

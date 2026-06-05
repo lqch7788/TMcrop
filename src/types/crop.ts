@@ -267,6 +267,7 @@ export interface DailyRecord {
   survivalCountChange?: number;  // 成活数量变化（正数增加，负数减少）
   plantedCountChange?: number;  // 定植数量变化
   lossCountChange?: number;    // 损耗数量
+  runnerIncreaseCount?: number;  // 2026-06-05: 扩繁小苗数量（草莓匍匐茎育苗等无性繁殖场景，记录当天新增的小苗数）
   remarks?: string;           // 备注
   // 水质参数（补充）
   phValue?: number;          // pH值
