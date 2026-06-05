@@ -252,9 +252,9 @@ export function AddModal({
   };
 
   const handleSubmit = async () => {
-    // 基本信息验证
-    if (!formData.sourceId || !formData.selectedCropCode || !formData.siteId) {
-      await showAlert('请填写完整信息：关联种源、作物品种、育苗区域为必填项');
+    // 基本信息验证（2026-06-05: 关联种源改为非必填）
+    if (!formData.selectedCropCode || !formData.siteId) {
+      await showAlert('请填写完整信息：作物品种、育苗区域为必填项');
       return;
     }
 
@@ -378,16 +378,18 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       }, 'farm', 'draft');
     }
 
-    // 扣减种源可用数量
+    // 扣减种源可用数量（仅当关联了种源时才扣减）
     // 单株育苗模式：扣减 initialCount
     // 扩繁育苗模式：扣减 motherPlantCount
-    const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
-      ? formData.motherPlantCount
-      : formData.initialCount;
-    try {
-      await decreaseAvailableCount(formData.sourceId, deductCount);
-    } catch (error) {
-      // logger.error('扣减种源可用数量失败:', error);
+    if (formData.sourceId) {
+      const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+        ? formData.motherPlantCount
+        : formData.initialCount;
+      try {
+        await decreaseAvailableCount(formData.sourceId, deductCount);
+      } catch (error) {
+        // logger.error('扣减种源可用数量失败:', error);
+      }
     }
 
     // 更新作物实例状态为育苗中
@@ -592,7 +594,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
             <div>
               <Label className="text-gray-900">
-                关联种源 <span className="text-red-500">*</span>
+                关联种源 <span className="text-gray-400 text-xs">（可选）</span>
               </Label>
               <div className="relative">
                 <Input

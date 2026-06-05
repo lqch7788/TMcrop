@@ -286,6 +286,26 @@ export async function deleteSeedlings(ids: string[]): Promise<boolean> {
 }
 
 /**
+ * 获取育苗的每日记录列表
+ * 2026-06-05: modal 需要独立拉取，因为 GET /seedlings 列表不返回 dailyRecords 字段
+ */
+export async function getDailyRecords(seedlingId: string): Promise<DailyRecord[]> {
+  try {
+    const res = await enhancedApiClient.get<{ items?: DailyRecord[]; data?: DailyRecord[] }>(
+      `/seedlings/${seedlingId}/daily-records?limit=200`
+    );
+    // 兼容多种响应结构
+    const payload: any = res;
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.items)) return payload.items;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * 添加每日记录
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */

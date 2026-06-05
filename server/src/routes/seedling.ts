@@ -451,7 +451,9 @@ router.post('/', (req: Request, res: Response) => {
     const { id, seedling_code, source_id, source_name, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
-            work_hours } = req.body;
+            work_hours, production_plan_code } = req.body;
+    // 2026-06-05: 兼容 camelCase productionPlanCode
+    const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
 
     // 方案2.5: 验证育苗地点AreaType=4（种植区）
@@ -471,11 +473,13 @@ router.post('/', (req: Request, res: Response) => {
     db.run(`
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
+        production_plan_code, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, source_id, source_name, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null, now, now]
+        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+        productionPlanCode || null, now, now]
         .map(v => v === undefined ? null : v));
 
     saveDatabase();
@@ -614,15 +618,80 @@ router.get('/:id/daily-records', (req: Request, res: Response) => {
     sql += ' LIMIT ' + Number(limit) + ' OFFSET ' + offset;
 
     const items = queryToObjects(db, sql, [id, 'seedling']);
+    // 2026-06-05: 解析 data JSON 字段还原业务字段（温度/湿度/pH/EC/浇水/成活/定植/损耗/操作员）
+    const expandedItems = items.map((it: any) => {
+      if (it.data) {
+        try {
+          const parsed = JSON.parse(it.data);
+          return { ...parsed, ...it };  // 业务字段优先，原始字段兜底
+        } catch { /* ignore parse error */ }
+      }
+      return it;
+    });
 
     res.json({
       success: true,
-      data: items,
+      data: expandedItems,
       meta: { total, page: Number(page), limit: Number(limit) }
     });
   } catch (error) {
     console.error('获取每日记录失败:', error);
     res.status(500).json({ success: false, error: '获取每日记录失败' });
+  }
+});
+
+/**
+ * 更新每日记录
+ * PUT /seedlings/:id/daily-records/:recordId
+ * 2026-06-05: 新增（之前缺失，导致前端编辑/删除失败）
+ */
+router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
+  try {
+    const { id, recordId } = req.params;
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // 业务字段打包成 data JSON（与 POST 一致）
+    const { recordDate, remarks, ...bizFields } = req.body;
+    const dataJson = Object.keys(bizFields).length > 0 ? JSON.stringify(bizFields) : null;
+
+    const fields = ['update_time = ?'];
+    const values: any[] = [now];
+    if (recordDate) { fields.push('record_date = ?'); values.push(recordDate); }
+    if (dataJson !== null) { fields.push('data = ?'); values.push(dataJson); }
+    if (remarks !== undefined) { fields.push('remarks = ?'); values.push(remarks || ''); }
+    values.push(recordId, id, 'seedling');
+
+    const result = db.run(
+      `UPDATE daily_records SET ${fields.join(', ')} WHERE id = ? AND related_id = ? AND related_type = ?`,
+      values
+    );
+    saveDatabase();
+    res.json({ success: true, data: { id: recordId, updated: true } });
+  } catch (error) {
+    console.error('更新每日记录失败:', error);
+    res.status(500).json({ success: false, error: '更新每日记录失败' });
+  }
+});
+
+/**
+ * 删除每日记录
+ * DELETE /seedlings/:id/daily-records/:recordId
+ * 2026-06-05: 新增（之前缺失）
+ */
+router.delete('/:id/daily-records/:recordId', (req: Request, res: Response) => {
+  try {
+    const { id, recordId } = req.params;
+    const db = getDatabase();
+    db.run(
+      'DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?',
+      [recordId, id, 'seedling']
+    );
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除每日记录失败:', error);
+    res.status(500).json({ success: false, error: '删除每日记录失败' });
   }
 });
 
