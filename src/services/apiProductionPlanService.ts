@@ -27,6 +27,8 @@ function normalizeBatch(raw: Record<string, unknown>): CropBatch {
     batchCode: raw.batchCode as string,
     cropName: (raw.cropName as string) || '',
     cropType: (raw.cropType as string) || '',
+    // 2026-06-05: 读 cropCode（修复弹窗作物品种显示空）
+    cropCode: raw.cropCode as string | undefined,
     variety: (raw.variety as string) || '',
     greenhouseId: (raw.greenhouseId as string) || (raw.greenhouseName as string) || '',
     greenhouseName: (raw.greenhouseName as string) || '',
@@ -114,7 +116,15 @@ export async function updateProductionPlan(
   id: string,
   updates: Partial<CropBatch>
 ): Promise<CropBatch | null> {
-  const data = await enhancedApiClient.put<Record<string, unknown>>(`/production-plans/${id}`, updates);
+  // 2026-06-05: 修复申请作废/编辑保存失败 — 之前直接 PUT 用 camelCase（如 batchStatus）
+  //   后端 route 用 Object.keys 拼 SQL，找不到 batchStatus 列（DB 列叫 batch_status）→ 500
+  //   改用映射转换，与 apiSeedSourceService.updateSeedSource 风格一致
+  const backendUpdates: Record<string, any> = { ...updates };
+  if (updates.batchStatus !== undefined) {
+    backendUpdates.batch_status = updates.batchStatus;
+    delete backendUpdates.batchStatus;
+  }
+  const data = await enhancedApiClient.put<Record<string, unknown>>(`/production-plans/${id}`, backendUpdates);
   if (!data) return null;
   return normalizeBatch(data);
 }

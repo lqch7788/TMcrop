@@ -68,6 +68,7 @@ export interface EditedBatch {
   targetQuantity?: number;
   targetYield?: number;
   cropName?: string;
+  cropCode?: string;          // 2026-06-05: 作物品种编码（弹窗回显用）
   variety?: string;
   greenhouseName?: string;
   greenhouseId?: string;
@@ -354,6 +355,7 @@ export function useProductionPage(): UseProductionPageReturn {
       batchName: formData.batchCode,
       planType: formData.planType,
       cropName: formData.cropName,
+      cropCode: formData.cropCode,  // 2026-06-05: 写入 cropCode
       variety: formData.variety,
       greenhouseId: greenhouseIds,
       greenhouseName: greenhouseNames,
@@ -421,6 +423,7 @@ export function useProductionPage(): UseProductionPageReturn {
       batchName: formData.batchCode,
       planType: formData.planType,
       cropName: formData.cropName,
+      cropCode: formData.cropCode,  // 2026-06-05: 写入 cropCode
       variety: formData.variety,
       greenhouseName: greenhouseNames,
       areaName: greenhouseNames,
@@ -578,6 +581,7 @@ export function useProductionPage(): UseProductionPageReturn {
               if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
               if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
               if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
+              if (edited.cropCode !== undefined) apiData.cropCode = edited.cropCode;  // 2026-06-05
               if (edited.variety !== undefined) apiData.variety = edited.variety;
               if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
               if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
@@ -705,6 +709,7 @@ export function useProductionPage(): UseProductionPageReturn {
             if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
             if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
             if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
+            if (edited.cropCode !== undefined) apiData.cropCode = edited.cropCode;  // 2026-06-05
             if (edited.variety !== undefined) apiData.variety = edited.variety;
             if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
             if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
@@ -783,7 +788,7 @@ export function useProductionPage(): UseProductionPageReturn {
         title: `生产计划作废审批：${currentBatch.batchCode}`,
         description: `申请作废生产计划：${currentBatch.batchCode}\n作物：${currentBatch.cropName} ${currentBatch.variety}\n区域：${currentBatch.greenhouseName}`,
         applicantId: currentUserId,
-        applicantName: currentUserName,
+        applicantName: currentUsername,
         applicantDepartment: currentDepartment,
         applyDate: today,
         status: 'pending',
@@ -803,8 +808,21 @@ export function useProductionPage(): UseProductionPageReturn {
       };
 
       if (USE_API) {
-        await updatePlan(currentBatch.id, { batchStatus: 'pending' } as any);
-        await apiClient.post('/approvals', approvalData);
+        // 2026-06-05: 分步 catch 暴露真实错误（之前笼统"提交作废申请失败"看不到具体步骤）
+        try {
+          await updatePlan(currentBatch.id, { batchStatus: 'pending' } as any);
+        } catch (e: any) {
+          console.error('[作废] updatePlan 失败:', e);
+          await showAlert(`作废失败[步骤1/2:更新计划状态]：${e?.message || String(e)}`);
+          return;
+        }
+        try {
+          await apiClient.post('/approvals', approvalData);
+        } catch (e: any) {
+          console.error('[作废] /approvals POST 失败:', e);
+          await showAlert(`作废失败[步骤2/2:提交审批单]：${e?.message || String(e)}`);
+          return;
+        }
       }
 
       voidedBatchIds.push(currentBatch.id);
@@ -822,8 +840,9 @@ export function useProductionPage(): UseProductionPageReturn {
 
       setShowBatchEditModal(false);
     } catch (error) {
-      // logger.error('提交作废申请失败:', error);
-      await showAlert('提交作废申请失败，请重试');
+      // 2026-06-05: 兜底也显示真实错误（之前吞错看不到原因）
+      console.error('[作废] 整体失败:', error);
+      await showAlert(`提交作废申请失败：${(error as Error)?.message || String(error)}`);
     }
 
     setShowVoidWarning(false);
