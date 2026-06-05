@@ -12,8 +12,8 @@ import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } f
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
-import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
+import { getVarietyByCode } from '../../../../services/cropVarietyService';
 import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore, useSeedlingStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
 import { PlanType } from '../../../../types';
@@ -157,6 +157,19 @@ export function AddModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [sourcePopoverOpen]);
 
+  // 完整品种路径：与种源列表/育苗列表的"品种路径"列保持一致（4 段）
+  const fullVarietyPath = useMemo(() => {
+    if (!formData.selectedCropCode) return null;
+    const variety = getVarietyByCode(formData.selectedCropCode);
+    if (!variety) return null;
+    return {
+      categoryName: variety.categoryName || '',
+      typeName: variety.typeName || '',
+      varietyName: variety.varietyName || '',
+      subVariety1Name: variety.subVariety1Name || '',
+    };
+  }, [formData.selectedCropCode]);
+
   // 自动计算目标成苗数
   const targetSurvivalCount = useMemo(() => {
     if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
@@ -194,6 +207,22 @@ export function AddModal({
       setFormData(prev => ({ ...prev, theoreticalYield }));
     }
   }, [theoreticalYield, formData.calculateMode, formData.theoreticalYield]);
+
+  // 关联种源信息（用于实时校验数量上限）
+  const selectedSource = useMemo(
+    () => seedSources.find(s => s.id === formData.sourceId) || null,
+    [seedSources, formData.sourceId]
+  );
+  const sourceAvailableCount = selectedSource?.availableCount ?? 0;
+
+  // 数量上限校验：单株模式 initialCount / 扩繁模式 motherPlantCount 不能超过种源可用数量
+  const initialCountExceeds = formData.calculateMode === SeedlingCalculateMode.SINGLE
+    && formData.initialCount > 0
+    && formData.initialCount > sourceAvailableCount;
+  const motherCountExceeds = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+    && formData.motherPlantCount > 0
+    && formData.motherPlantCount > sourceAvailableCount;
+  const isCountExceeded = initialCountExceeds || motherCountExceeds;
 
   // 自动计算育苗周期（天）
   const seedlingCycle = useMemo(() => {
@@ -252,7 +281,13 @@ export function AddModal({
   };
 
   const handleSubmit = async () => {
-    // 基本信息验证（2026-06-05: 关联种源改为非必填）
+    // 关联种源必填（单一数据源原则：种源必须先在种源管理中录入）
+    if (!formData.sourceId) {
+      await showAlert('请先选择种源');
+      return;
+    }
+
+    // 基本信息验证
     if (!formData.selectedCropCode || !formData.siteId) {
       await showAlert('请填写完整信息：作物品种、育苗区域为必填项');
       return;
@@ -269,12 +304,20 @@ export function AddModal({
         await showAlert('请输入初始数量');
         return;
       }
+      if (formData.sourceId && formData.initialCount > sourceAvailableCount) {
+        await showAlert(`初始数量 ${formData.initialCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
+        return;
+      }
     }
 
     // 扩繁育苗模式验证
     if (formData.calculateMode === SeedlingCalculateMode.PROPAGATION) {
       if (!formData.motherPlantCount || formData.motherPlantCount <= 0) {
         await showAlert('请输入母株数量');
+        return;
+      }
+      if (formData.sourceId && formData.motherPlantCount > sourceAvailableCount) {
+        await showAlert(`母株数量 ${formData.motherPlantCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
         return;
       }
       if (formData.propagationMultiple === 0) {
@@ -306,7 +349,8 @@ export function AddModal({
     // 构建育苗数据
     const seedlingData = {
       seedlingCode: formData.seedlingCode,
-      sourceCode,
+      sourceId: formData.sourceId,         // 关联种源 DB 主键（后端 source_id 字段）
+      sourceCode,                          // 关联种源批号（显示用）
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
       cropCode: formData.selectedCropCode,
@@ -472,16 +516,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
     }
   };
 
-  // 处理作物品种选择
-  const handleCropCodeChange = (cropCode: string, varietyInfo: unknown) => {
-    setFormData({
-      ...formData,
-      selectedCropCode: cropCode,
-      cropName: varietyInfo?.varietyName || '',
-      cropVariety: varietyInfo?.subVariety1Name || varietyInfo?.varietyName || ''
-    });
-  };
-
   // 场地选择时获取名称
   const handleSiteChange = (siteId: string) => {
     const site = sites.find(s => s.value === siteId);
@@ -590,11 +624,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             <Link2 className="w-4 h-4 text-blue-600" />
             <h3 className="text-sm font-semibold text-blue-900">关联种源信息</h3>
           </div>
+          <p className="text-xs text-gray-500 mb-3">种源必须先在种源管理中录入</p>
           <div className="grid grid-cols-2 gap-4">
             {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
             <div>
               <Label className="text-gray-900">
-                关联种源 <span className="text-gray-400 text-xs">（可选）</span>
+                关联种源 <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -641,7 +676,10 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     {/* 表格行 */}
                     <div className="overflow-y-auto max-h-48">
                       {filteredSeedSources.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-gray-400 text-center">无匹配种源</div>
+                        <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-1">
+                          <div>未找到匹配的种源</div>
+                          <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>
+                        </div>
                       ) : (
                         filteredSeedSources.map(s => (
                           <div
@@ -695,28 +733,42 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               />
             </div>
 
-            {/* 作物品种选择 */}
+            {/* 作物品种：与种源列表"作物品种"列一致，仅显示最终品种名（由种源自动带入） */}
             <div>
               <Label className="text-gray-900">
                 作物品种 <span className="text-red-500">*</span>
               </Label>
-              <CropCodeSelector
-                value={formData.selectedCropCode}
-                onChange={handleCropCodeChange}
-                placeholder="搜索或选择作物品种..."
-                size="md"
-              />
+              <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center min-h-[46px]`}>
+                {formData.cropVariety ? (
+                  <span>{formData.cropVariety}</span>
+                ) : (
+                  <span className="text-gray-400">请先选择种源</span>
+                )}
+              </div>
             </div>
 
-            {/* 作物名称（只读显示） */}
+            {/* 品种路径：与种源列表/育苗列表"品种路径"列 4 段格式保持一致 */}
             <div className="col-span-2">
-              <Label className="text-gray-700">作物名称</Label>
-              <Input
-                type="text"
-                value={formData.cropName ? `${formData.cropName} - ${formData.cropVariety}` : '请选择作物品种'}
-                readOnly
-                className={`${deepInputClass} bg-gray-100 text-gray-600`}
-              />
+              <Label className="text-gray-700">品种路径</Label>
+              <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center gap-1 flex-wrap min-h-[46px]`}>
+                {fullVarietyPath ? (
+                  <>
+                    <span className="text-gray-400">{fullVarietyPath.categoryName}</span>
+                    <span className="text-gray-400">-</span>
+                    <span className="text-gray-700">{fullVarietyPath.typeName}</span>
+                    <span className="text-gray-400">-</span>
+                    <span className="text-gray-700">{fullVarietyPath.varietyName}</span>
+                    {fullVarietyPath.subVariety1Name && (
+                      <>
+                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-900 font-medium">{fullVarietyPath.subVariety1Name}</span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400">请先选择种源</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -876,9 +928,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   type="number"
                   value={formData.initialCount || ''}
                   onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-                  className={deepInputClass}
+                  className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                   placeholder="请输入播种数量"
                 />
+                {initialCountExceeds && (
+                  <p className="text-xs text-red-500 mt-1">
+                    超过种源可用数量（{sourceAvailableCount}）
+                  </p>
+                )}
               </div>
 
               {/* 目标成苗率 */}
@@ -930,9 +987,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     type="number"
                     value={formData.motherPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
-                    className={deepInputClass}
+                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                     placeholder="投入的基础种苗数量"
                   />
+                  {motherCountExceeds && (
+                    <p className="text-xs text-red-500 mt-1">
+                      超过种源可用数量（{sourceAvailableCount}）
+                    </p>
+                  )}
                 </div>
 
                 {/* 扩繁倍数 */}

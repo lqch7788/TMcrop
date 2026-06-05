@@ -114,6 +114,30 @@ export class SeedSourceController {
   }
 
   /**
+   * POST /seed-sources/:id/decrease-available
+   * 扣减可用数量（用于育苗新增等场景）
+   */
+  async decreaseAvailable(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { count } = req.body as { count?: number };
+      const data = await this.service.decreaseAvailable(id, Number(count));
+      res.json({ success: true, data });
+    } catch (error) {
+      const msg = (error as Error).message;
+      if (msg === '种源记录不存在') {
+        res.status(404).json({ success: false, error: '种源记录不存在' });
+      } else if (msg === '扣减数量必须为正数') {
+        res.status(400).json({ success: false, error: msg });
+      } else if (msg.startsWith('可用数量不足')) {
+        res.status(400).json({ success: false, error: msg });
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  /**
    * DELETE /seed-sources/batch
    * 批量删除种源
    */
