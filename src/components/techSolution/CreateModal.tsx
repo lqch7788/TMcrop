@@ -249,6 +249,16 @@ export function CreateModal({
           />
         </FormField>
 
+        {/* 方案内容（与 EditModal 对齐，2026-06-06 新增） */}
+        <FormField label="方案内容">
+          <Textarea
+            value={form.content}
+            onChange={(e) => onFormChange({ ...form, content: e.target.value })}
+            rows={6}
+            placeholder="请输入方案内容（也可通过下方导入文件自动填充）"
+          />
+        </FormField>
+
         {/* 第七行：方案详细文件上传（单独一行） */}
         <FormField label="方案详细">
           <div className="flex items-center gap-3">
