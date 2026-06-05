@@ -28,6 +28,9 @@ router.post('/:id/propagation-records', (req, res, next) => seedSourceController
 router.put('/:id/propagation-stage', (req, res, next) => seedSourceController.updatePropagationStage(req, res, next));
 router.post('/:id/complete-propagation', (req, res, next) => seedSourceController.completePropagation(req, res, next));
 
+// 扣减可用数量（育苗新增时调用，2026-06-05 新增）
+router.post('/:id/decrease-available', (req, res, next) => seedSourceController.decreaseAvailable(req, res, next));
+
 // 检查种源是否可删除（被育苗引用则不可删）
 // 2026-06-04 升级：返回 references 详情列表，前端弹窗可直接展示"被哪些数据引用"
 router.get('/:id/check-deletable', (req, res) => {

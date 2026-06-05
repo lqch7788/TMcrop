@@ -108,6 +108,30 @@ export class SeedSourceService {
   }
 
   /**
+   * 扣减可用数量（用于育苗新增等场景）
+   * DB 列：remaining_quantity（API 字段：availableCount）
+   * @param id 种源ID
+   * @param count 扣减数量（正数）
+   * @returns 更新后的完整记录
+   */
+  async decreaseAvailable(id: string, count: number) {
+    if (!count || count <= 0) {
+      throw new Error('扣减数量必须为正数');
+    }
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      throw new Error('种源记录不存在');
+    }
+    const current = existing.remaining_quantity ?? 0;
+    if (current < count) {
+      throw new Error(`可用数量不足：当前 ${current}，需扣减 ${count}`);
+    }
+    const newAvailable = current - count;
+    await this.repository.update(id, { remaining_quantity: newAvailable } as any);
+    return await this.repository.findById(id);
+  }
+
+  /**
    * 批量删除种源
    * @param ids 种源ID数组
    * @returns 删除结果

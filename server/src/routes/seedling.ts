@@ -256,7 +256,7 @@ router.get('/transplant-ready', (req: Request, res: Response) => {
 
     let sql = `
       SELECT s.*,
-        COALESCE(cv.crop_code, '') AS cropCode,
+        COALESCE(NULLIF(s.crop_code, ''), cv.crop_code, '') AS cropCode,
         COALESCE(cv.category_name, '') AS categoryName,
         COALESCE(cv.type_name, '') AS typeName,
         COALESCE(cv.variety_name, '') AS varietyName,
@@ -364,7 +364,7 @@ router.get('/', (req: Request, res: Response) => {
     // 优先匹配sub_variety1_name，如果没有匹配则匹配variety_name
     let sql = `
       SELECT DISTINCT s.*,
-        COALESCE(cv.crop_code, '') AS cropCode,
+        COALESCE(NULLIF(s.crop_code, ''), cv.crop_code, '') AS cropCode,
         COALESCE(cv.category_name, '') AS categoryName,
         COALESCE(cv.type_name, '') AS typeName,
         COALESCE(cv.variety_name, '') AS varietyName,
@@ -448,13 +448,14 @@ router.get('/:id', (req: Request, res: Response) => {
 
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { id, seedling_code, source_id, source_name, crop_name, crop_variety,
+    const { id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
             work_hours, production_plan_code } = req.body;
-    // 2026-06-05: 兼容 camelCase productionPlanCode
+    // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
+    const cropCode = crop_code ?? req.body.cropCode;
 
     // 方案2.5: 验证育苗地点AreaType=4（种植区）
     if (greenhouse_name) {
@@ -471,12 +472,12 @@ router.post('/', (req: Request, res: Response) => {
 
     const db = getDatabase();
     db.run(`
-      INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_name, crop_variety,
+      INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
         production_plan_code, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, seedling_code, source_id, source_name, crop_name, crop_variety,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
         productionPlanCode || null, now, now]

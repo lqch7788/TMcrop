@@ -42,16 +42,16 @@ export default function SeedlingLabelManageModal({
     }
   }, [isOpen, seedlingId, loadLabels]);
 
-  // 筛选与该育苗相关的标签
+  // 筛选与该育苗相关的标签（2026-06-05: API 返回 camelCase seedlingId，之前写 snake_case 永远 0 条匹配）
   const seedlingLabels = useMemo(() => {
-    return labels.filter((l) => String(l.seedling_id) === String(seedlingId));
+    return labels.filter((l) => String(l.seedlingId) === String(seedlingId));
   }, [labels, seedlingId]);
 
   // 搜索过滤
   const filteredLabels = useMemo(() => {
     if (!searchText) return seedlingLabels;
     return seedlingLabels.filter((l) =>
-      l.label_number.toLowerCase().includes(searchText.toLowerCase())
+      l.labelNumber.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [seedlingLabels, searchText]);
 
@@ -82,12 +82,12 @@ export default function SeedlingLabelManageModal({
 
     const headers = ['标签编号', '移入位置', '移入日期', '移出位置', '移出日期', '创建时间'];
     const rows = toExport.map((l) => [
-      l.label_number,
-      l.move_in_area_name || '',
-      l.move_in_date || '',
-      l.move_out_area_name || '',
-      l.move_out_date || '',
-      l.create_time || '',
+      l.labelNumber,
+      l.moveInAreaName || '',
+      l.moveInDate || '',
+      l.moveOutAreaName || '',
+      l.moveOutDate || '',
+      l.createTime || '',
     ]);
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>育苗标签数据</title>
@@ -181,9 +181,9 @@ export default function SeedlingLabelManageModal({
                         }`}
                         onClick={() => handleSelectLabel(label.id)}
                       >
-                        <TableCell className="px-3 py-2 font-mono text-xs">{label.label_number}</TableCell>
-                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.move_in_area_name || '-'}</TableCell>
-                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.move_in_date || '-'}</TableCell>
+                        <TableCell className="px-3 py-2 font-mono text-xs">{label.labelNumber}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInAreaName || '-'}</TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-gray-600">{label.moveInDate || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -225,7 +225,7 @@ export default function SeedlingLabelManageModal({
                   markColor: r.mark_color || undefined,
                   operatorName: r.operator_name || undefined,
                 }))}
-                currentLabel={selectedLabel?.label_number}
+                currentLabel={selectedLabel?.labelNumber}
                 currentMark={undefined}
               />
             )}
