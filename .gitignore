@@ -68,6 +68,11 @@ electron/
 others/
 temp_backup/
 
+# 工具/规范目录（不提交）
+.codegraph/
+.specify/
+openspec/
+
 # 数据库备份文件（不提交）
 server/data/backups/
 server/data/yuanxingtu_backup_*.db
