@@ -8,6 +8,55 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 import { SeedSourceRecord, SeedSourceQuery } from '../types/seedSource';
 
 /**
+ * 种源表允许更新的列白名单（C10：防止任意字段被写入 DB）
+ * 调用方传入的 key 必须命中此白名单，否则抛出错误。
+ */
+const ALLOWED_UPDATE_COLUMNS = new Set<string>([
+  'source_code',
+  'source_name',
+  'source_type',
+  'source_origin',
+  'production_plan_code',
+  'crop_category',
+  'type_name',
+  'variety_name',
+  'crop_name',
+  'crop_variety',
+  'crop_code',
+  'supplier_id',
+  'supplier_name',
+  'quantity',
+  'unit',
+  'purchase_date',
+  'purchase_price',
+  'total_amount',
+  'used_quantity',
+  'remaining_quantity',
+  'remarks',
+  'pictures',
+  'propagation_type',
+  'propagation_status',
+  'propagation_method',
+  'parent_male_id',
+  'parent_male_code',
+  'parent_female_id',
+  'parent_female_code',
+  'mother_plant_id',
+  'mother_plant_code',
+  'linked_planting_id',
+  'linked_planting_code',
+  'propagation_start_date',
+  'expected_harvest_date',
+  'actual_harvest_date',
+  'breeding_location',
+  'target_traits',
+  'generation',
+  'end_type',
+  'end_time',
+  'print_count',
+]);
+
+/**
  * 种源 Repository 类
  * 提供种源数据的增删改查操作
  */
@@ -53,7 +102,7 @@ export class SeedSourceRepository {
       -- 2026-06-05: 强结分支字段（与 fixMissingSchema ALTER TABLE 同步）
       ss.end_type AS endType,
       ss.end_time AS endTime,
-      0 AS printCount,
+      COALESCE(ss.print_count, 0) AS printCount,
       ss.create_by AS createBy,
       ss.create_time AS createTime,
       ss.update_time AS updateTime,
@@ -234,14 +283,21 @@ export class SeedSourceRepository {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    const fields = Object.keys(data).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    // C10：白名单过滤，防止调用方传任意字段写入 DB
+    const keys = Object.keys(data).filter(k => k !== 'id');
+    const invalidKeys = keys.filter(k => !ALLOWED_UPDATE_COLUMNS.has(k));
+    if (invalidKeys.length > 0) {
+      throw new Error(`不允许更新的字段: ${invalidKeys.join(', ')}`);
+    }
+
+    const fields = keys.map(k => `${k} = ?`).join(', ');
 
     if (fields.length === 0) {
       throw new Error('没有需要更新的字段');
     }
 
     // 使用 any[] 来避免 sql.js 类型严格检查问题
-    const values: any[] = Object.keys(data).filter(k => k !== 'id').map(k => data[k as keyof SeedSourceRecord]);
+    const values: any[] = keys.map(k => data[k as keyof SeedSourceRecord]);
     values.push(now, id);
 
     db.run(`UPDATE seed_sources SET ${fields}, update_time = ? WHERE id = ?`, values);
@@ -524,6 +580,123 @@ export class SeedSourceRepository {
       [newInitial, newAvailable, now, now, id]
     );
     saveDatabase();
+  }
+
+  /**
+   * 检查种源是否可删除（C8：下沉到 repository，补全所有引用方）
+   * 引用方：
+   *   1. seedlings.source_id
+   *   2. propagation_records.seed_source_id
+   *   3. seed_source_print_records.seed_source_id
+   *   4. plantings.linked_planting_id（反查种源表 id 字段）
+   * @param id 种源ID
+   * @returns { deletable, references }
+   */
+  async checkDeletable(id: string): Promise<{
+    deletable: boolean;
+    references: Array<{
+      module: string;
+      moduleCode: string;
+      id: string;
+      code: string;
+      cropName?: string;
+      cropVariety?: string;
+      date?: string;
+      status?: string;
+    }>;
+  }> {
+    const db = getDatabase();
+    const references: Array<{
+      module: string;
+      moduleCode: string;
+      id: string;
+      code: string;
+      cropName?: string;
+      cropVariety?: string;
+      date?: string;
+      status?: string;
+    }> = [];
+
+    // 引用方1：育苗记录（source_id）
+    const seedlingRefs = db.exec(`
+      SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
+      FROM seedlings WHERE source_id = ?
+      ORDER BY create_time DESC
+    `, [id]);
+    for (const row of seedlingRefs[0]?.values || []) {
+      references.push({
+        module: '育苗管理',
+        moduleCode: 'seedling',
+        id: row[0] as string,
+        code: row[1] as string,
+        cropName: row[2] as string,
+        cropVariety: row[3] as string,
+        date: row[4] as string,
+        status: row[5] as string,
+      });
+    }
+
+    // 引用方2：繁殖过程记录（seed_source_id）
+    const propRefs = db.exec(`
+      SELECT id, stage, record_date, operator
+      FROM propagation_records WHERE seed_source_id = ?
+      ORDER BY record_date DESC, create_time DESC
+      LIMIT 100
+    `, [id]);
+    for (const row of propRefs[0]?.values || []) {
+      references.push({
+        module: '繁殖过程记录',
+        moduleCode: 'propagation_record',
+        id: row[0] as string,
+        code: row[0] as string,
+        date: row[2] as string,
+        status: row[1] as string,
+        cropName: row[3] as string,
+      });
+    }
+
+    // 引用方3：打印记录（seed_source_id）
+    const printRefs = db.exec(`
+      SELECT id, print_type, print_time, print_count
+      FROM seed_source_print_records WHERE seed_source_id = ?
+      ORDER BY print_time DESC
+      LIMIT 100
+    `, [id]);
+    for (const row of printRefs[0]?.values || []) {
+      references.push({
+        module: '种源打印记录',
+        moduleCode: 'seed_source_print',
+        id: row[0] as string,
+        code: row[0] as string,
+        date: row[2] as string,
+        status: row[1] as string,
+      });
+    }
+
+    // 引用方4：种植记录（linked_planting_id 反查种源表 id）
+    const plantingRefs = db.exec(`
+      SELECT id, planting_code, crop_name, crop_variety, planting_date, status
+      FROM plantings WHERE linked_planting_id = ?
+      ORDER BY update_time DESC
+      LIMIT 100
+    `, [id]);
+    for (const row of plantingRefs[0]?.values || []) {
+      references.push({
+        module: '种植管理',
+        moduleCode: 'planting',
+        id: row[0] as string,
+        code: row[1] as string,
+        cropName: row[2] as string,
+        cropVariety: row[3] as string,
+        date: row[4] as string,
+        status: row[5] as string,
+      });
+    }
+
+    return {
+      deletable: references.length === 0,
+      references,
+    };
   }
 
   /**

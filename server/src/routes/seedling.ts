@@ -1,12 +1,19 @@
 /**
  * 育苗 API 路由
+ * C1：所有路由都经过 authenticate 中间件
  */
 
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { authenticate } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
+import { seedSourceService } from '../services/seedSource.service';
 
 const router = Router();
+
+// C1：全局应用 auth 中间件
+router.use(authenticate);
 
 // ============================================
 // 批量操作路由必须在 /:id 之前定义，否则 /batch 会被当作 :id 参数
@@ -117,6 +124,72 @@ router.get('/generate-code', (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: '生成育苗批号失败' });
   }
 });
+
+/**
+ * 原子操作：扣减种源 + 创建育苗记录（C9）
+ * POST /api/seedlings/with-deduct
+ * Body: { sourceId: string, count: number, seedling: {...} }
+ * 顺序：deduct source.remaining_quantity → insert seedling
+ * 失败回滚：deduct 失败直接抛；insert 失败则 reverse deduct
+ */
+router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => {
+  const { sourceId, count, seedling } = req.body || {};
+
+  if (!sourceId || typeof sourceId !== 'string') {
+    return res.status(400).json({ success: false, error: '缺少 sourceId 参数' });
+  }
+  if (!seedling || typeof seedling !== 'object') {
+    return res.status(400).json({ success: false, error: '缺少 seedling 参数' });
+  }
+
+  // 步骤1：扣减种源（service 内部校验 + FAILED 守卫 + 整数防御）
+  // 扣减失败直接抛 400/404，由 asyncHandler 统一走全局 errorHandler
+  await seedSourceService.decreaseAvailable(sourceId, Number(count));
+
+  // 步骤2：创建育苗记录（如果失败，反向回滚扣减）
+  const db = getDatabase();
+  const newId = seedling.id || `SD${Date.now()}`;
+  const now = new Date().toISOString();
+  const { seedling_code, source_name, crop_code, crop_name, crop_variety,
+          seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
+          seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
+          work_hours, production_plan_code } = seedling;
+  const productionPlanCode = production_plan_code ?? seedling.productionPlanCode;
+  const workHours = work_hours ?? seedling.workHours;
+  const cropCode = crop_code ?? seedling.cropCode;
+
+  try {
+    db.run(`
+      INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
+        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
+        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
+        production_plan_code, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [newId, seedling_code, sourceId, source_name, cropCode, crop_name, crop_variety,
+        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
+        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+        productionPlanCode || null, now, now]
+        .map(v => v === undefined ? null : v));
+
+    saveDatabase();
+    return res.status(201).json({ success: true, data: { id: newId } });
+  } catch (insertErr) {
+    // 反向回滚：把刚刚扣减的 count 加回去
+    try {
+      const current = await seedSourceService.getById(sourceId);
+      if (current) {
+        const restoreCount = (current.remaining_quantity ?? 0) + Number(count);
+        db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
+          [restoreCount, now, sourceId]);
+        saveDatabase();
+      }
+    } catch (rollbackErr) {
+      // 回滚失败：抛出原始错误，提示需要人工介入
+      console.error('[with-deduct] 反向回滚失败:', rollbackErr);
+    }
+    throw insertErr;
+  }
+}));
 
 /**
  * 重置育苗数据

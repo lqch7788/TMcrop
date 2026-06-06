@@ -1,13 +1,20 @@
 /**
  * 种源路由
  * 精简为直接调用 Controller
+ * C1：所有路由都经过 authenticate 中间件（演示模式自动放行，生产模式需 token）
  */
 
 import { Router } from 'express';
 import { seedSourceController } from '../controllers/seedSource.controller';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
+import { seedSourceRepository } from '../repositories/seedSource.repository';
+import { authenticate } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
+
+// C1：全局应用 auth 中间件（演示模式下 DEMO_USERS 名单会跳过认证）
+router.use(authenticate);
 
 // 注意：generate-code 和 batch 路由必须在 :id 路由之前，否则会被 :id 匹配
 
@@ -31,105 +38,55 @@ router.post('/:id/complete-propagation', (req, res, next) => seedSourceControlle
 // 扣减可用数量（育苗新增时调用，2026-06-05 新增）
 router.post('/:id/decrease-available', (req, res, next) => seedSourceController.decreaseAvailable(req, res, next));
 
-// 检查种源是否可删除（被育苗引用则不可删）
-// 2026-06-04 升级：返回 references 详情列表，前端弹窗可直接展示"被哪些数据引用"
-router.get('/:id/check-deletable', (req, res) => {
-  try {
-    const { id } = req.params;
-    const db = getDatabase();
-
-    // 引用方1：育苗记录（source_id）
-    const seedlingRefs = db.exec(`
-      SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
-      FROM seedlings WHERE source_id = ?
-      ORDER BY create_time DESC
-    `, [id]);
-
-    const references: Array<{
-      module: string;
-      moduleCode: string;
-      id: string;
-      code: string;
-      cropName?: string;
-      cropVariety?: string;
-      date?: string;
-      status?: string;
-    }> = (seedlingRefs[0]?.values || []).map((row) => ({
-      module: '育苗管理',
-      moduleCode: 'seedling',
-      id: row[0] as string,
-      code: row[1] as string,
-      cropName: row[2] as string,
-      cropVariety: row[3] as string,
-      date: row[4] as string,
-      status: row[5] as string,
-    }));
-
-    // 引用方2：可在此扩展（订单/采收等如果引用了种源，加在这里即可）
-    // const orderRefs = db.exec(`...`, [id]);
-
-    res.json({
-      success: true,
-      data: {
-        deletable: references.length === 0,
-        references,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '检查失败' });
-  }
-});
+// 检查种源是否可删除（C8：下沉到 repository，补全所有引用方）
+// 引用方：seedlings.source_id / propagation_records.seed_source_id / seed_source_print_records.seed_source_id / plantings.linked_planting_id
+router.get('/:id/check-deletable', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const data = await seedSourceRepository.checkDeletable(id);
+  res.json({ success: true, data });
+}));
 
 // 打印记录相关路由
 // 获取打印记录
-router.get('/:id/print-records', (req, res) => {
-  try {
-    const { id } = req.params;
-    const db = getDatabase();
-    const records = db.exec(`
-      SELECT * FROM seed_source_print_records
-      WHERE seed_source_id = ?
-      ORDER BY print_time DESC
-    `, [id]);
-    const data = records.length > 0 ? records[0].values.map(row => {
-      const obj: any = {};
-      records[0].columns.forEach((col, idx) => obj[col] = row[idx]);
-      if (obj.label_numbers) obj.label_numbers = JSON.parse(obj.label_numbers);
-      return obj;
-    }) : [];
-    res.json({ success: true, data });
-  } catch (error) {
-    console.error('获取打印记录失败:', error);
-    res.status(500).json({ success: false, error: '获取打印记录失败' });
-  }
-});
+router.get('/:id/print-records', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const db = getDatabase();
+  const records = db.exec(`
+    SELECT * FROM seed_source_print_records
+    WHERE seed_source_id = ?
+    ORDER BY print_time DESC
+  `, [id]);
+  const data = records.length > 0 ? records[0].values.map(row => {
+    const obj: any = {};
+    records[0].columns.forEach((col, idx) => obj[col] = row[idx]);
+    if (obj.label_numbers) obj.label_numbers = JSON.parse(obj.label_numbers);
+    return obj;
+  }) : [];
+  res.json({ success: true, data });
+}));
 
 // 创建打印记录
-router.post('/:id/print', (req, res) => {
-  try {
-    const { id } = req.params;
-    const { printType, printCount, operator, labelNumbers } = req.body;
-    const db = getDatabase();
+router.post('/:id/print', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { printType, printCount, operator, labelNumbers } = req.body;
+  const db = getDatabase();
 
-    // 生成打印记录ID
-    const recordId = `SPR${Date.now()}`;
-    const now = new Date().toISOString();
+  // 生成打印记录ID
+  const recordId = `SPR${Date.now()}`;
+  const now = new Date().toISOString();
 
-    // 插入打印记录
-    db.run(`
-      INSERT INTO seed_source_print_records (id, seed_source_id, print_type, print_count, operator, label_numbers, print_time, create_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [recordId, id, printType || 'new', printCount || 1, operator || '', JSON.stringify(labelNumbers || []), now, now]);
+  // 插入打印记录
+  db.run(`
+    INSERT INTO seed_source_print_records (id, seed_source_id, print_type, print_count, operator, label_numbers, print_time, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [recordId, id, printType || 'new', printCount || 1, operator || '', JSON.stringify(labelNumbers || []), now, now]);
 
-    // 更新种源的打印次数
-    db.run(`UPDATE seed_sources SET print_count = print_count + ? WHERE id = ?`, [printCount || 1, id]);
+  // 更新种源的打印次数
+  db.run(`UPDATE seed_sources SET print_count = print_count + ? WHERE id = ?`, [printCount || 1, id]);
 
-    res.json({ success: true, data: { id: recordId, printCount: printCount || 1 } });
-  } catch (error) {
-    console.error('创建打印记录失败:', error);
-    res.status(500).json({ success: false, error: '创建打印记录失败' });
-  }
-});
+  saveDatabase();
+  res.json({ success: true, data: { id: recordId, printCount: printCount || 1 } });
+}));
 
 // 将请求传递给 controller
 router.get('/', (req, res, next) => seedSourceController.getAll(req, res, next));

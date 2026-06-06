@@ -3,8 +3,74 @@
  * 负责业务逻辑处理和数据转换
  */
 
+import { z } from 'zod';
 import { seedSourceRepository, SeedSourceRepository } from '../repositories/seedSource.repository';
-import { SeedSourceQuery, CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
+import {
+  SeedSourceQuery,
+  CreateSeedSourceDTO,
+  UpdateSeedSourceDTO,
+  CreatePropagationRecordDTO,
+  UpdatePropagationStageDTO,
+  CompletePropagationDTO,
+} from '../types/seedSource';
+import {
+  PROPAGATION_STAGES,
+  PROPAGATION_NEXT_STAGES,
+  PropagationStage,
+} from '../types/propagation';
+
+/**
+ * 2026-06-06: 业务错误码（L4 — 替代 msg.startsWith 文本匹配）
+ * Controller 用 `instanceof BusinessError` + `code` 匹配，避开文案漂移
+ */
+export class BusinessError extends Error {
+  code: string;
+  httpStatus: number;
+  constructor(code: string, message: string, httpStatus = 400) {
+    super(message);
+    this.name = 'BusinessError';
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+/** 错误码常量（前端用此码展示对应文案） */
+export const SeedSourceErrorCode = {
+  NOT_FOUND: 'SEED_SOURCE_NOT_FOUND',
+  INVALID_DECREASE_COUNT: 'SEED_SOURCE_INVALID_DECREASE_COUNT',
+  INSUFFICIENT_AVAILABLE: 'SEED_SOURCE_INSUFFICIENT_AVAILABLE',
+  FAILED_STATUS: 'SEED_SOURCE_FAILED_STATUS',
+  BATCH_TOO_LARGE: 'SEED_SOURCE_BATCH_TOO_LARGE',
+} as const;
+
+/**
+ * 扣减可用数量入参 schema（C10/H4：用 zod 校验替代 as any + 整数防御）
+ */
+const decreaseAvailableSchema = z.object({
+  count: z
+    .number({ error: 'count 必须为数字' })
+    .int('count 必须为整数')
+    .positive('count 必须为正数')
+    .max(1e7, 'count 单次最多 10000000'),
+});
+
+/** 推进阶段入参 schema（C6：阶段枚举强约束） */
+const updatePropagationStageSchema = z.object({
+  new_stage: z.enum(PROPAGATION_STAGES, {
+    error: `new_stage 必须是 ${PROPAGATION_STAGES.join('/')} 之一`,
+  }),
+  operator: z.string().optional(),
+});
+
+/** 完成入库入参 schema（C7：quantity 必须为正整数） */
+const completePropagationSchema = z.object({
+  quantity: z
+    .number({ error: 'quantity 必须为数字' })
+    .int('quantity 必须为整数')
+    .positive('quantity 必须为正数')
+    .max(1e7, 'quantity 单次最多 10000000'),
+  operator: z.string().optional(),
+});
 
 /**
  * 种源服务类
@@ -97,12 +163,13 @@ export class SeedSourceService {
    * @param id 种源ID
    */
   async delete(id: string) {
-    // 检查记录是否存在
+    if (!id) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
+    }
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw new Error('种源记录不存在');
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
     }
-
     await this.repository.delete(id);
     return { id };
   }
@@ -110,35 +177,59 @@ export class SeedSourceService {
   /**
    * 扣减可用数量（用于育苗新增等场景）
    * DB 列：remaining_quantity（API 字段：availableCount）
+   * C10/H4/L3：zod 校验 + 整数防御 + 拒绝 FAILED 状态
    * @param id 种源ID
-   * @param count 扣减数量（正数）
+   * @param count 扣减数量（正整数）
    * @returns 更新后的完整记录
    */
   async decreaseAvailable(id: string, count: number) {
-    if (!count || count <= 0) {
-      throw new Error('扣减数量必须为正数');
+    // C10/H4: 用 zod 校验 + 整数防御
+    const parsed = decreaseAvailableSchema.safeParse({ count });
+    if (!parsed.success) {
+      throw new BusinessError(
+        SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+        `参数错误: ${parsed.error.issues[0]?.message || parsed.error.message}`,
+      );
     }
+    const safeCount = parsed.data.count;
+
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw new Error('种源记录不存在');
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
     }
+
+    // L3: 拒绝 FAILED 状态扣减
+    if (existing.propagation_status === 'failed') {
+      throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
+    }
+
     const current = existing.remaining_quantity ?? 0;
-    if (current < count) {
-      throw new Error(`可用数量不足：当前 ${current}，需扣减 ${count}`);
+    if (current < safeCount) {
+      throw new BusinessError(
+        SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
+        `可用数量不足：当前 ${current}，需扣减 ${safeCount}`,
+      );
     }
-    const newAvailable = current - count;
-    await this.repository.update(id, { remaining_quantity: newAvailable } as any);
+    const newAvailable = current - safeCount;
+    await this.repository.update(id, { remaining_quantity: newAvailable });
     return await this.repository.findById(id);
   }
 
   /**
    * 批量删除种源
+   * H8：限制单次最多 100 条
    * @param ids 种源ID数组
    * @returns 删除结果
    */
   async deleteBatch(ids: string[]) {
     if (!ids || ids.length === 0) {
-      throw new Error('缺少 ids 参数');
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '缺少 ids 参数');
+    }
+    if (ids.length > 100) {
+      throw new BusinessError(
+        SeedSourceErrorCode.BATCH_TOO_LARGE,
+        `批量删除单次最多 100 条，当前 ${ids.length} 条`,
+      );
     }
 
     const deletedCount = await this.repository.deleteBatch(ids);
@@ -198,28 +289,70 @@ export class SeedSourceService {
 
   /**
    * 推进繁殖阶段
+   * C6：枚举强约束 + 禁止跳跃/倒回
+   * M6：允许从 planned/in_progress/harvested/quality_checked → failed
    */
   async updatePropagationStage(seedSourceId: string, data: UpdatePropagationStageDTO) {
+    // C6: zod 校验枚举
+    const parsed = updatePropagationStageSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error(`参数错误: ${parsed.error.issues[0]?.message || parsed.error.message}`);
+    }
+    const safeData = parsed.data;
+
     const existing = await this.repository.findById(seedSourceId);
     if (!existing) {
       throw new Error('种源记录不存在');
     }
 
-    await this.repository.updatePropagationStage(seedSourceId, data.new_stage);
-    return { id: seedSourceId, new_stage: data.new_stage };
+    const currentStage = (existing.propagation_status || 'planned') as PropagationStage;
+    const nextStage = safeData.new_stage;
+
+    // C6: 禁止跳跃（只能 +1 进入下一个阶段；允许任意状态 → failed）
+    if (nextStage === 'failed') {
+      const allowedFromForFailed: PropagationStage[] = ['planned', 'in_progress', 'harvested', 'quality_checked'];
+      if (!allowedFromForFailed.includes(currentStage)) {
+        throw new Error(`当前状态 ${currentStage} 不允许标记为 failed`);
+      }
+    } else {
+      const allowedNext = PROPAGATION_NEXT_STAGES[currentStage] || [];
+      if (!allowedNext.includes(nextStage)) {
+        throw new Error(
+          `非法阶段推进：当前 ${currentStage}，目标 ${nextStage}。允许的下一阶段: ${allowedNext.join('/') || '(终态)'}`
+        );
+      }
+    }
+
+    await this.repository.updatePropagationStage(seedSourceId, nextStage);
+    return { id: seedSourceId, new_stage: nextStage };
   }
 
   /**
    * 完成繁殖入库
+   * C7：仅当 propagation_status === 'quality_checked' 才放行
    */
   async completePropagation(seedSourceId: string, data: CompletePropagationDTO) {
+    // C7: zod 校验 quantity
+    const parsed = completePropagationSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error(`参数错误: ${parsed.error.issues[0]?.message || parsed.error.message}`);
+    }
+    const safeData = parsed.data;
+
     const existing = await this.repository.findById(seedSourceId);
     if (!existing) {
       throw new Error('种源记录不存在');
     }
 
-    await this.repository.completePropagation(seedSourceId, data.quantity);
-    return { id: seedSourceId, quantity: data.quantity };
+    // C7: 必须先经过 quality_checked 阶段
+    if (existing.propagation_status !== 'quality_checked') {
+      throw new Error(
+        `当前 propagation_status=${existing.propagation_status || 'null'}，必须先推进到 quality_checked 才能完成入库`
+      );
+    }
+
+    await this.repository.completePropagation(seedSourceId, safeData.quantity);
+    return { id: seedSourceId, quantity: safeData.quantity };
   }
 
   /**
