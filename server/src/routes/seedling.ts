@@ -8,7 +8,7 @@ import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
-import { seedSourceService } from '../services/seedSource.service';
+import { seedSourceService, BusinessError, SeedSourceErrorCode } from '../services/seedSource.service';
 
 const router = Router();
 
@@ -130,7 +130,9 @@ router.get('/generate-code', (req: Request, res: Response) => {
  * POST /api/seedlings/with-deduct
  * Body: { sourceId: string, count: number, seedling: {...} }
  * 顺序：deduct source.remaining_quantity → insert seedling
- * 失败回滚：deduct 失败直接抛；insert 失败则 reverse deduct
+ * 真事务：BEGIN → UPDATE seed_sources → INSERT seedlings → COMMIT；
+ *        任何一步失败整体 ROLLBACK。
+ * 保留请求/响应结构（兼容前端）：成功 {success:true, data:{id}}；失败抛 BusinessError。
  */
 router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => {
   const { sourceId, count, seedling } = req.body || {};
@@ -142,11 +144,6 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     return res.status(400).json({ success: false, error: '缺少 seedling 参数' });
   }
 
-  // 步骤1：扣减种源（service 内部校验 + FAILED 守卫 + 整数防御）
-  // 扣减失败直接抛 400/404，由 asyncHandler 统一走全局 errorHandler
-  await seedSourceService.decreaseAvailable(sourceId, Number(count));
-
-  // 步骤2：创建育苗记录（如果失败，反向回滚扣减）
   const db = getDatabase();
   const newId = seedling.id || `SD${Date.now()}`;
   const now = new Date().toISOString();
@@ -158,7 +155,48 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const workHours = work_hours ?? seedling.workHours;
   const cropCode = crop_code ?? seedling.cropCode;
 
+  // 步骤0：参数校验（与 seedSourceService.decreaseAvailable 保持等价语义）
+  const safeCount = Number(count);
+  if (!Number.isFinite(safeCount) || !Number.isInteger(safeCount) || safeCount <= 0) {
+    throw new BusinessError(
+      SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+      `参数错误: count 必须为正整数，当前 ${count}`,
+    );
+  }
+
+  // 真事务：扣减 + 插入 整体原子化
+  db.exec('BEGIN');
   try {
+    // 步骤1：查询种源（事务内取最新值）
+    const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ?');
+    stmt.bind([sourceId]);
+    let existing: { remaining_quantity?: number; propagation_status?: string } | null = null;
+    if (stmt.step()) {
+      existing = stmt.getAsObject() as any;
+    }
+    stmt.free();
+
+    if (!existing) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
+    }
+    // L3：拒绝 FAILED 状态扣减
+    if (existing.propagation_status === 'failed') {
+      throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
+    }
+    const current = existing.remaining_quantity ?? 0;
+    if (current < safeCount) {
+      throw new BusinessError(
+        SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
+        `可用数量不足：当前 ${current}，需扣减 ${safeCount}`,
+      );
+    }
+    const newAvailable = current - safeCount;
+
+    // 步骤2：扣减种源（不调用 service，避免内部 saveDatabase 提前落盘）
+    db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
+      [newAvailable, now, sourceId]);
+
+    // 步骤3：创建育苗记录
     db.run(`
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
@@ -171,22 +209,13 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         productionPlanCode || null, now, now]
         .map(v => v === undefined ? null : v));
 
+    // 步骤4：提交 + 落盘
+    db.exec('COMMIT');
     saveDatabase();
     return res.status(201).json({ success: true, data: { id: newId } });
   } catch (insertErr) {
-    // 反向回滚：把刚刚扣减的 count 加回去
-    try {
-      const current = await seedSourceService.getById(sourceId);
-      if (current) {
-        const restoreCount = (current.remaining_quantity ?? 0) + Number(count);
-        db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
-          [restoreCount, now, sourceId]);
-        saveDatabase();
-      }
-    } catch (rollbackErr) {
-      // 回滚失败：抛出原始错误，提示需要人工介入
-      console.error('[with-deduct] 反向回滚失败:', rollbackErr);
-    }
+    // 任一失败：整体回滚（sql.js 在 ROLLBACK 后会自动丢弃事务内所有变更）
+    try { db.exec('ROLLBACK'); } catch { /* ignore */ }
     throw insertErr;
   }
 }));
@@ -1037,40 +1066,6 @@ router.get('/:id/print-records', (req: Request, res: Response) => {
 });
 
 /**
- * 根据来源ID获取育苗记录
- * GET /api/seedlings/source/:sourceId
- */
-router.get('/source/:sourceId', (req: Request, res: Response) => {
-  try {
-    const { sourceId } = req.params;
-    const db = getDatabase();
-    const sql = 'SELECT * FROM seedlings WHERE source_id = ? ORDER BY create_time DESC';
-    const items = queryToObjects(db, sql, [sourceId]);
-    res.json({ success: true, data: items });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '获取来源育苗记录失败' });
-  }
-});
-
-/**
- * 生成育苗批号
- * GET /api/seedlings/generate-code
- */
-router.get('/generate-code', (req: Request, res: Response) => {
-  try {
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    const code = `SD${year}${month}${day}${random}`;
-    res.json({ success: true, data: code });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '生成育苗批号失败' });
-  }
-});
-
-/**
  * 获取可用定植数量
  * GET /api/seedlings/:id/available-count
  */
@@ -1139,153 +1134,6 @@ router.post('/:id/increase-planted', (req: Request, res: Response) => {
     res.json({ success: true, data: { planted_quantity: newPlanted } });
   } catch (error) {
     res.status(500).json({ success: false, error: '增加已定植数量失败' });
-  }
-});
-
-/**
- * 重置育苗数据
- * POST /api/seedlings/reset
- */
-router.post('/reset', (req: Request, res: Response) => {
-  try {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    // 清空现有数据
-    db.run('DELETE FROM seedlings');
-
-    // 插入默认数据
-    const defaultData = [
-      {
-        id: 'SD001',
-        seedling_code: 'YM2026-001',
-        source_id: 'SS001',
-        source_name: 'ZZ2026-001',
-        crop_name: '番茄',
-        crop_variety: '红果番茄',
-        seedling_type: '嫁接苗',
-        greenhouse_name: '育苗棚1',
-        area_name: '01区',
-        seedling_date: '2026-04-01',
-        expected_finish_date: '2026-04-25',
-        seedling_quantity: 50000,
-        survival_quantity: 47500,
-        survival_rate: 95,
-        status: 'in_progress',
-        remarks: '长势良好',
-        create_by: '李明辉',
-        create_time: now,
-        update_time: now
-      },
-      {
-        id: 'SD002',
-        seedling_code: 'YM2026-002',
-        source_id: 'SS002',
-        source_name: 'ZZ2026-002',
-        crop_name: '黄瓜',
-        crop_variety: '水果黄瓜',
-        seedling_type: '实生苗',
-        greenhouse_name: '育苗棚2',
-        area_name: '02区',
-        seedling_date: '2026-04-05',
-        expected_finish_date: '2026-04-28',
-        seedling_quantity: 30000,
-        survival_quantity: 28500,
-        survival_rate: 95,
-        status: 'completed',
-        remarks: '第二批育苗',
-        create_by: '王建国',
-        create_time: now,
-        update_time: now
-      }
-    ];
-
-    for (const item of defaultData) {
-      db.run(`
-        INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_name, crop_variety,
-          seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-          seedling_quantity, survival_quantity, survival_rate, status, remarks, create_by, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [item.id, item.seedling_code, item.source_id, item.source_name, item.crop_name, item.crop_variety,
-          item.seedling_type, item.greenhouse_name, item.area_name, item.seedling_date, item.expected_finish_date,
-          item.seedling_quantity, item.survival_quantity, item.survival_rate, item.status, item.remarks, item.create_by, item.create_time, item.update_time]);
-    }
-
-    saveDatabase();
-    res.json({ success: true, message: '育苗数据已重置' });
-  } catch (error) {
-    console.error('重置育苗数据失败:', error);
-    res.status(500).json({ success: false, error: '重置育苗数据失败' });
-  }
-});
-
-/**
- * 生成标签编号
- * GET /api/seedlings/label-number?code=xxx&index=1
- */
-router.get('/label-number', (req: Request, res: Response) => {
-  try {
-    const { code, index } = req.query;
-
-    if (!code) {
-      return res.status(400).json({ success: false, error: '缺少 code 参数' });
-    }
-
-    const idx = parseInt(index as string) || 1;
-    const labelNumber = `${code}-${String(idx).padStart(4, '0')}`;
-    res.json({ success: true, data: labelNumber });
-  } catch (error) {
-    res.status(500).json({ success: false, error: '生成标签编号失败' });
-  }
-});
-
-/**
- * 批量打印标签
- * POST /api/seedlings/batch-print
- */
-router.post('/batch-print', (req: Request, res: Response) => {
-  try {
-    const { seedlingIds, operator } = req.body;
-
-    if (!Array.isArray(seedlingIds) || seedlingIds.length === 0) {
-      return res.status(400).json({ success: false, error: '缺少 seedlingIds 参数或 seedlingIds 不是有效数组' });
-    }
-
-    const db = getDatabase();
-    const now = new Date().toISOString();
-    const results: any[] = [];
-
-    for (const seedlingId of seedlingIds) {
-      // 获取育苗记录
-      const stmt = db.prepare('SELECT * FROM seedlings WHERE id = ?');
-      stmt.bind([seedlingId]);
-      let seedling: any = null;
-      if (stmt.step()) {
-        seedling = stmt.getAsObject();
-      }
-      stmt.free();
-
-      if (!seedling) continue;
-
-      // 生成打印记录
-      const newId = `PR${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      const newOid = `PR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-
-      db.run(`
-        INSERT INTO print_records (id, oid, print_type, print_title, related_id, related_code, related_type,
-          printer_name, paper_size, copies, print_status, create_by, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [newId, newOid, 'seedling_label', '育苗标签打印', seedlingId, seedling.seedling_code,
-          'seedling', null, 'A6', 1, 'success', operator, now, now]);
-
-      results.push({ id: newId, oid: newOid, seedlingId, seedlingCode: seedling.seedling_code });
-    }
-
-    saveDatabase();
-    res.status(201).json({ success: true, data: results });
-  } catch (error) {
-    console.error('批量打印失败:', error);
-    res.status(500).json({ success: false, error: '批量打印失败' });
   }
 });
 
