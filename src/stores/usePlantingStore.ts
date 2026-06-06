@@ -11,6 +11,9 @@ interface PlantingState {
   isLoading: boolean;
   error: string | null;
 
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
+
   loadItems: () => Promise<void>;
   addItem: (item: Omit<Planting, 'id' | 'createTime' | 'updateTime'>) => Promise<Planting | null>;
   updateItem: (id: string, updates: Partial<Planting>) => Promise<Planting | null>;
@@ -24,6 +27,8 @@ export const usePlantingStore = create<PlantingState>()(
     items: [],
     isLoading: false,
     error: null,
+
+    clearError: () => set({ error: null }),
 
     loadItems: async () => {
       set({ isLoading: true, error: null });

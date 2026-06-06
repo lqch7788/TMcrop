@@ -3,10 +3,10 @@
  * V12.0 新增
  * 布局：PageHeader → FilterBar → StatsCards → Table → Modals
  */
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Sprout, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePestControlStore, PestControlData } from '@/stores';
+import { usePestControlStore, PestControlData, useToastStore } from '@/stores';
 import { PestControlFilter } from './PestControlFilter';
 import { PestControlTable } from './PestControlTable';
 import { PestControlStatsCards } from './PestControlStatsCards';
@@ -20,7 +20,10 @@ type OperationMode = 'normal' | 'delete' | 'export';
 
 export default function PestControlPage() {
   const store = usePestControlStore();
-  const { items, isLoading, error } = store;
+  const { items, isLoading, error, clearError } = store;
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -36,6 +39,15 @@ export default function PestControlPage() {
   useEffect(() => {
     store.fetchItems(filters);
   }, []);
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载病虫害数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // 统计数据
   const stats = useMemo(() => {

@@ -107,6 +107,8 @@ interface PestControlState {
   stats: any[];
   isLoading: boolean;
   error: string | null;
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
   fetchItems: (filters?: Record<string, string>) => Promise<void>;
   fetchItemById: (id: string) => Promise<PestControlData | null>;
   createItem: (item: Partial<PestControlData>) => Promise<PestControlData | null>;
@@ -123,6 +125,8 @@ export const usePestControlStore = create<PestControlState>()(
     stats: [],
     isLoading: false,
     error: null,
+
+    clearError: () => set({ error: null }),
 
     fetchItems: async (filters = {}) => {
       set({ isLoading: true, error: null });

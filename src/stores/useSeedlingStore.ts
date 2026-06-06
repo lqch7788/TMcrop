@@ -11,6 +11,9 @@ interface SeedlingState {
   isLoading: boolean;
   error: string | null;
 
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
+
   loadItems: () => Promise<void>;
   addItem: (item: Omit<Seedling, 'id' | 'createTime' | 'updateTime'>) => Promise<Seedling | null>;
   updateItem: (id: string, updates: Partial<Seedling>) => Promise<Seedling | null>;
@@ -27,6 +30,8 @@ export const useSeedlingStore = create<SeedlingState>()(
     items: [],
     isLoading: false,
     error: null,
+
+    clearError: () => set({ error: null }),
 
     loadItems: async () => {
       set({ isLoading: true, error: null });

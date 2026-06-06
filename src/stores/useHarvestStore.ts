@@ -11,6 +11,9 @@ interface HarvestState {
   isLoading: boolean;
   error: string | null;
 
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
+
   loadItems: () => Promise<void>;
   addItem: (item: Omit<HarvestRecord, 'id'>) => Promise<HarvestRecord | null>;
   updateItem: (id: string, updates: Partial<HarvestRecord>) => Promise<HarvestRecord | null>;
@@ -23,6 +26,8 @@ export const useHarvestStore = create<HarvestState>()(
     items: [],
     isLoading: false,
     error: null,
+
+    clearError: () => set({ error: null }),
 
     loadItems: async () => {
       set({ isLoading: true, error: null });

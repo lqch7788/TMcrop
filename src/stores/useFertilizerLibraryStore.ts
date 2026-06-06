@@ -92,6 +92,8 @@ interface FertilizerLibraryState {
   items: FertilizerLibrary[];
   isLoading: boolean;
   error: string | null;
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
   fetchItems: (filters?: Record<string, string>) => Promise<void>;
   fetchItemById: (id: string) => Promise<FertilizerLibrary | null>;
   createItem: (item: Partial<FertilizerLibrary>) => Promise<FertilizerLibrary | null>;
@@ -107,6 +109,8 @@ export const useFertilizerLibraryStore = create<FertilizerLibraryState>()(
     items: [],
     isLoading: false,
     error: null,
+
+    clearError: () => set({ error: null }),
 
     fetchItems: async (filters = {}) => {
       set({ isLoading: true, error: null });

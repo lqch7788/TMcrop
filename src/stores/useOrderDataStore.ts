@@ -25,6 +25,10 @@ interface OrderDataState {
   error: string | null;
   stats: OrderStats | null;
 
+  // 错误清理
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
+
   // Actions
   fetchOrders: () => Promise<void>;
   fetchStats: () => Promise<void>;
@@ -41,6 +45,8 @@ export const useOrderDataStore = create<OrderDataState>()(
       isLoading: false,
       error: null,
       stats: null,
+
+      clearError: () => set({ error: null }),
 
       fetchOrders: async () => {
         set({ isLoading: true, error: null });

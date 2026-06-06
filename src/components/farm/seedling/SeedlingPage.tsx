@@ -2,7 +2,7 @@
  * 育苗管理主页面
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
@@ -16,7 +16,7 @@ import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
-import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, useSeedlingStore, useSeedSourceStore, useToastStore } from '../../../stores';
 import { Seedling, SeedlingFilters, SeedlingStatus, SeedSource } from '../../../types/crop';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
@@ -63,7 +63,10 @@ export default function SeedlingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取育苗数据
-  const { items: seedlings, isLoading: loading, loadItems, deleteItem, deleteItems, updateItem } = useSeedlingStore();
+  const { items: seedlings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, updateItem } = useSeedlingStore();
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
   // 种源数据（用于筛选和关联）
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
 
@@ -145,6 +148,15 @@ export default function SeedlingPage() {
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载育苗数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);

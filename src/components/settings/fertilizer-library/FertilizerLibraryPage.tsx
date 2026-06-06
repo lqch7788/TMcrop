@@ -3,12 +3,12 @@
  * 布局：PageHeader → Tabs(有机肥/无机肥/水溶肥/复合肥/生物肥/缓释肥/微量元素肥) → FilterBar → Table → Modals
  * 所有数据通过 useFertilizerLibraryStore 管理
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Leaf, Plus, ArrowLeft, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
-import { useFertilizerLibraryStore, FertilizerLibrary } from '@/stores';
+import { useFertilizerLibraryStore, FertilizerLibrary, useToastStore } from '@/stores';
 import { FertilizerLibraryFilter } from './FertilizerLibraryFilter';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
 import { AddFertilizerModal } from './modals/AddFertilizerModal';
@@ -26,7 +26,10 @@ export default function FertilizerLibraryPage() {
 
   // ========== Store ==========
   const store = useFertilizerLibraryStore();
-  const { items, isLoading, error } = store;
+  const { items, isLoading, error, clearError } = store;
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // ========== 本地状态 ==========
   const [activeTab, setActiveTab] = useState<FertilizerType>('organic');
@@ -49,6 +52,15 @@ export default function FertilizerLibraryPage() {
     store.fetchItems(typeFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]); // 首次加载
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载肥料库数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // ========== 筛选处理 ==========
   const handleSearch = useCallback(() => {

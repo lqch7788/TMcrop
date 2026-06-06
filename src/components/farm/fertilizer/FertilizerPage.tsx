@@ -3,10 +3,10 @@
  * 布局：PageHeader → FilterBar → IotIndicator → StatsBar → ActionBar → Table → StatsPanel → Modals
  * 所有数据通过 useFertilizerStore 管理
  */
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from '../../ui/button';
 import { Sprout, Trash2 } from 'lucide-react';
-import { useFertilizerStore, FertilizerData, useIotStore } from '@/stores';
+import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
 import { FertilizerAddModal } from './FertilizerAddModal';
@@ -22,8 +22,11 @@ type OperationMode = 'normal' | 'delete' | 'export';
 export default function FertilizerPage() {
   // ========== Store ==========
   const store = useFertilizerStore();
-  const { items, isLoading, error } = store;
+  const { items, isLoading, error, clearError } = store;
   const iotStore = useIotStore();
+  // 2026-06-06: 监听 store 错误并弹 Toast（不修改 store 内部实现）
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // ========== 本地状态 ==========
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -43,6 +46,15 @@ export default function FertilizerPage() {
     store.fetchItems(filters);
     iotStore.fetchDevices();
   }, []); // 首次加载
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载施肥数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // ========== IoT设备状态（从施肥记录中提取auto_iot记录） ==========
   const iotDevices = useMemo<IotDeviceStatus[]>(() => {
