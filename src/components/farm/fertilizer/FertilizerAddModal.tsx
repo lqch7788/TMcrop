@@ -191,8 +191,8 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       operatorName: form.operatorName,
       dataSource: form.dataSource,
       description: form.description,
-      inputMode: form.inputMode,
-      selectedFertilizerId: form.selectedFertilizerId,
+      // G11 V1.1：肥料库 id（与后端 FIELD_MAP 配套）— 之前 selectedFertilizerId 被忽略
+      fertilizerId: form.selectedFertilizerId || null,
       plantingId: form.plantingId,
       plantingCode: form.plantingCode,
     };

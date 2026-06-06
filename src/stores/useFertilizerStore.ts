@@ -36,6 +36,8 @@ export interface FertilizerData {
   status: string;
   createTime: string;
   updateTime: string;
+  /** G11 V1.1：关联肥料库 id（外键到 fertilizer_library.id），老数据可空 */
+  fertilizerId?: string | null;
 }
 
 // ========== FIELD_MAP ==========
@@ -68,6 +70,8 @@ const FIELD_MAP: Record<string, string> = {
   status: 'status',
   create_time: 'createTime',
   update_time: 'updateTime',
+  // G11 V1.1：关联肥料库 id 映射
+  fertilizer_id: 'fertilizerId',
 };
 
 // ========== 转换函数 ==========

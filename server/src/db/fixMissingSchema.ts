@@ -1014,6 +1014,18 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 34.1 G11 V1.1: fertilizer_records 表添加 fertilizer_id 列（关联肥料库）
+  try {
+    db.run(`ALTER TABLE fertilizer_records ADD COLUMN fertilizer_id TEXT`);
+    seedLog.info('✓ fertilizer_records 表添加 fertilizer_id 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) {
+      seedLog.skip('• fertilizer_records.fertilizer_id 列已存在');
+    } else {
+      seedLog.skip('• fertilizer_records.fertilizer_id:', e.message);
+    }
+  }
+
   // 35. production_plans 表添加 planting_area_unit 列（种植面积单位）
   try {
     db.run(`ALTER TABLE production_plans ADD COLUMN planting_area_unit TEXT DEFAULT 'm²'`);
@@ -1332,6 +1344,15 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     if (e.message.includes('duplicate column')) seedLog.skip('• application_timing 列已存在');
     else seedLog.skip('• application_timing 列添加: ' + e.message);
+  }
+
+  // G11 V1.1: 为 fertilizer_library 表添加 current_stock 字段（当前库存，千克）
+  try {
+    db.run(`ALTER TABLE fertilizer_library ADD COLUMN current_stock REAL DEFAULT 0`);
+    seedLog.info('✓ fertilizer_library 表添加 current_stock 列成功');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• current_stock 列已存在');
+    else seedLog.skip('• current_stock 列添加: ' + e.message);
   }
 
   // 为 pesticide_specs 表添加作用机制字段
@@ -1825,6 +1846,18 @@ export async function fixMissingSchema(): Promise<void> {
         seedLog.skip(`• crop_orders.${fieldName}: ${e.message}`);
       }
     }
+  }
+
+  // G11 V1.1 数据修复：把所有肥料库 current_stock 初始化为 100（已有库/新装库通用）
+  try {
+    const now = new Date().toISOString();
+    const updated = db.run(
+      `UPDATE fertilizer_library SET current_stock = 100, update_time = ? WHERE current_stock IS NULL OR current_stock = 0`,
+      [now],
+    );
+    seedLog.info(`✓ 肥料库初始库存 100kg：${db.getRowsModified()} 条更新`);
+  } catch (fixErr: any) {
+    seedLog.skip('• 肥料库库存初始化跳过:', fixErr.message);
   }
 
   saveDatabase();
