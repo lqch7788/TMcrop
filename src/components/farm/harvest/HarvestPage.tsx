@@ -3,7 +3,7 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
 import { Button } from '../../ui/button';
-import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore, useToastStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import {
@@ -172,12 +172,24 @@ export default function HarvestPage() {
   });
 
   // 从 Zustand Store 获取采收数据
-  const { items: harvestRecords, isLoading: loading, loadItems, deleteItem, deleteItems, addItem, updateItem } = useHarvestStore();
+  const { items: harvestRecords, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, addItem, updateItem } = useHarvestStore();
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // 初始化数据（从 Store 加载）
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载采收数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // Export state
   const [exportMode, setExportMode] = useState(false);

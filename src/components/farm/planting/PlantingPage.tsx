@@ -2,7 +2,7 @@
  * 种植管理主页面
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
@@ -15,7 +15,7 @@ import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
-import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore } from '../../../stores';
+import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore, useToastStore } from '../../../stores';
 import type { PlantLabel, PlantMark } from '../../../stores/usePlantLabelStore';
 import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
@@ -69,7 +69,10 @@ export default function PlantingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取种植数据
-  const { items: plantings, isLoading: loading, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
+  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // 从标签 Store 获取标签/标记数据
   const {
@@ -110,6 +113,15 @@ export default function PlantingPage() {
     // loadItems 是稳定的 store 函数，不需要作为依赖
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载种植数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);

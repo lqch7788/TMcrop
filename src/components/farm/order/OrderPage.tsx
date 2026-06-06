@@ -2,7 +2,7 @@
  * 订单管理主页面
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList } from 'lucide-react';
 import { OrderStats } from './components/OrderStats';
@@ -19,6 +19,7 @@ import {
 } from '@/data/cropData';
 import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
+import { useToastStore } from '@/stores/useToastStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
@@ -35,6 +36,7 @@ export default function OrderPage() {
     orders,
     isLoading: loading,
     stats: apiStats,
+    error,
     fetchOrders,
     fetchStats,
     addOrder,
@@ -42,7 +44,11 @@ export default function OrderPage() {
     deleteOrder,
     deleteOrders,
     syncPending,
+    clearError,
   } = useOrderDataStore();
+  // 2026-06-06: 监听 store 错误并弹 Toast
+  const toast = useToastStore((s) => s.toast);
+  const lastShownErrorRef = useRef<string | null>(null);
 
   // 筛选状态
   const [filters, setFilters] = useState<CropOrderFilters>({
@@ -79,6 +85,15 @@ export default function OrderPage() {
     fetchOrders();
     fetchStats();
   }, [fetchOrders, fetchStats, syncPending]);
+
+  // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
+  useEffect(() => {
+    if (error && error !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = error;
+      toast.error(`加载订单数据失败：${error}`);
+      clearError();
+    }
+  }, [error, toast, clearError]);
 
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);

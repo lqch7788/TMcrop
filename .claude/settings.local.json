@@ -308,7 +308,15 @@
       "mcp__plugin_playwright_playwright__browser_close",
       "WebSearch",
       "Bash(mcp__codegraph__codegraph_explore *)",
-      "Bash(grep -n \"UnifiedModal\\\\|Modal\\\\s*$\\\\|isOpen\" src/components/production/modals/BatchEditModal.tsx)"
+      "Bash(grep -n \"UnifiedModal\\\\|Modal\\\\s*$\\\\|isOpen\" src/components/production/modals/BatchEditModal.tsx)",
+      "mcp__plugin_oh-my-claudecode_t__state_clear",
+      "Bash(ls -la \"D:/TMcrop/yuanxingtu/V1.1/docs/2026-06-06-G11-系统架构图.drawio\" \"D:/TMcrop/yuanxingtu/V1.1/docs/2026-06-06-事务流时序图.drawio\")",
+      "Bash(echo \"---xml validity---\")",
+      "Bash(echo '=== __TRACKED_VAR__ ===')",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(wmic process *)",
+      "Bash(nohup npx tsx watch src/index.ts)",
+      "Bash(echo \"Started PID=$!\")"
     ]
   }
 }
