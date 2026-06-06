@@ -3,7 +3,7 @@
  * 功能：种源列表展示、筛选、新增、编辑、删除、标签打印、图片查看、导出Excel
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
@@ -27,12 +27,11 @@ import { SeedSource, SeedSourceFilters, StockStatus, SourceType } from '../../..
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { useSeedSourceStore } from '../../../stores/useSeedSourceStore';
-import { useUserStore } from '../../../stores/useUserStore';
 import { useToastStore } from '../../../stores/useToastStore';
-import { enhancedApiClient } from '../../../lib/apiClient';
 import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
@@ -52,9 +51,9 @@ export default function SeedSourcePage() {
     items: seedSources,
     isLoading,
     loadItems,
-    deleteItem,
     deleteItems,
-    updateItem,
+    checkDeletable,
+    endSeedSource,
   } = useSeedSourceStore();
 
   // Toast 通知
@@ -100,15 +99,25 @@ export default function SeedSourcePage() {
   const [currentImages, setCurrentImages] = useState<string[]>([]);
 
   // 导出状态
-  const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // 操作模式状态（用于批量操作：编辑、删除、导出、打印）
-  const [operationMode, setOperationMode] = useState<'normal' | 'edit' | 'delete' | 'export' | 'print'>('normal');
+  // 2026-06-06: 合并 3 个独立 state 为 BatchOpState discriminated union
+  // 原 operationMode + exportMode(bool) + printMode(bool) → 一个 state 决定 5 种批量操作模式
+  type BatchOpState =
+    | { mode: 'normal' }
+    | { mode: 'edit' }
+    | { mode: 'delete' }
+    | { mode: 'export' }
+    | { mode: 'print' };
+  const [batchOp, setBatchOp] = useState<BatchOpState>({ mode: 'normal' });
 
-  // 打印模式状态
-  const [printMode, setPrintMode] = useState(false);
+  // 派生标志（供 SeedSourceTable 保持向后兼容的 props 形态）
+  const operationMode = batchOp.mode === 'edit' || batchOp.mode === 'delete' ? batchOp.mode : 'normal';
+  const exportMode = batchOp.mode === 'export';
+  const printMode = batchOp.mode === 'print';
+
+  // 打印记录（待打印队列）
   const [printRecords, setPrintRecords] = useState<SeedSource[]>([]);
 
   // 繁殖途径弹窗状态
@@ -137,52 +146,8 @@ export default function SeedSourcePage() {
     }
   }, []);
 
-  // 筛选后的数据（按创建时间倒序，新数据在前）
-  const filteredData = useMemo(() => {
-    // 方案1.3: 记录人ID转名称（用于级联筛选）
-    let recorderName = '';
-    if (filters.recorderId) {
-      const userStore = useUserStore.getState();
-      const user = userStore.users.find((u: any) => (u.oid || u.id) === filters.recorderId);
-      recorderName = user?.name || '';
-    }
-
-    const filtered = seedSources.filter(item => {
-      if (filters.cropCategory && filters.cropCategory !== '__all__' && item.cropCategory !== filters.cropCategory) return false;
-      if (filters.cropName && !item.cropName.includes(filters.cropName)) return false;
-      // 方案1.3: 作物类型筛选（按cropCategory匹配）
-      if (filters.cropType && filters.cropType !== '__all__' && item.cropCategory !== filters.cropType) return false;
-      if (filters.seedCode && !item.seedCode.includes(filters.seedCode)) return false;
-      if (filters.sourceType && filters.sourceType !== '__all__' && item.sourceType !== filters.sourceType) return false;
-      if (filters.supplierName && filters.supplierName !== '__all__' && !item.supplierName.includes(filters.supplierName)) return false;
-      // 2026-06-04: status 改为实时计算，筛选比较用 computeStockStatus
-      if (filters.status && filters.status !== '__all__' && computeStockStatus(item.availableCount, item.initialCount) !== filters.status) return false;
-      if (filters.startDate && item.purchaseDate < filters.startDate) return false;
-      if (filters.endDate && item.purchaseDate > filters.endDate) return false;
-      if (filters.createBy && !item.createBy.includes(filters.createBy)) return false;
-      // 方案1.3: 记录人筛选
-      if (recorderName && item.createBy !== recorderName) return false;
-      // 方案1.3: 剩余数量范围筛选 (surplus = availableCount)
-      if (filters.surplusMin !== undefined && item.availableCount < filters.surplusMin) return false;
-      if (filters.surplusMax !== undefined && item.availableCount > filters.surplusMax) return false;
-      // 繁殖途径筛选
-      if (filters.propagationType) {
-        const itemPropType = (item as any).propagationType || 'external';
-        if (itemPropType !== filters.propagationType) return false;
-      }
-      if (filters.propagationStatus) {
-        const itemPropStatus = (item as any).propagationStatus;
-        if (itemPropStatus !== filters.propagationStatus) return false;
-      }
-      return true;
-    });
-    // 按创建时间倒序排列（最新的在前）
-    return filtered.sort((a, b) => {
-      const timeA = a.createTime ? new Date(a.createTime).getTime() : 0;
-      const timeB = b.createTime ? new Date(b.createTime).getTime() : 0;
-      return timeB - timeA;
-    });
-  }, [filters, seedSources]);
+  // 2026-06-06: M3 — 12 项过滤逻辑下沉到 useFilteredSeedSources Hook
+  const filteredData = useFilteredSeedSources(seedSources, filters);
 
   // 2026-06-05: 顶部统计卡片已删除（user 要求）
 
@@ -247,25 +212,13 @@ export default function SeedSourcePage() {
   };
 
   // 处理删除（通过 Store，删除前检查关联引用）
-  // 2026-06-04 升级：弹窗展示具体被哪些模块/记录引用，附"前往处理"按钮
+  // 2026-06-06: CRITICAL #2 — 改用 store.checkDeletable，组件不再直调 enhancedApiClient
   const handleDelete = async (ids: string[]) => {
     for (const id of ids) {
       try {
-        const res = await enhancedApiClient.get<{
-          deletable: boolean;
-          references: Array<{
-            module: string;
-            moduleCode: string;
-            id: string;
-            code: string;
-            cropName?: string;
-            cropVariety?: string;
-            date?: string;
-            status?: string;
-          }>;
-        }>(`/seed-sources/${id}/check-deletable`);
+        const res = await checkDeletable(id);
 
-        if (res && !res.deletable && res.references?.length) {
+        if (!res.deletable && res.references.length) {
           const lines = res.references.slice(0, 10).map((r) => {
             const parts = [r.module, `「${r.code}」`];
             if (r.cropName) parts.push(r.cropName);
@@ -282,9 +235,11 @@ export default function SeedSourcePage() {
         }
       } catch { /* 降级策略：检查失败时允许继续删除 */ }
     }
-    const success = await deleteItems(ids);
-    if (success) {
+    try {
+      await deleteItems(ids);
       setSelectedRows([]);
+    } catch (e: any) {
+      await showAlert(`删除失败：${e?.message || String(e)}`);
     }
   };
 
@@ -298,9 +253,8 @@ export default function SeedSourcePage() {
   };
 
   // 处理结束计划
+  // 2026-06-06: M2 — 强结种源分支下沉到 store.endSeedSource；此处保留 cropBatch 结束流程编排
   const handleEnd = async (record: SeedSource, endType: 'normal' | 'abnormal') => {
-    // 2026-06-05: 统一强结 — 不管有没有关联生产计划，都走强结逻辑
-    // （生产计划存在时由用户选择联动结束或强结；查不到时直接强结）
     const hasPlan = !!record.productionPlanCode;
     let batch: Awaited<ReturnType<typeof cropBatchService.getCropBatchByCode>> | null = null;
     if (hasPlan) {
@@ -331,7 +285,7 @@ export default function SeedSourcePage() {
       return;
     }
 
-    // 分支 2: 没有生产计划 / 查不到 → 强结种源本身
+    // 分支 2: 没有生产计划 / 查不到 → 强结种源本身（Store action）
     const isNormal = endType === 'normal';
     const reason = !hasPlan
       ? '该种源未关联生产计划。'
@@ -343,23 +297,18 @@ export default function SeedSourcePage() {
     if (!confirmed) return;
 
     try {
-      await updateItem(record.id, {
-        endType,
-        endTime: new Date().toISOString(),
-        ...(hasPlan ? { productionPlanCode: null as unknown as string } : {}), // 有生产计划才清空
-      });
+      await endSeedSource(record.id, { endType });
       await showAlert(isNormal ? '种源订单已正常结束（强结）' : '种源订单已异常结束（强结）');
       await loadItems();
     } catch (e: any) {
-      console.error('[强结失败]', e);
+      // logger.error('[强结失败]', e);
       await showAlert(`强结失败：${e?.message || String(e)}`);
     }
   };
 
   // 导出相关处理
   const handleExportClick = () => {
-    setOperationMode('export');
-    setExportMode(true);
+    setBatchOp({ mode: 'export' });
     setSelectedRows([]);
   };
 
@@ -372,8 +321,7 @@ export default function SeedSourcePage() {
   };
 
   const handleExportCancel = () => {
-    setExportMode(false);
-    setOperationMode('normal');
+    setBatchOp({ mode: 'normal' });
     setSelectedRows([]);
   };
 
@@ -394,7 +342,7 @@ export default function SeedSourcePage() {
     setPrintRecords(records);
     setCurrentRecord(records[0]);
     setPrintModalOpen(true);
-    setPrintMode(false);
+    setBatchOp({ mode: 'normal' });
     setSelectedRows([]);
   };
 
@@ -414,7 +362,8 @@ export default function SeedSourcePage() {
     const selectedData = filteredData.filter(item => selectedRows.includes(item.id));
 
     // 导出表头（含图片列）
-    const headers = ['种源图片', '种源批号', '种源类型', '作物类别', '作物品种', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
+    // 2026-06-06: L7 对齐表格列名 — 表格「作物品种」实际为 cropVariety||cropName，拆为「最细化」+「细分品种」两列
+    const headers = ['种源图片', '种源批号', '种源类型', '作物类别', '作物品种（最细化）', '作物品种（细分品种）', '品种路径', '供应商', '采购日期', '采购数量', '单位', '单价(元)', '总金额(元)', '初始数量', '可用数量', '库存状态', '溯源码', '创建人', '创建时间', '备注'];
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
@@ -430,8 +379,9 @@ export default function SeedSourcePage() {
                   record.sourceType === SourceType.SELF_PRODUCED ? '自繁苗' :
                   record.sourceType === SourceType.EXTERNAL ? '外购苗' : '其他',
       '作物类别': record.cropCategory,
+      // 2026-06-06: L7 对齐表格列名 — 表格列「作物品种」实际显示 cropVariety||cropName（最细分）
       '作物品种（最细化）': record.cropName,
-      '作物品种': record.cropVariety,
+      '作物品种（细分品种）': record.cropVariety,
       '供应商': record.supplierName,
       '采购日期': record.purchaseDate,
       '采购数量': record.quantity,
@@ -516,7 +466,7 @@ export default function SeedSourcePage() {
       URL.revokeObjectURL(url);
     }
 
-    setExportMode(false);
+    setBatchOp({ mode: 'normal' });
     setSelectedRows([]);
     setShowExportModal(false);
   };
@@ -576,13 +526,13 @@ export default function SeedSourcePage() {
         onEnd={handleEnd}
         onAdd={handleAdd}
         operationMode={operationMode}
-        onOperationModeChange={setOperationMode}
+        onOperationModeChange={(m) => setBatchOp({ mode: m })}
         exportMode={exportMode}
         onExportSelectAll={handleExportSelectAll}
         onExportCancel={handleExportCancel}
         onConfirmExport={handleExportClickConfirm}
         printMode={printMode}
-        onPrintModeChange={setPrintMode}
+        onPrintModeChange={(v) => setBatchOp({ mode: v ? 'print' : 'normal' })}
         onConfirmPrint={handlePrintConfirm}
         canCreate={canCreate}
         canEdit={canEdit}

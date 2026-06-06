@@ -12,6 +12,80 @@
 import { enhancedApiClient } from '../lib/apiClient';
 import { SeedSource, SourceType, SourceOrigin, PropagationType, PropagationStatus, PropagationRecord } from '../types/crop';
 
+/**
+ * 2026-06-06: 集中维护 camelCase → snake_case 字段映射表。
+ * 避免 addSeedSource / updateSeedSource 漂移（之前散落在两个函数里，遗漏字段会导致后端写入失败）。
+ */
+const CAMEL_TO_SNAKE_MAP: Record<string, string> = {
+  seedCode: 'source_code',
+  sourceType: 'source_type',
+  sourceOrigin: 'source_origin',
+  productionPlanId: 'production_plan_id',
+  productionPlanCode: 'production_plan_code',
+  cropCategory: 'crop_category',
+  typeName: 'type_name',
+  varietyName: 'variety_name',
+  cropName: 'crop_name',
+  cropVariety: 'crop_variety',
+  cropCode: 'crop_code',
+  supplierId: 'supplier_id',
+  supplierName: 'supplier_name',
+  purchaseDate: 'purchase_date',
+  quantity: 'quantity',
+  unit: 'unit',
+  unitPrice: 'purchase_price',
+  totalAmount: 'total_amount',
+  availableCount: 'remaining_quantity',
+  usedQuantity: 'used_quantity',
+  remarks: 'remarks',
+  createBy: 'create_by',
+  // 繁殖字段
+  propagationType: 'propagation_type',
+  propagationStatus: 'propagation_status',
+  propagationMethod: 'propagation_method',
+  parentMaleId: 'parent_male_id',
+  parentMaleCode: 'parent_male_code',
+  parentFemaleId: 'parent_female_id',
+  parentFemaleCode: 'parent_female_code',
+  motherPlantId: 'mother_plant_id',
+  motherPlantCode: 'mother_plant_code',
+  linkedPlantingId: 'linked_planting_id',
+  linkedPlantingCode: 'linked_planting_code',
+  propagationStartDate: 'propagation_start_date',
+  expectedHarvestDate: 'expected_harvest_date',
+  actualHarvestDate: 'actual_harvest_date',
+  breedingLocation: 'breeding_location',
+  targetTraits: 'target_traits',
+  generation: 'generation',
+  // 结束标记
+  endType: 'end_type',
+  endTime: 'end_time',
+  // 打印统计
+  printCount: 'print_count',
+};
+
+/**
+ * 2026-06-06: 通用转换 — 给定部分 SeedSource，返回 snake_case 的后端 payload。
+ * 未知字段（不在 CAMEL_TO_SNAKE_MAP）原样保留，方便新增字段不用两边都改。
+ */
+function toBackendPayload(updates: Partial<SeedSource>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(updates) as (keyof SeedSource)[]) {
+    if (updates[key] === undefined) continue;
+    const mapped = CAMEL_TO_SNAKE_MAP[key as string] ?? key;
+    if (mapped === 'pictures') {
+      result[mapped] = JSON.stringify(updates[key] ?? []);
+    } else {
+      result[mapped] = updates[key];
+    }
+  }
+  // pictures 特殊处理：上面映射到的 key 是 'pictures'，但 CAMEL_TO_SNAKE_MAP 没收录，统一处理
+  if (result.pictures === undefined && updates.pictures !== undefined) {
+    result.pictures = JSON.stringify(updates.pictures ?? []);
+  }
+  return result;
+}
+
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendSeedSource {
   id: string;
@@ -190,51 +264,13 @@ export async function getSeedSourcesByIds(ids: string[]): Promise<SeedSource[]> 
  * 注意：前端使用 camelCase，后端期望 snake_case，需要转换
  */
 export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime' | 'updateTime'>): Promise<SeedSource> {
-  // 转换为后端期望的 snake_case 格式
-  const backendData = {
-    source_code: source.seedCode,
-    source_name: source.seedCode,  // 修复 P3 #20: source_name 应该是种源批号，而非供应商名
-    source_type: source.sourceType,
-    source_origin: source.sourceOrigin,
-    production_plan_code: source.productionPlanCode || '',
-    crop_category: source.cropCategory,
-    type_name: source.typeName,
-    variety_name: source.varietyName,
-    crop_name: source.cropName,
-    crop_variety: source.cropVariety,
-    crop_code: source.cropCode,
-    supplier_id: source.supplierId,
-    supplier_name: source.supplierName,
-    purchase_date: source.purchaseDate,
-    quantity: source.quantity,
-    unit: source.unit,
-    purchase_price: source.unitPrice,
-    total_amount: source.totalAmount,
+  // 2026-06-06: 改用统一映射表 toBackendPayload，避免字段漂移
+  // source_name 特殊处理：与 source_code 一致（修复 P3 #20: source_name 应该是种源批号）
+  const backendData: Record<string, unknown> = {
+    ...toBackendPayload(source),
+    source_name: source.seedCode,
+    // remaining_quantity 默认等于 quantity（新种源初始可用 = 采购数量）
     remaining_quantity: source.quantity,
-    used_quantity: source.usedQuantity || 0,
-    // status 不再传给后端（2026-06-04 改为实时计算）
-    remarks: source.remarks || '',
-    create_by: source.createBy,
-    // 2026-06-05: 修复「繁殖字段」白名单缺失（之前不传 → DB 默认 'external' → 过程记录/阶段推进按钮永远不显示）
-    propagation_type: source.propagationType,
-    propagation_status: source.propagationStatus,
-    propagation_method: source.propagationMethod,
-    parent_male_id: source.parentMaleId,
-    parent_male_code: source.parentMaleCode,
-    parent_female_id: source.parentFemaleId,
-    parent_female_code: source.parentFemaleCode,
-    mother_plant_id: source.motherPlantId,
-    mother_plant_code: source.motherPlantCode,
-    linked_planting_id: source.linkedPlantingId,
-    linked_planting_code: source.linkedPlantingCode,
-    propagation_start_date: source.propagationStartDate,
-    expected_harvest_date: source.expectedHarvestDate,
-    actual_harvest_date: source.actualHarvestDate,
-    breeding_location: source.breedingLocation,
-    target_traits: source.targetTraits,
-    generation: source.generation,
-    // P0 #1: 传递 pictures 字段（后端 JSON 字符串）
-    pictures: JSON.stringify(source.pictures || []),
   };
 
   const result = await enhancedApiClient.post<{ id: string; create_time?: string; update_time?: string }>('/seed-sources', backendData);
@@ -251,54 +287,8 @@ export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime'
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSeedSource(id: string, updates: Partial<SeedSource>): Promise<SeedSource | null> {
-  // 转换为后端期望的 snake_case 格式
-  const backendUpdates: Record<string, any> = {};
-
-  if (updates.seedCode !== undefined) backendUpdates.source_code = updates.seedCode;
-  if (updates.supplierName !== undefined) backendUpdates.supplier_name = updates.supplierName;
-  if (updates.sourceType !== undefined) backendUpdates.source_type = updates.sourceType;
-  if (updates.sourceOrigin !== undefined) backendUpdates.source_origin = updates.sourceOrigin;
-  if (updates.productionPlanCode !== undefined) backendUpdates.production_plan_code = updates.productionPlanCode;
-  // 2026-06-05: 修复繁殖字段白名单缺失（与 addSeedSource 同步）
-  if (updates.propagationType !== undefined) backendUpdates.propagation_type = updates.propagationType;
-  if (updates.propagationStatus !== undefined) backendUpdates.propagation_status = updates.propagationStatus;
-  if (updates.propagationMethod !== undefined) backendUpdates.propagation_method = updates.propagationMethod;
-  if (updates.parentMaleId !== undefined) backendUpdates.parent_male_id = updates.parentMaleId;
-  if (updates.parentMaleCode !== undefined) backendUpdates.parent_male_code = updates.parentMaleCode;
-  if (updates.parentFemaleId !== undefined) backendUpdates.parent_female_id = updates.parentFemaleId;
-  if (updates.parentFemaleCode !== undefined) backendUpdates.parent_female_code = updates.parentFemaleCode;
-  if (updates.motherPlantId !== undefined) backendUpdates.mother_plant_id = updates.motherPlantId;
-  if (updates.motherPlantCode !== undefined) backendUpdates.mother_plant_code = updates.motherPlantCode;
-  if (updates.linkedPlantingId !== undefined) backendUpdates.linked_planting_id = updates.linkedPlantingId;
-  if (updates.linkedPlantingCode !== undefined) backendUpdates.linked_planting_code = updates.linkedPlantingCode;
-  if (updates.propagationStartDate !== undefined) backendUpdates.propagation_start_date = updates.propagationStartDate;
-  if (updates.expectedHarvestDate !== undefined) backendUpdates.expected_harvest_date = updates.expectedHarvestDate;
-  if (updates.actualHarvestDate !== undefined) backendUpdates.actual_harvest_date = updates.actualHarvestDate;
-  if (updates.breedingLocation !== undefined) backendUpdates.breeding_location = updates.breedingLocation;
-  if (updates.targetTraits !== undefined) backendUpdates.target_traits = updates.targetTraits;
-  if (updates.generation !== undefined) backendUpdates.generation = updates.generation;
-  // 结束标记（2026-06-05：强结分支写入；注意不写 status 字段，符合 V2.1 铁律"status 实时计算"）
-  if (updates.endType !== undefined) backendUpdates.end_type = updates.endType;
-  if (updates.endTime !== undefined) backendUpdates.end_time = updates.endTime;
-  // 2026-06-05: 修复强结 bug — 强结时把 productionPlanCode 置 null 的字段名映射
-  // （后端 repository.update 用 Object.keys 原样拼 SQL，需要 snake_case）
-  if (updates.cropCategory !== undefined) backendUpdates.crop_category = updates.cropCategory;
-  if (updates.typeName !== undefined) backendUpdates.type_name = updates.typeName;
-  if (updates.varietyName !== undefined) backendUpdates.variety_name = updates.varietyName;
-  if (updates.cropName !== undefined) backendUpdates.crop_name = updates.cropName;
-  if (updates.cropVariety !== undefined) backendUpdates.crop_variety = updates.cropVariety;
-  if (updates.cropCode !== undefined) backendUpdates.crop_code = updates.cropCode;
-  if (updates.supplierId !== undefined) backendUpdates.supplier_id = updates.supplierId;
-  if (updates.purchaseDate !== undefined) backendUpdates.purchase_date = updates.purchaseDate;
-  if (updates.quantity !== undefined) backendUpdates.quantity = updates.quantity;
-  if (updates.unit !== undefined) backendUpdates.unit = updates.unit;
-  if (updates.unitPrice !== undefined) backendUpdates.purchase_price = updates.unitPrice;
-  if (updates.totalAmount !== undefined) backendUpdates.total_amount = updates.totalAmount;
-  if (updates.availableCount !== undefined) backendUpdates.remaining_quantity = updates.availableCount;
-  // status 不再传给后端（2026-06-04 改为实时计算）
-  if (updates.remarks !== undefined) backendUpdates.remarks = updates.remarks;
-  // P0 #1: 传递 pictures 字段
-  if (updates.pictures !== undefined) backendUpdates.pictures = JSON.stringify(updates.pictures);
+  // 2026-06-06: 改用统一映射表 toBackendPayload，消除白名单漂移（HIGH #1）
+  const backendUpdates = toBackendPayload(updates);
 
   const result = await enhancedApiClient.put<{ id: string; update_time?: string }>(`/seed-sources/${id}`, backendUpdates);
   return result ? { ...updates, id, updateTime: result.update_time || '' } as SeedSource : null;
@@ -323,6 +313,34 @@ export async function deleteSeedSources(ids: string[]): Promise<boolean> {
 }
 
 /**
+ * 2026-06-06: 检查种源是否可删除（是否被关联记录引用）
+ * CRITICAL #2: 从组件上移到 Store（避免组件直调 enhancedApiClient 绕开数据流铁律）
+ */
+export interface DeletableReference {
+  module: string;
+  moduleCode: string;
+  id: string;
+  code: string;
+  cropName?: string;
+  cropVariety?: string;
+  date?: string;
+  status?: string;
+}
+
+export interface CheckDeletableResult {
+  deletable: boolean;
+  references: DeletableReference[];
+}
+
+export async function checkSeedSourceDeletable(id: string): Promise<CheckDeletableResult> {
+  const res = await enhancedApiClient.get<CheckDeletableResult>(`/seed-sources/${id}/check-deletable`);
+  return {
+    deletable: !!res?.deletable,
+    references: res?.references || [],
+  };
+}
+
+/**
  * 减少可用数量
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
@@ -340,26 +358,18 @@ export async function resetSeedSources(): Promise<void> {
 
 /**
  * 获取当日最大序号
- * 降级策略：API → 失败返回0
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
  */
 export async function getTodayMaxSeedCodeSerial(dateStr: string): Promise<number> {
-  try {
-    return await enhancedApiClient.get<number>(`/seed-sources/max-serial?date=${dateStr}`);
-  } catch {
-    return 0;
-  }
+  return await enhancedApiClient.get<number>(`/seed-sources/max-serial?date=${dateStr}`);
 }
 
 /**
  * 生成种源编码
- * 降级策略：API → 失败返回空字符串
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回默认值）
  */
 export async function generateSeedCode(dateStr: string): Promise<string> {
-  try {
-    return await enhancedApiClient.get<string>(`/seed-sources/generate-code?date=${dateStr}`);
-  } catch {
-    return '';
-  }
+  return await enhancedApiClient.get<string>(`/seed-sources/generate-code?date=${dateStr}`);
 }
 
 // ========== 繁殖过程记录 API ==========
@@ -522,16 +532,12 @@ export async function getAllPropagationRecords(params: PropagationRecordQueryPar
   query.push(`limit=${params.limit || 20}`);
   const qs = query.join('&');
 
-  const res = await enhancedApiClient.get<{ success: boolean; data: { items: any[]; total: number } }>(
+  // 2026-06-06: enhancedApiClient 已自动解包 data；res 直接是 {items, total}
+  // 删除原 `(res as any).data || res || {}` 三层 fallback 链（HIGH #2）
+  const res = await enhancedApiClient.get<{ items: PropagationRecordWithSource[]; total: number }>(
     `/seed-sources/propagation-records?${qs}`
   );
-  // 2026-06-05: enhancedApiClient 已自动解包 data 字段；res 实际是 {items, total}，不要二次 .data
-  const payload = (res && (res as any).data) || res || {};
-  const raw = Array.isArray(payload) ? payload : (payload.items || []);
-  const total = typeof (res as any).total === 'number'
-    ? (res as any).total
-    : (payload.total || 0);
-  const items: PropagationRecordWithSource[] = (raw as any[]).map((it: any) => ({
+  const items: PropagationRecordWithSource[] = (res.items || []).map((it) => ({
     id: it.id,
     seedSourceId: it.seedSourceId,
     seedCode: it.seedCode || '',
@@ -561,7 +567,7 @@ export async function getAllPropagationRecords(params: PropagationRecordQueryPar
     createTime: it.createTime || '',
     updateTime: it.updateTime || '',
   }));
-  return { items, total: (res as any).total ?? items.length };
+  return { items, total: res.total ?? items.length };
 }
 
 /**
@@ -643,6 +649,7 @@ export async function createPrintRecord(
 
 /**
  * 打印标签（便捷函数）
+ * 错误直接抛给上层（V2.1 铁律：禁止吞错返回 false）
  */
 export async function printLabel(
   seedSourceId: string,
@@ -650,11 +657,6 @@ export async function printLabel(
   printCount: number,
   operator: string,
   labelNumbers?: string[]
-): Promise<boolean> {
-  try {
-    await createPrintRecord(seedSourceId, printType, printCount, operator, labelNumbers);
-    return true;
-  } catch {
-    return false;
-  }
+): Promise<{ id: string; printCount: number }> {
+  return await createPrintRecord(seedSourceId, printType, printCount, operator, labelNumbers);
 }
