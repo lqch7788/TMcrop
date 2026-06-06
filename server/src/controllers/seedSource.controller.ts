@@ -1,11 +1,38 @@
 /**
  * 种源控制器层 (Controller)
  * 负责处理 HTTP 请求/响应，参数验证
+ * H9：统一错误处理，全部走 next(error) + 全局 errorHandler
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { seedSourceService, SeedSourceService } from '../services/seedSource.service';
+import { seedSourceService, SeedSourceService, BusinessError } from '../services/seedSource.service';
 import { CreateSeedSourceDTO, UpdateSeedSourceDTO, CreatePropagationRecordDTO, UpdatePropagationStageDTO, CompletePropagationDTO } from '../types/seedSource';
+import { AppError } from '../middleware/errorHandler';
+
+/**
+ * 把业务错误消息映射成 HTTP 状态码（H9 辅助函数）
+ * 2026-06-06: L4 — 优先用 BusinessError.code 匹配；保留 msg 关键字兜底兼容历史报错
+ */
+function toHttpError(err: Error): AppError {
+  // 2026-06-06: 业务错误码优先（避免 msg 文案漂移导致匹配失效）
+  if (err instanceof BusinessError) {
+    // 将错误码前缀到消息中（兼容当前 errorHandler 不识别 code 的情况）
+    return new AppError(err.message, err.httpStatus);
+  }
+  const msg = err.message || '服务器内部错误';
+  if (msg === '种源记录不存在') {
+    return new AppError(msg, 404);
+  }
+  // 业务校验类错误 → 400（兜底）
+  const validationKeywords = [
+    '参数错误', '缺少', '必须', '非法', '不允许', '不足',
+    '批量删除单次最多', '当前', '拒绝', '当前状态',
+  ];
+  if (validationKeywords.some(k => msg.includes(k))) {
+    return new AppError(msg, 400);
+  }
+  return new AppError(msg, 500);
+}
 
 /**
  * 种源控制器类
@@ -51,11 +78,7 @@ export class SeedSourceController {
       const data = await this.service.getById(id);
       res.json({ success: true, data });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '种源记录不存在' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -69,8 +92,7 @@ export class SeedSourceController {
       const result = await this.service.create(data);
       res.status(201).json({ success: true, data: result });
     } catch (error) {
-      console.error('创建种源记录失败:', error);
-      next(error);
+      next(toHttpError(error as Error));
     }
   }
 
@@ -85,13 +107,7 @@ export class SeedSourceController {
       const result = await this.service.update(id, data);
       res.json({ success: true, data: result });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '更新种源记录失败' });
-      } else if ((error as Error).message === '没有需要更新的字段') {
-        res.status(400).json({ success: false, error: '没有需要更新的字段' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -105,11 +121,7 @@ export class SeedSourceController {
       await this.service.delete(id);
       res.json({ success: true, data: { id } });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '删除种源记录失败' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -124,16 +136,7 @@ export class SeedSourceController {
       const data = await this.service.decreaseAvailable(id, Number(count));
       res.json({ success: true, data });
     } catch (error) {
-      const msg = (error as Error).message;
-      if (msg === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '种源记录不存在' });
-      } else if (msg === '扣减数量必须为正数') {
-        res.status(400).json({ success: false, error: msg });
-      } else if (msg.startsWith('可用数量不足')) {
-        res.status(400).json({ success: false, error: msg });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -146,18 +149,14 @@ export class SeedSourceController {
       const { ids } = req.query;
 
       if (!ids) {
-        res.status(400).json({ success: false, error: '缺少 ids 参数' });
-        return;
+        return next(new AppError('缺少 ids 参数', 400));
       }
 
       const idArray = (ids as string).split(',');
-      console.log('[deleteBatch] 收到批量删除请求, ids:', idArray);
       const result = await this.service.deleteBatch(idArray);
-      console.log('[deleteBatch] 删除结果:', result);
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error('[deleteBatch] 批量删除种源记录失败:', error);
-      next(error);
+      next(toHttpError(error as Error));
     }
   }
 
@@ -169,14 +168,12 @@ export class SeedSourceController {
     try {
       const { date } = req.query;
       if (!date || typeof date !== 'string') {
-        res.status(400).json({ success: false, error: '缺少 date 参数' });
-        return;
+        return next(new AppError('缺少 date 参数', 400));
       }
       const code = await this.service.generateCode(date);
       res.json({ success: true, data: code });
     } catch (error) {
-      console.error('生成种源编码失败:', error);
-      next(error);
+      next(toHttpError(error as Error));
     }
   }
 
@@ -193,11 +190,7 @@ export class SeedSourceController {
       const result = await this.service.addPropagationRecord(id, data);
       res.status(201).json({ success: true, data: result });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '种源记录不存在' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -248,11 +241,7 @@ export class SeedSourceController {
       const result = await this.service.updatePropagationStage(id, data);
       res.json({ success: true, data: result });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '种源记录不存在' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
@@ -267,11 +256,7 @@ export class SeedSourceController {
       const result = await this.service.completePropagation(id, data);
       res.json({ success: true, data: result });
     } catch (error) {
-      if ((error as Error).message === '种源记录不存在') {
-        res.status(404).json({ success: false, error: '种源记录不存在' });
-      } else {
-        next(error);
-      }
+      next(toHttpError(error as Error));
     }
   }
 
