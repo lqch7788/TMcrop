@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
 import { Button } from '../../../ui/button';
-import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
+import { X, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -33,6 +33,7 @@ import { Label } from '../../../ui/label';
 import { DatePicker } from '../../../ui/DatePicker';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { ImageUploader } from '../../../ui/ImageUploader';
 import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */
@@ -55,9 +56,6 @@ interface AddModalProps {
   /** 留种初始化数据（从种植页面跳转来） */
   seedSavingInit?: { linkedPlantingId?: string; linkedPlantingCode?: string; cropName?: string; } | null;
 }
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function AddModal({
   isOpen,
@@ -269,6 +267,15 @@ export function AddModal({
     // 外部采购时供应商必填
     if (formData.sourceOrigin === 'external_purchase' && !formData.supplierId) {
       await showAlert('请选择供应商');
+      return;
+    }
+    // 2026-06-06: HIGH #6 — 数量必须 > 0，单价必须为有限数字
+    if (formData.quantity <= 0) {
+      await showAlert('请输入有效的采购数量（必须大于 0）');
+      return;
+    }
+    if (!Number.isFinite(formData.unitPrice)) {
+      await showAlert('请输入有效的单价（数字）');
       return;
     }
 
@@ -595,7 +602,7 @@ export function AddModal({
               type="text"
               value={formData.propagationType === PropagationType.EXTERNAL ? '外部采购' : '自主产出'}
               readOnly
-              className={`${deepInputClass} bg-gray-50 text-gray-700`}
+              className="bg-gray-50 text-gray-700"
             />
           </div>
 
@@ -608,7 +615,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className={deepInputClass}>
+                  <SelectTrigger className="">
                     <SelectValue placeholder="选择育种方法" />
                   </SelectTrigger>
                   <SelectContent>
@@ -629,8 +636,7 @@ export function AddModal({
                   value={formData.parentMaleCode}
                   onChange={(e) => setFormData({ ...formData, parentMaleCode: e.target.value })}
                   placeholder="♂ 父本种源批号"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">母本编号</Label>
@@ -639,8 +645,7 @@ export function AddModal({
                   value={formData.parentFemaleCode}
                   onChange={(e) => setFormData({ ...formData, parentFemaleCode: e.target.value })}
                   placeholder="♀ 母本种源批号"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">世代</Label>
@@ -648,7 +653,7 @@ export function AddModal({
                   value={formData.generation}
                   onValueChange={(val) => setFormData({ ...formData, generation: val })}
                 >
-                  <SelectTrigger className={deepInputClass}>
+                  <SelectTrigger className="">
                     <SelectValue placeholder="选择世代" />
                   </SelectTrigger>
                   <SelectContent>
@@ -667,8 +672,7 @@ export function AddModal({
                   value={formData.breedingLocation}
                   onChange={(e) => setFormData({ ...formData, breedingLocation: e.target.value })}
                   placeholder="育种基地/温室"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">目标性状</Label>
@@ -677,8 +681,7 @@ export function AddModal({
                   value={formData.targetTraits}
                   onChange={(e) => setFormData({ ...formData, targetTraits: e.target.value })}
                   placeholder="如：抗病、高产、早熟"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">预计采收日期</Label>
@@ -700,8 +703,7 @@ export function AddModal({
                   value={formData.linkedPlantingCode}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingCode: e.target.value })}
                   placeholder="种植批次号"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">留种株标识</Label>
@@ -710,8 +712,7 @@ export function AddModal({
                   value={formData.linkedPlantingId}
                   onChange={(e) => setFormData({ ...formData, linkedPlantingId: e.target.value })}
                   placeholder="留种株编号"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">预计采收日期</Label>
@@ -732,7 +733,7 @@ export function AddModal({
                   value={formData.propagationMethod}
                   onValueChange={(val) => setFormData({ ...formData, propagationMethod: val })}
                 >
-                  <SelectTrigger className={deepInputClass}>
+                  <SelectTrigger className="">
                     <SelectValue placeholder="选择繁殖方式" />
                   </SelectTrigger>
                   <SelectContent>
@@ -752,8 +753,7 @@ export function AddModal({
                   value={formData.motherPlantCode}
                   onChange={(e) => setFormData({ ...formData, motherPlantCode: e.target.value })}
                   placeholder="母株种源批号"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">母株ID</Label>
@@ -762,8 +762,7 @@ export function AddModal({
                   value={formData.motherPlantId}
                   onChange={(e) => setFormData({ ...formData, motherPlantId: e.target.value })}
                   placeholder="母株记录ID"
-                  className={deepInputClass}
-                />
+                                 />
               </div>
               <div>
                 <Label className="text-gray-900">预计产出种苗数</Label>
@@ -771,8 +770,7 @@ export function AddModal({
                   type="number"
                   value={formData.quantity || ''}
                   onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                  className={deepInputClass}
-                />
+                                 />
               </div>
             </>
           )}
@@ -815,8 +813,7 @@ export function AddModal({
                       onChange={(e) => setSupplierSearchKeyword(e.target.value)}
                       onFocus={() => setShowSupplierSearch(true)}
                       placeholder="搜索供应商名称、编码或联系人..."
-                      className={deepInputClass}
-                    />
+                                         />
                     <Button
                       variant="secondary"
                       size="sm"
@@ -892,7 +889,7 @@ export function AddModal({
                 }));
               }}
             >
-              <SelectTrigger className={deepInputClass}>
+              <SelectTrigger className="">
                 <SelectValue placeholder="不关联" />
               </SelectTrigger>
               <SelectContent>
@@ -929,8 +926,7 @@ export function AddModal({
                 type="number"
                 value={formData.quantity || ''}
                 onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                className={deepInputClass}
-              />
+                             />
               <DictSelect
                 category="unit"
                 value={formData.unit}
@@ -947,66 +943,16 @@ export function AddModal({
               type="number"
               value={formData.unitPrice || ''}
               onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-              className={deepInputClass}
-            />
+                         />
           </div>
 
-          {/* 图片上传 - 占两列 */}
+          {/* 图片上传 - 占两列 (M11: 抽离为统一的 ImageUploader 组件) */}
           <div className="col-span-2">
             <Label className="text-gray-900">图片上传</Label>
-            <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
-              {formData.pictures.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {formData.pictures.map((pic, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={pic}
-                        alt={`预览${index + 1}`}
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => setFormData({
-                          ...formData,
-                          pictures: formData.pictures.filter((_, i) => i !== index)
-                        })}
-                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">点击上传图片</span>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files) {
-                      Array.from(files).forEach(file => {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          const result = event.target?.result as string;
-                          setFormData({
-                            ...formData,
-                            pictures: [...formData.pictures, result]
-                          });
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }
-                    e.target.value = '';
-                  }}
-                />
-              </Label>
-            </div>
+            <ImageUploader
+              value={formData.pictures}
+              onChange={(pics) => setFormData({ ...formData, pictures: pics })}
+            />
           </div>
 
           {/* 备注 - 占两列 */}
@@ -1016,8 +962,7 @@ export function AddModal({
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               rows={3}
-              className={deepInputClass}
-              placeholder="请输入备注信息"
+                           placeholder="请输入备注信息"
             />
           </div>
 
@@ -1043,8 +988,7 @@ export function AddModal({
                 value={formData.supplementaryReason}
                 onChange={(e) => setFormData({ ...formData, supplementaryReason: e.target.value })}
                 rows={2}
-                className={deepInputClass}
-                placeholder="请输入补录原因，说明为什么需要补录此入库记录"
+                               placeholder="请输入补录原因，说明为什么需要补录此入库记录"
               />
             </div>
           )}

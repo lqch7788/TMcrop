@@ -29,7 +29,7 @@ export function SeedSourceFilter({
   statusOptions
 }: SeedSourceFilterProps) {
   return (
-    <div className="bg-[#F2F6FA] rounded-xl p-4 shadow-sm">
+    <div className="bg-gray-50 rounded-xl p-4 shadow-sm">
       {/* 2026-06-05: 强制单行布局，搜索/重置按键放最后（日期选择器 160px，避免按键换行） */}
       <div className="flex flex-nowrap gap-3 items-end">
         {/* 作物品种 */}

@@ -5,46 +5,26 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Image, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch, Info } from 'lucide-react';
+import { Edit2, Trash2, Printer, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch, HelpCircle } from 'lucide-react';
 import { Button } from '../../../ui/button';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
-import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
+import {
+  UNIT_MAP,
+  STOCK_STATUS_MAP,
+  SOURCE_TYPE_MAP,
+  SOURCE_ORIGIN_MAP,
+  // 2026-06-06: 抽离重复 3 处（SeedSourceTable / PropagationRecordModal / PropagationStageModal）
+  PROPAGATION_TYPE_LABELS,
+  PROPAGATION_TYPE_COLORS,
+  PROPAGATION_STATUS_LABELS,
+  PROPAGATION_STATUS_COLORS,
+} from '../../../../constants/cropConstants';
 import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
-import { Input } from '../../../ui/input';
+import { Checkbox } from '../../../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
 import { showAlert } from '@/lib/dialogService';
-
-// 繁殖途径标签颜色
-const PROPAGATION_TYPE_LABELS: Record<string, string> = {
-  external: '外购入库',
-  breeding: '育种计划',
-  seed_saving: '种植留种',
-  asexual: '无性繁殖',
-};
-const PROPAGATION_TYPE_COLORS: Record<string, string> = {
-  external: 'bg-gray-100 text-gray-600',
-  breeding: 'bg-orange-100 text-orange-700',
-  seed_saving: 'bg-green-100 text-green-700',
-  asexual: 'bg-purple-100 text-purple-700',
-};
-const PROPAGATION_STATUS_LABELS: Record<string, string> = {
-  planned: '已计划',
-  in_progress: '进行中',
-  harvested: '已采收',
-  quality_checked: '已质检',
-  completed: '已入库',
-  failed: '失败',
-};
-const PROPAGATION_STATUS_COLORS: Record<string, string> = {
-  planned: 'bg-gray-100 text-gray-600',
-  in_progress: 'bg-blue-100 text-blue-700',
-  harvested: 'bg-green-100 text-green-700',
-  quality_checked: 'bg-purple-100 text-purple-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  failed: 'bg-red-100 text-red-700',
-};
 
 // 操作模式类型（用于批量操作）
 type SeedSourceOperationMode = 'normal' | 'edit' | 'delete' | 'export' | 'print';
@@ -344,8 +324,8 @@ export function SeedSourceTable({
               )}
               {canPrint && (
                 <Button
+                  variant="purple"
                   size="sm"
-                  className="bg-purple-600 text-white hover:bg-purple-700"
                   onClick={() => { onPrintModeChange(true); }}
                 >
                   <Printer className="w-4 h-4" />
@@ -364,18 +344,16 @@ export function SeedSourceTable({
             <TableRow className="hover:from-blue-500 hover:to-blue-600">
               {showCheckbox && (
                 <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap w-12">
-                  <Input
-                    type="checkbox"
+                  <Checkbox
                     // P2 #13 修复: 用 currentData 判断"当前页全选"，而非 data（避免多页时只选当前页却显示已全选）
                     checked={currentData.length > 0 && currentData.every(r => selectedRows.includes(r.id))}
-                    onChange={(e) => {
-                      if (e.target.checked) {
+                    onCheckedChange={(checked) => {
+                      if (checked) {
                         onSelectionChange(currentData.map(item => item.id));
                       } else {
                         onSelectionChange([]);
                       }
                     }}
-                    className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                   />
                 </TableHead>
               )}
@@ -396,18 +374,18 @@ export function SeedSourceTable({
                 <Tooltip
                   content={
                     <div className="text-left space-y-1">
-                      <div className="font-medium border-b border-blue-300/40 pb-1 mb-1">状态判定规则</div>
-                      <div>· 剩余率 = 0% → <span className="text-red-300">耗尽</span></div>
-                      <div>· 剩余率 &lt; 20% → <span className="text-amber-300">不足</span></div>
-                      <div>· 剩余率 ≥ 20% → <span className="text-green-300">充足</span></div>
+                      <div className="font-medium border-b border-white/30 pb-1 mb-1">状态判定规则</div>
+                      <div>· 剩余率 = 0% → <span className="text-red-200 font-semibold">耗尽</span></div>
+                      <div>· 剩余率 &lt; 20% → <span className="text-amber-200 font-semibold">不足</span></div>
+                      <div>· 剩余率 ≥ 20% → <span className="text-white font-semibold">充足</span></div>
                     </div>
                   }
                   position="bottom"
                   multiline
                   maxWidth={260}
-                  className="bg-blue-600"
+                  className="bg-emerald-800 text-white"
                 >
-                  <span className="cursor-help border-b border-dotted border-white/50">状态</span>
+                  <span className="cursor-help border-b border-dotted border-white/50">状态<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span></span>
                 </Tooltip>
               </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
@@ -427,17 +405,15 @@ export function SeedSourceTable({
                 <TableRow key={record.id} className="hover:bg-emerald-50">
                   {showCheckbox && (
                     <TableCell className="px-4 py-3">
-                      <Input
-                        type="checkbox"
+                      <Checkbox
                         checked={selectedRows.includes(record.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
+                        onCheckedChange={(checked) => {
+                          if (checked) {
                             onSelectionChange([...selectedRows, record.id]);
                           } else {
                             onSelectionChange(selectedRows.filter(k => k !== record.id));
                           }
                         }}
-                        className="w-4 h-4 rounded border-gray-400 text-emerald-600 focus:ring-emerald-500"
                       />
                     </TableCell>
                   )}
@@ -518,11 +494,12 @@ export function SeedSourceTable({
                         );
                       })()}
                       {/* 2026-06-05: 强结后显示"已结束"角标（区分正常/异常） */}
+                      {/* 2026-06-06: 异常结束角标改为红色（与繁殖失败同等级） */}
                       {record.endTime && (
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
                             record.endType === 'abnormal'
-                              ? 'text-amber-600 bg-amber-50'
+                              ? 'text-red-700 bg-red-100'
                               : 'text-gray-500 bg-gray-100'
                           }`}
                           title={`${record.endType === 'abnormal' ? '异常' : '正常'}结束于 ${record.endTime}`}
@@ -535,43 +512,45 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
                       {/* 2026-06-05: 删除操作列的「查看详情」按钮（与点击种源批号重复） */}
-                      {/* 繁殖途径操作按钮（非外购 + 未完成时显示） */}
+                      {/* 繁殖途径操作按钮（非外购 + 未完成时显示；2026-06-06 失败时仅保留"过程记录"追溯，其余隐藏） */}
                       {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onPropagationRecord(record)}
-                            className="text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
-                            title="过程记录"
-                          >
-                            <ClipboardList className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onPropagationStage(record)}
-                            className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
-                            title="阶段推进"
-                          >
-                            <GitBranch className="w-4 h-4" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onPropagationRecord(record)}
+                          className="text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                          title="过程记录"
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                        </Button>
                       )}
-                      {/* 2026-06-05: 外购种源无繁殖过程，显示置灰提示（hover 解释为何无『过程记录/阶段推进』） */}
+                      {/* 阶段推进：失败状态下隐藏（已锁定失败，不可继续推进） */}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onPropagationStage(record)}
+                          className="text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                          title="阶段推进"
+                        >
+                          <GitBranch className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* 2026-06-06: 外购种源无繁殖过程，显示天蓝色 HelpCircle（表达"提示"语义而非"错误"） */}
                       {(!record.propagationType || record.propagationType === PropagationType.EXTERNAL) && (
                         <Button
                           variant="ghost"
                           size="icon"
                           disabled
-                          className="text-gray-300 cursor-not-allowed"
+                          className="text-sky-600 bg-sky-50 cursor-not-allowed hover:bg-sky-50"
                           title="外购种源无繁殖过程。如需追踪繁殖阶段，请编辑种源把『来源途径』改为：育种 / 留种 / 无性繁殖"
                         >
-                          <Info className="w-4 h-4" />
+                          <HelpCircle className="w-4 h-4" />
                         </Button>
                       )}
                       {/* 2026-06-05: 去掉 productionPlanCode 守卫 — 新建未关联生产计划的种源也要能结束（强结） */}
-                      {!record.endTime && (
+                      {/* 2026-06-06: 失败种源已"完结"为失败，隐藏强结按钮避免误操作 */}
+                      {!record.endTime && record.propagationStatus !== PropagationStatus.FAILED && (
                         <>
                           <Button
                             variant="ghost"

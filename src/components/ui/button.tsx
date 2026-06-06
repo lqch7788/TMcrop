@@ -16,6 +16,8 @@ const buttonVariants = cva(
         link: "text-emerald-600 underline-offset-4 hover:underline",
         blue: "bg-blue-600 text-white hover:bg-blue-700",
         warning: "bg-amber-500 text-white hover:bg-amber-600",
+        // 2026-06-06: 种源管理「标签打印」按钮专用紫色变体
+        purple: "bg-purple-600 text-white hover:bg-purple-700",
       },
       size: {
         default: "h-10 px-4 py-2",

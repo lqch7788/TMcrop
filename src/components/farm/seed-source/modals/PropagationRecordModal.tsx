@@ -13,25 +13,8 @@ import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-
-// 阶段中文映射
-const STAGE_LABELS: Record<string, string> = {
-  planned: '已计划',
-  in_progress: '进行中',
-  harvested: '已采收',
-  quality_checked: '已质检',
-  completed: '已入库',
-  failed: '失败',
-};
-
-const STAGE_COLORS: Record<string, string> = {
-  planned: 'bg-gray-100 text-gray-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  harvested: 'bg-green-100 text-green-700',
-  quality_checked: 'bg-purple-100 text-purple-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  failed: 'bg-red-100 text-red-700',
-};
+// 2026-06-06: 抽离重复 3 处，使用 cropConstants 统一标签/颜色
+import { PROPAGATION_STATUS_LABELS as STAGE_LABELS, PROPAGATION_STATUS_COLORS as STAGE_COLORS } from '../../../../constants/cropConstants';
 
 interface PropagationRecordModalProps {
   isOpen: boolean;
@@ -39,9 +22,6 @@ interface PropagationRecordModalProps {
   record: SeedSource | null;
   onSuccess?: () => void;
 }
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function PropagationRecordModal({
   isOpen,
@@ -161,8 +141,7 @@ export function PropagationRecordModal({
                 type="datetime-local"
                 value={formData.recordDate || ''}
                 onChange={(e) => setFormData({ ...formData, recordDate: e.target.value })}
-                className={deepInputClass}
-              />
+                             />
             </div>
 
             {/* 阶段 */}
@@ -172,7 +151,7 @@ export function PropagationRecordModal({
                 value={formData.stage}
                 onValueChange={(val) => setFormData({ ...formData, stage: val as PropagationStatus })}
               >
-                <SelectTrigger className={deepInputClass}>
+                <SelectTrigger className="">
                   <SelectValue placeholder="选择阶段" />
                 </SelectTrigger>
                 <SelectContent>
@@ -194,8 +173,7 @@ export function PropagationRecordModal({
                 value={formData.temperature ?? ''}
                 onChange={(e) => setFormData({ ...formData, temperature: e.target.value ? Number(e.target.value) : undefined })}
                 placeholder="如 25.5"
-                className={deepInputClass}
-              />
+                             />
             </div>
 
             {/* 湿度 */}
@@ -209,8 +187,7 @@ export function PropagationRecordModal({
                 value={formData.humidity ?? ''}
                 onChange={(e) => setFormData({ ...formData, humidity: e.target.value ? Number(e.target.value) : undefined })}
                 placeholder="如 65"
-                className={deepInputClass}
-              />
+                             />
             </div>
 
             {/* 操作人 */}
@@ -221,8 +198,7 @@ export function PropagationRecordModal({
                 value={formData.operator || ''}
                 onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
                 placeholder="操作人姓名"
-                className={deepInputClass}
-              />
+                             />
             </div>
 
             {/* === 育种途径字段 === */}
@@ -234,7 +210,7 @@ export function PropagationRecordModal({
                     value={formData.pollinationType || '__none__'}
                     onValueChange={(val) => setFormData({ ...formData, pollinationType: val === '__none__' ? undefined : val as any })}
                   >
-                    <SelectTrigger className={deepInputClass}>
+                    <SelectTrigger className="">
                       <SelectValue placeholder="未设置" />
                     </SelectTrigger>
                     <SelectContent>
@@ -252,8 +228,7 @@ export function PropagationRecordModal({
                     value={formData.pollinatorCrop || ''}
                     onChange={(e) => setFormData({ ...formData, pollinatorCrop: e.target.value })}
                     placeholder="授粉作物名称"
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">授粉花朵数</Label>
@@ -261,8 +236,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.flowerCount || ''}
                     onChange={(e) => setFormData({ ...formData, flowerCount: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">坐果数</Label>
@@ -270,8 +244,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.fruitSetCount || ''}
                     onChange={(e) => setFormData({ ...formData, fruitSetCount: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
               </>
             )}
@@ -285,8 +258,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.harvestSeedCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestSeedCount: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">种子重量(g)</Label>
@@ -295,8 +267,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.seedWeight || ''}
                     onChange={(e) => setFormData({ ...formData, seedWeight: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
               </>
             )}
@@ -310,8 +281,7 @@ export function PropagationRecordModal({
                     type="number"
                     value={formData.harvestPlantCount || ''}
                     onChange={(e) => setFormData({ ...formData, harvestPlantCount: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
               </>
             )}
@@ -326,8 +296,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.germinationRate || ''}
                     onChange={(e) => setFormData({ ...formData, germinationRate: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">净度(%)</Label>
@@ -336,8 +305,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.purity || ''}
                     onChange={(e) => setFormData({ ...formData, purity: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">水分(%)</Label>
@@ -346,8 +314,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.moisture || ''}
                     onChange={(e) => setFormData({ ...formData, moisture: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
               </>
             ) : isAsexual ? (
@@ -359,8 +326,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.survivalRate || ''}
                     onChange={(e) => setFormData({ ...formData, survivalRate: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">生根率(%)</Label>
@@ -369,8 +335,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.rootedRate || ''}
                     onChange={(e) => setFormData({ ...formData, rootedRate: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
                 <div>
                   <Label className="text-gray-600 text-xs">嫁接成活率(%)</Label>
@@ -379,8 +344,7 @@ export function PropagationRecordModal({
                     step="0.1"
                     value={formData.graftSuccessRate || ''}
                     onChange={(e) => setFormData({ ...formData, graftSuccessRate: Number(e.target.value) })}
-                    className={deepInputClass}
-                  />
+                                     />
                 </div>
               </>
             ) : null}
@@ -395,8 +359,7 @@ export function PropagationRecordModal({
                 value={formData.abnormality || ''}
                 onChange={(e) => setFormData({ ...formData, abnormality: e.target.value })}
                 placeholder="记录异常情况（如有）"
-                className={deepInputClass}
-              />
+                             />
             </div>
 
             {/* 备注 - 占两列 */}
@@ -406,8 +369,7 @@ export function PropagationRecordModal({
                 value={formData.remarks || ''}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                 rows={2}
-                className={deepInputClass}
-                placeholder="补充说明"
+                               placeholder="补充说明"
               />
             </div>
           </div>
@@ -438,8 +400,16 @@ export function PropagationRecordModal({
                       </span>
                     </div>
                     <div className="text-xs text-gray-600 space-y-0.5">
-                      {rec.temperature !== undefined && <span className="mr-3">🌡 {rec.temperature}℃</span>}
-                      {rec.humidity !== undefined && <span className="mr-3">💧 {rec.humidity}%</span>}
+                      {rec.temperature !== undefined && (
+                        <span className="inline-flex items-center gap-1 mr-3">
+                          <Thermometer className="w-3 h-3 text-orange-500" />{rec.temperature}℃
+                        </span>
+                      )}
+                      {rec.humidity !== undefined && (
+                        <span className="inline-flex items-center gap-1 mr-3">
+                          <Droplets className="w-3 h-3 text-blue-500" />{rec.humidity}%
+                        </span>
+                      )}
                       {rec.pollinationType && <span className="mr-3">授粉: {rec.pollinationType}</span>}
                       {rec.flowerCount !== undefined && rec.flowerCount > 0 && <span className="mr-3">花: {rec.flowerCount}</span>}
                       {rec.fruitSetCount !== undefined && rec.fruitSetCount > 0 && <span className="mr-3">果: {rec.fruitSetCount}</span>}
@@ -450,8 +420,9 @@ export function PropagationRecordModal({
                     </div>
                     {rec.operator && <div className="text-xs text-gray-400 mt-1">操作人: {rec.operator}</div>}
                     {rec.abnormality && (
-                      <div className="text-xs text-amber-600 mt-1 bg-amber-50 px-2 py-1 rounded">
-                        ⚠ {rec.abnormality}
+                      <div className="text-xs text-amber-600 mt-1 bg-amber-50 px-2 py-1 rounded inline-flex items-start gap-1">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span>{rec.abnormality}</span>
                       </div>
                     )}
                     {rec.remarks && <div className="text-xs text-gray-500 mt-1">{rec.remarks}</div>}

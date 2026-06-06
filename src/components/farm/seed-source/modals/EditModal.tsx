@@ -5,8 +5,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
-import { X, Upload } from 'lucide-react';
 import { SeedSource, SourceType, SourceOrigin } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 // 2026-06-04: status 改为实时计算，store 不再写入 status 字段，computeStockStatus 也不再需要
@@ -19,6 +17,7 @@ import { Label } from '../../../ui/label';
 import { DatePicker } from '../../../ui/DatePicker';
 import { TextArea } from '../../../ui/TextArea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { ImageUploader } from '../../../ui/ImageUploader';
 import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */
@@ -40,9 +39,6 @@ interface EditModalProps {
   record: SeedSource;
   suppliers: Array<{ value: string; label: string }>;
 }
-
-// 深度输入框样式
-const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
 export function EditModal({
   isOpen,
@@ -330,7 +326,7 @@ export function EditModal({
               setFormData({ ...formData, supplierId: val, supplierName: supplier?.label || '' });
             }}
           >
-            <SelectTrigger className={deepInputClass}>
+            <SelectTrigger className="">
               <SelectValue placeholder={
                 formData.sourceOrigin === 'external_purchase' ? '请选择' : '内部自留/无需填写'
               } />
@@ -368,8 +364,7 @@ export function EditModal({
               type="number"
               value={formData.quantity || ''}
               onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-              className={deepInputClass}
-            />
+                         />
             <DictSelect
               category="unit"
               value={formData.unit}
@@ -386,66 +381,16 @@ export function EditModal({
             type="number"
             value={formData.unitPrice || ''}
             onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-            className={deepInputClass}
-          />
+                     />
         </div>
 
-        {/* 图片上传 - 占两列 (P2 #8 修复: 从 AddModal 移植完整实现) */}
+        {/* 图片上传 - 占两列 (M11: 抽离为统一的 ImageUploader 组件) */}
         <div className="col-span-2">
           <Label className="text-gray-900">图片上传</Label>
-          <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
-            {formData.pictures && formData.pictures.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {formData.pictures.map((pic, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={pic}
-                      alt={`预览${index + 1}`}
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => setFormData({
-                        ...formData,
-                        pictures: formData.pictures.filter((_, i) => i !== index)
-                      })}
-                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 rounded-lg py-4">
-              <Upload className="w-8 h-8 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-500">点击上传图片</span>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = e.target.files;
-                  if (files) {
-                    Array.from(files).forEach(file => {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const result = event.target?.result as string;
-                        setFormData({
-                          ...formData,
-                          pictures: [...(formData.pictures || []), result]
-                        });
-                      };
-                      reader.readAsDataURL(file);
-                    });
-                  }
-                  e.target.value = '';
-                }}
-              />
-            </Label>
-          </div>
+          <ImageUploader
+            value={formData.pictures || []}
+            onChange={(pics) => setFormData({ ...formData, pictures: pics })}
+          />
         </div>
 
         {/* 备注 - 占两列 */}

@@ -231,6 +231,39 @@ export function parseHarvesterNames(value: string[] | string | null | undefined)
   }
 }
 
+// ========== 繁殖途径标签（种源管理专用） ==========
+// 2026-06-06: 抽离重复 3 处（SeedSourceTable / PropagationRecordModal / PropagationStageModal）
+export const PROPAGATION_TYPE_LABELS: Record<string, string> = {
+  external: '外购入库',
+  breeding: '育种计划',
+  seed_saving: '种植留种',
+  asexual: '无性繁殖',
+};
+export const PROPAGATION_TYPE_COLORS: Record<string, string> = {
+  external: 'bg-gray-100 text-gray-600',
+  breeding: 'bg-orange-100 text-orange-700',
+  seed_saving: 'bg-green-100 text-green-700',
+  asexual: 'bg-purple-100 text-purple-700',
+};
+
+// ========== 繁殖阶段状态标签（种源管理专用） ==========
+export const PROPAGATION_STATUS_LABELS: Record<string, string> = {
+  planned: '已计划',
+  in_progress: '进行中',
+  harvested: '已采收',
+  quality_checked: '已质检',
+  completed: '已入库',
+  failed: '失败',
+};
+export const PROPAGATION_STATUS_COLORS: Record<string, string> = {
+  planned: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  harvested: 'bg-green-100 text-green-700',
+  quality_checked: 'bg-purple-100 text-purple-700',
+  completed: 'bg-emerald-100 text-emerald-700',
+  failed: 'bg-red-100 text-red-700',
+};
+
 // ========== 库存状态映射（ProduceInventory） ==========
 export const INVENTORY_STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   in_stock: { label: '正常', bg: 'bg-emerald-600', text: 'text-white' },
