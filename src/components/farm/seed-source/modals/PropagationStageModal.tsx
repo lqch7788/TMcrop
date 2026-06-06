@@ -12,7 +12,9 @@ import { SeedSource, PropagationType, PropagationStatus } from '../../../../type
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 import { Input } from '../../../ui/input';
 import { Label } from '../../../ui/label';
-import { showAlert } from '@/lib/dialogService';
+import { showAlert, showConfirm } from '@/lib/dialogService';
+// 2026-06-06: 抽离重复 3 处，使用 cropConstants 统一阶段标签
+import { PROPAGATION_STATUS_LABELS as STAGE_LABELS } from '../../../../constants/cropConstants';
 
 // 统一繁殖阶段流转顺序
 const STAGE_ORDER: PropagationStatus[] = [
@@ -22,15 +24,6 @@ const STAGE_ORDER: PropagationStatus[] = [
   PropagationStatus.QUALITY_CHECKED,
   PropagationStatus.COMPLETED,
 ];
-
-const STAGE_LABELS: Record<string, string> = {
-  planned: '已计划',
-  in_progress: '进行中',
-  harvested: '已采收',
-  quality_checked: '已质检',
-  completed: '已入库',
-  failed: '失败',
-};
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   planned: '',
@@ -139,6 +132,23 @@ export function PropagationStageModal({
       await loadItems();
       onSuccess?.();
       onClose();
+    }
+  };
+
+  // 标记失败（2026-06-06 补 UI 入口：此前 STAGE_LABELS/descriptions/isFailed 红框
+  // 等"接收端"代码完备，但弹窗无触发按钮，仅 API 可写）
+  const handleMarkFailed = async () => {
+    const failedDesc = descriptions[PropagationStatus.FAILED] || '繁殖过程失败';
+    const ok = await showConfirm(
+      `确认将该种源繁殖阶段标记为"失败"？\n\n当前阶段：${STAGE_LABELS[currentStage] || currentStage}\n标记后状态：失败（${failedDesc}）\n\n⚠️ 标记后该种源繁殖阶段将锁定为"失败"，无法继续推进或入库。\n请确认失败原因后再操作（如授粉未成功/插条未生根/留种株异常等）。`
+    );
+    if (!ok) return;
+    setConfirming(true);
+    const success = await updatePropagationStage(record.id, PropagationStatus.FAILED);
+    setConfirming(false);
+    if (success) {
+      setCurrentStage(PropagationStatus.FAILED);
+      onSuccess?.();
     }
   };
 
@@ -289,6 +299,27 @@ export function PropagationStageModal({
                 <p className="text-xs text-emerald-600 mt-1">该种源已完成全部阶段流转，库存已更新</p>
               </div>
             )}
+
+            {/* 标记失败（2026-06-06 补 UI 入口；统一用 destructive 危险操作样式） */}
+            <div className="bg-white rounded-lg p-3 border border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700">标记为「失败」</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {descriptions[PropagationStatus.FAILED] || '繁殖过程失败'}
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleMarkFailed}
+                  disabled={confirming}
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  {confirming ? '处理中...' : '标记失败'}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
