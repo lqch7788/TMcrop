@@ -1871,9 +1871,9 @@ function seedFertilizerLibrary() {
     db.run(`
       INSERT INTO fertilizer_library
       (id, fertilizer_code, fertilizer_name, fertilizer_type, application_timing,
-       function_desc, taboo_desc, shelf_life, storage_condition, status, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [id, code, fert.name, fert.type, fert.timing, fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage, 'active', now, now]);
+       function_desc, taboo_desc, shelf_life, storage_condition, status, current_stock, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, code, fert.name, fert.type, fert.timing, fert.functionDesc, fert.tabooDesc, fert.shelfLife, fert.storage, 'active', 100, now, now]);
     codeIndex++;
   }
 

@@ -2,14 +2,30 @@
  * 施肥管理 API 路由
  * 施肥记录 CRUD + 统计分析 + IoT数据接入
  * V10.0 新增
+ * G11 V1.1：路由层改调 fertilizerService（含事务 + 库存扣减）
  */
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { iotAuth } from '../middleware/iotAuth';
 import { iotIngestSchema } from '../validation/iotIngest';
+import { fertilizerService, BusinessError } from '../services/fertilizer.service';
+import { FertilizerRecord } from '../repositories/fertilizer.repository';
 
 const router = Router();
+
+/**
+ * 将 service 返回的 snake_case 记录转为 camelCase 响应（G11：让前端 store FIELD_MAP 正确解析）
+ */
+function toCamelResponse<T = any>(record: FertilizerRecord | null): T | null {
+  if (!record) return null;
+  return {
+    ...record,
+    fertilizerId: record.fertilizer_id,
+    // 让响应字段同时保留 snake 和 camel 兼容老 store
+    fertilizer_id: record.fertilizer_id,
+  } as T;
+}
 
 /** 生成施肥编号 SF+年月日-4位流水号 */
 function generateFertilizerCode(db: any): string {
@@ -42,30 +58,16 @@ router.get('/generate-code', (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/fertilizer/batch-delete — 批量删除(先于:id注册) */
-router.post('/batch-delete', (req: Request, res: Response) => {
+/** POST /api/fertilizer/batch-delete — 批量删除（G11：调 service.removeBatch() 含事务 + 库存恢复） */
+router.post('/batch-delete', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) {
-      res.status(400).json({ success: false, error: '请提供要删除的记录ID数组' });
-      return;
-    }
-    const placeholders = ids.map(() => '?').join(',');
-    const iotRows = queryToObjects<{ id: string }>(db,
-      `SELECT id FROM fertilizer_records WHERE id IN (${placeholders}) AND data_source = 'auto_iot'`, ids
-    );
-    const iotIds = new Set(iotRows.map(r => r.id));
-    const deletableIds = ids.filter((id: string) => !iotIds.has(id));
-    if (deletableIds.length === 0) {
-      res.status(403).json({ success: false, error: '所选记录均为IoT自动记录，不可删除' });
-      return;
-    }
-    const delPlaceholders = deletableIds.map(() => '?').join(',');
-    db.run(`DELETE FROM fertilizer_records WHERE id IN (${delPlaceholders})`, deletableIds);
-    saveDatabase(); // 持久化到磁盘
-    res.json({ success: true, data: { deleted: deletableIds.length, skipped: ids.length - deletableIds.length } });
+    const result = await fertilizerService.removeBatch(req.body?.ids);
+    res.json({ success: true, data: result });
   } catch (error) {
+    if (error instanceof BusinessError) {
+      res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
+      return;
+    }
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
@@ -106,41 +108,16 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/fertilizer — 新增 */
-router.post('/', (req: Request, res: Response) => {
+/** POST /api/fertilizer — 新增（G11：调 service.apply() 含事务 + 库存扣减） */
+router.post('/', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const body = req.body;
-    if (!body.fertilizer_name || !body.fertilizer_type || !body.dilution_ratio || !body.greenhouse_name || !body.crop_name || !body.fertilize_time) {
-      res.status(400).json({ success: false, error: '肥料名称、肥料类型、稀释比例、温室位置、作物名称、施肥时间为必填项' });
+    const record = await fertilizerService.apply(req.body);
+    res.status(201).json({ success: true, data: toCamelResponse(record) });
+  } catch (error) {
+    if (error instanceof BusinessError) {
+      res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
       return;
     }
-    const code = generateFertilizerCode(db);
-    const now = new Date().toISOString();
-    const id = `fer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const qty = body.quantity || 0;
-    const price = body.unit_price || 0;
-
-    db.run(`INSERT INTO fertilizer_records (
-      id, fertilizer_code, farm_task_id, production_plan_id, production_plan_code,
-      planting_id, planting_code, greenhouse_id, greenhouse_name, area_name,
-      crop_name, crop_variety, fertilizer_name, fertilizer_type, dilution_ratio,
-      quantity, unit, unit_price, total_cost, fertilize_time, operator_id, operator_name,
-      data_source, iot_device_id, iot_record_id, description, status, create_time, update_time
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, code, body.farm_task_id || null, body.production_plan_id || null, body.production_plan_code || null,
-       body.planting_id || null, body.planting_code || null, body.greenhouse_id || null, body.greenhouse_name,
-       body.area_name || null, body.crop_name, body.crop_variety || null, body.fertilizer_name, body.fertilizer_type,
-       body.dilution_ratio, qty, body.unit || '千克', price, qty * price, body.fertilize_time,
-       body.operator_id || null, body.operator_name || null, body.data_source || 'manual',
-       body.iot_device_id || null, body.iot_record_id || null, body.description || null,
-       body.status || 'completed', now, now]
-    );
-
-    const items = queryToObjects(db, `SELECT * FROM fertilizer_records WHERE fertilizer_code = ?`, [code]);
-    saveDatabase(); // 持久化到磁盘，防止重启数据丢失
-    res.status(201).json({ success: true, data: items[0] || null });
-  } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
@@ -177,50 +154,22 @@ router.get('/stats', (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/fertilizer/iot-ingest — IoT数据接入 (IoT设备认证 + Zod校验) */
-router.post('/iot-ingest', iotAuth, (req: Request, res: Response) => {
+/** POST /api/fertilizer/iot-ingest — IoT数据接入 (G11：调 service.ingestIot() 含事务 + 库存扣减) */
+router.post('/iot-ingest', iotAuth, async (req: Request, res: Response) => {
   try {
-    // Zod 请求校验
     const parsed = iotIngestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ success: false, error: '请求格式错误', details: parsed.error.issues });
       return;
     }
     const { device_id, device_name, records } = parsed.data;
-
-    const db = getDatabase();
-    let inserted = 0, skipped = 0;
-    const now = new Date().toISOString();
-
-    for (const record of records) {
-      const dups = queryToObjects<{ id: string }>(db,
-        `SELECT id FROM fertilizer_records WHERE iot_record_id = ? AND iot_device_id = ?`,
-        [record.iot_record_id, device_id]
-      );
-      if (dups.length > 0) { skipped++; continue; }
-
-      const code = generateFertilizerCode(db);
-      const id = `fer-iot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${inserted}`;
-      const qty = record.quantity || 0;
-      const price = record.unit_price || 0;
-
-      db.run(`INSERT INTO fertilizer_records (
-        id, fertilizer_code, greenhouse_name, area_name, crop_name,
-        fertilizer_name, fertilizer_type, dilution_ratio, quantity, unit_price,
-        total_cost, fertilize_time, operator_name, data_source,
-        iot_device_id, iot_record_id, status, create_time, update_time
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [id, code, record.greenhouse_name || '', record.area_name || null, record.crop_name || '',
-         record.fertilizer_name, record.fertilizer_type || '', record.dilution_ratio || '',
-         qty, price, qty * price, record.fertilize_time || now,
-         device_name || `设备${device_id}`, 'auto_iot', device_id, record.iot_record_id,
-         'completed', now, now]
-      );
-      inserted++;
-    }
-    saveDatabase(); // 持久化到磁盘
-    res.status(201).json({ success: true, data: { inserted, skipped, total: records.length, device_id } });
+    const result = await fertilizerService.ingestIot(device_id!, device_name ?? '', records);
+    res.status(201).json({ success: true, data: result });
   } catch (error) {
+    if (error instanceof BusinessError) {
+      res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
+      return;
+    }
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
@@ -238,52 +187,30 @@ router.get('/:id', (req: Request, res: Response) => {
   }
 });
 
-/** PUT /api/fertilizer/:id — 更新(IoT记录不可更新) */
-router.put('/:id', (req: Request, res: Response) => {
+/** PUT /api/fertilizer/:id — 更新（G11：调 service.update() 含事务 + delta 库存调整） */
+router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const { id } = req.params;
-    const body = req.body;
-    const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
-    if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
-    if (existing[0].data_source === 'auto_iot') { res.status(403).json({ success: false, error: 'IoT自动记录不可编辑' }); return; }
-
-    const now = new Date().toISOString();
-    const qty = body.quantity ?? existing[0].quantity;
-    const price = body.unit_price ?? existing[0].unit_price;
-    db.run(`UPDATE fertilizer_records SET fertilizer_name=?, fertilizer_type=?, dilution_ratio=?,
-      quantity=?, unit=?, unit_price=?, total_cost=?, greenhouse_name=?, area_name=?, crop_name=?, crop_variety=?,
-      fertilize_time=?, operator_name=?, description=?, production_plan_id=?, production_plan_code=?,
-      planting_id=?, planting_code=?, update_time=? WHERE id=?`,
-      [body.fertilizer_name ?? existing[0].fertilizer_name, body.fertilizer_type ?? existing[0].fertilizer_type,
-       body.dilution_ratio ?? existing[0].dilution_ratio, qty, body.unit ?? existing[0].unit ?? '千克', price, qty * price,
-       body.greenhouse_name ?? existing[0].greenhouse_name, body.area_name ?? existing[0].area_name,
-       body.crop_name ?? existing[0].crop_name, body.crop_variety ?? existing[0].crop_variety,
-       body.fertilize_time ?? existing[0].fertilize_time, body.operator_name ?? existing[0].operator_name,
-       body.description ?? existing[0].description, body.production_plan_id ?? existing[0].production_plan_id,
-       body.production_plan_code ?? existing[0].production_plan_code, body.planting_id ?? existing[0].planting_id,
-       body.planting_code ?? existing[0].planting_code, now, id]
-    );
-    const updated = queryToObjects(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
-    saveDatabase(); // 持久化到磁盘
-    res.json({ success: true, data: updated[0] || null });
+    const updated = await fertilizerService.update(req.params.id, req.body);
+    res.json({ success: true, data: toCamelResponse(updated) });
   } catch (error) {
+    if (error instanceof BusinessError) {
+      res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
+      return;
+    }
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });
 
-/** DELETE /api/fertilizer/:id — 删除(IoT记录不可删除) */
-router.delete('/:id', (req: Request, res: Response) => {
+/** DELETE /api/fertilizer/:id — 删除（G11：调 service.remove() 含事务 + 库存恢复） */
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const { id } = req.params;
-    const existing = queryToObjects<Record<string, any>>(db, `SELECT * FROM fertilizer_records WHERE id = ?`, [id]);
-    if (existing.length === 0) { res.status(404).json({ success: false, error: '记录不存在' }); return; }
-    if (existing[0].data_source === 'auto_iot') { res.status(403).json({ success: false, error: 'IoT自动记录不可删除' }); return; }
-    db.run(`DELETE FROM fertilizer_records WHERE id = ?`, [id]);
-    saveDatabase(); // 持久化到磁盘
-    res.json({ success: true, data: { id } });
+    const result = await fertilizerService.remove(req.params.id);
+    res.json({ success: true, data: result });
   } catch (error) {
+    if (error instanceof BusinessError) {
+      res.status(error.httpStatus).json({ success: false, error: error.message, code: error.code });
+      return;
+    }
     res.status(500).json({ success: false, error: (error as Error).message });
   }
 });

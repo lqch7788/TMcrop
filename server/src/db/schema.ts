@@ -2620,7 +2620,10 @@ export function initializeDatabase() {
       description TEXT,
       status TEXT DEFAULT 'completed',
       create_time TEXT DEFAULT (datetime('now','localtime')),
-      update_time TEXT DEFAULT (datetime('now','localtime'))
+      update_time TEXT DEFAULT (datetime('now','localtime')),
+      -- G11 V1.1：关联肥料库（库选择追溯用；老数据可空）
+      fertilizer_id TEXT,
+      FOREIGN KEY (fertilizer_id) REFERENCES fertilizer_library(id) ON DELETE SET NULL
     )
   `);
 
@@ -2930,6 +2933,8 @@ export function initializeDatabase() {
       storage_condition TEXT,
       supplier_info TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+      -- G11 V1.1：当前库存（千克），施肥时事务扣减，删除/编辑时回滚
+      current_stock REAL DEFAULT 0,
       create_time TEXT DEFAULT (datetime('now','localtime')),
       update_time TEXT DEFAULT (datetime('now','localtime'))
     )
