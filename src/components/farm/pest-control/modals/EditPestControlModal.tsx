@@ -196,10 +196,10 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
         })(),
         // 化学防治专用（支持多个药剂）
         pesticides: (() => {
-          // 优先从 pesticide_list 加载
-          if ((record as any).pesticide_list) {
+          // 优先从 pesticideList 加载
+          if ((record as any).pesticideList) {
             try {
-              const parsed = JSON.parse((record as any).pesticide_list);
+              const parsed = JSON.parse((record as any).pesticideList);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed;
               }
@@ -220,10 +220,10 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
         })(),
         // 生物防治专用（支持多个制剂）
         bioAgents: (() => {
-          // 优先从 bio_agent_list 加载
-          if ((record as any).bio_agent_list) {
+          // 优先从 bioAgentList 加载
+          if ((record as any).bioAgentList) {
             try {
-              const parsed = JSON.parse((record as any).bio_agent_list);
+              const parsed = JSON.parse((record as any).bioAgentList);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed;
               }
@@ -243,10 +243,10 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
         })(),
         // 物理防治专用（支持多个设备/方式）
         equipment: (() => {
-          // 优先从 equipment_list 加载
-          if ((record as any).equipment_list) {
+          // 优先从 equipmentList 加载
+          if ((record as any).equipmentList) {
             try {
-              const parsed = JSON.parse((record as any).equipment_list);
+              const parsed = JSON.parse((record as any).equipmentList);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed;
               }

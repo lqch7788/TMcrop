@@ -238,9 +238,9 @@ export function PestControlTable({
             ) : (
               currentData.map((record) => {
                 const expanded = isExpanded(record.id);
-                const pesticideList = parseJsonList((record as any).pesticide_list);
-                const bioAgentList = parseJsonList((record as any).bio_agent_list);
-                const equipmentList = parseJsonList((record as any).equipment_list);
+                const pesticideList = parseJsonList((record as any).pesticideList);
+                const bioAgentList = parseJsonList((record as any).bioAgentList);
+                const equipmentList = parseJsonList((record as any).equipmentList);
                 const leafFertilizerList = parseJsonList(record.leafFertilizerName);
 
                 return (
