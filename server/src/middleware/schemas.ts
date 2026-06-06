@@ -202,3 +202,20 @@ export const paginationSchema = z.object({
 export const idQuerySchema = z.object({
   id: z.string().min(1, 'ID 不能为空'),
 });
+
+// ============================================
+// 生产计划列表查询验证 (P0-08)
+// ============================================
+
+/**
+ * 生产计划列表查询 Schema
+ * 用于 GET /api/production-plans 的 query 参数校验
+ */
+export const productionPlanListQuerySchema = z.object({
+  crop_name: z.string().optional(),
+  status: z.string().optional(),
+  plan_type: z.string().optional(),
+  keyword: z.string().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(200).optional().default(50),
+});

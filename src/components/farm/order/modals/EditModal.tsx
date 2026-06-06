@@ -104,8 +104,8 @@ export function EditModal({
     }
   }, [record, isOpen]);
 
-  // 所有品种选项
-  const varietyOptions = useMemo(() => cropVarietyService.getVarietyOptions(), []);
+  // 所有品种选项（[M-2] 2026-06-06 移除 useMemo 空依赖包装，直接每次渲染计算，避免与 filteredVarieties 形成双层缓存）
+  const varietyOptions = cropVarietyService.getVarietyOptions();
 
   // 过滤品种选项
   const filteredVarieties = useMemo(() => {
@@ -234,8 +234,12 @@ export function EditModal({
       unit: formData.unit,
       remarks: formData.remarks,
       status: finalStatus,
-      // 客户相关字段
+      // 客户相关字段（P0-5：补全 customerName / customerPhone / deliveryAddress，
+      // 字段名对照后端 PUT fieldMap：customer_name / customer_phone / delivery_address）
       customerId: formData.customerId || undefined,
+      customerName: formData.customerName || (record as any).customerName || '',
+      customerPhone: formData.customerPhone || '',
+      deliveryAddress: formData.deliveryAddress || '',
     };
 
     // logger.info('[EditModal] 准备更新的订单数据:', JSON.stringify(updates, null, 2));

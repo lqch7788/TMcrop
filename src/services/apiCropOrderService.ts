@@ -19,6 +19,10 @@ import type { CropOrder, CropOrderStatus } from '../types/crop';
 
 /**
  * 将前端驼峰命名字段转换为后端蛇形命名字段
+ *
+ * [M-1] 2026-06-06 补全字段映射：customerContact / expectedDeliveryDate / actualDeliveryDate /
+ *     cropName / orderName 之前已在表中，现再补 quantity / deliveryPlan / totalDeliveredQuantity /
+ *     expectedHarvestDate / createTime / id 等后端 schema 中存在的列，确保 PUT 全量字段不丢
  */
 function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
   const snakeMap: Record<string, string> = {
@@ -30,6 +34,7 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
     cropCategory: 'crop_category',
     plannedQuantity: 'planned_quantity',
     actualQuantity: 'actual_quantity',
+    quantity: 'quantity',
     unitPrice: 'unit_price',
     totalAmount: 'total_amount',
     customerId: 'customer_id',
@@ -37,16 +42,21 @@ function toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {
     customerContact: 'customer_contact',
     customerPhone: 'customer_phone',
     deliveryAddress: 'delivery_address',
+    deliveryPlan: 'delivery_plan',
+    totalDeliveredQuantity: 'total_delivered_quantity',
     orderDate: 'order_date',
     expectedDeliveryDate: 'expected_delivery_date',
     actualDeliveryDate: 'actual_delivery_date',
+    expectedHarvestDate: 'expected_harvest_date',
     expectedCompletionDate: 'expected_completion_date',
     completedQuantity: 'completed_quantity',
     unit: 'unit',
     remarks: 'remarks',
     status: 'status',
     createBy: 'create_by',
+    createTime: 'create_time',
     updateTime: 'update_time',
+    id: 'id',
   };
 
   const result: Record<string, unknown> = {};
@@ -103,12 +113,12 @@ export async function deleteOrder(id: string): Promise<boolean> {
 }
 
 /**
- * 批量删除订单
+ * 批量删除订单（P0-2：改为一次批量接口，避免串行 N 次网络往返）
+ * 后端已提供 POST /api/crop-orders/batch/delete
  */
 export async function deleteOrders(ids: string[]): Promise<boolean> {
-  for (const id of ids) {
-    await enhancedApiClient.delete(`/crop-orders/${id}`);
-  }
+  if (!Array.isArray(ids) || ids.length === 0) return true;
+  await enhancedApiClient.post('/crop-orders/batch/delete', { ids });
   return true;
 }
 
@@ -156,23 +166,28 @@ export async function resetOrders(): Promise<void> {
 }
 
 /**
- * 订单统计数据
+ * 订单统计数据（P0-3：改为真实调后端 API）
+ * 后端 stats 路由已按前端 CropOrderStatus 枚举（planned/in_progress/completed/cancelled）统计，
+ * 同时计算本月新增（thisMonth）以兼容 OrderStats.tsx 的 prop 形状
  */
 export interface OrderStats {
   total: number;
   inProgress: number;
   completed: number;
   thisMonth: number;
+  /** 扩展字段：后端多返回的，方便后续业务使用 */
+  planned?: number;
+  cancelled?: number;
+  totalAmount?: number;
 }
 
 /**
  * 从后端获取订单统计数据
- * 注意：后端API使用pending/confirmed/processing/shipped/delivered状态，
- * 与前端CropOrderStatus的planned/in_progress/completed/cancelled不匹配，
- * 因此直接返回null，使用前端本地数据计算
+ * 解析响应 data 字段直接返回；Store 端可按需 setState
  */
-export async function getOrderStats(): Promise<null> {
-  // 后端状态与前端 CropOrderStatus 枚举不匹配，无法正确映射
-  // 前端已有 fallback 逻辑基于 orders 本地计算统计
-  return null;
+export async function getOrderStats(): Promise<OrderStats | null> {
+  // 网络失败由 enhancedApiClient 3 次重试后自动抛出；Store 端 catch 弹 toast
+  const data = await enhancedApiClient.get<OrderStats>('/crop-orders/stats/summary');
+  if (!data || typeof data !== 'object') return null;
+  return data;
 }

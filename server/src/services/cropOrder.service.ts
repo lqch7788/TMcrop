@@ -1,5 +1,9 @@
 /**
  * 订单服务
+ *
+ * [L-2] 当前未被任何 routes/services 引用，保留为备用实现，不删除（用户禁止擅删文件）
+ * 实际订单 CRUD 逻辑集中在 server/src/routes/cropOrder.ts 中直接使用 sql.js 完成
+ * TODO: 后续如确认不再使用，删除前需走用户授权
  */
 
 import { getDatabase, saveDatabase } from '../db';

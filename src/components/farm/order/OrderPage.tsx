@@ -43,7 +43,8 @@ export default function OrderPage() {
     updateOrder,
     deleteOrder,
     deleteOrders,
-    syncPending,
+    // [M-3] 2026-06-06 移除 syncPending 调用（apiCropOrderService.syncPendingOrders() 当前是 stub 返回 {0,0}，
+    // 客户端 fire-and-forget 调用是无效网络往返；后续真同步接入时再恢复）
     clearError,
   } = useOrderDataStore();
   // 2026-06-06: 监听 store 错误并弹 Toast
@@ -62,7 +63,7 @@ export default function OrderPage() {
   });
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // [L-5] 2026-06-06 移除 refreshKey 死状态（仅 setRefreshKey 未被使用，refreshKey 自身也未被消费）
 
   // 作物品种数据（从订单数据中提取唯一品种，而不是从品种库获取所有品种）
   const cropNames = useMemo(() => {
@@ -76,15 +77,10 @@ export default function OrderPage() {
 
   // 组件挂载时加载数据
   useEffect(() => {
-    // 同步待处理订单 + 加载数据
-    syncPending().then(result => {
-      if (result.success > 0 || result.failed > 0) {
-        // logger.info(`[OrderPage] 同步结果: 成功 ${result.success}, 失败 ${result.failed}`);
-      }
-    });
+    // [M-3] 2026-06-06 移除 syncPending() 调用（详见 store 解构处注释）
     fetchOrders();
     fetchStats();
-  }, [fetchOrders, fetchStats, syncPending]);
+  }, [fetchOrders, fetchStats]);
 
   // 2026-06-06: 监听 store.error 变化，新错误弹 Toast（用 useRef 去重）
   useEffect(() => {
@@ -168,9 +164,13 @@ export default function OrderPage() {
       try {
         await deleteOrders(ids);
         setSelectedRows([]);
+        // [H-4 perf] 2026-06-06 修复：删除后立即刷新统计，保证顶部统计卡片数量同步
+        await fetchStats();
       } catch (error) {
-        // logger.error('删除订单失败:', error);
-        showAlert('删除失败，请稍后重试');
+        // [M-5] 2026-06-06 修复：catch 之前只弹通用文案，丢 error.message；现把 error.message 拼到 alert
+        console.error('[OrderPage] 删除订单失败:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        showAlert(`删除失败：${msg || '请稍后重试'}`);
       }
     }
   };
@@ -429,7 +429,10 @@ export default function OrderPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onSuccess={() => {
+          // [H-4 perf] 2026-06-06 修复：新增订单后同时刷新列表 + 统计，
+          // 否则顶部 OrderStats 数量不更新
           fetchOrders();
+          fetchStats();
         }}
         orderTypeOptions={orderTypeOptions}
       />
