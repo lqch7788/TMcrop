@@ -6,7 +6,9 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { PurchasePlan, PurchasePlanItem } from './purchasePlanService';
+// M-3: 改用 src/types/purchase 的 PurchasePlan（含 executionStatus 字段）
+import type { PurchasePlan, PurchasePlanItem, PurchaseExecutionStatus } from '../types/purchase';
+import { z } from 'zod';
 
 // 后端返回的数据字段类型
 interface BackendPurchasePlanItem {
@@ -64,17 +66,69 @@ interface BackendPurchasePlan {
   supplierName: string;
   totalAmount: number;
   attachments: string[];
+  executionStatus?: string;
+  execution_status?: string;
   [key: string]: unknown;
 }
 
+// M-3: 用 zod 校验后端响应里的执行状态枚举，拒收非法值
+const ExecutionStatusSchema = z.enum(['pending_execution', 'purchasing', 'completed', 'cancelled']);
+
 /**
- * 将后端返回的数据转换为前端格式
+ * 安全解析后端返回的 executionStatus，失败时回退到 'pending_execution'
  */
-function transformPurchasePlan(data: BackendPurchasePlan | BackendPurchasePlan[]): PurchasePlan | PurchasePlan[] {
-  if (Array.isArray(data)) {
-    return data.map(item => transformSingle(item));
-  }
-  return transformSingle(data);
+function parseExecutionStatus(raw: unknown): PurchaseExecutionStatus {
+  const parsed = ExecutionStatusSchema.safeParse(raw);
+  return parsed.success ? parsed.data : 'pending_execution';
+}
+
+/**
+ * M-12: 单条转换（明确契约：只接受单条）
+ */
+function transformSingle(item: BackendPurchasePlan): PurchasePlan {
+  return {
+    id: item.id,
+    purchaseApplicationCode: item.purchaseApplicationCode || '',
+    relatedBatchCode: item.relatedBatchCode || '',
+    purchaseType: (item.purchaseType || 'other') as PurchasePlan['purchaseType'],
+    purchaseTypeName: item.purchaseTypeName || '',
+    applicant: item.applicant || '',
+    applicantId: item.applicantId || '',
+    applicantDepartment: item.applicantDepartment || '',
+    applyDate: item.applyDate ? item.applyDate.split('T')[0] : '',
+    requiredDate: item.requiredDate ? item.requiredDate.split('T')[0] : '',
+    priority: (item.priority || 'normal') as PurchasePlan['priority'],
+    priorityText: item.priorityText || '中',
+    status: (item.status || 'draft') as PurchasePlan['status'],
+    statusText: item.statusText || '草稿',
+    // M-3: 强类型，不再用 as any；走 zod 校验白名单值
+    executionStatus: parseExecutionStatus(item.executionStatus ?? item.execution_status),
+    itemCount: item.itemCount || 0,
+    items: Array.isArray(item.items) ? item.items.map(transformItem) : [],
+    remark: item.remarks || '', // 后端字段名是 remarks，前端 PurchaseApplication 类型用 remark（兼容映射）
+    approvalPerson: item.approvalPerson || '',
+    approvalStatus: item.approvalStatus || 'pending',
+    createdAt: item.createdAt || '',
+    updatedAt: item.updatedAt || '',
+    planCode: item.planCode || '',
+    planTitle: item.planTitle || '',
+    planType: item.planType || '',
+    departmentName: item.departmentName || '',
+    applicantName: item.applicantName || '',
+    applyDate2: item.applyDate2 || '',
+    expectedDate: item.expectedDate || '',
+    supplierId: item.supplierId || '',
+    supplierName: item.supplierName || '',
+    totalAmount: item.totalAmount || 0,
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
+  };
+}
+
+/**
+ * M-12: 数组转换（明确契约：只接受数组）
+ */
+function transformPurchasePlanArray(data: BackendPurchasePlan[]): PurchasePlan[] {
+  return data.map(transformSingle);
 }
 
 function transformItem(item: BackendPurchasePlanItem): PurchasePlanItem {
@@ -100,43 +154,8 @@ function transformItem(item: BackendPurchasePlanItem): PurchasePlanItem {
   };
 }
 
-function transformSingle(item: BackendPurchasePlan): PurchasePlan {
-  return {
-    id: item.id,
-    purchaseApplicationCode: item.purchaseApplicationCode || '',
-    relatedBatchCode: item.relatedBatchCode || '',
-    purchaseType: item.purchaseType || '',
-    purchaseTypeName: item.purchaseTypeName || '',
-    applicant: item.applicant || '',
-    applicantId: item.applicantId || '',
-    applicantDepartment: item.applicantDepartment || '',
-    applyDate: item.applyDate ? item.applyDate.split('T')[0] : '',
-    requiredDate: item.requiredDate ? item.requiredDate.split('T')[0] : '',
-    priority: item.priority || 'normal',
-    priorityText: item.priorityText || '中',
-    status: item.status || 'draft',
-    statusText: item.statusText || '草稿',
-    executionStatus: (item.executionStatus || item.execution_status || 'pending_execution') as any,
-    itemCount: item.itemCount || 0,
-    items: Array.isArray(item.items) ? item.items.map(transformItem) : [],
-    remarks: item.remarks || '',
-    approvalPerson: item.approvalPerson || '',
-    approvalStatus: item.approvalStatus || 'pending',
-    createdAt: item.createdAt || '',
-    updatedAt: item.updatedAt || '',
-    planCode: item.planCode || '',
-    planTitle: item.planTitle || '',
-    planType: item.planType || '',
-    departmentName: item.departmentName || '',
-    applicantName: item.applicantName || '',
-    applyDate2: item.applyDate2 || '',
-    expectedDate: item.expectedDate || '',
-    supplierId: item.supplierId || '',
-    supplierName: item.supplierName || '',
-    totalAmount: item.totalAmount || 0,
-    attachments: Array.isArray(item.attachments) ? item.attachments : [],
-  };
-}
+// 注：transformSingle 已在 M-12 中提到文件顶部（强类型 + zod 校验 executionStatus）
+// 旧的 transformPurchasePlan 双契约版本已删除，拆为 transformPurchasePlanArray（数组）+ transformSingle（单条）
 
 /**
  * 获取所有采购计划
@@ -144,7 +163,8 @@ function transformSingle(item: BackendPurchasePlan): PurchasePlan {
  */
 export async function getPurchasePlans(): Promise<PurchasePlan[]> {
   const data = await enhancedApiClient.get<BackendPurchasePlan[]>('/purchase-plans');
-  return transformPurchasePlan(data) as PurchasePlan[];
+  // M-12: 数组契约专用 transform
+  return transformPurchasePlanArray(data);
 }
 
 /**
@@ -153,7 +173,7 @@ export async function getPurchasePlans(): Promise<PurchasePlan[]> {
  */
 export async function getPurchasePlanById(id: string): Promise<PurchasePlan | undefined> {
   const data = await enhancedApiClient.get<BackendPurchasePlan>(`/purchase-plans/${id}`);
-  return transformPurchasePlan(data) as PurchasePlan;
+  return data ? transformSingle(data) : undefined;
 }
 
 /**
@@ -161,9 +181,8 @@ export async function getPurchasePlanById(id: string): Promise<PurchasePlan | un
  * 数据流：API → SQLite DB
  */
 export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<PurchasePlan> {
-  const result = await enhancedApiClient.post<PurchasePlan>('/purchase-plans', plan);
-  // POST 响应现在返回经过 mapToFrontendFormat 的完整数据
-  return transformPurchasePlan(result) as PurchasePlan;
+  const result = await enhancedApiClient.post<BackendPurchasePlan>('/purchase-plans', plan);
+  return transformSingle(result);
 }
 
 /**
@@ -172,17 +191,24 @@ export async function addPurchasePlan(plan: Omit<PurchasePlan, 'id'>): Promise<P
  */
 export async function updatePurchasePlan(id: string, updates: Partial<PurchasePlan>): Promise<PurchasePlan | null> {
   // enhancedApiClient 已自动解包 { success, data }，result 就是 plan 本身
-  const result = await enhancedApiClient.put<PurchasePlan>(`/purchase-plans/${id}`, updates);
-  return result ? transformPurchasePlan(result) as PurchasePlan : null;
+  const result = await enhancedApiClient.put<BackendPurchasePlan>(`/purchase-plans/${id}`, updates);
+  return result ? transformSingle(result) : null;
 }
 
 /**
  * 删除采购计划
  * 数据流：API → SQLite DB
+ * P0-1 修复：4xx/5xx 由 enhancedApiClient 自动抛错，成功才返回 true
  */
 export async function deletePurchasePlan(id: string): Promise<boolean> {
-  await enhancedApiClient.delete(`/purchase-plans/${id}`);
-  return true;
+  try {
+    await enhancedApiClient.delete(`/purchase-plans/${id}`);
+    return true;
+  } catch (error) {
+    // 业务校验失败（如已审批/采购中）或网络错误统一返回 false，由调用方处理
+    console.error('[apiPurchasePlanService] deletePurchasePlan 失败:', error);
+    throw error;
+  }
 }
 
 /**
@@ -224,9 +250,9 @@ export async function updateExecutionStatus(
   executionStatus: string
 ): Promise<PurchasePlan | null> {
   // enhancedApiClient 已自动解包 { success, data }，result 就是 plan 本身
-  const result = await enhancedApiClient.patch<PurchasePlan>(
+  const result = await enhancedApiClient.patch<BackendPurchasePlan>(
     `/purchase-plans/${id}/execution-status`,
     { executionStatus }
   );
-  return result ? transformPurchasePlan(result) as PurchasePlan : null;
+  return result ? transformSingle(result) : null;
 }

@@ -1,7 +1,7 @@
 /**
  * 采购计划预警统计组件
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import type { PurchasePlan } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
@@ -15,9 +15,17 @@ interface AlertStatsProps {
  * 采购计划预警统计组件
  */
 export function AlertStats({ purchasePlansData }: AlertStatsProps) {
-  // 计算预警统计
-  const overdueCount = purchasePlansData.filter(p => calculateOverdueAlert(p).level === 'overdue').length;
-  const warningCount = purchasePlansData.filter(p => calculateOverdueAlert(p).level === 'warning').length;
+  // H-5: 用 useMemo 一次遍历算 2 个值（避免 O(2n) 双 filter）
+  const { overdueCount, warningCount } = useMemo(() => {
+    let overdue = 0;
+    let warning = 0;
+    for (const p of purchasePlansData) {
+      const level = calculateOverdueAlert(p).level;
+      if (level === 'overdue') overdue++;
+      else if (level === 'warning') warning++;
+    }
+    return { overdueCount: overdue, warningCount: warning };
+  }, [purchasePlansData]);
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-none">

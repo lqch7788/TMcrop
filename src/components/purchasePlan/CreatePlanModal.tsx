@@ -13,6 +13,10 @@ import { usePlantingStore, useDictionaryStore } from '../../stores';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
+// M-7: 改用静态 import（原本 generateCode 函数内 await import 每次调用都重新打包）
+import { getNextPurchaseApplicationCode } from '../../services/apiPurchasePlanService';
+// H-2: 复用 codeGenerator 的兜底逻辑
+import { yearMonthLocal } from '@/lib/dateUtils';
 
 const safeArray = <T,>(v: T[] | undefined | null): T[] => Array.isArray(v) ? v : [];
 
@@ -50,14 +54,12 @@ interface CreatePlanModalProps {
  */
 const generateCode = async (): Promise<string> => {
   try {
-    const { getNextPurchaseApplicationCode } = await import('../../services/apiPurchasePlanService');
+    // M-7: 静态 import
     return await getNextPurchaseApplicationCode();
-  } catch (err) {
+  } catch {
     // 后端调用失败时的兜底：PA+年月+4位随机（不保证唯一，但前端会校验）
-    const now = new Date();
-    const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
     const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    return `PA${ym}${random}`;
+    return `PA${yearMonthLocal()}${random}`;
   }
 };
 

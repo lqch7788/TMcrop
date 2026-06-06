@@ -10,6 +10,7 @@
 export type PurchaseStatus =
   | 'draft'           // 草稿
   | 'pending'        // 待审批
+  | 'rejected'       // 已拒绝（业务规则仍然使用，类型补齐）
   | 'approved'       // 已通过
   | 'purchasing'     // 采购中
   | 'completed'      // 已完成
@@ -106,7 +107,7 @@ export interface PurchaseApplication {
 
   // 物料明细
   items: PurchaseItem[];               // 物料明细数组
-  itemCount: number;                  // 物料种类数
+  itemCount: number;                  // 物料种类数 — L-5 冗余：与 items.length 等价；保留以便后端 / 报表直接读，避免 N+1 性能问题；不在前端重算
 
   // 审批相关（如果已关联审批单）
   approvalId?: string;
@@ -120,6 +121,19 @@ export interface PurchaseApplication {
   // 时间戳
   createdAt: string;
   updatedAt: string;
+
+  // 扩展字段（M-3 / M-12 调整后保留兼容，原 PurchasePlan 接口有这些字段）
+  planCode?: string;
+  planTitle?: string;
+  planType?: string;
+  departmentName?: string;
+  applicantName?: string;
+  applyDate2?: string;
+  expectedDate?: string;
+  supplierId?: string;
+  supplierName?: string;
+  totalAmount?: number;
+  attachments?: string[];
 }
 
 // ============================================================

@@ -87,6 +87,7 @@ export function PlanDetailModal({
   };
 
   const handleSaveExecStatus = async () => {
+    // M-8: 用已提取的 currentExecStatus 局部 const（避免多处重算 + 类型断言）
     if (newExecStatus === currentExecStatus) {
       setEditingExecStatus(false);
       return;

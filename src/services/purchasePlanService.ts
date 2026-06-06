@@ -1,9 +1,11 @@
 /**
  * 采购计划数据类型定义
  * 供前端其他模块引用
+ * L-1: 整个文件未被引用（实际数据流走 apiPurchasePlanService + types/purchase），保留以便其他模块可能通过旧路径引用
  */
 
 // 采购计划类型
+// M-5: 加 barcode?: string 字段（与 CreatePlanModal.tsx:172 / types/purchase.ts PurchaseItem 对齐）
 export interface PurchasePlanItem {
   id: string;
   materialId: string;
@@ -23,6 +25,7 @@ export interface PurchasePlanItem {
   purpose: string;
   remark: string;
   relatedBatchCode?: string;
+  barcode?: string;
 }
 
 export interface PurchasePlan {
