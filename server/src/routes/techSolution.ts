@@ -213,7 +213,6 @@ router.get('/:id', (req: Request, res: Response) => {
     if (items && items.length > 0) {
       const data = mapFieldsToFrontend(items[0]);
       // 加载适用范围（V9.0 关联表）
-      const db = getDatabase();
       const scopesMap = loadScopesBySolutionIds(db, [data.id as string]);
       data.scopes = scopesMap[data.id as string] || [];
       res.json({
@@ -306,7 +305,9 @@ router.post('/', (req: Request, res: Response) => {
     }
     for (let i = 0; i < scopeNames.length; i++) {
       const name = scopeNames[i];
-      const code = scopeCodes[i] || `custom_${i}`;
+      // L-5 修复：scope_code 直接使用 scope_name 同名字符串（前端传的是中文名）
+      // 之前 fallback `custom_${i}` 会在数据库写入脏数据
+      const code = scopeCodes[i] || name;
       db.run(
         `INSERT INTO tech_solution_scopes (solution_id, scope_code, scope_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`,
         [id, code, name, i, now]
@@ -396,7 +397,8 @@ router.put('/:id', (req: Request, res: Response) => {
       const now2 = new Date().toISOString();
       for (let i = 0; i < names.length; i++) {
         const name = names[i];
-        const code = codes[i] || `custom_${i}`;
+        // L-5 修复：scope_code 直接使用 scope_name 同名字符串
+        const code = codes[i] || name;
         db.run(
           `INSERT INTO tech_solution_scopes (solution_id, scope_code, scope_name, sort_order, created_at) VALUES (?, ?, ?, ?, ?)`,
           [id, code, name, i, now2]
@@ -430,8 +432,17 @@ router.delete('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
 
-    db.run('DELETE FROM tech_solutions WHERE id = ?', [id]);
-    saveDatabase();
+    // P0-1: 事务化删除主表 + 级联清理适用范围关联表
+    db.exec('BEGIN');
+    try {
+      db.run('DELETE FROM tech_solution_scopes WHERE solution_id = ?', [id]);
+      db.run('DELETE FROM tech_solutions WHERE id = ?', [id]);
+      db.exec('COMMIT');
+      saveDatabase();
+    } catch (delErr) {
+      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      throw delErr;
+    }
 
     res.json({
       success: true,
@@ -457,8 +468,17 @@ router.post('/batch-delete', (req: Request, res: Response) => {
     }
 
     const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM tech_solutions WHERE id IN (${placeholders})`, ids);
-    saveDatabase();
+    // P0-1: 事务化批量删除主表 + 级联清理适用范围关联表
+    db.exec('BEGIN');
+    try {
+      db.run(`DELETE FROM tech_solution_scopes WHERE solution_id IN (${placeholders})`, ids);
+      db.run(`DELETE FROM tech_solutions WHERE id IN (${placeholders})`, ids);
+      db.exec('COMMIT');
+      saveDatabase();
+    } catch (delErr) {
+      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      throw delErr;
+    }
 
     res.json({
       success: true,

@@ -10,6 +10,8 @@ import { DictSelect } from '../common/settings/DictSelect';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';
 import { TECH_SOLUTION_SCOPES } from './constants';
+// M-2 抽取：关联生产批次号下拉选项共享
+import { RELATED_BATCH_OPTIONS } from './constants/relatedBatchOptions';
 
 export interface NewPlanForm {
   code: string;
@@ -17,7 +19,8 @@ export interface NewPlanForm {
   crop: string;
   cropCode: string;
   plantingMode: string;
-  // 旧的 stage 字符串保留兼容
+  // 旧的 stage 字符串保留兼容（M-1: 已迁移到 scopes，DB 列保留不动）
+  /** @deprecated 2026-06-06 V9.0：使用 scopes 数组替代，stage 仅作历史数据展示 */
   stage: string;
   // V9.0: 新增适用范围数组
   scopes: string[];
@@ -61,7 +64,8 @@ export function CreateModal({
   const handleFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.txt,.md,.docx';
+    // H-4 修复：.docx 是二进制 zip 文件，readAsText 会读出乱码。仅允许纯文本格式
+    input.accept = '.txt,.md';
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -214,16 +218,8 @@ export function CreateModal({
             <Select
               value={form.relatedBatchCode}
               onChange={(e) => onFormChange({ ...form, relatedBatchCode: e.target.value })}
-              options={[
-                { value: '', label: '不关联生产批次' },
-                { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
-                { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
-                { value: 'ZZB2026-003', label: 'ZZB2026-003 - 草莓种植批次' },
-                { value: 'YMB2026-001', label: 'YMB2026-001 - 番茄育苗批次' },
-                { value: 'YMB2026-002', label: 'YMB2026-002 - 黄瓜育苗批次' },
-                { value: 'JZB2026-001', label: 'JZB2026-001 - 番茄种源批次' },
-                { value: 'JZB2026-002', label: 'JZB2026-002 - 黄瓜种源批次' },
-              ]}
+              // M-2 抽取：共享 RELATED_BATCH_OPTIONS（与 EditModal/BatchEditModal 一致）
+              options={RELATED_BATCH_OPTIONS}
             />
           </FormField>
         </div>
@@ -266,7 +262,7 @@ export function CreateModal({
               <Upload className="w-3 h-3 mr-1" />
               导入文件
             </Button>
-            <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>
+            <span className="text-xs text-gray-500">支持 .txt, .md 格式</span>
             {form.planDetailFileName && (
               <span className="text-xs text-emerald-600">{form.planDetailFileName}</span>
             )}

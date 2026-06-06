@@ -17,6 +17,10 @@ export interface TechSolution {
   cropCode?: string;
   plantingMode: string;
   // 旧的 stage 字段保留兼容（来自 tech_solutions.stage 旧种子值）
+  // M-1: V9.0 重构后 stage 字段已迁移到 tech_solution_scopes 关联表（scopes: string[]）
+  // 此字段仅作历史数据展示用，禁止写入新数据（前端表单已禁用 stage 编辑）
+  // 后端数据库列保留不动以兼容旧数据
+  /** @deprecated 2026-06-06 V9.0：使用 scopes 数组替代 */
   stage: string;
   // V9.0: 新增适用范围数组（来自 tech_solution_scopes 关联表）
   scopes?: string[];
