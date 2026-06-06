@@ -172,17 +172,22 @@ router.post('/', (req: Request, res: Response) => {
 
     // 优先使用前端传入的订单编号（如果格式正确以DD开头）
     // 否则自动生成
-    if (!code || !code.startsWith('DD')) {
+    const needGenerateCode = !code || !code.startsWith('DD');
+    let dateStr = '';
+    if (needGenerateCode) {
       const year = nowDate.getFullYear().toString();
       const month = (nowDate.getMonth() + 1).toString().padStart(2, '0');
       const day = nowDate.getDate().toString().padStart(2, '0');
       // 格式: DD + 年月日(8位) + 4位流水号
-      const dateStr = `${year}${month}${day}`;
+      dateStr = `${year}${month}${day}`;
+    }
 
-      // 使用 BEGIN IMMEDIATE 获取写锁，确保并发安全
-      db.exec("BEGIN IMMEDIATE");
+    // 使用 BEGIN IMMEDIATE 包裹整个写流程（生成订单号 + INSERT），
+    // 确保并发安全：序号不重复、INSERT 与订单号生成原子完成
+    db.exec("BEGIN IMMEDIATE");
 
-      try {
+    try {
+      if (needGenerateCode) {
         // 查询当天最大的订单编号（基于日期前缀匹配）
         const stmt = db.prepare(`
           SELECT order_code FROM crop_orders
@@ -201,58 +206,58 @@ router.post('/', (req: Request, res: Response) => {
 
         const seq = maxSeq + 1;
         code = `DD${dateStr}${String(seq).padStart(4, '0')}`;
-
-        // 提交事务
-        db.exec("COMMIT");
-      } catch (error) {
-        db.exec("ROLLBACK");
-        throw error;
       }
-    }
 
-    db.run(`
-      INSERT INTO crop_orders (
-        id, order_code, order_type, crop_name, crop_variety,
-        quantity, unit, unit_price, total_amount,
-        customer_id, customer_name, customer_contact, customer_phone,
-        delivery_address, delivery_plan, total_delivered_quantity,
-        order_date, expected_delivery_date, actual_delivery_date,
-        status, remarks, create_by, create_time, update_time,
-        order_name, crop_category, planned_quantity, completed_quantity, expected_harvest_date,
-        expected_completion_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      id,
-      code,
-      order_type || '',
-      crop_name || '',
-      crop_variety || '',
-      quantity || 0,
-      unit || '',
-      unit_price || 0,
-      total_amount || 0,
-      customer_id || '',
-      customer_name || '',
-      customer_contact || '',
-      customer_phone || '',
-      delivery_address || '',
-      delivery_plan || '',
-      total_delivered_quantity || 0,
-      order_date || now.substring(0, 10),
-      expected_delivery_date || '',
-      actual_delivery_date || '',
-      status || 'pending',
-      remarks || '',
-      create_by || '',
-      now,
-      now,
-      order_name || '',
-      crop_category || '',
-      planned_quantity || 0,
-      completed_quantity || 0,
-      expected_harvest_date || '',
-      expected_completion_date || ''
-    ]);
+      db.run(`
+        INSERT INTO crop_orders (
+          id, order_code, order_type, crop_name, crop_variety,
+          quantity, unit, unit_price, total_amount,
+          customer_id, customer_name, customer_contact, customer_phone,
+          delivery_address, delivery_plan, total_delivered_quantity,
+          order_date, expected_delivery_date, actual_delivery_date,
+          status, remarks, create_by, create_time, update_time,
+          order_name, crop_category, planned_quantity, completed_quantity, expected_harvest_date,
+          expected_completion_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        id,
+        code,
+        order_type || '',
+        crop_name || '',
+        crop_variety || '',
+        quantity || 0,
+        unit || '',
+        unit_price || 0,
+        total_amount || 0,
+        customer_id || '',
+        customer_name || '',
+        customer_contact || '',
+        customer_phone || '',
+        delivery_address || '',
+        delivery_plan || '',
+        total_delivered_quantity || 0,
+        order_date || now.substring(0, 10),
+        expected_delivery_date || '',
+        actual_delivery_date || '',
+        status || 'pending',
+        remarks || '',
+        create_by || '',
+        now,
+        now,
+        order_name || '',
+        crop_category || '',
+        planned_quantity || 0,
+        completed_quantity || 0,
+        expected_harvest_date || '',
+        expected_completion_date || ''
+      ]);
+
+      // 提交事务
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
 
     saveDatabase();
 
@@ -343,7 +348,15 @@ router.put('/:id', (req: Request, res: Response) => {
     values.push(now);
     values.push(id);
 
-    db.run(`UPDATE crop_orders SET ${updateFields.join(', ')} WHERE id = ?`, values);
+    // 使用 BEGIN IMMEDIATE 包裹 UPDATE,确保并发写安全
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.run(`UPDATE crop_orders SET ${updateFields.join(', ')} WHERE id = ?`, values);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
     saveDatabase();
 
     // 查询更新后的完整数据并返回（自动 camelCase 转换）
@@ -391,7 +404,15 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: '无法删除已完成的订单' });
     }
 
-    db.run('DELETE FROM crop_orders WHERE id = ?', [id]);
+    // 使用 BEGIN IMMEDIATE 包裹 DELETE,确保并发写安全
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.run('DELETE FROM crop_orders WHERE id = ?', [id]);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
     saveDatabase();
 
     res.json({ success: true, message: '订单删除成功' });
@@ -455,8 +476,16 @@ router.post('/batch/delete', (req: Request, res: Response) => {
 
     if (validIds.length > 0) {
       const deletePlaceholders = validIds.map(() => '?').join(',');
-      db.run(`DELETE FROM crop_orders WHERE id IN (${deletePlaceholders})`, validIds);
-      deletedIds.push(...validIds);
+      // 使用 BEGIN IMMEDIATE 包裹批量 DELETE,确保并发写安全
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        db.run(`DELETE FROM crop_orders WHERE id IN (${deletePlaceholders})`, validIds);
+        deletedIds.push(...validIds);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     }
 
     saveDatabase();
@@ -818,23 +847,31 @@ router.post('/:id/link-instances', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     let linkedCount = 0;
 
-    for (const instanceId of instanceIds) {
-      // 检查实例是否已关联到其他订单
-      const checkStmt = db.prepare('SELECT order_id FROM crop_instances WHERE id = ?');
-      checkStmt.bind([instanceId]);
-      let currentOrderId: string | null = null;
-      if (checkStmt.step()) {
-        currentOrderId = checkStmt.getAsObject().order_id as string;
-      }
-      checkStmt.free();
+    // 使用 BEGIN IMMEDIATE 包裹循环 UPDATE,确保并发写安全
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const instanceId of instanceIds) {
+        // 检查实例是否已关联到其他订单
+        const checkStmt = db.prepare('SELECT order_id FROM crop_instances WHERE id = ?');
+        checkStmt.bind([instanceId]);
+        let currentOrderId: string | null = null;
+        if (checkStmt.step()) {
+          currentOrderId = checkStmt.getAsObject().order_id as string;
+        }
+        checkStmt.free();
 
-      if (currentOrderId && currentOrderId !== id) {
-        continue; // 已关联到其他订单，跳过
-      }
+        if (currentOrderId && currentOrderId !== id) {
+          continue; // 已关联到其他订单，跳过
+        }
 
-      // 关联实例到订单
-      db.run('UPDATE crop_instances SET order_id = ?, update_time = ? WHERE id = ?', [id, now, instanceId]);
-      linkedCount++;
+        // 关联实例到订单
+        db.run('UPDATE crop_instances SET order_id = ?, update_time = ? WHERE id = ?', [id, now, instanceId]);
+        linkedCount++;
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
     }
 
     saveDatabase();
@@ -862,9 +899,17 @@ router.post('/:id/unlink-instances', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     let unlinkedCount = 0;
 
-    for (const instanceId of instanceIds) {
-      db.run('UPDATE crop_instances SET order_id = NULL, update_time = ? WHERE id = ? AND order_id = ?', [now, instanceId, id]);
-      unlinkedCount++;
+    // 使用 BEGIN IMMEDIATE 包裹循环 UPDATE,确保并发写安全
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const instanceId of instanceIds) {
+        db.run('UPDATE crop_instances SET order_id = NULL, update_time = ? WHERE id = ? AND order_id = ?', [now, instanceId, id]);
+        unlinkedCount++;
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
     }
 
     saveDatabase();
@@ -904,7 +949,15 @@ router.put('/:id/status', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    db.run('UPDATE crop_orders SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+    // 使用 BEGIN IMMEDIATE 包裹 UPDATE,确保并发写安全
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.run('UPDATE crop_orders SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
     saveDatabase();
 
     res.json({ success: true, message: '订单状态已更新' });
@@ -922,9 +975,6 @@ router.post('/reset', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
-
-    // 清空现有数据
-    db.run('DELETE FROM crop_orders');
 
     // 插入默认数据
     const defaultData = [
@@ -968,35 +1018,47 @@ router.post('/reset', (req: Request, res: Response) => {
       }
     ];
 
-    for (const item of defaultData) {
-      db.run(`
-        INSERT INTO crop_orders (id, order_code, order_type, crop_name, crop_variety,
-          quantity, unit, unit_price, total_amount,
-          customer_name, customer_contact, delivery_address,
-          order_date, expected_delivery_date,
-          status, remarks, create_by, create_time, update_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        item.id,
-        item.order_code,
-        item.order_type,
-        item.crop_name,
-        item.crop_variety,
-        item.quantity,
-        item.unit,
-        item.unit_price,
-        item.total_amount,
-        item.customer_name,
-        item.customer_contact,
-        item.delivery_address,
-        item.order_date,
-        item.expected_delivery_date,
-        item.status,
-        item.remarks,
-        item.create_by,
-        now,
-        now
-      ]);
+    // 使用 BEGIN IMMEDIATE 包裹整个重置流程（DELETE + 循环 INSERT），
+    // 确保重置操作的原子性
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      // 清空现有数据
+      db.run('DELETE FROM crop_orders');
+
+      for (const item of defaultData) {
+        db.run(`
+          INSERT INTO crop_orders (id, order_code, order_type, crop_name, crop_variety,
+            quantity, unit, unit_price, total_amount,
+            customer_name, customer_contact, delivery_address,
+            order_date, expected_delivery_date,
+            status, remarks, create_by, create_time, update_time)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          item.id,
+          item.order_code,
+          item.order_type,
+          item.crop_name,
+          item.crop_variety,
+          item.quantity,
+          item.unit,
+          item.unit_price,
+          item.total_amount,
+          item.customer_name,
+          item.customer_contact,
+          item.delivery_address,
+          item.order_date,
+          item.expected_delivery_date,
+          item.status,
+          item.remarks,
+          item.create_by,
+          now,
+          now
+        ]);
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
     }
 
     saveDatabase();
