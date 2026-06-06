@@ -26,6 +26,8 @@ interface PurchasePlanTableProps {
   pageSize: number;
   // 选中状态
   selectedRows: string[];
+  // L-6: 模式统一为单个 mode 标记（避免 EDIT_COLUMNS vs VIEW_COLUMNS 双契约分裂）
+  // 兼容：原 exportMode / batchEditMode / batchDeleteMode 通过 helper 派生
   // 模式状态
   exportMode: boolean;
   batchEditMode: boolean;
@@ -62,6 +64,15 @@ interface PurchasePlanTableProps {
   onBatchEditCancel?: () => void;
   onBatchDeleteConfirm?: () => void;
   onBatchDeleteCancel?: () => void;
+}
+
+// L-6: 统一 mode 派生 + 列显隐计算（消除 EDIT_COLUMNS vs VIEW_COLUMNS 双契约）
+type TableMode = 'view' | 'export' | 'batchEdit' | 'batchDelete';
+function deriveMode(exportMode: boolean, batchEditMode: boolean, batchDeleteMode: boolean): TableMode {
+  if (exportMode) return 'export';
+  if (batchEditMode) return 'batchEdit';
+  if (batchDeleteMode) return 'batchDelete';
+  return 'view';
 }
 
 /**
@@ -160,6 +171,11 @@ export function PurchasePlanTable({
 }: PurchasePlanTableProps) {
   // 计算总页数
   const totalPages = Math.ceil(filteredAndSortedData.length / pageSize) || 1;
+
+  // L-6: 派生统一 mode（避免列显隐到处写 exportMode || batchEditMode || batchDeleteMode）
+  const mode = deriveMode(exportMode, batchEditMode, batchDeleteMode);
+  const isSelectable = mode !== 'view';
+  const isBatchAction = mode === 'batchEdit' || mode === 'batchDelete';
 
   // 获取排序指示器
   const getSortIndicator = (field: string) => {

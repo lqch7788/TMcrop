@@ -4,7 +4,7 @@
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { PurchasePlan, PurchasePlanItem, PurchasePlanStatus } from '../types/purchase';
+import { PurchasePlan, PurchasePlanStatus } from '../types/purchase';
 import * as planService from '../services/apiPurchasePlanService';
 
 export interface PurchasePlanStatusUpdate {
@@ -92,12 +92,18 @@ export const usePurchasePlanStore = create<PurchasePlanState>()(
     },
 
     updateExecutionStatus: async (id, executionStatus) => {
-      const { updateExecutionStatus: apiUpdate } = await import('../services/apiPurchasePlanService');
-      const updated = await apiUpdate(id, executionStatus);
+      // H-6: 改用顶部已静态导入的 planService.updateExecutionStatus，避免每次调用都走动态 import
+      const updated = await planService.updateExecutionStatus(id, executionStatus);
       if (updated) {
         set((state) => ({
           plans: state.plans.map((p) => (p.id === id ? updated : p)),
         }));
+        // M-9: 后端已返回最新状态，清掉本地对该 plan 的 statusUpdate 防止状态分裂
+        set((state) => {
+          if (!(id in state.statusUpdates)) return state;
+          const { [id]: _removed, ...rest } = state.statusUpdates;
+          return { statusUpdates: rest };
+        });
       }
       return updated;
     },

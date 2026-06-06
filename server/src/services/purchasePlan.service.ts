@@ -490,11 +490,13 @@ export class PurchasePlanService {
           return { success: false, error: `采购申请批次号已存在: ${planCode}` };
         }
       } else {
-        // 最多重试 5 次生成唯一编码
+        // 最多重试 5 次生成唯一编码（不污染外层 planCode）
         for (let i = 0; i < 5; i++) {
-          planCode = this.generatePurchasePlanCode();
-          if (!this.isPlanCodeExists(planCode)) break;
-          planCode = undefined as unknown as string;
+          const code = this.generatePurchasePlanCode();
+          if (!this.isPlanCodeExists(code)) {
+            planCode = code;
+            break;
+          }
         }
         if (!planCode) {
           return { success: false, error: '生成唯一采购申请批次号失败，请重试' };
@@ -582,11 +584,10 @@ export class PurchasePlanService {
       }
       const currentRecord = current[0];
 
-      // 2. 状态机保护：开发测试阶段允许编辑所有状态
-      // 系统稳定后可恢复为：
-      //   if (!this.canEdit(currentRecord)) {
-      //     return { success: false, error: `当前状态（${currentRecord.status}）不允许修改` };
-      //   }
+      // 2. 状态机保护：仅允许编辑草稿/待审批/已拒绝
+      if (!this.canEdit(currentRecord)) {
+        return { success: false, error: `当前状态（${currentRecord.status}）不允许修改` };
+      }
 
       // 3. 编号冲突校验
       if (input.purchaseApplicationCode && input.purchaseApplicationCode !== currentRecord.planCode) {
@@ -606,8 +607,8 @@ export class PurchasePlanService {
           continue;
         }
 
-        // 跳过空字符串：保留 DB 原值（防止覆盖）
-        if (value === '' || value === null || value === undefined) {
+        // P0-6 修复：仅跳过 undefined；传 '' 或 null 视为显式置空 DB
+        if (value === undefined) {
           continue;
         }
 
@@ -688,14 +689,18 @@ export class PurchasePlanService {
   }
 
   /**
-   * 单条删除（开发测试阶段：允许删除所有状态）
+   * 单条删除（P0-2 修复：恢复 canDelete 状态机保护）
    */
   async deleteById(id: string): Promise<ServiceResult<{ id: string }>> {
     try {
       const db = getDatabase();
-      const current = queryToObjects(db, 'SELECT id FROM purchase_plans WHERE id = ?', [id]);
+      const current = queryToObjects(db, 'SELECT * FROM purchase_plans WHERE id = ?', [id]);
       if (current.length === 0) {
         return { success: false, error: '采购计划不存在' };
+      }
+      // 状态机保护：仅允许删除草稿/待审批/已拒绝
+      if (!this.canDelete(current[0])) {
+        return { success: false, error: `当前状态（${current[0].status}）不允许删除` };
       }
       db.run('DELETE FROM purchase_plans WHERE id = ?', [id]);
       saveDatabase();

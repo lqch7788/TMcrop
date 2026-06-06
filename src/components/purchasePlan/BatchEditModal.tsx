@@ -333,7 +333,8 @@ export function BatchEditModal({
             <div>
               <Label className="text-xs text-gray-700">申请人</Label>
               <UserSelect
-                value={currentEditingPlan?.applicantId || ''}
+                // M-6: 统一从 batchEditData.applicant 读；改值时也只走 batchEditData
+                value={batchEditData.applicant || currentEditingPlan?.applicantId || ''}
                 onChange={(value) => {
                   if (currentEditingPlan) {
                     // 根据选择的用户ID获取用户姓名
@@ -344,6 +345,8 @@ export function BatchEditModal({
                       applicantId: value,
                       applicant: applicantName,
                     });
+                    // 同步写回 batchEditData，保证保存时使用最新值
+                    onBatchEditDataChange('applicant', applicantName);
                   }
                 }}
                 placeholder="请选择"
