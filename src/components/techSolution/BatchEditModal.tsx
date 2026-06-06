@@ -22,6 +22,8 @@ import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';
 import { TechSolution } from '../../types/techSolution';
 import { TECH_SOLUTION_SCOPES } from './constants';
+// M-2 抽取：关联生产批次号下拉选项共享
+import { RELATED_BATCH_OPTIONS } from './constants/relatedBatchOptions';
 
 export interface BatchEditData {
   version?: string;
@@ -57,17 +59,8 @@ export interface BatchEditModalProps {
   onSave: () => Promise<void>;
 }
 
-// 与 CreateModal/EditModal 一致的关联生产批次号 Select 选项
-const RELATED_BATCH_OPTIONS = [
-  { value: '', label: '不关联' },
-  { value: 'ZZB2026-001', label: 'ZZB2026-001 - 番茄种植批次' },
-  { value: 'ZZB2026-002', label: 'ZZB2026-002 - 黄瓜种植批次' },
-  { value: 'ZZB2026-003', label: 'ZZB2026-003 - 生菜种植批次' },
-  { value: 'ZZB2026-004', label: 'ZZB2026-004 - 辣椒种植批次' },
-  { value: 'ZZB2026-005', label: 'ZZB2026-005 - 茄子种植批次' },
-  { value: 'ZZB2026-006', label: 'ZZB2026-006 - 番茄种植批次' },
-  { value: 'ZZB2026-007', label: 'ZZB2026-007 - 百合种植批次' },
-];
+// 与 CreateModal/EditModal 共享的关联生产批次号 Select 选项（M-2 抽取到 constants/relatedBatchOptions.ts）
+// 之前三处各硬编码一份，现统一从 './constants/relatedBatchOptions' 导入
 
 export function BatchEditModal({
   isOpen,
@@ -113,7 +106,8 @@ export function BatchEditModal({
   const handleUploadClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.md,.docx,.txt';
+    // H-4 修复：.docx 二进制文件 readAsText 会乱码，仅允许纯文本
+    input.accept = '.md,.txt';
     input.onchange = (e) => {
       const file = (e.target as unknown as HTMLInputElement).files?.[0];
       if (file && selectedTechCode) {
@@ -333,7 +327,7 @@ export function BatchEditModal({
                       <Upload className="w-3 h-3" />
                       重新上传
                     </Button>
-                    <span className="text-xs text-gray-500">支持 .md, .docx, .txt 格式</span>
+                    <span className="text-xs text-gray-500">支持 .md, .txt 格式</span>
                   </div>
                 ) : (
                   <Button variant="default" size="sm" onClick={handleUploadClick}>

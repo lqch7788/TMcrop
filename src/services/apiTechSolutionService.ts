@@ -122,12 +122,13 @@ export async function getTechSolutionById(id: string): Promise<TechSolution | un
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promise<TechSolution> {
+  // H-6 修复：enhancedApiClient.request 已自动解包 result.data（apiClient.ts:215），
+  // 此处返回的就是后端写入的完整记录，无需再访问 .data
   const result = await enhancedApiClient.post<{ success: boolean; data?: TechSolution }>('/tech-solutions', solution);
-  // 返回后端转换后的完整数据（包含正确的字段映射）
-  if (result.data) {
-    return result.data as TechSolution;
+  // 兜底：万一后端未来不返回完整记录，使用前端构造数据
+  if (result && typeof result === 'object' && 'id' in result) {
+    return result as TechSolution;
   }
-  // 降级：使用前端构建的数据
   return { ...solution, id: (result as any).id } as TechSolution;
 }
 
@@ -136,9 +137,11 @@ export async function addTechSolution(solution: Omit<TechSolution, 'id'>): Promi
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateTechSolution(id: string, updates: Partial<TechSolution>): Promise<TechSolution | null> {
+  // H-6 修复：enhancedApiClient.request 已自动解包 result.data（apiClient.ts:215），
+  // 此处返回的就是后端更新后的完整记录
   const result = await enhancedApiClient.put<{ success: boolean; data?: TechSolution }>(`/tech-solutions/${id}`, updates);
-  if (result?.data) {
-    return transformTechSolution(result.data) as TechSolution;
+  if (result && typeof result === 'object' && 'id' in result) {
+    return result as TechSolution;
   }
   return null;
 }

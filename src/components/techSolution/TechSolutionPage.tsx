@@ -1,19 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FileCode, Plus, Search, Download, Eye, Edit, Trash2, Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
-import { Label } from '../ui/label';
-import { Select as UISelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Input as UIInput } from '../ui/input';
-import { Checkbox } from '../ui/checkbox';
-import { DictSelect } from '../common/settings/DictSelect';
-import { DeleteWarningModal } from './DeleteWarningModal';
-import { TechSolutionDetailModal } from './TechSolutionDetailModal';
-import { useAuthPermission } from '../../hooks/usePermission';
+// L-1 清理：移除未使用 imports
+// 移除：Plus/Search/Download/Eye/Edit/Trash2/Upload/Leaf/ChevronDown/ChevronUp/Button/Modal/FormField/Input/Select/Textarea/Label/UISelect/UIInput/Checkbox/DictSelect/useAuthPermission/apiClient/TechSolutionFiltersValue/TechSolutionTableHandlers
+// 保留 FileCode（项目内统一图标标识，Header 使用）
+import { FileCode } from 'lucide-react';
 import { useApproval } from '../../hooks/useApproval';
-import { apiClient, USE_API } from '../../services/apiClient';
+import { USE_API } from '../../services/apiClient';
 import { getDictionaries } from '../../services/dictionaryService';
-import { useTechSolutionStore, useDictionaryStore, useAuthStore, getDictItemName } from '../../stores';
+import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, getDictItemName } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import { Pagination } from '@/components/ui/Pagination';
@@ -22,12 +15,16 @@ import { getVarietyByCode } from '../../services/cropVarietyService';
 // 使用 import type 确保类型导入在编译时被擦除
 import type { TechSolution } from '../../types/techSolution';
 import { TechSolutionHeader } from './Header';
-import { TechSolutionFilters, type TechSolutionFiltersValue } from './TechSolutionFilters';
-import { TechSolutionTable, type TechSolutionTableHandlers } from './TechSolutionTable';
+import { TechSolutionFilters } from './TechSolutionFilters';
+import { TechSolutionTable } from './TechSolutionTable';
 import { ExportFormatModal } from './ExportFormatModal';
 import { EditModal, type EditForm } from './EditModal';
 import { CreateModal, type NewPlanForm } from './CreateModal';
 import { BatchEditModal, type BatchEditData } from './BatchEditModal';
+import { DeleteWarningModal } from './DeleteWarningModal';
+// M-3 抽取：4 个默认编制人兜底
+import { DEFAULT_OPERATOR_OPTIONS } from './constants/defaultOperators';
+// H-1 抽取：state/handler hook 文件已创建，Page 主体不动时暂不引用（避免 unused 告警）
 
 // re-export 保持向后兼容（type-only re-export 编译时被擦除）
 export type { TechSolution };
@@ -69,18 +66,13 @@ export function TechSolutionPage() {
   const currentDepartment = currentUser?.orgOid || '';
 
   // 操作人员选项（从数据字典获取）— 2026-06-05: 初始值直接放 4 个默认人，防止 useEffect 异步跑导致第一帧下拉空
-  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>([
-    { value: '陆启闯', label: '陆启闯' },
-    { value: '郭靖', label: '郭靖' },
-    { value: '黄蓉', label: '黄蓉' },
-    { value: '张无忌', label: '张无忌' },
-  ]);
+  // M-3 修复：硬编码 4 人改用 DEFAULT_OPERATOR_OPTIONS 常量（与 fallback 共用同一份）
+  const [operatorOptions, setOperatorOptions] = useState<{ value: string; label: string }[]>(DEFAULT_OPERATOR_OPTIONS);
 
   // 作物品种选择（与种源管理一致，CropCodeSelector 内部自动初始化品种数据）
   const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
-  // 字典加载状态 - 确保字典加载完成后再渲染
-  const [dictReady, setDictReady] = useState(false);
+  // L-2 清理：删除 dictReady 死状态（无任何引用）
 
   // 2026-06-05: 合并字典 + tech.author 到 operatorOptions（防止字典收录不全时下拉空）
   useEffect(() => {
@@ -93,14 +85,9 @@ export function TechSolutionPage() {
       } catch {
         // 忽略错误走默认
       }
-      // 字典为空时使用默认 4 人
+      // 字典为空时使用默认 4 人（M-3 抽取为 DEFAULT_OPERATOR_OPTIONS）
       if (base.length === 0) {
-        base = [
-          { value: '陆启闯', label: '陆启闯' },
-          { value: '郭靖', label: '郭靖' },
-          { value: '黄蓉', label: '黄蓉' },
-          { value: '张无忌', label: '张无忌' },
-        ];
+        base = [...DEFAULT_OPERATOR_OPTIONS];
       }
       // 合并列表里所有 author（去重）
       const known = new Set(base.map(o => o.value));
@@ -125,7 +112,7 @@ export function TechSolutionPage() {
       if (state.dictionaries.length === 0) {
         await state.loadDictionaries();
       }
-      setDictReady(true);
+      // L-2 清理：删除 setDictReady 调用
     };
     loadDict();
   }, [fetchSolutions]);
@@ -169,11 +156,12 @@ export function TechSolutionPage() {
       return false;
     }
     // 开始日期过滤
-    if (startDate && tech.createDate < startDate) {
+    // L-4 修复：tech.createDate 可能为空字符串，避免 < 比较报 NaN 或 false
+    if (startDate && tech.createDate && tech.createDate < startDate) {
       return false;
     }
     // 结束日期过滤
-    if (endDate && tech.createDate > endDate) {
+    if (endDate && tech.createDate && tech.createDate > endDate) {
       return false;
     }
     return true;
@@ -270,10 +258,8 @@ export function TechSolutionPage() {
     return `T${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
   };
 
-  const handleTitleClick = (tech: TechSolution) => {
-    setSelectedTech(tech);
-    setViewModalOpen(true);
-  };
+  // M-4 修复：删除 handleTitleClick，与 handleViewClick 行为完全重复，统一用 handleViewClick
+  // （TechSolutionTable 仍可传 onTitleClick prop，page 直接绑 handleViewClick 即可）
 
   const handleViewClick = (tech: TechSolution) => {
     setSelectedTech(tech);
@@ -420,7 +406,8 @@ export function TechSolutionPage() {
               version: newPlanForm.version || 'V1.0',
             },
           };
-          await apiClient.post('/approvals', approvalData);
+          // P0-4: 走 useApprovalStore.addApproval（统一 Store 入口 + 错误处理）
+          await useApprovalStore.getState().addApproval(approvalData);
 
           // 刷新审批中心数据
           await refreshApprovals();
@@ -492,7 +479,8 @@ export function TechSolutionPage() {
       '方案标题': row.title,
       '作物品种': row.crop,
       '种植模式': getDictItemName('planting_mode', row.plantingMode),
-      '适用范围': row.stage,
+      // H-3 修复：优先用 V9.0 scopes 数组（V9.0 关联表），空时回退到 stage 旧字段
+      '适用范围': row.scopes?.length ? row.scopes.join('、') : row.stage || '-',
       '版本': row.version,
       '编制人': row.author,
       '创建日期': row.createDate,
@@ -544,6 +532,11 @@ export function TechSolutionPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
+      // H-5 修复：用户主动取消保存（AbortError）时不静默回退到下载，避免误导用户
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      // 其他错误（如权限拒绝）才回退到普通下载
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -655,7 +648,8 @@ export function TechSolutionPage() {
         getDictItemName={getDictItemName}
         handlers={{
           onViewClick: handleViewClick,
-          onTitleClick: handleTitleClick,
+          // M-4 修复：onTitleClick 与 onViewClick 重复，统一绑到 handleViewClick
+          onTitleClick: handleViewClick,
           onEditClick: handleEditClick,
           onDeleteClick: (tech) => {
             setSelectedRows([tech.id]);
@@ -830,22 +824,26 @@ export function TechSolutionPage() {
         onSave={async () => {
           try {
             if (USE_API) {
+              // H-2 修复：只遍历选中的行（selectedRows），不再遍历全集 techSolutions
+              // 之前遍历全集会导致 N 次 updateSolution（与选中行数无关），且对未选中的也无效调用
               for (const tech of techSolutions) {
+                if (!selectedRows.includes(tech.id)) continue; // 跳过未选中行
                 const edited = editedTechs[tech.code];
-                if (edited) {
-                  await updateSolution(tech.id, {
-                    solutionTitle: edited.title ?? tech.title,
-                    cropName: edited.crop ?? tech.crop,
-                    plantingMode: edited.plantingMode ?? tech.plantingMode,
-                    stage: edited.stage ?? tech.stage,
-                    version: edited.version ?? tech.version,
-                    content: edited.content ?? tech.content,
-                    relatedBatchCode: tech.relatedBatchCode || '',
-                    planDetailFileName: tech.planDetailFileName || '',
-                    priority: tech.priority || 'normal',
-                    remarks: '',
-                  });
-                }
+                if (!edited) continue; // 选中但未编辑：跳过
+                await updateSolution(tech.id, {
+                  solutionTitle: edited.title ?? tech.title,
+                  cropName: edited.crop ?? tech.crop,
+                  plantingMode: edited.plantingMode ?? tech.plantingMode,
+                  stage: edited.stage ?? tech.stage,
+                  version: edited.version ?? tech.version,
+                  content: edited.content ?? tech.content,
+                  relatedBatchCode: tech.relatedBatchCode || '',
+                  planDetailFileName: tech.planDetailFileName || '',
+                  priority: tech.priority || 'normal',
+                  remarks: '',
+                  // P0-2: 兜底保留 store 里当前 tech 的 scopes，避免批量编辑静默丢适用范围
+                  scopeNames: edited.scopes ?? tech.scopes ?? [],
+                });
               }
             }
             setShowBatchEditModal(false);
