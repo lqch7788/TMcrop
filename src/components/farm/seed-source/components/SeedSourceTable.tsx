@@ -11,7 +11,7 @@ import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus
 import { UNIT_MAP, STOCK_STATUS_MAP, SOURCE_TYPE_MAP, SOURCE_ORIGIN_MAP } from '../../../../constants/cropConstants';
 import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
 import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/Pagination';
 import { showAlert } from '@/lib/dialogService';
@@ -390,8 +390,26 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">入库数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余率</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
+                <Tooltip
+                  content={
+                    <div className="text-left space-y-1">
+                      <div className="font-medium border-b border-blue-300/40 pb-1 mb-1">状态判定规则</div>
+                      <div>· 剩余率 = 0% → <span className="text-red-300">耗尽</span></div>
+                      <div>· 剩余率 &lt; 20% → <span className="text-amber-300">不足</span></div>
+                      <div>· 剩余率 ≥ 20% → <span className="text-green-300">充足</span></div>
+                    </div>
+                  }
+                  position="bottom"
+                  multiline
+                  maxWidth={260}
+                  className="bg-blue-600"
+                >
+                  <span className="cursor-help border-b border-dotted border-white/50">状态</span>
+                </Tooltip>
+              </TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人</TableHead>
@@ -400,7 +418,7 @@ export function SeedSourceTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 17 : 16} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -471,10 +489,13 @@ export function SeedSourceTable({
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
-                    {record.initialCount.toLocaleString()} {formatUnit(record.unit)}
+                    {record.initialCount.toLocaleString()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {record.availableCount.toLocaleString()} {formatUnit(record.unit)}
+                    {record.availableCount.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {formatUnit(record.unit) || '-'}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     {record.initialCount > 0 ? (

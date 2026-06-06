@@ -41,7 +41,8 @@ export function computeStockStatus(
 }
 
 /**
- * 完成比例（百分比）
+ * 剩余率（百分比）= availableCount / initialCount
+ * 注意：虽然函数名沿用 getCompletionRate，但实际含义是"剩余率"（种源表专用）
  * @returns 0-100 的整数，initialCount<=0 时返回 0
  */
 export function getCompletionRate(availableCount: number, initialCount: number): number {
