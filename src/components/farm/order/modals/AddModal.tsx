@@ -18,6 +18,7 @@ import { useAuthStore, useCustomerStore } from '@/stores';
 import { Modal } from '@/components/ui/Modal';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert } from '@/lib/dialogService';
+import { useToastStore } from '@/stores/useToastStore';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -165,8 +166,11 @@ export function AddModal({
       const result = await store.addOrder(newOrder);
       // logger.info('[AddModal] 创建订单成功，返回数据:', JSON.stringify(result, null, 2));
     } catch (error) {
-      // logger.error('创建订单失败:', error);
-      await showAlert('创建订单失败，请重试');
+      // [M-6] 2026-06-06 修复：原 showAlert 是模态弹窗，会阻塞用户后续操作；
+      // 改用 toast.error 不阻塞；同时把 error.message 一并展示，方便用户排查
+      console.error('[AddModal] 创建订单失败:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      useToastStore.getState().toast.error(`创建订单失败：${msg || '请稍后重试'}`);
       return;
     }
     onSuccess();

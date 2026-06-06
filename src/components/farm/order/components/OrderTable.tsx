@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Eye, Trash2, Download, Check, X, Plus, Pencil } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination } from '@/components/ui/Pagination';

@@ -66,7 +66,10 @@ export const useOrderDataStore = create<OrderDataState>()(
             set({ stats });
           }
         } catch (error) {
-          // logger.warn('[useOrderDataStore] 获取统计失败:', error);
+          // [M-4] 2026-06-06 修复：catch 之前只注释不 set，导致统计失败时 UI 无任何反馈；
+          // 现写入 error 状态，由 OrderPage 的 toast 监听统一弹错误
+          console.warn('[useOrderDataStore] 获取统计失败:', error);
+          set({ error: (error as Error).message });
         }
       },
 

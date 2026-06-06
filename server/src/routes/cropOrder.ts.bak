@@ -1,6 +1,10 @@
 /**
  * 订单 API 路由
  * 提供订单的 CRUD 操作
+ *
+ * [L-3] .bak 备份文件残留，当前未被任何 server 入口引用
+ * 实际生效的路由是同目录下的 cropOrder.ts（无 .bak 后缀）
+ * 不删除（用户禁止擅删文件）；TODO: 后续确认可清理时再走用户授权
  */
 
 import { Router, Request, Response } from 'express';
