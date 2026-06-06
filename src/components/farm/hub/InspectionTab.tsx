@@ -139,7 +139,7 @@ export function InspectionTab({
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
-  const storePlans = useProductionPlanStore((state) => state.plans);
+  const storePlans = useProductionPlanStore((state) => state.batches);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);

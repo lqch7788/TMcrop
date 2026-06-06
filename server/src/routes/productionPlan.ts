@@ -6,6 +6,8 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { validateQuery } from '../middleware/validate';
+import { productionPlanListQuerySchema } from '../middleware/schemas';
 
 const router = Router();
 
@@ -115,8 +117,10 @@ function generatePlanCode(type: string): string {
  * 获取所有生产计划
  * GET /api/production-plans
  * Query: crop_name, status, plan_type, keyword, page, limit
+ *
+ * P0-08: 加 Zod query 校验 + LIKE 通配符转义（% _ → \% \_，加 ESCAPE '\\'）
  */
-router.get('/', (req: Request, res: Response) => {
+router.get('/', validateQuery(productionPlanListQuerySchema), (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const {
@@ -131,9 +135,12 @@ router.get('/', (req: Request, res: Response) => {
     let sql = 'SELECT * FROM production_plans WHERE 1=1';
     const params: (string | number)[] = [];
 
+    // P0-08: LIKE 通配符转义函数（% _ 需要转义避免用户输入触发通配）
+    const escapeLike = (s: string): string => s.replace(/[%_\\]/g, ch => '\\' + ch);
+
     if (crop_name) {
-      sql += ' AND crop_name LIKE ?';
-      params.push(`%${crop_name}%`);
+      sql += " AND crop_name LIKE ? ESCAPE '\\'";
+      params.push(`%${escapeLike(String(crop_name))}%`);
     }
 
     if (status) {
@@ -147,16 +154,19 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     if (keyword) {
-      sql += ' AND (plan_code LIKE ? OR crop_name LIKE ? OR plan_name LIKE ?)';
-      const kw = `%${keyword}%`;
+      // P0-08: 转义后用 ESCAPE '\\' 让 SQLite 把 \% \_ 当字面量
+      sql += " AND (plan_code LIKE ? ESCAPE '\\' OR crop_name LIKE ? ESCAPE '\\' OR plan_name LIKE ? ESCAPE '\\')";
+      const kw = `%${escapeLike(String(keyword))}%`;
       params.push(kw, kw, kw);
     }
 
     const countSql = sql;
+    // H-10: 拆 count 与分页两个变量，避免共享 params 后分页时把 count 偏移量也算进去
+    const countParams: (string | number)[] = [...params];
     sql += ' ORDER BY create_time DESC';
 
     // 获取总数
-    const total = execCount(db, countSql, params);
+    const total = execCount(db, countSql, countParams);
 
     // 添加分页
     const offset = (Number(page) - 1) * Number(limit);
@@ -177,6 +187,21 @@ router.get('/', (req: Request, res: Response) => {
   } catch (error) {
     console.error('获取生产计划列表失败:', error);
     res.status(500).json({ success: false, error: '获取生产计划列表失败' });
+  }
+});
+
+/**
+ * 生成生产计划编码（必须在 /:id 路由前注册，否则会被 :id 匹配走 404）
+ * GET /api/production-plans/generate-code?planType=xxx
+ */
+router.get('/generate-code', (req: Request, res: Response) => {
+  try {
+    const planType = (req.query.planType as string) || '';
+    const code = generatePlanCode(planType);
+    res.json({ success: true, code });
+  } catch (error) {
+    console.error('生成生产计划编码失败:', error);
+    res.status(500).json({ success: false, error: '生成生产计划编码失败' });
   }
 });
 
@@ -255,9 +280,19 @@ router.post('/', (req: Request, res: Response) => {
       executionStatus
     } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ success: false, error: '生产计划ID不能为空' });
+    // M-13: 后端自动生成 id（前端未传 或 传了重复 id 都不会 500）
+    // 1) id 为空 → 自动生成
+    // 2) id 已存在 → 自动生成新 id
+    let finalId = id;
+    if (!finalId || finalId.trim() === '') {
+      finalId = `PP${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    } else {
+      const idExists = db.exec(`SELECT 1 FROM production_plans WHERE id = '${finalId.replace(/'/g, "''")}'`);
+      if (idExists.length > 0 && idExists[0].values.length > 0) {
+        finalId = `PP${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      }
     }
+    req.body.id = finalId;
 
     const now = new Date().toISOString();
     const code = batchCode || generatePlanCode(planType);
@@ -274,7 +309,7 @@ router.post('/', (req: Request, res: Response) => {
         order_id, order_code, execution_status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      id,
+      finalId,
       code,
       batchName || '',
       planType || '',
@@ -317,7 +352,7 @@ router.post('/', (req: Request, res: Response) => {
     const createdPlans = queryToObjects<Record<string, unknown>>(
       db,
       'SELECT * FROM production_plans WHERE id = ?',
-      [id]
+      [finalId]
     );
     const createdData = createdPlans.length > 0 ? mapFieldsToFrontend(createdPlans[0]) : null;
 
@@ -396,10 +431,15 @@ router.put('/:id', (req: Request, res: Response) => {
     const updateFields: string[] = [];
     const values: (string | number | null)[] = [];
 
+    // L-10: TODO — DB 列名仍以 snake_case 存储，camelCase 字段名通过 fieldMap 翻译
+    //  后续迁移到统一 camelCase 列时再删 fieldMap
+    // H-09: 过滤合法字段，只允许 fieldMap 声明的字段写入；丢弃未声明 key（防 SQL 注入 + 脏数据）
+    const allowedKeys = new Set(Object.keys(fieldMap));
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'id') continue;
+      if (!allowedKeys.has(key)) continue; // 丢弃未声明字段
 
-      const dbField = fieldMap[key] || key;
+      const dbField = fieldMap[key];
       updateFields.push(`${dbField} = ?`);
       values.push(value as string | number | null);
     }
@@ -434,6 +474,8 @@ router.put('/:id', (req: Request, res: Response) => {
  * 批量删除生产计划
  * DELETE /api/production-plans/batch?ids=id1,id2,id3
  * 注意：此路由必须放在 /:id 路由之前，否则 /batch 会被当作 :id 参数
+ *
+ * M-12: 用 BEGIN/COMMIT 事务包裹批量删除，try/catch ROLLBACK
  */
 router.delete('/batch', (req: Request, res: Response) => {
   try {
@@ -449,14 +491,66 @@ router.delete('/batch', (req: Request, res: Response) => {
 
     const db = getDatabase();
 
-    // 批量删除（不再检查状态）
-    const stmt = db.prepare(`DELETE FROM production_plans WHERE id = ?`);
-    for (const id of idArray) {
-      stmt.bind([id]);
-      stmt.step();
-      stmt.reset();
+    // M-12: 事务包裹批量删除（任一失败回滚全部）
+    db.exec('BEGIN');
+    try {
+      const stmt = db.prepare(`DELETE FROM production_plans WHERE id = ?`);
+      for (const id of idArray) {
+        stmt.bind([id]);
+        stmt.step();
+        stmt.reset();
+      }
+      stmt.free();
+      db.exec('COMMIT');
+    } catch (txErr) {
+      db.exec('ROLLBACK');
+      throw txErr;
     }
-    stmt.free();
+    saveDatabase();
+
+    res.json({ success: true, message: `成功删除${idArray.length}条生产计划` });
+  } catch (error) {
+    console.error('批量删除生产计划失败:', error);
+    res.status(500).json({ success: false, error: '批量删除生产计划失败' });
+  }
+});
+
+/**
+ * 批量删除生产计划（POST 版本，对应前端 L-01 改的 POST body）
+ * POST /api/production-plans/batch/delete
+ * Body: { ids: string[] }
+ *
+ * 与 DELETE /batch 行为一致；走 POST 避免 URL 长度限制
+ */
+router.post('/batch/delete', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: '缺少ids参数' });
+    }
+
+    const idArray = ids.map((id: unknown) => String(id).trim()).filter(Boolean);
+    if (idArray.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids参数格式错误' });
+    }
+
+    const db = getDatabase();
+
+    // M-12: 事务包裹
+    db.exec('BEGIN');
+    try {
+      const stmt = db.prepare(`DELETE FROM production_plans WHERE id = ?`);
+      for (const id of idArray) {
+        stmt.bind([id]);
+        stmt.step();
+        stmt.reset();
+      }
+      stmt.free();
+      db.exec('COMMIT');
+    } catch (txErr) {
+      db.exec('ROLLBACK');
+      throw txErr;
+    }
     saveDatabase();
 
     res.json({ success: true, message: `成功删除${idArray.length}条生产计划` });
@@ -510,6 +604,9 @@ router.delete('/:id', (req: Request, res: Response) => {
 /**
  * 获取生产计划统计数据
  * GET /api/production-plans/stats/summary
+ *
+ * L-11: unused — 前端无调用（ProductionStatsCards 改用本地 batches 派生计算）
+ * 保留路由以备未来扩展；勿删
  */
 router.get('/stats/summary', (req: Request, res: Response) => {
   try {

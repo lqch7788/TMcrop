@@ -278,7 +278,7 @@ export default function MonthlyPlanningPage() {
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
 
   const { generateMonthlyPlan } = useMonthlyTaskPlanning();
-  const { plans: storeBatches, fetchPlans } = useProductionPlanStore();
+  const { batches: storeBatches, fetchPlans } = useProductionPlanStore();
 
   // 挂载时从API加载批次数据
   useEffect(() => {

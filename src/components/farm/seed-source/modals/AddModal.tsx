@@ -69,7 +69,7 @@ export function AddModal({
 
   // P1 #5 修复: 改用订阅式读取 store，store 更新时组件自动重渲染
   const storeUsers = useUserStore((s) => s.users);
-  const storePlans = useProductionPlanStore((s) => s.plans);
+  const storePlans = useProductionPlanStore((s) => s.batches);
   // P2 #16 修复: 当前用户从 useAuthStore.currentUser 读取（认证已登录的用户），不再用 localStorage
   const authCurrentUser = useAuthStore((s) => s.currentUser);
   // 2026-06-05: 修复创建人显示"未知用户"/空白

@@ -173,7 +173,7 @@ export function useCropGrowthEngine(): UseCropGrowthEngineReturn {
 
   // 计算批次当前生长阶段
   const getBatchCurrentStage = useCallback((batchId: string): GrowthStage | null => {
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     const batch = plans.find(b => b.id === batchId);
     if (!batch) return null;
 
@@ -203,7 +203,7 @@ export function useCropGrowthEngine(): UseCropGrowthEngineReturn {
     const seasonalAdjustment = getSeasonalIntervalAdjustment(currentSeason);
     const tasks: PredictedTask[] = [];
 
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     plans.forEach(batch => {
       const plantingDate = new Date(batch.startDate);
       const daysSincePlanting = Math.floor((today.getTime() - plantingDate.getTime()) / (1000 * 60 * 60 * 24));

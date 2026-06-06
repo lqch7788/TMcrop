@@ -17,7 +17,7 @@ const taskTypes = FARM_OPERATION_TYPES.map(t => ({
 
 // 获取批次选项（从Store读取）
 function getBatchCodes() {
-  return useProductionPlanStore.getState().plans.map(b => ({
+  return useProductionPlanStore.getState().batches.map(b => ({
     value: b.batchCode,
     label: b.batchCode,
   }));

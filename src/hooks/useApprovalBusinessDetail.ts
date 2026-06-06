@@ -75,8 +75,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { usePurchasePlanStore } = await import('../stores/usePurchasePlanStore');
       const state = usePurchasePlanStore.getState();
-      if (state.plans.length === 0) await state.fetchPlans();
-      return usePurchasePlanStore.getState().plans.find((p: any) => p.id === requestId);
+      if (state.batches.length === 0) await state.fetchPlans();
+      return usePurchasePlanStore.getState().batches.find((p: any) => p.id === requestId);
     },
   },
   production_plan: {
@@ -84,8 +84,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useProductionPlanStore } = await import('../stores/useProductionPlanStore');
       const state = useProductionPlanStore.getState();
-      if (state.plans?.length === 0) await state.fetchPlans?.();
-      return useProductionPlanStore.getState().plans?.find((p: any) => p.id === requestId);
+      if (state.batches?.length === 0) await state.fetchPlans?.();
+      return useProductionPlanStore.getState().batches?.find((p: any) => p.id === requestId);
     },
   },
   production: {
@@ -93,8 +93,8 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useProductionPlanStore } = await import('../stores/useProductionPlanStore');
       const state = useProductionPlanStore.getState();
-      if (state.plans?.length === 0) await state.fetchPlans?.();
-      return useProductionPlanStore.getState().plans?.find((p: any) => p.id === requestId);
+      if (state.batches?.length === 0) await state.fetchPlans?.();
+      return useProductionPlanStore.getState().batches?.find((p: any) => p.id === requestId);
     },
   },
   production_batch: {
@@ -102,7 +102,7 @@ const BUSINESS_STORE_MAP: Record<string, { typeName: string; loader: StoreLoader
     loader: async (requestId) => {
       const { useProductionPlanStore } = await import('../stores/useProductionPlanStore');
       const state = useProductionPlanStore.getState();
-      return state.plans?.find((p: any) => p.id === requestId);
+      return state.batches?.find((p: any) => p.id === requestId);
     },
   },
   tech_solution: {

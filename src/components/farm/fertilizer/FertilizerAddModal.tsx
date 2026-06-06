@@ -75,7 +75,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
 
   // 获取生产计划列表（过滤已完成）
   const planOptions = useMemo(() => {
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     const activePlans = plans.filter(p => p.status !== 'completed');
     if (!planSearchKeyword.trim()) return activePlans;
     const kw = planSearchKeyword.toLowerCase();

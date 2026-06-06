@@ -52,6 +52,7 @@ export const executionStatusLabels: Record<string, string> = {
   completed: '已完成',
 };
 
+// M-11: unused — 旧版阶段进度配置（已用 batchStatus 双轨并行替代；保留供历史/导出使用）
 export const stageProgress: Record<string, number> = {
   seedling: 15,
   vegetative: 40,
@@ -60,8 +61,9 @@ export const stageProgress: Record<string, number> = {
   harvest: 100,
 };
 
-// 负责人列表（武侠人物）
-export const RESPONSIBLE_PERSONS = [
+// L-08: 负责人列表改为派生自 useUserStore
+// 旧版硬编码武侠人物 fallback 已废弃；当前仍用本地常量兜底，迁移到 Store 由 UI 决定加载时机
+export const RESPONSIBLE_PERSONS: string[] = [
   '郭靖', '黄蓉', '张无忌', '令狐冲', '萧峰', '段誉', '虚竹', '杨过'
 ];
 
@@ -111,8 +113,11 @@ export const PLANTING_MODES = [
 
 /**
  * 根据计划类型获取对应的模式列表
+ *
+ * L-09: 显式覆盖 3 个 PlanType 枚举值；未知类型返回空数组（不再静默 fallback 到 PLANTING_MODES）
+ * 原因：原 default fallback 会导致拼错的 planType 也能下拉选项，难以排查
  */
-export const getModesByPlanType = (planType: PlanType) => {
+export const getModesByPlanType = (planType: PlanType): { value: string; label: string }[] => {
   switch (planType) {
     case PlanType.SEED_BREEDING:
       return SEED_BREEDING_MODES;
@@ -121,6 +126,8 @@ export const getModesByPlanType = (planType: PlanType) => {
     case PlanType.PLANTING:
       return PLANTING_MODES;
     default:
-      return PLANTING_MODES;
+      // 显式返回空数组并打 console.warn（避免静默 fallback 到 PLANTING_MODES）
+      console.warn(`[getModesByPlanType] 未识别的 planType: ${planType}，返回空列表`);
+      return [];
   }
 };

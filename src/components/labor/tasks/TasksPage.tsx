@@ -146,7 +146,7 @@ export function TasksPage() {
   const loadUsers = useUserStore((state) => state.loadUsers);
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
-  const cropBatches = useProductionPlanStore((state) => state.plans);
+  const cropBatches = useProductionPlanStore((state) => state.batches);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   useEffect(() => {

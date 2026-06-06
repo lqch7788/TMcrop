@@ -41,8 +41,9 @@ function normalizeBatch(raw: Record<string, unknown>): CropBatch {
     // API 返回 targetQuantity，映射到 targetYield
     targetYield: (raw.targetQuantity as number) || (raw.targetYield as number) || 0,
     actualYield: (raw.actualYield as number) || 0,
-    // API 返回 status，前端用 batchStatus
-    batchStatus: (raw.status as CropBatch['batchStatus']) || (raw.batchStatus as CropBatch['batchStatus']) || 'draft',
+    // P0-01: 修复分支顺序 — batchStatus 优先于 status
+    // API 返回 status，前端用 batchStatus；batchStatus 字段存在时优先
+    batchStatus: (raw.batchStatus as CropBatch['batchStatus']) || (raw.status as CropBatch['batchStatus']) || 'draft',
     plantingMode: (raw.plantingMode as string) || '',
     responsiblePerson: (raw.responsiblePerson as string) || '',
     publisher: raw.publisher as string | undefined,
@@ -119,10 +120,11 @@ export async function updateProductionPlan(
   // 2026-06-05: 修复申请作废/编辑保存失败 — 之前直接 PUT 用 camelCase（如 batchStatus）
   //   后端 route 用 Object.keys 拼 SQL，找不到 batchStatus 列（DB 列叫 batch_status）→ 500
   //   改用映射转换，与 apiSeedSourceService.updateSeedSource 风格一致
-  const backendUpdates: Record<string, any> = { ...updates };
+  // M-01: 明确类型（不允许 any）；batchStatus 单独处理后其它字段以 string|number|null 透传
+  const backendUpdates: Record<string, string | number | null> = { ...(updates as Record<string, string | number | null>) };
   if (updates.batchStatus !== undefined) {
-    backendUpdates.batch_status = updates.batchStatus;
-    delete backendUpdates.batchStatus;
+    backendUpdates.batch_status = updates.batchStatus as string;
+    delete (backendUpdates as Record<string, unknown>).batchStatus;
   }
   const data = await enhancedApiClient.put<Record<string, unknown>>(`/production-plans/${id}`, backendUpdates);
   if (!data) return null;
@@ -138,9 +140,21 @@ export async function deleteProductionPlan(id: string): Promise<boolean> {
 }
 
 /**
+ * H-03: 调用后端生成生产计划编码（避免前端 batches.length+1 重复）
+ * 后端按日期+随机生成唯一编码
+ */
+export async function generateProductionPlanCode(planType?: string): Promise<string> {
+  const data = await enhancedApiClient.get<{ code: string }>(
+    `/production-plans/generate-code${planType ? `?planType=${encodeURIComponent(planType)}` : ''}`
+  );
+  return (data && (data as { code?: string }).code) || '';
+}
+
+/**
  * 批量删除生产计划
+ * L-01: 改用 POST + body 传 ids（避免 query string 长度限制 / URL 编码问题）
  */
 export async function deleteProductionPlans(ids: string[]): Promise<boolean> {
-  await enhancedApiClient.delete(`/production-plans/batch?ids=${ids.join(',')}`);
+  await enhancedApiClient.post('/production-plans/batch/delete', { ids });
   return true;
 }

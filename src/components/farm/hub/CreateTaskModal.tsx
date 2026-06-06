@@ -56,7 +56,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
   const loadUsers = useUserStore((state) => state.loadUsers);
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
-  const storePlans = useProductionPlanStore((state) => state.plans);
+  const storePlans = useProductionPlanStore((state) => state.batches);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
   const pesticideStore = usePesticideLibraryStore();
   const pestDiseaseStore = usePestDiseaseDictStore();
@@ -231,7 +231,8 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择批次" />
                     </SelectTrigger>
-                    <SelectContent>                      {cropBatches.map((batch) => (
+                    <SelectContent>
+                      {cropBatches.map((batch) => (
                         <SelectItem key={batch.batchCode} value={batch.batchCode}>
                           {batch.batchCode} - {batch.cropName}
                         </SelectItem>
@@ -251,7 +252,8 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                     <SelectTrigger className={deepInputClass}>
                       <SelectValue placeholder="请选择区域" />
                     </SelectTrigger>
-                    <SelectContent>                      {greenhouses.map((gh) => (
+                    <SelectContent>
+                      {greenhouses.map((gh) => (
                         <SelectItem key={gh.id} value={gh.name}>{gh.name}</SelectItem>
                       ))}
                     </SelectContent>

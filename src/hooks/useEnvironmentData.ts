@@ -323,7 +323,7 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
     setAlerts(generateAlerts(sensorData, DEFAULT_ALERT_RULES));
 
     // 生成环境告警触发的任务（土壤湿度低于40%时生成灌溉任务）
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     setAlertTriggeredTasks(generateAlertTriggeredTasks(sensorData, plans));
   }, []);
 
@@ -343,7 +343,7 @@ export function useEnvironmentData(): UseEnvironmentDataReturn {
       setSensors(newSensors);
       setAlerts(generateAlerts(newSensors, alertRules));
       // 更新环境告警触发的任务
-      const plans = useProductionPlanStore.getState().plans;
+      const plans = useProductionPlanStore.getState().batches;
       setAlertTriggeredTasks(generateAlertTriggeredTasks(newSensors, plans));
     }, 30000);
 

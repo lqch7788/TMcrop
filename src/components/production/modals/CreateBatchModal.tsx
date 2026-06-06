@@ -4,11 +4,11 @@
 
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
-import { Select as RadixSelect, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// M-07: 移除未使用的 RadixSelect import（之前定义了但实际未使用）
 import { Checkbox } from '@/components/ui/checkbox';
 import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, ChevronDown, ChevronUp } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
@@ -44,7 +44,8 @@ interface CreateBatchModalProps {
   errors: Record<string, string>;
   greenhouses: Greenhouse[];
   orders: CropOrder[];
-  onFormChange: (field: string, value: any) => void;
+  // M-08: 移除 any，value 限定为 string / string[] / number / null
+  onFormChange: (field: string, value: string | string[] | number | null) => void;
   onGenerateCode: () => void;
 }
 
@@ -66,6 +67,17 @@ export function CreateBatchModal({
   const [orderExpanded, setOrderExpanded] = useState(false);
   const inputClass = "w-full px-3 py-2 border border-gray-500 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
 
+  // L-06: 受控 input ref 复用 + cleanup（之前每次点击都 new 一个 input 未清理）
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    return () => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current = null;
+      }
+    };
+  }, []);
+
   const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
     if (varietyInfo) {
       setSelectedCrop(varietyInfo);
@@ -78,6 +90,29 @@ export function CreateBatchModal({
       onFormChange('variety', '');
       onFormChange('cropName', '');
     }
+  };
+
+  const triggerFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md,.docx';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          onFormChange('planDetail', event.target?.result as string);
+          onFormChange('planDetailFileName', file.name);
+        };
+        reader.readAsText(file);
+      }
+    };
+    fileInputRef.current = input;
+    input.click();
   };
 
   return (
@@ -391,26 +426,11 @@ export function CreateBatchModal({
         <div>
           <FormField label="计划详细说明">
             <div className="flex items-center gap-3">
+              {/* L-06: 受控 input ref 复用 + cleanup */}
               <Button
                 size="sm"
                 variant="blue"
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.txt,.md,.docx';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        onFormChange('planDetail', event.target?.result as string);
-                        onFormChange('planDetailFileName', file.name);
-                      };
-                      reader.readAsText(file);
-                    }
-                  };
-                  input.click();
-                }}
+                onClick={triggerFilePicker}
               >
                 <Upload className="w-3 h-3 mr-1" />
                 导入文件
