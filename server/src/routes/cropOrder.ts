@@ -522,10 +522,10 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    // 只禁止删除已完成的订单
-    if (order.status === 'completed') {
-      return res.status(400).json({ success: false, error: '无法删除已完成的订单' });
-    }
+    // 2026-06-07: 业务调整为允许删除任何状态的订单（包括 completed/cancelled）。
+    // 原 hard block 注释保留以备审计；前端通过 showConfirm 强确认 + 警告文案承担保护责任。
+    // 注：若已完成订单已触发下游（库存/应收应付），删除将留孤儿——前端会按
+    // batchDeleteMode 弹出"已完成订单删除后不可恢复"二次确认。
 
     // 使用 BEGIN IMMEDIATE 包裹 DELETE,确保并发写安全
     db.exec("BEGIN IMMEDIATE");
@@ -584,17 +584,14 @@ router.post('/batch/delete', (req: Request, res: Response) => {
         continue;
       }
 
-      // 只禁止删除已完成的订单
-      if (order.status === 'completed') {
-        failedIds.push({ id, reason: '无法删除已完成的订单' });
-        continue;
-      }
+      // 2026-06-07: 业务调整允许删除任何状态订单（包括 completed/cancelled）。
+      // 原 hard block 注释保留以备审计；前端通过 showConfirm 强确认 + 警告文案承担保护责任。
     }
 
-    // 批量删除有效的订单（非已完成状态）
+    // 批量删除有效的订单（任何状态，包括 completed）
     const validIds = ids.filter(id => {
       const order = ordersMap.get(id);
-      return order && order.status !== 'completed';
+      return order != null;
     });
 
     if (validIds.length > 0) {

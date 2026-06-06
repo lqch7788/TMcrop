@@ -160,7 +160,15 @@ export default function OrderPage() {
   };
 
   const handleDelete = async (ids: string[]) => {
-    if (await showConfirm(`确定要删除选中的 ${ids.length} 条记录吗？`)) {
+    // 2026-06-07: 业务调整允许删除任何状态订单；已完成/已取消订单给二次确认警告
+    const selectedOrders = orders.filter(o => ids.includes(o.id));
+    const completedOrCancelled = selectedOrders.filter(
+      o => o.status === CropOrderStatus.COMPLETED || o.status === CropOrderStatus.CANCELLED
+    );
+    const confirmMsg = completedOrCancelled.length > 0
+      ? `选中的 ${ids.length} 条订单中包含 ${completedOrCancelled.length} 条已完成/已取消订单，删除后不可恢复。\n\n确定要继续删除吗？`
+      : `确定要删除选中的 ${ids.length} 条记录吗？`;
+    if (await showConfirm(confirmMsg)) {
       try {
         await deleteOrders(ids);
         setSelectedRows([]);
@@ -380,14 +388,14 @@ export default function OrderPage() {
         onExport={handleExportClick}
         onConfirmBatchEdit={() => {}}
         onCancelBatchEdit={() => setBatchEditMode(false)}
-        onConfirmDelete={() => {}}
-        onCancelDelete={() => setDeleteMode(false)}
+        onConfirmDelete={() => handleDelete(selectedRows)}
+        onCancelDelete={() => { setDeleteMode(false); setSelectedRows([]); }}
         onConfirmExport={handleExportClickConfirm}
         onCancelExport={handleExportCancel}
         onAdd={() => setAddModalOpen(true)}
         canCreate={canCreate}
         canEdit={false}
-        canDelete={false}
+        canDelete={canDelete}
         canExport={true}
         showLowStockButton={false}
         showCustomerButton={true}
@@ -416,6 +424,7 @@ export default function OrderPage() {
         onAdd={() => setAddModalOpen(true)}
         exportMode={exportMode}
         batchEditMode={batchEditMode}
+        deleteMode={deleteMode}
         onExportSelectAll={handleExportSelectAll}
         onExportCancel={handleExportCancel}
         onConfirmExport={handleExportClickConfirm}
