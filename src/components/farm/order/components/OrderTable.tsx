@@ -22,6 +22,7 @@ interface OrderTableProps {
   onAdd: () => void;
   exportMode: boolean;
   batchEditMode: boolean;
+  deleteMode?: boolean;
   onExportSelectAll: () => void;
   onExportCancel: () => void;
   onConfirmExport: () => void;
@@ -43,6 +44,7 @@ export function OrderTable({
   onAdd,
   exportMode,
   batchEditMode,
+  deleteMode = false,
   onExportSelectAll,
   onExportCancel,
   onConfirmExport,
@@ -102,7 +104,7 @@ export function OrderTable({
         <table className="w-full">
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
             <tr>
-              {(exportMode || batchEditMode) && (
+              {(exportMode || batchEditMode || deleteMode) && (
                 <th className="px-4 py-3 text-left text-sm font-semibold w-14 whitespace-nowrap">
                   <Checkbox
                     checked={selectedRows.length === data.length && data.length > 0}
@@ -130,14 +132,14 @@ export function OrderTable({
           <tbody className="divide-y divide-gray-300">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={(exportMode || batchEditMode) ? 15 : 14} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={(exportMode || batchEditMode || deleteMode) ? 15 : 14} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
             ) : (
               paginatedData.map((record) => (
                 <tr key={record.id} className="hover:bg-emerald-50 transition-colors">
-                  {(exportMode || batchEditMode) && (
+                  {(exportMode || batchEditMode || deleteMode) && (
                     <td className="px-4 py-3">
                       <Checkbox
                         checked={selectedRows.includes(record.id)}
