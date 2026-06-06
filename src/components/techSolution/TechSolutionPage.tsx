@@ -22,6 +22,7 @@ import { EditModal, type EditForm } from './EditModal';
 import { CreateModal, type NewPlanForm } from './CreateModal';
 import { BatchEditModal, type BatchEditData } from './BatchEditModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
+import { TechSolutionDetailModal } from './TechSolutionDetailModal';
 // M-3 抽取：4 个默认编制人兜底
 import { DEFAULT_OPERATOR_OPTIONS } from './constants/defaultOperators';
 // H-1 抽取：state/handler hook 文件已创建，Page 主体不动时暂不引用（避免 unused 告警）
