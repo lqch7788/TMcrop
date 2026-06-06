@@ -4,6 +4,8 @@
  */
 
 import { harvestRepository, HarvestRepository, HarvestRecord, HarvestQuery, HarvestStats } from '../repositories/harvest.repository';
+import { inventoryStockRepository } from '../repositories/inventory.repository';
+import { getDatabase, saveDatabase } from '../db';
 
 /**
  * 采收服务类
@@ -64,6 +66,74 @@ export class HarvestService {
 
     const result = await this.repository.create(record);
     return { id: result.id! };
+  }
+
+  /**
+   * C 阶段 BC-1：单条采收记录 + 库存实例的**事务原子**创建
+   *
+   * 解决原 BC-1 问题：客户端串行调用 addItem → for 循环 inbound，inventory 中间失败导致
+   * "采收记录已创建但 inventory_stock 漏写" 或 "反之"。
+   *
+   * 行为：
+   * 1. BEGIN
+   * 2. INSERT harvest_records (主单)
+   * 3. INSERT inventory_stock (库存实例，关联 business_id = harvestId)
+   * 4. COMMIT（或任一失败 ROLLBACK）
+   *
+   * @param harvestData 采收记录数据
+   * @param inventoryData 库存实例数据（必含 stock_type/crop_name/quantity/warehouse_id/warehouse_name）
+   * @returns harvest id + inventory id
+   */
+  async createOneWithInventory(
+    harvestData: Partial<HarvestRecord>,
+    inventoryData: Record<string, any>,
+  ): Promise<{ harvestId: string; inventoryId: string }> {
+    if (!inventoryData || Object.keys(inventoryData).length === 0) {
+      throw new Error('inventoryData 必填 — 至少含 stock_type/crop_name/quantity/warehouse_id/warehouse_name');
+    }
+    const requiredInvFields = ['stock_type', 'crop_name', 'quantity', 'warehouse_id', 'warehouse_name'];
+    for (const f of requiredInvFields) {
+      if (inventoryData[f] === undefined || inventoryData[f] === null || inventoryData[f] === '') {
+        throw new Error(`inventoryData.${f} 必填`);
+      }
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const harvestId = harvestData.id || `HV${Date.now()}`;
+
+    db.exec('BEGIN');
+    try {
+      // 1) INSERT harvest_records
+      const harvestRecord = {
+        ...harvestData,
+        id: harvestId,
+        status: harvestData.status || 'pending',
+      };
+      await this.repository.create(harvestRecord);
+
+      // 2) INSERT inventory_stock（关联 business_id = harvestId, business_type = 'harvest'）
+      const inventoryRecord = {
+        ...inventoryData,
+        business_id: harvestId,
+        business_type: 'harvest',
+        business_code: (harvestData as any).harvestCode ?? harvestData.harvest_code ?? harvestId,
+        current_quantity: inventoryData.quantity,
+        available_quantity: inventoryData.quantity,
+        status: 'in_stock',
+        version: 1,
+        create_time: now,
+        update_time: now,
+      };
+      const created = await inventoryStockRepository.create(inventoryRecord);
+
+      db.exec('COMMIT');
+      saveDatabase();
+      return { harvestId, inventoryId: created.id! };
+    } catch (err) {
+      try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+      throw err;
+    }
   }
 
   /**
