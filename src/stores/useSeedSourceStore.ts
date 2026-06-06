@@ -30,6 +30,10 @@ interface SeedSourceState {
   isLoading: boolean;
   error: string | null;
 
+  // ===== 错误清理 =====
+  /** 手动清空 error 状态（由页面在 toast 后调用） */
+  clearError: () => void;
+
   // ===== 列表 =====
   loadItems: () => Promise<void>;
   addItem: (item: Parameters<typeof seedSourceService.addSeedSource>[0]) => Promise<SeedSource>;
@@ -56,6 +60,8 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
   items: [],
   isLoading: false,
   error: null,
+
+  clearError: () => set({ error: null }),
 
   loadItems: async () => {
     set({ isLoading: true, error: null });

@@ -80,7 +80,11 @@ export class SeedSourceRepository {
       COALESCE(ss.source_origin, 'external_purchase') AS sourceOrigin,
       COALESCE(cv.category_name, ss.crop_category, '') AS cropCategory,
       COALESCE(cv.type_name, ss.type_name, '') AS typeName,
-      COALESCE(cv.sub_variety1_name, cv.variety_name, ss.variety_name, ss.crop_variety, '') AS varietyName,
+      -- 2026-06-06: R5 — COALESCE 顺序调整：ss.crop_variety 优先于 ss.variety_name
+      -- 旧顺序：cv.sub_variety1_name, cv.variety_name, ss.variety_name, ss.crop_variety, ''
+      -- 新顺序：cv.sub_variety1_name, cv.variety_name, ss.crop_variety, ss.variety_name, ''
+      -- 原因：老数据只有 ss.variety_name；新数据写入 ss.crop_variety；新字段应优先被采用
+      COALESCE(cv.sub_variety1_name, cv.variety_name, ss.crop_variety, ss.variety_name, '') AS varietyName,
       ss.crop_name AS cropName,
       COALESCE(ss.crop_variety, '') AS cropVariety,
       COALESCE(cv.crop_code, ss.crop_code, '') AS cropCode,
@@ -617,80 +621,91 @@ export class SeedSourceRepository {
       status?: string;
     }> = [];
 
-    // 引用方1：育苗记录（source_id）
-    const seedlingRefs = db.exec(`
-      SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
-      FROM seedlings WHERE source_id = ?
-      ORDER BY create_time DESC
-    `, [id]);
-    for (const row of seedlingRefs[0]?.values || []) {
-      references.push({
-        module: '育苗管理',
-        moduleCode: 'seedling',
-        id: row[0] as string,
-        code: row[1] as string,
-        cropName: row[2] as string,
-        cropVariety: row[3] as string,
-        date: row[4] as string,
-        status: row[5] as string,
-      });
-    }
+    // 2026-06-06: R2 — 用 BEGIN/COMMIT/ROLLBACK 包裹 4 个引用方查询，
+    // 保证检查期间数据快照一致，避免并发删除/写入时的竞态（R2: 4 db.exec 无事务回归）
+    db.exec('BEGIN');
+    try {
+      // 引用方1：育苗记录（source_id）
+      const seedlingRefs = db.exec(`
+        SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
+        FROM seedlings WHERE source_id = ?
+        ORDER BY create_time DESC
+      `, [id]);
+      for (const row of seedlingRefs[0]?.values || []) {
+        references.push({
+          module: '育苗管理',
+          moduleCode: 'seedling',
+          id: row[0] as string,
+          code: row[1] as string,
+          cropName: row[2] as string,
+          cropVariety: row[3] as string,
+          date: row[4] as string,
+          status: row[5] as string,
+        });
+      }
 
-    // 引用方2：繁殖过程记录（seed_source_id）
-    const propRefs = db.exec(`
-      SELECT id, stage, record_date, operator
-      FROM propagation_records WHERE seed_source_id = ?
-      ORDER BY record_date DESC, create_time DESC
-      LIMIT 100
-    `, [id]);
-    for (const row of propRefs[0]?.values || []) {
-      references.push({
-        module: '繁殖过程记录',
-        moduleCode: 'propagation_record',
-        id: row[0] as string,
-        code: row[0] as string,
-        date: row[2] as string,
-        status: row[1] as string,
-        cropName: row[3] as string,
-      });
-    }
+      // 引用方2：繁殖过程记录（seed_source_id）
+      const propRefs = db.exec(`
+        SELECT id, stage, record_date, operator
+        FROM propagation_records WHERE seed_source_id = ?
+        ORDER BY record_date DESC, create_time DESC
+        LIMIT 100
+      `, [id]);
+      for (const row of propRefs[0]?.values || []) {
+        references.push({
+          module: '繁殖过程记录',
+          moduleCode: 'propagation_record',
+          id: row[0] as string,
+          code: row[0] as string,
+          date: row[2] as string,
+          status: row[1] as string,
+          cropName: row[3] as string,
+        });
+      }
 
-    // 引用方3：打印记录（seed_source_id）
-    const printRefs = db.exec(`
-      SELECT id, print_type, print_time, print_count
-      FROM seed_source_print_records WHERE seed_source_id = ?
-      ORDER BY print_time DESC
-      LIMIT 100
-    `, [id]);
-    for (const row of printRefs[0]?.values || []) {
-      references.push({
-        module: '种源打印记录',
-        moduleCode: 'seed_source_print',
-        id: row[0] as string,
-        code: row[0] as string,
-        date: row[2] as string,
-        status: row[1] as string,
-      });
-    }
+      // 引用方3：打印记录（seed_source_id）
+      const printRefs = db.exec(`
+        SELECT id, print_type, print_time, print_count
+        FROM seed_source_print_records WHERE seed_source_id = ?
+        ORDER BY print_time DESC
+        LIMIT 100
+      `, [id]);
+      for (const row of printRefs[0]?.values || []) {
+        references.push({
+          module: '种源打印记录',
+          moduleCode: 'seed_source_print',
+          id: row[0] as string,
+          code: row[0] as string,
+          date: row[2] as string,
+          status: row[1] as string,
+        });
+      }
 
-    // 引用方4：种植记录（linked_planting_id 反查种源表 id）
-    const plantingRefs = db.exec(`
-      SELECT id, planting_code, crop_name, crop_variety, planting_date, status
-      FROM plantings WHERE linked_planting_id = ?
-      ORDER BY update_time DESC
-      LIMIT 100
-    `, [id]);
-    for (const row of plantingRefs[0]?.values || []) {
-      references.push({
-        module: '种植管理',
-        moduleCode: 'planting',
-        id: row[0] as string,
-        code: row[1] as string,
-        cropName: row[2] as string,
-        cropVariety: row[3] as string,
-        date: row[4] as string,
-        status: row[5] as string,
-      });
+      // 引用方4：种植记录（linked_planting_id 反查种源表 id）
+      const plantingRefs = db.exec(`
+        SELECT id, planting_code, crop_name, crop_variety, planting_date, status
+        FROM plantings WHERE linked_planting_id = ?
+        ORDER BY update_time DESC
+        LIMIT 100
+      `, [id]);
+      for (const row of plantingRefs[0]?.values || []) {
+        references.push({
+          module: '种植管理',
+          moduleCode: 'planting',
+          id: row[0] as string,
+          code: row[1] as string,
+          cropName: row[2] as string,
+          cropVariety: row[3] as string,
+          date: row[4] as string,
+          status: row[5] as string,
+        });
+      }
+
+      db.exec('COMMIT');
+    } catch (err) {
+      // 任意引用方查询失败 → 回滚事务并向上抛错（不静默）
+      try { db.exec('ROLLBACK'); } catch { /* ROLLBACK 失败不掩盖原始错误 */ }
+      throw err;
     }
 
     return {
