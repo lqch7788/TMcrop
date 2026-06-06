@@ -243,7 +243,7 @@ export function AddModal({
   };
 
   // 从Store获取生产计划和当前用户
-  const storePlans = useProductionPlanStore((s) => s.plans);
+  const storePlans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
   const storeUsers = useUserStore((s) => s.users);
   const loadUsers = useUserStore((s) => s.loadUsers);

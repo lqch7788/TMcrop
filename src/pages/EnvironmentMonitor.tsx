@@ -64,7 +64,7 @@ export default function EnvironmentMonitor() {
   // Zustand Store: IoT设备数据 + 生产计划数据
   const devices = useIotStore((s) => s.devices);
   const fetchDevices = useIotStore((s) => s.fetchDevices);
-  const plans = useProductionPlanStore((s) => s.plans);
+  const plans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
   // 组件挂载时加载数据

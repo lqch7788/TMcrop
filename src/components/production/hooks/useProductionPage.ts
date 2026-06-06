@@ -4,10 +4,14 @@
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore, useAuthStore } from '../../../stores';
-import { CropBatch, PlanType, PlanTypeCodePrefix } from '../../../types';
+import { CropBatch, PlanType } from '../../../types';
 import { useApproval } from '../../../hooks/useApproval';
 import { apiClient, USE_API } from '../../../services/apiClient';
 import { showAlert, showConfirm } from '../../../lib/dialogService';
+import * as apiProductionPlanService from '../../../services/apiProductionPlanService';
+import { batchStatusLabels } from '../constants';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 // 表单数据类型
 export interface ProductionFormData {
@@ -36,8 +40,8 @@ export interface ProductionFormData {
 
 // 表单默认值
 const getInitialFormData = (): ProductionFormData => {
-  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
-  const initialUsername = useAuthStore.getState().currentUser?.username || '陆启闯';
+  // M-02: 从 useAuthStore 获取当前登录用户；若未登录则空字符串（不硬编码 fallback 用户名）
+  const initialUsername = useAuthStore.getState().currentUser?.username || '';
   return {
   batchCode: '',
   planType: PlanType.PLANTING as PlanType,
@@ -153,7 +157,7 @@ export interface UseProductionPageReturn {
   handleFormChange: (field: string, value: unknown) => void;
   validateForm: () => boolean;
   resetForm: () => void;
-  generateBatchCode: () => void;
+  generateBatchCode: () => Promise<void>;
 
   // 操作
   handleSaveDraft: () => Promise<void>;
@@ -190,7 +194,7 @@ export function useProductionPage(): UseProductionPageReturn {
   const loadGreenhouses = useGreenhouseStore((s) => s.loadGreenhouses);
   const { refreshApprovals } = useApproval();
   const {
-    plans: batches,
+    batches,
     fetchPlans,
     addPlan,
     updatePlan,
@@ -201,8 +205,8 @@ export function useProductionPage(): UseProductionPageReturn {
   const orders = useOrderDataStore((s) => s.orders);
   const fetchOrders = useOrderDataStore((s) => s.fetchOrders);
 
-  // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
-  const currentUsername = useAuthStore((s) => s.currentUser?.username || '陆启闯');
+  // M-02: 从 useAuthStore 获取当前登录用户；若未登录则空字符串
+  const currentUsername = useAuthStore((s) => s.currentUser?.username || '');
   const currentUserId = useAuthStore((s) => s.currentUser?.oid || '');
   const currentDepartment = useAuthStore((s) => s.currentUser?.orgOid || '');
 
@@ -225,14 +229,16 @@ export function useProductionPage(): UseProductionPageReturn {
   }, [orders.length, fetchOrders]);
 
   useEffect(() => {
+    // H-05: 标签页回到前台时，只对高变更态（in_progress）触发拉取；其它状态本地内存已最新
+    // 避免每次切回都全量 refetch 浪费流量
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && batches.some(b => b.batchStatus === 'in_progress')) {
         fetchPlans();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [fetchPlans]);
+  }, [fetchPlans, batches]);
 
   // ==================== 状态定义 ====================
   const [statusFilter, setStatusFilter] = useState('all');
@@ -281,18 +287,40 @@ export function useProductionPage(): UseProductionPageReturn {
   }, [showCreateModal, greenhouses]);
 
   // ==================== 过滤逻辑 ====================
+  // H-04: 300ms debounce 全表 filter，避免每次按键都重算（百行 + 搜索输入场景卡顿）
+  const [debouncedBatchCodeSearch, setDebouncedBatchCodeSearch] = useState(batchCodeSearch);
+  const [debouncedPlantingModeSearch, setDebouncedPlantingModeSearch] = useState(plantingModeSearch);
+  const [debouncedCropNameSearch, setDebouncedCropNameSearch] = useState(cropNameSearch);
+  const [debouncedVarietySearch, setDebouncedVarietySearch] = useState(varietySearch);
+  const [debouncedGreenhouseSearch, setDebouncedGreenhouseSearch] = useState(greenhouseSearch);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setDebouncedBatchCodeSearch(batchCodeSearch), 300);
+    const t2 = setTimeout(() => setDebouncedPlantingModeSearch(plantingModeSearch), 300);
+    const t3 = setTimeout(() => setDebouncedCropNameSearch(cropNameSearch), 300);
+    const t4 = setTimeout(() => setDebouncedVarietySearch(varietySearch), 300);
+    const t5 = setTimeout(() => setDebouncedGreenhouseSearch(greenhouseSearch), 300);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      clearTimeout(t5);
+    };
+  }, [batchCodeSearch, plantingModeSearch, cropNameSearch, varietySearch, greenhouseSearch]);
+
   const filteredBatches = useMemo(() => {
     return batches.filter((batch) => {
-      const matchBatchCode = !batchCodeSearch || batch.batchCode.toLowerCase().includes(batchCodeSearch.toLowerCase());
-      const matchPlantingMode = !plantingModeSearch || batch.plantingMode.toLowerCase().includes(plantingModeSearch.toLowerCase());
-      const matchCropName = !cropNameSearch || batch.cropName.toLowerCase().includes(cropNameSearch.toLowerCase());
-      const matchVariety = !varietySearch || batch.variety.toLowerCase().includes(varietySearch.toLowerCase());
-      const matchGreenhouse = !greenhouseSearch || batch.greenhouseName.toLowerCase().includes(greenhouseSearch.toLowerCase());
+      const matchBatchCode = !debouncedBatchCodeSearch || batch.batchCode.toLowerCase().includes(debouncedBatchCodeSearch.toLowerCase());
+      const matchPlantingMode = !debouncedPlantingModeSearch || batch.plantingMode.toLowerCase().includes(debouncedPlantingModeSearch.toLowerCase());
+      const matchCropName = !debouncedCropNameSearch || batch.cropName.toLowerCase().includes(debouncedCropNameSearch.toLowerCase());
+      const matchVariety = !debouncedVarietySearch || batch.variety.toLowerCase().includes(debouncedVarietySearch.toLowerCase());
+      const matchGreenhouse = !debouncedGreenhouseSearch || batch.greenhouseName.toLowerCase().includes(debouncedGreenhouseSearch.toLowerCase());
       const matchStatus = statusFilter === 'all' || batch.batchStatus === statusFilter;
       const matchPlanType = planTypeFilter === 'all' || batch.planType === planTypeFilter;
       return matchBatchCode && matchPlantingMode && matchCropName && matchVariety && matchGreenhouse && matchStatus && matchPlanType;
     });
-  }, [batches, batchCodeSearch, plantingModeSearch, cropNameSearch, varietySearch, greenhouseSearch, statusFilter, planTypeFilter]);
+  }, [batches, debouncedBatchCodeSearch, debouncedPlantingModeSearch, debouncedCropNameSearch, debouncedVarietySearch, debouncedGreenhouseSearch, statusFilter, planTypeFilter]);
 
   // ==================== 工具函数 ====================
   const handleFormChange = useCallback((field: string, value: unknown) => {
@@ -329,13 +357,18 @@ export function useProductionPage(): UseProductionPageReturn {
     setPlanTypeFilter('all');
   }, []);
 
-  const generateBatchCode = useCallback(() => {
-    const year = new Date().getFullYear();
-    const num = batches.length + 1;
-    const prefix = PlanTypeCodePrefix[formData.planType as PlanType] || 'FQ';
-    const code = `${prefix}${year}-${String(num).padStart(3, '0')}`;
-    setFormData(prev => ({ ...prev, batchCode: code }));
-  }, [batches.length, formData.planType]);
+  // H-03: 改用后端 service 生成编码（之前 batches.length+1 会导致编号重复）
+  const generateBatchCode = useCallback(async () => {
+    try {
+      const code = await apiProductionPlanService.generateProductionPlanCode(formData.planType as string);
+      if (code) {
+        setFormData(prev => ({ ...prev, batchCode: code }));
+      }
+    } catch (error) {
+      console.error('[ProductionPlan] 生成批次编号失败:', error);
+      await showAlert('生成批次编号失败，请重试');
+    }
+  }, [formData.planType]);
 
   // ==================== 保存草稿 ====================
   const handleSaveDraft = useCallback(async () => {
@@ -367,7 +400,7 @@ export function useProductionPage(): UseProductionPageReturn {
       startDate: formData.startDate,
       expectedHarvestDate: formData.expectedHarvestDate,
       actualHarvestDate: '',
-      status: 'draft',
+      // P0-04: 统一只用 batch_status 列；status 列由后端默认 'planning'，前端不再写入
       stage: 'seedling',
       stageName: '苗期',
       priority: 'normal',
@@ -400,7 +433,7 @@ export function useProductionPage(): UseProductionPageReturn {
       resetForm();
       setErrors({});
     } catch (error) {
-      // logger.error('保存草稿失败:', error);
+      console.error('[ProductionPlan] 保存草稿失败:', error);
       await showAlert('保存草稿失败，请重试');
     }
   }, [formData, greenhouses, validateForm, addPlan, resetForm]);
@@ -430,7 +463,7 @@ export function useProductionPage(): UseProductionPageReturn {
       targetQuantity: parseInt(formData.targetYield) || 0,
       startDate: formData.startDate,
       expectedHarvestDate: formData.expectedHarvestDate,
-      status: 'pending',
+      // P0-04: 统一只用 batch_status 列；status 列由后端默认 'planning'，前端不再写入
       priority: 'normal',
       remarks: formData.description || '',
       publisher: formData.publisher || currentUsername,
@@ -515,19 +548,20 @@ export function useProductionPage(): UseProductionPageReturn {
       }
       await showAlert('删除成功');
     } catch (error) {
-      // logger.error('删除生产计划失败:', error);
+      console.error('[ProductionPlan] 删除生产计划失败:', error);
       await showAlert('删除失败，请重试');
     }
   }, [deletePlan]);
 
   // ==================== 批量删除确认 ====================
+  // M-04: 成功后才清 batchDeleteMode（之前先关弹窗再 await，成功后未再次清理导致 UI 残留）
   const handleDeleteConfirm = useCallback(async () => {
     setShowDeleteWarning(false);
-    setBatchDeleteMode(false);
     const toDelete = selectedRows;
 
     if (toDelete.length === 0) {
       setSelectedRows([]);
+      setBatchDeleteMode(false);
       return;
     }
 
@@ -536,10 +570,13 @@ export function useProductionPage(): UseProductionPageReturn {
         await deletePlans(toDelete);
       }
       setSelectedRows([]);
+      setBatchDeleteMode(false); // M-04: 成功后才关闭批量删除模式
       await showAlert('删除成功');
     } catch (error) {
-      // logger.error('删除生产计划失败:', error);
+      console.error('[ProductionPlan] 删除生产计划失败:', error);
       await showAlert('删除失败，请重试');
+      setBatchDeleteMode(false);
+      setSelectedRows([]);
     }
   }, [selectedRows, deletePlans]);
 
@@ -565,6 +602,7 @@ export function useProductionPage(): UseProductionPageReturn {
 
     if (Object.keys(editedBatches).length > 0) {
       const submittedBatchIds: string[] = [];
+      const failedBatchCodes: string[] = [];
 
       try {
         // 直接复用 hook 顶部定义的 currentUserId/currentUsername/currentDepartment
@@ -573,9 +611,21 @@ export function useProductionPage(): UseProductionPageReturn {
         const currentUserNameValue = currentUsername;
         const currentDepartmentValue = currentDepartment;
 
-        for (const batch of batches) {
-          const edited = editedBatches[batch.batchCode];
-          if (edited) {
+        // P0-03: 串行 for+await 改为 Promise.allSettled 并行提交
+        // 收集所有已编辑的批次作为独立任务
+        const submitTasks = batches
+          .map(batch => {
+            const edited = editedBatches[batch.batchCode];
+            if (!edited) return null;
+            return { batch, edited };
+          })
+          .filter((t): t is { batch: CropBatch; edited: EditedBatch } => t !== null);
+
+        const today = new Date().toISOString().slice(0, 10);
+
+        // 并行执行所有提交任务；任一失败不影响其他
+        const results = await Promise.allSettled(
+          submitTasks.map(async ({ batch, edited }) => {
             if (USE_API) {
               const apiData: Record<string, unknown> = {};
               if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
@@ -600,7 +650,6 @@ export function useProductionPage(): UseProductionPageReturn {
               await updatePlan(batch.id, apiData as any);
             }
 
-            const today = new Date().toISOString().slice(0, 10);
             const changeId = `BC${Date.now()}_${batch.id}`;
             const changeCode = `BG${today.replace(/-/g, '')}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
@@ -649,13 +698,23 @@ export function useProductionPage(): UseProductionPageReturn {
               await apiClient.post('/approvals', approvalData);
             }
 
-            submittedBatchIds.push(batch.id);
+            return batch.id;
+          })
+        );
+
+        // 收集成功 / 失败
+        results.forEach((r, idx) => {
+          if (r.status === 'fulfilled') {
+            submittedBatchIds.push(r.value);
+          } else {
+            console.error(`[handlePublish] 批次 ${submitTasks[idx].batch.batchCode} 提交失败:`, r.reason);
+            failedBatchCodes.push(submitTasks[idx].batch.batchCode);
           }
-        }
+        });
 
         await refreshApprovals();
       } catch (error) {
-        // logger.error('提交审批失败:', error);
+        console.error('[ProductionPlan] 提交审批失败:', error);
         await showAlert('提交审批失败，请重试');
         return;
       }
@@ -678,13 +737,22 @@ export function useProductionPage(): UseProductionPageReturn {
       setEditedBatches(remainingEditedBatches);
       setEditedBatchCodes(remainingEditedBatchCodes);
 
-      if (submittedBatchIds.length === selectedRows.length) {
+      // P0-03: 最终 toast 显示成功 / 失败数
+      const successCount = submittedBatchIds.length;
+      const failedCount = failedBatchCodes.length;
+      if (failedCount > 0) {
+        await showAlert(`提交完成：成功 ${successCount} 项，失败 ${failedCount} 项（${failedBatchCodes.slice(0, 3).join('、')}${failedCount > 3 ? ' 等' : ''}）`);
+      }
+
+      if (successCount === selectedRows.length && failedCount === 0) {
         setShowBatchEditModal(false);
         setEditedBatches({});
         setEditedBatchCodes([]);
         setSelectedRows([]);
+      } else if (successCount > 0) {
+        // 部分成功：保留剩余未提交项，弹窗不关
       } else {
-        await showAlert(`已提交 ${submittedBatchIds.length} 项编辑申请，还有 ${remainingSelectedRows.length} 项待处理`);
+        // 全部失败：保留弹窗让用户重试
       }
     } else {
       await showAlert('请先编辑至少一个生产计划');
@@ -775,6 +843,19 @@ export function useProductionPage(): UseProductionPageReturn {
       return;
     }
 
+    // P0-05: 先确认（避免误点）+ 不再先 updatePlan('pending') 写脏数据
+    // 原流程会先把状态切到 pending 再提交审批，若用户取消则留下脏数据
+    // 新流程：只提交审批单，状态切换由审批通过后回调处理
+    const confirmed = await showConfirm(
+      `确认作废生产计划：${currentBatch.batchCode}？\n\n` +
+      `作物：${currentBatch.cropName} ${currentBatch.variety}\n` +
+      `区域：${currentBatch.greenhouseName}\n\n` +
+      `此操作不可逆，请确认！`
+    );
+    if (!confirmed) {
+      return;
+    }
+
     const voidedBatchIds: string[] = [];
 
     try {
@@ -808,19 +889,13 @@ export function useProductionPage(): UseProductionPageReturn {
       };
 
       if (USE_API) {
-        // 2026-06-05: 分步 catch 暴露真实错误（之前笼统"提交作废申请失败"看不到具体步骤）
-        try {
-          await updatePlan(currentBatch.id, { batchStatus: 'pending' } as any);
-        } catch (e: any) {
-          console.error('[作废] updatePlan 失败:', e);
-          await showAlert(`作废失败[步骤1/2:更新计划状态]：${e?.message || String(e)}`);
-          return;
-        }
+        // P0-05: 移除 updatePlan('pending') 步骤，直接提交审批单
+        // 状态切换由审批通过后回调 / 手动审批流处理（数据库 batch_status 保持当前值）
         try {
           await apiClient.post('/approvals', approvalData);
         } catch (e: any) {
           console.error('[作废] /approvals POST 失败:', e);
-          await showAlert(`作废失败[步骤2/2:提交审批单]：${e?.message || String(e)}`);
+          await showAlert(`作废失败[提交审批单]：${e?.message || String(e)}`);
           return;
         }
       }
@@ -828,7 +903,8 @@ export function useProductionPage(): UseProductionPageReturn {
       voidedBatchIds.push(currentBatch.id);
       await refreshApprovals();
 
-      setSelectedRows(selectedRows.filter(id => !voidedBatchIds.includes(id)));
+      // M-03: 用 prev 闭包避免多次连续 setState 互相覆盖
+      setSelectedRows(prev => prev.filter(id => !voidedBatchIds.includes(id)));
 
       setEditedBatches(prev => {
         const next = { ...prev };
@@ -846,7 +922,7 @@ export function useProductionPage(): UseProductionPageReturn {
     }
 
     setShowVoidWarning(false);
-  }, [batches, selectedBatchCode, updatePlan, refreshApprovals, editedBatches]);
+  }, [batches, selectedBatchCode, refreshApprovals, editedBatches, selectedRows]);
 
   // ==================== 选择逻辑 ====================
   const handleSelectRow = useCallback((id: string) => {
@@ -910,19 +986,11 @@ export function useProductionPage(): UseProductionPageReturn {
     setShowExportModal(true);
   }, []);
 
+  // L-02 + L-03: 用 xlsx 库生成真 Excel；batchStatusLabels 从 constants 复用
   const handleDoExport = useCallback(async () => {
     try {
       const selectedData = batches.filter(b => selectedRows.includes(b.id));
       const headers = ['生产计划批次号', '种植模式', '作物名称', '作物品种', '种植区域', '种植面积', '开始时间', '预计结束时间', '负责人', '目标产量', '发布人', '初次发布时间', '最后修改时间', '当前状态', '版本号', '备注'];
-      const batchStatusLabels: Record<string, string> = {
-        draft: '草稿',
-        pending: '待审批',
-        approved: '已通过',
-        rejected: '已拒绝',
-        completed: '已完成',
-        cancelled: '已作废',
-        pending_complete: '待完成',
-      };
       const exportData = selectedData.map(row => ({
         '生产计划批次号': row.batchCode,
         '种植模式': row.plantingMode,
@@ -942,41 +1010,33 @@ export function useProductionPage(): UseProductionPageReturn {
         '备注': row.description || '-',
       }));
 
-      let content = '';
-      let mimeType = '';
-      let extension = '';
-
-      if (exportFormat === 'csv') {
-        content = headers.join(',') + '\n' + exportData.map(row =>
-          headers.map(h => `"${row[h] || ''}"`).join(',')
-        ).join('\n');
-        mimeType = 'text/csv;charset=utf-8';
-        extension = 'csv';
-      } else if (exportFormat === 'excel') {
-        content = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        mimeType = 'application/vnd.ms-excel;charset=utf-8';
-        extension = 'xls';
+      // L-02: 用 xlsx 库生成真正的 .xlsx 文件（之前是伪 HTML 后缀 xls，打开警告）
+      if (exportFormat === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '生产计划');
+        const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      } else if (exportFormat === 'csv') {
+        const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.csv`);
       } else if (exportFormat === 'word') {
-        content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${h}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-        mimeType = 'application/vnd.ms-word;charset=utf-8';
-        extension = 'doc';
+        // word 仍用 html 包裹（无 docx 库时是常见方案）
+        const escapeHtml = (s: unknown) =>
+          String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h as keyof typeof row])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([content], { type: 'application/msword' });
+        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.doc`);
       }
-
-      const fileName = `生产计划_${new Date().toISOString().slice(0, 10)}.${extension}`;
-
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
 
       setShowExportModal(false);
       setExportMode(false);
       setSelectedRows([]);
     } catch (error) {
-      // logger.error('导出失败:', error);
+      console.error('[ProductionPlan] 导出失败:', error);
       await showAlert('导出失败，请重试');
       setShowExportModal(false);
       setExportMode(false);

@@ -107,7 +107,7 @@ export function useProductionReports() {
   // 回退到本地数据
   const fallbackToLocalData = useCallback(() => {
     // 产量统计数据（从 useProductionPlanStore 获取）
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     const activeBatches = plans.filter(b => b.status === 'in_progress' || b.status === 'completed');
     const byCrop = activeBatches.reduce((acc, batch) => {
       if (!acc[batch.cropName]) {
@@ -187,7 +187,7 @@ export function useProductionReports() {
   const cropYieldData = useMemo((): CropYieldRow[] => {
     if (!yieldStats || yieldStats.length === 0) {
       // 回退到 store 数据
-      const plans = useProductionPlanStore.getState().plans;
+      const plans = useProductionPlanStore.getState().batches;
       const activeBatches = plans.filter(b => b.status === 'in_progress' || b.status === 'completed');
       const byCrop = activeBatches.reduce((acc, batch) => {
         if (!acc[batch.cropName]) {
@@ -345,7 +345,7 @@ export function useProductionReports() {
     }
 
     // 回退到 store 数据
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     const allTasks = useFarmTaskStore.getState().tasks;
     const totalBatches = plans.length;
     const totalYield = plans.reduce((sum, b) => sum + b.actualYield, 0);

@@ -78,7 +78,7 @@ export function usePestAlert(daysBack: number = 7) {
   const greenhouseCropMap = useMemo(() => {
     const map = new Map<string, GreenhouseCrop>();
 
-    useProductionPlanStore.getState().plans.forEach((batch) => {
+    useProductionPlanStore.getState().batches.forEach((batch) => {
       if (!map.has(batch.greenhouseId)) {
         map.set(batch.greenhouseId, {
           greenhouseId: batch.greenhouseId,

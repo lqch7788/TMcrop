@@ -4,7 +4,7 @@
  */
 
 import { Upload } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
@@ -26,10 +26,11 @@ interface BatchEditModalProps {
   batches: CropBatch[];
   greenhouses: Greenhouse[];
   editedBatchCodes: string[];
-  editedBatches: Record<string, Partial<CropBatch>>;
+  // L-07: 用 Omit 明确排除 id / 父表关联字段，避免误改 PK
+  editedBatches: Record<string, Omit<Partial<CropBatch>, 'id' | 'createTime' | 'updateTime'>>;
   selectedBatchCode: string;
   onSelectedBatchCodeChange: (code: string) => void;
-  onEditedBatchesChange: (batches: Record<string, Partial<CropBatch>>) => void;
+  onEditedBatchesChange: (batches: Record<string, Omit<Partial<CropBatch>, 'id' | 'createTime' | 'updateTime'>>) => void;
   onEditedBatchCodesChange: (codes: string[]) => void;
   onClose: () => void;
   onVoidWarning: () => void;
@@ -63,8 +64,17 @@ export function BatchEditModal({
   const [plantingModeExpanded, setPlantingModeExpanded] = useState(false);
 
   // 获取当前编辑的批次（在条件返回之前获取）
-  const selectedBatches = selectedRows.map(id => batches.find(b => b.id === id)).filter(Boolean) as CropBatch[];
-  const currentBatch = selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) : null;
+  // H-08: useMemo 缓存 selectedBatches（O(N×M) → O(N+M)）
+  const selectedBatches = useMemo(
+    () => selectedRows
+      .map(id => batches.find(b => b.id === id))
+      .filter((b): b is CropBatch => b !== undefined),
+    [selectedRows, batches]
+  );
+  const currentBatch = useMemo(
+    () => selectedBatchCode ? batches.find(b => b.batchCode === selectedBatchCode) || null : null,
+    [selectedBatchCode, batches]
+  );
   const editedData = selectedBatchCode ? editedBatches[selectedBatchCode] || {} : {};
 
   // 2026-06-05: 切换行 / 重新打开弹窗时反向查表初始化 selectedCrop
@@ -125,9 +135,47 @@ export function BatchEditModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBatch?.batchCode, currentBatch?.variety, currentBatch?.cropCode, currentBatch?.cropName, isOpen]);
 
+  // L-06: file input ref + cleanup（之前每次点击都 new 一个 input，未清理）
+  // 必须在 early return 之前声明（React Hooks 规则：hooks 调用顺序必须稳定）
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    return () => {
+      // 卸载时清理 ref
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current = null;
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
-  // 种植区域名称列表（直接从数据计算，不用 useMemo，与种植模式保持一致）
+  const triggerFilePicker = () => {
+    // 受控 input（ref 复用），而不是动态 createElement 每次都 new
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md,.docx,.txt';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        handleFieldChange('planDetailFileName', file.name);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          handleFieldChange('planDetail', event.target?.result as string);
+        };
+        reader.readAsText(file);
+      }
+    };
+    fileInputRef.current = input;
+    input.click();
+  };
+
+  // M-10: 修正误导注释 — 这里**没有**用 useMemo（每次渲染都重算）；
+  // 由于依赖只 greenhouseName 字符串，单步 split 代价极小，无需 memo
   const currentGreenhouseNames = editedData.greenhouseName
     ? editedData.greenhouseName.split(',').map(n => n.trim()).filter(Boolean)
     : currentBatch?.greenhouseName
@@ -188,8 +236,8 @@ export function BatchEditModal({
           <Button variant="warning" onClick={onVoidWarning}>
             申请作废
           </Button>
-          <Button variant="blue" onClick={currentBatch?.batchStatus === 'published' ? onSave : onPublish}>
-            {currentBatch?.batchStatus === 'published' ? '保存' : '提交'}
+          <Button variant="blue" onClick={currentBatch?.batchStatus === 'pending' || currentBatch?.batchStatus === 'rejected' ? onPublish : onSave}>
+            {currentBatch?.batchStatus === 'pending' || currentBatch?.batchStatus === 'rejected' ? '提交' : '保存'}
           </Button>
         </div>
       }
@@ -488,26 +536,11 @@ export function BatchEditModal({
                       <span className="text-sm text-gray-700">
                         {editedData.planDetailFileName ?? currentBatch.planDetailFileName}
                       </span>
+                      {/* L-06: 受控 input ref 复用 + cleanup */}
                       <Button
                         size="sm"
                         variant="blue"
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = '.md,.docx,.txt';
-                          input.onchange = (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0];
-                            if (file) {
-                              handleFieldChange('planDetailFileName', file.name);
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                handleFieldChange('planDetail', event.target?.result as string);
-                              };
-                              reader.readAsText(file);
-                            }
-                          };
-                          input.click();
-                        }}
+                        onClick={triggerFilePicker}
                       >
                         <Upload className="w-3 h-3" />
                         重新上传
@@ -516,23 +549,7 @@ export function BatchEditModal({
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.md,.docx,.txt';
-                        input.onchange = (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (file) {
-                            handleFieldChange('planDetailFileName', file.name);
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              handleFieldChange('planDetail', event.target?.result as string);
-                            };
-                            reader.readAsText(file);
-                          }
-                        };
-                        input.click();
-                      }}
+                      onClick={triggerFilePicker}
                     >
                       <Upload className="w-3 h-3" />
                       上传计划文件

@@ -1,4 +1,5 @@
-import { Layers, PlayCircle, CheckCircle2, FileEdit } from 'lucide-react';
+import { Layers, PlayCircle, CheckCircle2, FileEdit, CheckCheck } from 'lucide-react';
+import { useMemo } from 'react';
 import { CropBatch } from '../../types';
 
 interface ProductionStatsCardsProps {
@@ -6,7 +7,8 @@ interface ProductionStatsCardsProps {
 }
 
 export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
-  const stats = [
+  // M-06: useMemo 缓存派生统计，batches 不变就不重算（避免 5 次 filter × 每次渲染）
+  const stats = useMemo(() => [
     {
       label: '总批次',
       value: batches.length,
@@ -15,9 +17,17 @@ export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
     },
     {
       label: '执行中',
-      value: batches.filter(b => b.batchStatus === 'published' || b.batchStatus === 'in_progress').length,
+      // P0-06: 单值匹配 in_progress（排除 published），更准确反映"在执行"状态
+      value: batches.filter(b => b.batchStatus === 'in_progress').length,
       color: 'bg-emerald-500',
       icon: PlayCircle,
+    },
+    {
+      // P0-06: 新增"已审批"卡，单独归类 published 状态
+      label: '已审批',
+      value: batches.filter(b => b.batchStatus === 'published').length,
+      color: 'bg-cyan-500',
+      icon: CheckCheck,
     },
     {
       label: '已完成',
@@ -31,10 +41,10 @@ export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
       color: 'bg-gray-500',
       icon: FileEdit,
     },
-  ];
+  ], [batches]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map((stat, index) => {
         const IconComponent = stat.icon;
         return (

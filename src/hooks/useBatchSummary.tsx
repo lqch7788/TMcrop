@@ -20,7 +20,7 @@ export function useBatchSummary(filters?: BatchFilters) {
   const [batchStats, setBatchStats] = useState<BatchStatsItem[]>([]);
 
   // 在 hook 顶层订阅 Store 数据（响应式）
-  const plans = useProductionPlanStore((state) => state.plans);
+  const plans = useProductionPlanStore((state) => state.batches);
   const tasks = useFarmTaskStore((state) => state.tasks);
 
   // 构建 mockData 的函数（在 fallback 时直接使用已订阅的数据）
@@ -169,7 +169,7 @@ function getStatusClass(completionRate: number | string, status: string): 'norma
  */
 export function useBatchFilterOptions() {
   // 使用响应式订阅
-  const plans = useProductionPlanStore((state) => state.plans);
+  const plans = useProductionPlanStore((state) => state.batches);
 
   const cropNames = useMemo(() => {
     const names = [...new Set(plans.map(b => b.cropName))];

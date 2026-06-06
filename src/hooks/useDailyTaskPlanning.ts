@@ -118,7 +118,7 @@ export function useDailyTaskPlanning(): UseDailyTaskPlanningReturn {
   const { getRecommendations } = useComprehensiveDispatch();
 
   // 响应式订阅生产计划 Store 数据
-  const storeBatches = useProductionPlanStore((state) => state.plans);
+  const storeBatches = useProductionPlanStore((state) => state.batches);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
 
   // 每日计划 Store（持久化到服务器）

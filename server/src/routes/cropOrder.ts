@@ -1,13 +1,63 @@
 /**
  * 订单 API 路由
  * 提供订单的 CRUD 操作
+ *
+ * [H-1 sec] 2026-06-06 安全提示：
+ * - 本路由当前未加 router.use(authenticate) 中间件（仅 server/src/index.ts 顶层 optionalAuthenticate）
+ * - optionalAuthenticate 在演示模式下未带 token 也会放行（默认 user = 陆启闯 admin）
+ * - 用户已明确说明：本次修复范围**不**改后端认证/IDOR 范围
+ * - TODO: 生产部署前必须在此处加 router.use(authenticate) 强制鉴权
+ *   并在写操作里校验 req.user 拥有订单归属权
  */
 
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { validate } from '../middleware/validate';
 
 const router = Router();
+
+// ============================================
+// [H-3 sec] 2026-06-06 Zod 校验 schema
+// 防止恶意输入：负数金额、超长字符串、超大数值、空字符串
+// ============================================
+const ALLOWED_ORDER_STATUS = ['planned', 'in_progress', 'completed', 'cancelled'] as const;
+const ALLOWED_ORDER_TYPE = ['breeding', 'seedling', 'production', 'research', 'sales', 'other'] as const;
+
+const orderBaseSchema = {
+  orderCode: z.string().max(64).optional().or(z.literal('')),
+  orderName: z.string().max(200).optional().or(z.literal('')),
+  orderType: z.enum(ALLOWED_ORDER_TYPE).optional(),
+  cropName: z.string().max(200).optional().or(z.literal('')),
+  cropVariety: z.string().max(200).optional().or(z.literal('')),
+  cropCategory: z.string().max(500).optional().or(z.literal('')),
+  quantity: z.number().nonnegative().max(1e9).optional(),
+  plannedQuantity: z.number().nonnegative().max(1e9).optional(),
+  completedQuantity: z.number().nonnegative().max(1e9).optional(),
+  unit: z.string().max(20).optional().or(z.literal('')),
+  unitPrice: z.number().nonnegative().max(1e6).optional(),
+  totalAmount: z.number().nonnegative().max(1e9).optional(),
+  customerId: z.string().max(64).optional().or(z.literal('')),
+  customerName: z.string().max(200).optional().or(z.literal('')),
+  customerContact: z.string().max(50).optional().or(z.literal('')),
+  customerPhone: z.string().max(50).optional().or(z.literal('')),
+  deliveryAddress: z.string().max(500).optional().or(z.literal('')),
+  deliveryPlan: z.string().max(1000).optional().or(z.literal('')),
+  totalDeliveredQuantity: z.number().nonnegative().max(1e9).optional(),
+  orderDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  expectedDeliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  actualDeliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  expectedHarvestDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  expectedCompletionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal('')),
+  status: z.enum(ALLOWED_ORDER_STATUS).optional(),
+  remarks: z.string().max(2000).optional().or(z.literal('')),
+  createBy: z.string().max(100).optional().or(z.literal('')),
+  id: z.string().max(64).optional(),
+};
+
+const orderCreateSchema = z.object(orderBaseSchema);
+const orderUpdateSchema = z.object(orderBaseSchema);
 
 // ============================================
 // 辅助函数
@@ -18,6 +68,32 @@ const router = Router();
  */
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * 将 DB 中可能存在的旧枚举值归一化为前端 CropOrderStatus 枚举
+ * 前端枚举：planned / in_progress / completed / cancelled
+ * 旧枚举：pending / confirmed / processing / shipped / delivered
+ */
+const LEGACY_STATUS_MAP: Record<string, string> = {
+  pending: 'planned',
+  confirmed: 'in_progress',
+  processing: 'in_progress',
+  shipped: 'in_progress',
+  delivered: 'in_progress',
+};
+
+function normalizeOrderStatus(status: unknown): string {
+  if (typeof status !== 'string') return 'planned';
+  if (['planned', 'in_progress', 'completed', 'cancelled'].includes(status)) return status;
+  return LEGACY_STATUS_MAP[status] || 'planned';
+}
+
+/**
+ * 对 GET 响应数组统一做 status 归一化（兼容旧 DB 数据）
+ */
+function mapOrdersStatus<T extends { status?: string }>(orders: T[]): T[] {
+  return orders.map((o) => ({ ...o, status: normalizeOrderStatus(o.status) }));
 }
 
 // ============================================
@@ -81,7 +157,7 @@ router.get('/', (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: items,
+      data: mapOrdersStatus(items),
       meta: { total, page: Number(page), limit: Number(limit) }
     });
   } catch (error) {
@@ -110,7 +186,8 @@ router.get('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
-    res.json({ success: true, data: items[0] });
+    const order = items[0] as Record<string, unknown> & { status?: string };
+    res.json({ success: true, data: { ...order, status: normalizeOrderStatus(order.status) } });
   } catch (error) {
     console.error('获取订单详情失败:', error);
     res.status(500).json({ success: false, error: '获取订单详情失败' });
@@ -122,7 +199,7 @@ router.get('/:id', (req: Request, res: Response) => {
  * POST /api/crop-orders
  * 使用事务确保订单编号唯一性和并发安全
  */
-router.post('/', (req: Request, res: Response) => {
+router.post('/', validate(orderCreateSchema), (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     let {
@@ -169,6 +246,21 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const nowDate = new Date();
     let code = order_code;
+
+    // 前端 CropOrderStatus 枚举：planned/in_progress/completed/cancelled
+    // 状态枚举归一化：DB 一律存前端 4 个枚举值
+    const ALLOWED_STATUSES = ['planned', 'in_progress', 'completed', 'cancelled'];
+    if (status && !ALLOWED_STATUSES.includes(status)) {
+      // 兜底映射：旧枚举 → 新枚举
+      const legacyMap: Record<string, string> = {
+        pending: 'planned',
+        confirmed: 'in_progress',
+        processing: 'in_progress',
+        shipped: 'in_progress',
+        delivered: 'in_progress',
+      };
+      status = legacyMap[status] || 'planned';
+    }
 
     // 优先使用前端传入的订单编号（如果格式正确以DD开头）
     // 否则自动生成
@@ -239,7 +331,7 @@ router.post('/', (req: Request, res: Response) => {
         order_date || now.substring(0, 10),
         expected_delivery_date || '',
         actual_delivery_date || '',
-        status || 'pending',
+        status || 'planned',
         remarks || '',
         create_by || '',
         now,
@@ -268,7 +360,12 @@ router.post('/', (req: Request, res: Response) => {
       [id]
     );
 
-    res.status(201).json({ success: true, data: newOrders[0] || {} });
+    res.status(201).json({
+      success: true,
+      data: newOrders[0]
+        ? { ...newOrders[0], status: normalizeOrderStatus((newOrders[0] as { status?: string }).status) }
+        : {}
+    });
   } catch (error) {
     console.error('创建订单失败:', error);
     res.status(500).json({ success: false, error: '创建订单失败' });
@@ -279,7 +376,7 @@ router.post('/', (req: Request, res: Response) => {
  * 更新订单
  * PUT /api/crop-orders/:id
  */
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', validate(orderUpdateSchema), (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -297,6 +394,30 @@ router.put('/:id', (req: Request, res: Response) => {
 
     if (!order) {
       return res.status(404).json({ success: false, error: '订单不存在' });
+    }
+
+    // P0-4 状态机校验：completed/cancelled 是终态，禁止编辑
+    if (order.status === 'completed' || order.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        error: `订单已${order.status === 'completed' ? '完成' : '取消'}，无法编辑`,
+        code: 'BUSINESS_ERROR',
+      });
+    }
+
+    // P0-1 状态枚举归一化（DB 存前端 4 枚举：planned/in_progress/completed/cancelled）
+    if (typeof updates.status === 'string') {
+      const ALLOWED_STATUSES = ['planned', 'in_progress', 'completed', 'cancelled'];
+      if (!ALLOWED_STATUSES.includes(updates.status)) {
+        const legacyMap: Record<string, string> = {
+          pending: 'planned',
+          confirmed: 'in_progress',
+          processing: 'in_progress',
+          shipped: 'in_progress',
+          delivered: 'in_progress',
+        };
+        updates.status = legacyMap[updates.status] || 'planned';
+      }
     }
 
     // 构建更新字段映射 (camelCase -> snake_case)
@@ -369,7 +490,9 @@ router.put('/:id', (req: Request, res: Response) => {
     res.json({
       success: true,
       message: '订单更新成功',
-      data: updatedOrders.length > 0 ? updatedOrders[0] : null
+      data: updatedOrders.length > 0
+        ? { ...updatedOrders[0], status: normalizeOrderStatus((updatedOrders[0] as { status?: string }).status) }
+        : null
     });
   } catch (error) {
     console.error('更新订单失败:', error);
@@ -516,15 +639,16 @@ router.get('/stats/summary', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
 
+    // 状态机对齐前端 CropOrderStatus 枚举（planned/in_progress/completed/cancelled）
+    // 兼容旧 DB 数据：pending/confirmed/processing/shipped/delivered 全部归为 in_progress
     const sql = `
       SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
-        SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
-        SUM(CASE WHEN status = 'shipped' THEN 1 ELSE 0 END) as shipped,
-        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as delivered,
+        SUM(CASE WHEN status IN ('planned', 'pending') THEN 1 ELSE 0 END) as planned,
+        SUM(CASE WHEN status IN ('in_progress', 'confirmed', 'processing', 'shipped', 'delivered') THEN 1 ELSE 0 END) as inProgress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
+        SUM(CASE WHEN substr(order_date, 1, 7) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END) as thisMonth,
         SUM(total_amount) as total_amount
       FROM crop_orders
     `;
@@ -616,7 +740,7 @@ router.get('/stats/by-status', (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: items,
+      data: mapOrdersStatus(items),
       meta: { total, page: Number(page), limit: Number(limit) }
     });
   } catch (error) {
@@ -719,9 +843,11 @@ router.get('/export', (req: Request, res: Response) => {
       const csvContent = csvRows.join('\n');
       const filename = `orders_${new Date().toISOString().substring(0, 10).replace(/-/g, '')}.csv`;
 
+      // [H-2 sec] 2026-06-06 修复：CSV 加 UTF-8 BOM（），确保 Excel 打开中文不乱码
+      const BOM = '﻿';
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(csvContent);
+      res.send(BOM + csvContent);
     }
   } catch (error) {
     console.error('导出订单失败:', error);
@@ -802,9 +928,11 @@ router.get('/export/stats', (req: Request, res: Response) => {
       const csvContent = csvRows.join('\n');
       const filename = `order_stats_${startDate}_${endDate}.csv`;
 
+      // [H-2 sec] 2026-06-06 修复：CSV 加 UTF-8 BOM，确保 Excel 打开中文不乱码
+      const BOM = '﻿';
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(csvContent);
+      res.send(BOM + csvContent);
     }
   } catch (error) {
     console.error('导出订单统计失败:', error);
@@ -846,6 +974,9 @@ router.post('/:id/link-instances', (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     let linkedCount = 0;
+    // [H-4 sec] 2026-06-06 修复：原代码对"已关联到其他订单"的实例静默 continue，
+    // 调用方无法感知失败实例；现收集 failedIds 全部处理完后返回（200 + data.failed）
+    const failedIds: { id: string; reason: string }[] = [];
 
     // 使用 BEGIN IMMEDIATE 包裹循环 UPDATE,确保并发写安全
     db.exec("BEGIN IMMEDIATE");
@@ -861,7 +992,9 @@ router.post('/:id/link-instances', (req: Request, res: Response) => {
         checkStmt.free();
 
         if (currentOrderId && currentOrderId !== id) {
-          continue; // 已关联到其他订单，跳过
+          // [H-4 sec] 不再静默跳过：记录失败原因并继续处理其它实例
+          failedIds.push({ id: instanceId, reason: `已关联到其他订单(${currentOrderId})` });
+          continue;
         }
 
         // 关联实例到订单
@@ -875,7 +1008,11 @@ router.post('/:id/link-instances', (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.json({ success: true, data: { linked: linkedCount } });
+    // [H-4 sec] 返回 linked + failed，调用方可决定是否要警告用户
+    res.json({
+      success: true,
+      data: { linked: linkedCount, failed: failedIds }
+    });
   } catch (error) {
     console.error('关联实例失败:', error);
     res.status(500).json({ success: false, error: '关联实例失败' });
@@ -949,10 +1086,26 @@ router.put('/:id/status', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '订单不存在' });
     }
 
+    // P0-1 状态枚举归一化（DB 存前端 4 枚举：planned/in_progress/completed/cancelled）
+    const normalizedStatus = normalizeOrderStatus(status);
+
+    // P0-6 下游联动（最简方案）：状态变更为 completed 时记录 TODO 日志
+    // TODO(2026-06-06): 后续在事务内写 inventory_transaction（出库占位）/ 更新 crop_inventory.reserved_quantity
+    if (normalizedStatus === 'completed' && order.status !== 'completed') {
+      console.log(
+        `[cropOrder] TODO 下游联动：订单 ${id}(${(order as Record<string, unknown>).order_code}) ` +
+        `进入 completed 状态，应自动写入 inventory_transaction 并扣减 crop_inventory。` +
+        ` 关联客户=${(order as Record<string, unknown>).customer_name}, ` +
+        `计划数量=${(order as Record<string, unknown>).planned_quantity}, ` +
+        `完成数量=${(order as Record<string, unknown>).completed_quantity}。` +
+        `本次仅记录日志，未实际写下游表，避免破坏现有功能。`
+      );
+    }
+
     // 使用 BEGIN IMMEDIATE 包裹 UPDATE,确保并发写安全
     db.exec("BEGIN IMMEDIATE");
     try {
-      db.run('UPDATE crop_orders SET status = ?, update_time = ? WHERE id = ?', [status, now, id]);
+      db.run('UPDATE crop_orders SET status = ?, update_time = ? WHERE id = ?', [normalizedStatus, now, id]);
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -993,7 +1146,7 @@ router.post('/reset', (req: Request, res: Response) => {
         delivery_address: '福州市鼓楼区',
         order_date: '2026-05-01',
         expected_delivery_date: '2026-05-05',
-        status: 'pending',
+        status: 'planned',
         remarks: '第一批订单',
         create_by: '李明辉'
       },
@@ -1012,7 +1165,7 @@ router.post('/reset', (req: Request, res: Response) => {
         delivery_address: '厦门市思明区',
         order_date: '2026-05-02',
         expected_delivery_date: '2026-05-06',
-        status: 'confirmed',
+        status: 'in_progress',
         remarks: '第二批订单',
         create_by: '王建国'
       }

@@ -325,7 +325,7 @@ export interface UseMonthlyTaskPlanningReturn {
 // ============================================
 export function useMonthlyTaskPlanning(): UseMonthlyTaskPlanningReturn {
   // 响应式订阅生产计划 Store 数据
-  const storeBatches = useProductionPlanStore((state) => state.plans);
+  const storeBatches = useProductionPlanStore((state) => state.batches);
 
   // 月度计划 Store（持久化到服务器）
   const monthlyPlanStore = useMonthlyPlanStore();

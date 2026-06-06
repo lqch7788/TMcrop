@@ -60,7 +60,7 @@ export function AddModal({
   });
 
   // 从Store获取生产计划
-  const storePlans = useProductionPlanStore((s) => s.plans);
+  const storePlans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
   useEffect(() => {

@@ -18,8 +18,8 @@ interface ProductionPlanFilters {
 }
 
 interface ProductionPlanState {
-  // 数据
-  plans: CropBatch[];
+  // 数据 — P0-02: plans 重命名为 batches（与 CropBatch 类型一致，避免消费方再次重命名）
+  batches: CropBatch[];
   isLoading: boolean;
   error: string | null;
 
@@ -33,7 +33,7 @@ interface ProductionPlanState {
 
 export const useProductionPlanStore = create<ProductionPlanState>()(
   (set) => ({
-    plans: [],
+    batches: [],
     isLoading: false,
     error: null,
 
@@ -41,43 +41,70 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
       set({ isLoading: true, error: null });
       try {
         const data = await apiService.getProductionPlans(filters);
-        set({ plans: data, isLoading: false });
+        set({ batches: data, isLoading: false });
       } catch (error) {
         // logger.error('[useProductionPlanStore] 获取生产计划失败:', error);
         set({ error: (error as Error).message, isLoading: false });
       }
     },
 
+    // H-01: 4 个写操作全部加 try/catch + setError，避免异常被吞导致 UI 无感知
     addPlan: async (plan) => {
-      const result = await apiService.createProductionPlan(plan);
-      set((state) => ({ plans: [result, ...state.plans] }));
-      return result;
+      try {
+        const result = await apiService.createProductionPlan(plan);
+        if (result) {
+          set((state) => ({ batches: [result, ...state.batches] }));
+        }
+        return result;
+      } catch (error) {
+        console.error('[useProductionPlanStore] addPlan 失败:', error);
+        set({ error: (error as Error).message });
+        throw error;
+      }
     },
 
     updatePlan: async (id, updates) => {
-      const result = await apiService.updateProductionPlan(id, updates);
-      if (result) {
-        set((state) => ({
-          plans: state.plans.map((p) => (p.id === id ? { ...p, ...result } : p)),
-        }));
+      try {
+        const result = await apiService.updateProductionPlan(id, updates);
+        if (result) {
+          set((state) => ({
+            batches: state.batches.map((p) => (p.id === id ? { ...p, ...result } : p)),
+          }));
+        }
+        return result;
+      } catch (error) {
+        console.error('[useProductionPlanStore] updatePlan 失败:', error);
+        set({ error: (error as Error).message });
+        throw error;
       }
-      return result;
     },
 
     deletePlan: async (id) => {
-      const result = await apiService.deleteProductionPlan(id);
-      if (result) {
-        set((state) => ({ plans: state.plans.filter((p) => p.id !== id) }));
+      try {
+        const result = await apiService.deleteProductionPlan(id);
+        if (result) {
+          set((state) => ({ batches: state.batches.filter((p) => p.id !== id) }));
+        }
+        return result;
+      } catch (error) {
+        console.error('[useProductionPlanStore] deletePlan 失败:', error);
+        set({ error: (error as Error).message });
+        throw error;
       }
-      return result;
     },
 
     deletePlans: async (ids) => {
-      const result = await apiService.deleteProductionPlans(ids);
-      if (result) {
-        set((state) => ({ plans: state.plans.filter((p) => !ids.includes(p.id)) }));
+      try {
+        const result = await apiService.deleteProductionPlans(ids);
+        if (result) {
+          set((state) => ({ batches: state.batches.filter((p) => !ids.includes(p.id)) }));
+        }
+        return result;
+      } catch (error) {
+        console.error('[useProductionPlanStore] deletePlans 失败:', error);
+        set({ error: (error as Error).message });
+        throw error;
       }
-      return result;
     },
   })
 );

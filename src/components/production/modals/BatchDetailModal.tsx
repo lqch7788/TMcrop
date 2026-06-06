@@ -3,10 +3,11 @@
  * 使用通用DetailModal组件统一样式
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CropBatch } from '@/types';
 import { batchStatusColors, batchStatusLabels, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
-import { getProductionPlanApprovals, ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
+import { ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
+import { useApprovalStore } from '@/stores';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui/button';
 
@@ -34,28 +35,48 @@ const approvalStatusLabels: Record<string, string> = {
 };
 
 export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDetailModalProps) {
-  const [approvals, setApprovals] = useState<ProductionPlanApproval[]>([]);
+  // L-05: 改用 useApprovalStore 取审批单（按 batch.id 在 businessLink 过滤）
+  // 避免每个详情弹窗都直接 fetch 独立接口
+  const allApprovals = useApprovalStore((s) => s.approvals);
+  const fetchApprovals = useApprovalStore((s) => s.fetchApprovals);
+  const isLoaded = useApprovalStore((s) => s.isLoaded);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // 加载审批记录
+  // 触发审批单加载（仅在 store 还没数据时拉一次）
   useEffect(() => {
-    if (batch) {
-      loadApprovals();
+    if (batch && !isLoaded) {
+      setLoadingApprovals(true);
+      setLoadError(null);
+      fetchApprovals()
+        .catch((err) => {
+          // H-07 + M-14: 不再静默吞错
+          console.error('[BatchDetailModal] 加载审批单失败:', err);
+          setLoadError(err?.message || '加载审批记录失败');
+        })
+        .finally(() => setLoadingApprovals(false));
     }
-  }, [batch]);
+  }, [batch, isLoaded, fetchApprovals]);
 
-  const loadApprovals = async () => {
-    if (!batch) return;
-    setLoadingApprovals(true);
-    try {
-      const result = await getProductionPlanApprovals(batch.id);
-      setApprovals(result);
-    } catch {
-      setApprovals([]);
-    } finally {
-      setLoadingApprovals(false);
-    }
-  };
+  // 在已加载的审批单里按 businessLink.requestId 过滤当前批次的
+  const approvals: ProductionPlanApproval[] = useMemo(() => {
+    if (!batch) return [];
+    return allApprovals
+      .filter((a) => {
+        const link = a.businessLink as { type?: string; requestId?: string } | undefined;
+        return link?.type === 'production' && link?.requestId === batch.id;
+      })
+      .map((a) => ({
+        id: a.id,
+        code: a.code,
+        title: a.title,
+        status: a.status,
+        currentStep: a.currentStep,
+        totalSteps: a.totalSteps,
+        records: (a.records || []) as unknown as ApprovalRecord[],
+        createdAt: a.createdAt,
+      }));
+  }, [allApprovals, batch]);
 
   if (!batch) return null;
 
@@ -128,6 +149,9 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
 
   // 审批记录渲染
   const renderApprovalRecords = () => {
+    if (loadError) {
+      return <div className="text-center text-red-500 py-4 text-sm">加载失败：{loadError}</div>;
+    }
     if (loadingApprovals) {
       return <div className="text-center text-gray-500 py-4">加载中...</div>;
     }

@@ -147,7 +147,7 @@ const initialNewTask: NewTaskState = {
 export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: CreateTaskModalProps) {
   const users = useUserStore((state) => state.users);
   const loadUsers = useUserStore((state) => state.loadUsers);
-  const storePlans = useProductionPlanStore((state) => state.plans);
+  const storePlans = useProductionPlanStore((state) => state.batches);
   const fetchPlans = useProductionPlanStore((state) => state.fetchPlans);
   // 班组数据（来自农事管理-班组分配）
   const teams = useTeamManageStore((state) => state.teams);
@@ -1206,7 +1206,8 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="请选择执行人" />
                 </SelectTrigger>
-                <SelectContent>                  {responsiblePersons.map(person => (
+                <SelectContent>
+                  {responsiblePersons.map(person => (
                     <SelectItem key={person.code || person.name} value={person.name}>{person.name}</SelectItem>
                   ))}
                 </SelectContent>

@@ -55,7 +55,7 @@ export default function HarvestPage() {
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
   // 生产计划Store
-  const plans = useProductionPlanStore((s) => s.plans);
+  const plans = useProductionPlanStore((s) => s.batches);
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
   // 仓库Store（用于筛选工具栏）
   const warehouses = useWarehouseStore((s) => s.warehouses);

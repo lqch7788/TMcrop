@@ -143,7 +143,7 @@ export function useSmartRecommendation() {
     const map = new Map<string, GreenhouseCrop>();
 
     // 从 useProductionPlanStore 获取温室作物信息
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     plans.forEach(batch => {
       if (!map.has(batch.greenhouseId)) {
         map.set(batch.greenhouseId, {
@@ -388,7 +388,7 @@ export function useSmartRecommendation() {
     const todayStr = format(today, 'yyyy-MM-dd');
 
     // 遍历所有温室和作物批次（从 useProductionPlanStore 获取）
-    const plans = useProductionPlanStore.getState().plans;
+    const plans = useProductionPlanStore.getState().batches;
     plans.forEach(batch => {
       const greenhouseInfo = greenhouseCropMap.get(batch.greenhouseId);
       if (!greenhouseInfo) return;

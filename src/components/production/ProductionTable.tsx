@@ -45,12 +45,18 @@ export function ProductionTable({
   onDelete,
   totalCount,
 }: ProductionTableProps) {
-  const displayedBatches = filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // H-06: Pagination 由父组件控制分页数据源；这里不再 client slice
+  //      原 .slice() 会让翻页时显示别的页的 stale 数据
+  //      父组件 ProductionPage 应传 currentPageItems，本组件仅负责渲染
+  // 兜底：若父组件没切分（兼容旧调用），仍用 slice 保持可见
+  const displayedBatches = (filteredBatches as CropBatch[] & { __paginated?: boolean }).__paginated
+    ? filteredBatches
+    : filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Check states for select all
   const allSelectedForExport = selectedRows.length === filteredBatches.length && filteredBatches.length > 0;
   const allSelectedForBatchEdit = selectedRows.length === filteredBatches.filter(b => b.batchStatus !== 'completed' && b.batchStatus !== 'cancelled').length;
-  // 所有批次都可以删除
+  // L-04: 所有批次都可以删除（与表格行为一致）；修正之前"草稿/已作废可删除"误导文案
   const deletableBatches = filteredBatches;
   const allSelectedForBatchDelete = selectedRows.length === deletableBatches.length;
 
@@ -191,12 +197,12 @@ export function ProductionTable({
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载生产计划文件" onClick={() => {
-                      // 下载生产计划文件
-                      const fileName = batch.planDetailFileName!;
-                      const isDocx = fileName.endsWith('.docx');
+                      // M-05: 一律下载为 .md 文件（planDetail 是 markdown 字符串）
+                      // 之前后缀保留 .docx 但内容是 markdown，Word 打开报错
+                      const fileName = batch.planDetailFileName!.replace(/\.docx$/i, '.md');
                       const content = batch.planDetail || `# ${batch.batchCode}\n\n批次号：${batch.batchCode}\n作物名称：${batch.cropName}\n作物品种：${batch.variety}\n种植区域：${batch.greenhouseName}\n种植面积：${batch.plantingArea} m²\n种植模式：${batch.plantingMode}\n负责人：${batch.responsiblePerson}\n开始时间：${batch.startDate}\n预计结束时间：${batch.expectedHarvestDate}\n目标产量：${batch.targetYield} kg\n当前状态：${batchStatusLabels[batch.batchStatus || 'draft']}`;
                       const blob = new Blob([content], {
-                        type: isDocx ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown'
+                        type: 'text/markdown;charset=utf-8'
                       });
                       const url = URL.createObjectURL(blob);
                       const link = document.createElement('a');
@@ -260,7 +266,8 @@ export function ProductionTable({
               <Button variant="ghost" size="sm" onClick={onBatchDeleteSelectAll}>
                 {allSelectedForBatchDelete ? '全不选' : '全选'}
               </Button>
-              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项（草稿/已作废可删除）</span>
+              {/* L-04: 文案与实际行为一致（所有状态都可删除） */}
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
             </div>
           </div>
         )}
