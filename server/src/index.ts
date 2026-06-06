@@ -99,7 +99,9 @@ async function start() {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // API 路由
+    // API 路由（optionalAuthenticate：演示模式无 token 放行；带 token 验证）
+    const { optionalAuthenticate } = await import('./middleware/auth');
+    app.use('/api', optionalAuthenticate);
     app.use('/api', routes);
 
     // 生产环境/Electron：托管前端静态文件

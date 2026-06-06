@@ -8,6 +8,52 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 const router = Router();
 
+/**
+ * C 阶段 ZP-1：plantings 表允许更新的列白名单
+ * 防止 SQL 注入（攻击者通过 `{"id":"...","is_harvest=0; --":"x"}` 改非授权列）
+ */
+const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
+  'planting_code', 'plan_type', 'crop_category', 'crop_name', 'crop_variety',
+  'greenhouse_id', 'greenhouse_name', 'area_name', 'planting_area', 'planting_area_unit',
+  'planting_date', 'expected_harvest_date', 'actual_harvest_date',
+  'target_yield', 'actual_yield', 'harvest_quantity', 'unit',
+  'status', 'end_type', 'end_time', 'is_harvest', 'is_deleted',
+  'remarks', 'operator_id', 'operator_name', 'production_plan_id', 'production_plan_code',
+  'update_time',
+]);
+
+/** 通用 UPDATE 白名单过滤：拒绝未知列，返回 {fields, values} */
+function buildWhitelistedUpdate(
+  updates: Record<string, any>,
+  extra: any[] = [],
+  allowed: Set<string> = PLANTING_ALLOWED_UPDATE_COLUMNS,
+): { fields: string; values: any[]; rejected: string[] } {
+  const cols: string[] = [];
+  const vals: any[] = [];
+  const rejected: string[] = [];
+  for (const [k, v] of Object.entries(updates)) {
+    if (k === 'id') continue;
+    if (!allowed.has(k)) {
+      rejected.push(k);
+      continue;
+    }
+    cols.push(`${k} = ?`);
+    vals.push(v);
+  }
+  return { fields: cols.join(', '), values: [...vals, ...extra], rejected };
+}
+
+/**
+ * farm_tasks 表允许更新的列白名单（同样防 SQL 注入）
+ */
+const FARM_TASK_ALLOWED_UPDATE_COLUMNS = new Set<string>([
+  'task_code', 'task_title', 'task_type', 'task_content', 'assignee_id', 'assignee_name',
+  'greenhouse_id', 'greenhouse_name', 'area_name', 'plan_date', 'plan_time',
+  'actual_date', 'status', 'is_completed', 'priority', 'remarks', 'create_by',
+  'production_plan_id', 'production_plan_code', 'batch_id', 'batch_code',
+  'update_time',
+]);
+
 router.get('/', (req: Request, res: Response) => {
   try {
     const { crop_name, status, page = 1, limit = 50 } = req.query;
@@ -221,13 +267,14 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now, id]);
     if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
     }
-
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
-    values.push(now, id);
+    if (rejected.length > 0) {
+      // 静默忽略非法字段（保持原行为兼容老接口）；可按需改成 400
+      console.warn(`[ZP-1] rejected unknown columns: ${rejected.join(', ')}`);
+    }
 
     db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
@@ -277,6 +324,9 @@ router.put('/batch', (req: Request, res: Response) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, error: '缺少 ids 参数或 ids 不是有效数组' });
     }
+    if (ids.length > 200) {
+      return res.status(400).json({ success: false, error: '批量更新最多 200 条' });
+    }
 
     if (!updates || typeof updates !== 'object') {
       return res.status(400).json({ success: false, error: '缺少 updates 参数或 updates 不是有效对象' });
@@ -285,13 +335,13 @@ router.put('/batch', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now]);
     if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
     }
-
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
-    values.push(now);
+    if (rejected.length > 0) {
+      console.warn(`[ZP-1 batch] rejected unknown columns: ${rejected.join(', ')}`);
+    }
 
     const placeholders = ids.map(() => '?').join(',');
     db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id IN (${placeholders})`, [...values, ...ids]);
@@ -559,13 +609,13 @@ router.put('/daily-records/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
+    const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now, id], FARM_TASK_ALLOWED_UPDATE_COLUMNS);
     if (fields.length === 0) {
-      return res.status(400).json({ success: false, error: '没有需要更新的字段' });
+      return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
     }
-
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
-    values.push(now, id);
+    if (rejected.length > 0) {
+      console.warn(`[ZP-1 farm_task] rejected unknown columns: ${rejected.join(', ')}`);
+    }
 
     db.run(`UPDATE farm_tasks SET ${fields}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
