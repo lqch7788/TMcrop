@@ -113,6 +113,18 @@ export async function deleteOrders(ids: string[]): Promise<boolean> {
 }
 
 /**
+ * 同步待处理订单（C 阶段 DD-1 修复）
+ * 修复 useOrderDataStore.ts:100 + OrderPage.tsx:74 启动时静默抛错
+ * （原函数未定义 → uncaught promise rejection → console error）
+ *
+ * 当前实现：stub 返回 { success: 0, failed: 0 }，消除启动报错。
+ * 真实同步逻辑（按 status=pending 拉取 → 业务处理）待后续单独 PR 接入。
+ */
+export async function syncPendingOrders(): Promise<{ success: number; failed: number }> {
+  return { success: 0, failed: 0 };
+}
+
+/**
  * 关联实例到订单
  */
 export async function linkInstances(orderId: string, instanceIds: string[]): Promise<boolean> {
