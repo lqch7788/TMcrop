@@ -3,7 +3,7 @@
  * 功能：种源列表展示、筛选、新增、编辑、删除、标签打印、图片查看、导出Excel
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
@@ -54,6 +54,8 @@ export default function SeedSourcePage() {
     deleteItems,
     checkDeletable,
     endSeedSource,
+    error: storeError,
+    clearError,
   } = useSeedSourceStore();
 
   // Toast 通知
@@ -86,6 +88,18 @@ export default function SeedSourcePage() {
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  // 2026-06-06: R3 — 监听 store.loadItems 错误并弹 Toast（不修改 store 内部实现）
+  // store 内部已在 catch 中 set({ error: msg })，此处仅做 UI 展示
+  // 用 useRef 记录上次已展示的错误，避免同一错误重复弹 toast
+  const lastShownErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (storeError && storeError !== lastShownErrorRef.current) {
+      lastShownErrorRef.current = storeError;
+      toast.error(`加载种源数据失败：${storeError}`);
+      clearError();
+    }
+  }, [storeError, toast, clearError]);
 
   // 2026-06-04: status 改为实时计算，移除静默重算 useEffect（不再需要）
 
@@ -233,7 +247,13 @@ export default function SeedSourcePage() {
           );
           return;
         }
-      } catch { /* 降级策略：检查失败时允许继续删除 */ }
+      } catch (e: any) {
+        // 2026-06-06: R4 — 不许静默 catch，检查失败必须报错给用户
+        // 删除按钮功能保持不变（用户仍可继续删除），仅将错误暴露给 UI
+        // 不 return — 让循环继续，最终仍会执行 deleteItems(ids)
+        const msg = e?.message || String(e);
+        toast.error(`检查种源引用失败：${msg}`);
+      }
     }
     try {
       await deleteItems(ids);

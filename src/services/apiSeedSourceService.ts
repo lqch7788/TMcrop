@@ -264,11 +264,12 @@ export async function getSeedSourcesByIds(ids: string[]): Promise<SeedSource[]> 
  * 注意：前端使用 camelCase，后端期望 snake_case，需要转换
  */
 export async function addSeedSource(source: Omit<SeedSource, 'id' | 'createTime' | 'updateTime'>): Promise<SeedSource> {
-  // 2026-06-06: 改用统一映射表 toBackendPayload，避免字段漂移
-  // source_name 特殊处理：与 source_code 一致（修复 P3 #20: source_name 应该是种源批号）
+  // 2026-06-06: R1 — 消除 source_name 硬编码，从 toBackendPayload 派生 source_code
+  // source_name 与 source_code 语义一致（都是种源批号），统一从映射结果取值
+  const basePayload = toBackendPayload(source);
   const backendData: Record<string, unknown> = {
-    ...toBackendPayload(source),
-    source_name: source.seedCode,
+    ...basePayload,
+    source_name: basePayload.source_code,
     // remaining_quantity 默认等于 quantity（新种源初始可用 = 采购数量）
     remaining_quantity: source.quantity,
   };
