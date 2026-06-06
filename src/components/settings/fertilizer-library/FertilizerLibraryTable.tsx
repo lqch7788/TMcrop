@@ -135,6 +135,7 @@ export function FertilizerLibraryTable({
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料名称</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">肥料类型</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">施肥时期</TableHead>
+              <TableHead className="py-3 font-semibold text-white whitespace-nowrap">当前库存</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">功能说明</TableHead>
               <TableHead className="py-3 font-semibold text-white whitespace-nowrap">规格数</TableHead>
               {!exportMode && (
@@ -145,7 +146,7 @@ export function FertilizerLibraryTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                <TableCell colSpan={9} className="px-4 py-12 text-center text-gray-400">
                   暂无肥料记录
                 </TableCell>
               </TableRow>
@@ -205,6 +206,22 @@ export function FertilizerLibraryTable({
                     {/* 施肥时期 - Badge */}
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       {getApplicationTimingLabel(record.applicationTiming || '')}
+                    </TableCell>
+                    {/* 当前库存 (G11 V1.1) */}
+                    <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                      {(() => {
+                        const stock = record.currentStock ?? 0;
+                        const colorClass = stock === 0
+                          ? 'text-red-600 font-semibold'
+                          : stock < 50
+                            ? 'text-amber-600 font-semibold'
+                            : 'text-emerald-600 font-semibold';
+                        return (
+                          <span className={colorClass} title={stock === 0 ? '库存为零，无法施肥' : stock < 50 ? '库存偏低' : '库存充足'}>
+                            {stock} kg
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     {/* 功能说明 */}
                     <TableCell className="px-4 py-3 text-sm text-gray-600 max-w-[150px] truncate">

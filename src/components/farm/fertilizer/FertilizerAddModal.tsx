@@ -197,6 +197,10 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
       plantingCode: form.plantingCode,
     };
     await store.createItem(payload);
+    // G11 V1.1：创建成功后刷新肥料库库存（让 UI 立即看到扣减）
+    if (form.selectedFertilizerId) {
+      try { await fetchLibraryItems(); } catch { /* refetch 失败不影响主流程 */ }
+    }
     setSubmitting(false);
     onSaved();
   };
@@ -600,6 +604,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                       .map(item => (
                         <option key={item.id} value={item.id}>
                           {item.fertilizerName}
+                          {item.currentStock != null ? `（库存 ${item.currentStock}kg）` : ''}
                         </option>
                       ))}
                   </select>
@@ -639,6 +644,19 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
                   placeholder="0"
                   className={deepInputClass}
                 />
+                {(() => {
+                  if (form.inputMode !== 'library' || !form.selectedFertilizerId) return null;
+                  const lib = fertilizerLibraryStore.items.find(i => i.id === form.selectedFertilizerId);
+                  if (!lib || lib.currentStock == null) return null;
+                  if (form.quantity > lib.currentStock) {
+                    return (
+                      <div className="text-amber-600 text-sm mt-1" data-testid="stock-warning">
+                        ⚠ 施肥量 {form.quantity} 超过库存 {lib.currentStock}kg
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div>
                 <Label className="text-gray-900">单位</Label>

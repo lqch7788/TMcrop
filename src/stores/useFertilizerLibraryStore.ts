@@ -32,6 +32,8 @@ export interface FertilizerLibrary {
   status: string;
   createTime: string;
   updateTime: string;
+  /** G11 V1.1：当前库存（千克），施肥时事务扣减 */
+  currentStock?: number;
   specs?: FertilizerSpec[];
 }
 
@@ -49,6 +51,8 @@ const FIELD_MAP: Record<string, string> = {
   status: 'status',
   create_time: 'createTime',
   update_time: 'updateTime',
+  // G11 V1.1：当前库存映射
+  current_stock: 'currentStock',
 };
 
 const SPEC_FIELD_MAP: Record<string, string> = {
