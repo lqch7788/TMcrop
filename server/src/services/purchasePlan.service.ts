@@ -584,25 +584,39 @@ export class PurchasePlanService {
       }
       const currentRecord = current[0];
 
-      // 2. 状态机保护：仅允许编辑草稿/待审批/已拒绝
-      if (!this.canEdit(currentRecord)) {
+      // 2. executionStatus 独立处理（不受 canEdit 约束）
+      // 业务上 executionStatus 是采购执行流（4 档白名单），与 status（审批流）解耦，
+      // approved/purchasing/completed 等状态下都应允许推进执行状态。
+      const { executionStatus: newExecutionStatus, ...restInput } = input;
+      if (newExecutionStatus !== undefined && !EXECUTION_STATUSES.has(newExecutionStatus as string)) {
+        return { success: false, error: `无效的执行状态: ${newExecutionStatus}` };
+      }
+
+      // 3. 状态机保护：仅允许编辑草稿/待审批/已拒绝（executionStatus 已摘出，不参与校验）
+      const hasNonExecutionUpdate = Object.values(restInput).some(v => v !== undefined);
+      if (hasNonExecutionUpdate && !this.canEdit(currentRecord)) {
+        // approved/purchasing/completed 等状态下，其他字段被 canEdit 拒绝。
+        // 但 executionStatus 属于独立执行流，应允许推进——单独走 updateExecutionStatus 路径。
+        if (newExecutionStatus !== undefined) {
+          return this.updateExecutionStatus(id, newExecutionStatus as string);
+        }
         return { success: false, error: `当前状态（${currentRecord.status}）不允许修改` };
       }
 
-      // 3. 编号冲突校验
+      // 4. 编号冲突校验
       if (input.purchaseApplicationCode && input.purchaseApplicationCode !== currentRecord.planCode) {
         if (this.isPlanCodeExists(input.purchaseApplicationCode, id)) {
           return { success: false, error: `采购申请批次号已存在: ${input.purchaseApplicationCode}` };
         }
       }
 
-      // 4. 构建 UPDATE 语句
+      // 5. 构建 UPDATE 语句
       const updateFields: string[] = [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const values: any[] = [];
       let newItems: unknown[] | null = null;
 
-      for (const [camelKey, value] of Object.entries(input)) {
+      for (const [camelKey, value] of Object.entries(restInput)) {
         if (EXCLUDE_FIELDS.has(camelKey) || EXCLUDE_FIELDS.has(FIELD_MAP[camelKey] || '')) {
           continue;
         }
@@ -610,11 +624,6 @@ export class PurchasePlanService {
         // P0-6 修复：仅跳过 undefined；传 '' 或 null 视为显式置空 DB
         if (value === undefined) {
           continue;
-        }
-
-        // executionStatus 4 档白名单校验
-        if (camelKey === 'executionStatus' && !EXECUTION_STATUSES.has(value as string)) {
-          return { success: false, error: `无效的执行状态: ${value}` };
         }
 
         if (camelKey === 'items') {
@@ -640,6 +649,12 @@ export class PurchasePlanService {
         const dbField = FIELD_MAP[camelKey] || camelKey;
         updateFields.push(`${dbField} = ?`);
         values.push(value);
+      }
+
+      // executionStatus 单独追加（已通过白名单校验，且不参与 canEdit）
+      if (newExecutionStatus !== undefined) {
+        updateFields.push('execution_status = ?');
+        values.push(newExecutionStatus);
       }
 
       if (updateFields.length === 0) {
