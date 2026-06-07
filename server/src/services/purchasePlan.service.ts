@@ -689,7 +689,9 @@ export class PurchasePlanService {
   }
 
   /**
-   * 单条删除（P0-2 修复：恢复 canDelete 状态机保护）
+   * 单条删除
+   * 2026-06-07: 业务调整允许删除任何状态订单（与批量删除、订单管理、技术方案、生产计划保持一致）。
+   * 原 canDelete 状态机保护注释保留以备审计；前端通过 showConfirm 强确认承担保护责任。
    */
   async deleteById(id: string): Promise<ServiceResult<{ id: string }>> {
     try {
@@ -697,10 +699,6 @@ export class PurchasePlanService {
       const current = queryToObjects(db, 'SELECT * FROM purchase_plans WHERE id = ?', [id]);
       if (current.length === 0) {
         return { success: false, error: '采购计划不存在' };
-      }
-      // 状态机保护：仅允许删除草稿/待审批/已拒绝
-      if (!this.canDelete(current[0])) {
-        return { success: false, error: `当前状态（${current[0].status}）不允许删除` };
       }
       db.run('DELETE FROM purchase_plans WHERE id = ?', [id]);
       saveDatabase();

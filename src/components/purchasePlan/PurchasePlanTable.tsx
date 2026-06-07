@@ -383,7 +383,12 @@ export function PurchasePlanTable({
                             variant="ghost"
                             size="icon"
                             onClick={async () => {
-                              if (await showConfirm(`确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`)) {
+                              // 2026-06-07: 业务调整允许删除任何状态采购计划
+                              const isTerminal = ['approved', 'purchasing', 'completed'].includes(plan.status);
+                              const confirmMsg = isTerminal
+                                ? `采购计划 ${plan.purchaseApplicationCode} 状态为「${plan.status}」，删除后不可恢复。\n\n确定要继续删除吗？`
+                                : `确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`;
+                              if (await showConfirm(confirmMsg)) {
                                 onDelete(plan);
                               }
                             }}
