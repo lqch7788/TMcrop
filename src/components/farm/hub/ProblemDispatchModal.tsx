@@ -10,7 +10,7 @@ import { useProblemDispatch, type ProblemFlowRecord } from '../../../hooks/usePr
 import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
-import { Input } from '../../ui/input';
+import { Input } from '@/components/ui';
 
 interface ProblemDispatchModalProps {
   problemId: number;

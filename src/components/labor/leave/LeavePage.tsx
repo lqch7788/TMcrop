@@ -6,7 +6,7 @@ import { LeaveTable } from './LeaveTable';
 import { LeaveDetailModal } from './LeaveDetailModal';
 import { LeaveFormModal } from './LeaveFormModal';
 import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } from './modals';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { useLeaveStore } from '@/stores/leaveStore';
 import { showAlert } from '@/lib/dialogService';
 

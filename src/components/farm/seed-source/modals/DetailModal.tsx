@@ -3,8 +3,8 @@
  */
 
 import React, { useState } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { SeedSource } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
 import { History } from 'lucide-react';

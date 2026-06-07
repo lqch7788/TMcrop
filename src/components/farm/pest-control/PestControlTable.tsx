@@ -6,11 +6,11 @@
 import React from 'react';
 import { Eye, Edit2, Trash2, Plus, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import { PestControlData, useDictionaryStore } from '@/stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
+import { Badge } from '@/components/ui';
 
 interface PestControlTableProps {
   data: PestControlData[];

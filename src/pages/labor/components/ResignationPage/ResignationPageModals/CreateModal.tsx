@@ -2,10 +2,10 @@
  * 离职申请页面新建表单弹窗组件
  */
 import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { ResignationFormData, RESIGNATION_TYPE_OPTIONS, VOLUNTARY_REASONS, INVOLUNTARY_REASONS, ResignationType } from '../../../types/resignationPage.types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { useWorkerStore } from '../../../../../stores';
 

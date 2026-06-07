@@ -1,9 +1,9 @@
 import React from 'react';
 import { BarChart3, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 interface StatMonthlyTableProps {
   activeTab: 'monthly' | 'material';

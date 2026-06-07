@@ -17,7 +17,7 @@ import {
   Label,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 export default function MyApproval() {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Thermometer, Droplets, Wind, Bug, Info, CheckCircle, XCircle } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const alertData = [
   { id: 'A001', type: '温度', level: 'warning', title: '温度偏高预警', message: '1号温室-A区当前温度32°C，超过28°C阈值', time: '2026-03-14 10:25', status: '待处理' },

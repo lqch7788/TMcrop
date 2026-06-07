@@ -4,8 +4,8 @@
 
 import React from 'react';
 import { FileText, Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '../../../ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
 import { OvertimeBadge } from './OvertimeBadge';
 import { showAlert } from '@/lib/dialogService';

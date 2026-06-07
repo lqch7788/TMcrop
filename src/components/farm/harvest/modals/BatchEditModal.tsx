@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Modal, FormField } from '@/components/ui';
-import { Input, Select } from '../../../ui/Modal';
+import { Input, Select } from '@/components/ui';
 import { useDictionaryStore, getDictItems } from '../../../../stores';
 import { parseHarvesterNames } from '../../../../constants/cropConstants';
 

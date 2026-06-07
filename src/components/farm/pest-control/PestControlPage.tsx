@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Sprout, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { usePestControlStore, PestControlData, useToastStore } from '@/stores';
 import { PestControlFilter } from './PestControlFilter';
 import { PestControlTable } from './PestControlTable';

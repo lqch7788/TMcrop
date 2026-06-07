@@ -5,13 +5,13 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download } from 'lucide-react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Planting } from '../../../../types/crop';
 import { useUserStore } from '../../../../stores';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface PrintLabelModalProps {

@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sprout, Search, Plus, Edit, Trash2, ChevronLeft } from 'lucide-react';
 import { useDictionaryStore, getDictItems } from '../stores';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 // 作物数据接口
 interface CropItem {

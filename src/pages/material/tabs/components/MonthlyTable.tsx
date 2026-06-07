@@ -1,8 +1,8 @@
 // MonthlyTable 组件 - 月度汇总表格
 // 按物料分类统计的月度汇总表格（折叠模式）
 import { Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import {
   useStatisticsStore,
   getSingleMonthTableData,

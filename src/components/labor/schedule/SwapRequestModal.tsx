@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import type { Staff, SwapRequest } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface SwapRequestModalProps {

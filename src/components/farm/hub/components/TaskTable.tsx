@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody } from '@/components/ui';
 import { EDITABLE_STATUSES, STATUS_MAP } from '../constants_taskDispatch';
 

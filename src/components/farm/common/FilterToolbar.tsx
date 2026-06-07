@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Search, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 
 // 按钮类型
 export interface FilterButtonProps {

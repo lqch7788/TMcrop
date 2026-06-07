@@ -3,9 +3,9 @@
  */
 
 import { Search, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { MONTH_OPTIONS, DEPT_OPTIONS } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface MonthlyReportFiltersProps {
   month: string;

@@ -19,7 +19,7 @@ import { useOperationRecords } from '../../../hooks/useOperationRecords';
 // 导入子组件
 import { TaskFilterTabs } from './TaskFilterTabs';
 import { WorkLogPage } from '../worklog/WorkLogPage';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { TempTaskTableRow } from './TempTaskTableRow';
 import { ProblemTaskTableRow } from './ProblemTaskTableRow';
 import { ProductionTaskTableRow } from './ProductionTaskTableRow';
@@ -33,7 +33,7 @@ import { TaskFilterType, FeedbackFormData, TaskWithExtras } from './types';
 import { formatDateShort, formatExpectedEndDate, STATUS_MAP } from './constants';
 
 // 导入 UI 组件
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 // 导入 Task 类型（从 useTasks）
 import { Task } from '../../../hooks/useTasks';

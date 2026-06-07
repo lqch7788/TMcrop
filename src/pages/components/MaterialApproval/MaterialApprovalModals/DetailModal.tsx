@@ -2,10 +2,10 @@
 // 物料审批详情弹窗
 import { Approval, ApprovalStatus } from '@/types/approval';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 interface DetailModalProps {
   // 弹窗状态

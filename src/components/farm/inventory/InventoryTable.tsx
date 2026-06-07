@@ -5,9 +5,9 @@
 
 import React, { useMemo } from 'react';
 import { Package, Leaf, Sprout, ArrowUpCircle } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Checkbox } from '../../ui/checkbox';
-import { Pagination } from '../../ui/Pagination';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import {
   StockType,
   SourceType,

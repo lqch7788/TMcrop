@@ -1,5 +1,5 @@
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { DatePicker } from '../../../ui/DatePicker';
+import { Modal, FormField, Input, Select } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 interface OperationRecord {
   id: number;

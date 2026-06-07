@@ -3,11 +3,11 @@
 // 使用统一的 Modal 组件，支持拖动、调整大小、最大化功能
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Modal } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { UserSelect } from '@/components/common/settings/UserSelect';
 import type { MaterialItem, MaterialReceivingRecord } from '@/types/materialReceiving';

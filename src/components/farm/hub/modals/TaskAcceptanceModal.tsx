@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { AlertTriangle, Clock, User, Camera, MapPin, Mic, FileText } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 

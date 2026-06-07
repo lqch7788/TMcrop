@@ -1,9 +1,9 @@
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 interface PersonnelTableProps {
   workers: Worker[];

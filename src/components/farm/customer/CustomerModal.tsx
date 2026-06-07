@@ -3,11 +3,11 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { useCustomerStore } from '@/stores';
 import { Customer } from '@/types/customer.types';
 import { showAlert } from '@/lib/dialogService';

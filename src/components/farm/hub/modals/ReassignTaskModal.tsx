@@ -4,9 +4,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { UserPlus, AlertTriangle, Users } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';

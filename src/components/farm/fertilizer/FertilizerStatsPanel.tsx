@@ -10,10 +10,10 @@ import {
 } from 'recharts';
 import { useFertilizerStore } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 
 interface FertilizerStatsPanelProps {
   filters: Record<string, string>;

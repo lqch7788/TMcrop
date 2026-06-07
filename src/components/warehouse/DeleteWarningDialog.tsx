@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Button } from '../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 interface DeleteWarningDialogProps {
   isOpen: boolean;

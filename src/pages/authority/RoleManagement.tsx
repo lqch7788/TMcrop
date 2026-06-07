@@ -14,7 +14,7 @@ import {
   X,
   Save,
 } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { useOrganizationStore } from '@/stores';
 import { Role } from '../types/authority';
 import { showConfirm } from '@/lib/dialogService';

@@ -18,7 +18,7 @@ import {
   Label,
 } from '../components/ui';
 import { Button } from '../components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 export default function PendingApproval() {
   const { approve, reject } = useApproval();

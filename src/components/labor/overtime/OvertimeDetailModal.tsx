@@ -1,6 +1,6 @@
 import { X, Check, XCircle } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { OvertimeDetailModalProps, OvertimeType } from './types';
 
 /**

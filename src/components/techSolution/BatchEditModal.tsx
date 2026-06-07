@@ -6,17 +6,17 @@
 import { useState, useMemo } from 'react';
 import { Upload } from 'lucide-react';
 import { Modal, FormField, Textarea } from '../ui/Modal';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui';
 import { DictSelect } from '../common/settings/DictSelect';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';

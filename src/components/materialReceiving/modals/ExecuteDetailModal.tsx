@@ -1,8 +1,8 @@
 import React from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 interface ExecuteDetailModalProps {

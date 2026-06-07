@@ -5,7 +5,7 @@
 import { BarChart3, Eye, Edit, Trash2, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import type { Indicator } from '../../types/indicators.types';
 import { getProgressColor, getAchievementColor, calcAchievementRate } from '../../hooks/useIndicators';
 

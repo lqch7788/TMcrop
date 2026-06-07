@@ -3,16 +3,16 @@
  * 受控组件：父组件传 filter state 和 onChange
  */
 import { Search } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
 
 export interface TechSolutionFiltersValue {

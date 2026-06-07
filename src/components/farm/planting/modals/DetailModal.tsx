@@ -3,8 +3,8 @@
  */
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';

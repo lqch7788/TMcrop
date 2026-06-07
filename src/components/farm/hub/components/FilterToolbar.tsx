@@ -6,8 +6,8 @@
 import React from 'react';
 import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
 import { Button, Label } from '@/components/ui';
-import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 
 interface FilterToolbarProps {

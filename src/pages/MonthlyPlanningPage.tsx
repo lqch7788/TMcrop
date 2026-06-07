@@ -22,7 +22,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import { useProductionPlanStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';

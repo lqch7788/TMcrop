@@ -2,7 +2,7 @@
  * 请假申请撤回确认弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { LeaveRecord } from '../../../../components/labor/leave/types';
 
 export interface WithdrawModalProps {

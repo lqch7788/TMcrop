@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface CropVarietyCodeToolbarProps {
   codeGenExpanded: boolean;

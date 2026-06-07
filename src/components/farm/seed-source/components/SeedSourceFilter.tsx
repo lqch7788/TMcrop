@@ -4,9 +4,9 @@
 
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { SeedSourceFilters, SourceType } from '../../../../types/crop';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 import { Label, DateRangePicker, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface SeedSourceFilterProps {

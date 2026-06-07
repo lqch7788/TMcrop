@@ -18,7 +18,7 @@ import {
   Save,
   Building2,
 } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import {
   Warehouse,
   getWarehouses,

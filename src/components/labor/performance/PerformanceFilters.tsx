@@ -2,8 +2,8 @@
  * 绩效考核筛选栏组件
  */
 import { Search, RotateCcw, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import type { PerformanceFilters as PerformanceFiltersType } from './types';
 import { DEPT_OPTIONS, getMonthOptions } from './types';
 

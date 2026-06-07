@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { DatePicker } from '../../../../../components/ui/DatePicker';
 import type { AttendanceRepairFormData } from '../types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS } from '../types/attendanceRepairPage.types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { useWorkerStore } from '../../../../../stores';
 
 interface CreateModalProps {

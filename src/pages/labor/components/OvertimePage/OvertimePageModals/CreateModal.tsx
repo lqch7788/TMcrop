@@ -3,10 +3,10 @@
  */
 import { useEffect } from 'react';
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { OvertimeFormData, OvertimeFeePreview } from '../types/overtimePage.types';
 import { OVERTIME_TYPE_OPTIONS } from '../types/overtimePage.types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { useWorkerStore } from '../../../../../stores';
 

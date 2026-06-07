@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Barcode, Package } from 'lucide-react';
 import { Material } from './MaterialFilters';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { NumberInput } from '../ui/NumberInput';
-import { DatePicker } from '../ui/DatePicker';
-import { Label } from '../ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { X } from 'lucide-react';
 
 // 深度输入框样式

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ClipboardList, FileText, ClipboardCheck, BarChart3, DollarSign } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 // 成本核算Tab组件
 import CostTab from '../components/materialReceiving/tabs/CostTab';

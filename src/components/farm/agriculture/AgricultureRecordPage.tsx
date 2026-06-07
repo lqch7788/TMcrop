@@ -5,9 +5,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import {
   Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
   X, Pencil, Trash2, Sprout, Droplets, AlertTriangle

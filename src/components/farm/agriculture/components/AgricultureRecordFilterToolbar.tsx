@@ -7,10 +7,10 @@ import { Search, Plus } from 'lucide-react';
 import { SOURCE_CONFIG, type FarmOperationRecord } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 
 // 来源类型选项
 const SOURCE_OPTIONS = Object.entries(SOURCE_CONFIG).map(([value, config]) => ({

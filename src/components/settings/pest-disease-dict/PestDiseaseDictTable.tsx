@@ -6,10 +6,10 @@
 import React, { useState } from 'react';
 import { Eye, Edit2, Trash2 } from 'lucide-react';
 import { PestDiseaseDict } from '@/stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 interface PestDiseaseDictTableProps {
   data: PestDiseaseDict[];

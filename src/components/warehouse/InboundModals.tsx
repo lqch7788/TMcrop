@@ -4,14 +4,14 @@ import { InboundRecord, InboundMaterial } from './MaterialInboundTab';
 import { useUserStore } from '../../stores/useUserStore';
 import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, TextRun } from 'docx';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
-import { NumberInput } from '../ui/NumberInput';
-import { DatePicker } from '../ui/DatePicker';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface InboundDetailModalProps {

@@ -6,7 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 导入行类型

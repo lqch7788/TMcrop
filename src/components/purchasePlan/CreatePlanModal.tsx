@@ -3,10 +3,10 @@
  */
 import React, { useRef, useState } from 'react';
 import { Plus, Trash2, Upload, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
-import { Modal, FormField } from '../ui/Modal';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Button } from '../ui/button';
+import { Modal, FormField } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
 import { usePlantingStore, useDictionaryStore } from '../../stores';

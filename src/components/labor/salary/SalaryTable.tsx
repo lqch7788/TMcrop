@@ -1,7 +1,7 @@
 import { Eye, Calculator, Download, ChevronLeft, ChevronRight, Edit, Trash2, Plus } from 'lucide-react';
 import type { SalaryTableProps } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 /**
  * 工资状态徽章

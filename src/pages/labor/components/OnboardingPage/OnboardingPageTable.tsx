@@ -4,7 +4,7 @@
 import { Eye, Check, X } from 'lucide-react';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { OnboardingRecord, STATUS_CONFIG_MAP } from '../../types/onboardingPage.types';
 
 interface OnboardingPageTableProps {

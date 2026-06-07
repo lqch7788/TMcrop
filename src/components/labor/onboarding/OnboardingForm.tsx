@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { OnboardingFormData, ContractType } from './types';
-import { Label } from '@/components/ui/label';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Label } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 interface OnboardingFormProps {
   formData: OnboardingFormData;

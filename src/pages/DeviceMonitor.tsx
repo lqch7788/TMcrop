@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileText, Power, Wifi, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 const deviceData = [
   { id: 'D001', name: '温室1号通风扇', type: '通风设备', location: '1号温室-A区', status: '运行中', online: true, lastUpdate: '2026-03-14 10:30' },

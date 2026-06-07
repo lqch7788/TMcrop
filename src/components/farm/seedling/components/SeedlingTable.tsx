@@ -6,12 +6,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 import { SEEDLING_STATUS_MAP } from '../../../../constants/cropConstants';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 

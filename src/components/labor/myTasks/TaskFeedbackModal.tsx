@@ -2,12 +2,12 @@
  * 任务反馈表单弹窗组件
  */
 
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { FeedbackFormData } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeLabel } from './constants';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

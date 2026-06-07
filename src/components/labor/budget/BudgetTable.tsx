@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Eye, Edit2, Trash2, Download, Plus } from 'lucide-react';
 import type { MonthlyBudget } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 interface BudgetTableProps {
   data: MonthlyBudget[];

@@ -4,7 +4,7 @@
  */
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import type { Material } from '../../types/materials.types';
 
 interface MaterialsTableProps {

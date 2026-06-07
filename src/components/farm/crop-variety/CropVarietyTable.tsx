@@ -5,10 +5,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, List, GitBranch } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   getCategoryOptions,

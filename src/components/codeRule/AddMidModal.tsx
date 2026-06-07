@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface AddMidModalProps {
   isOpen: boolean;

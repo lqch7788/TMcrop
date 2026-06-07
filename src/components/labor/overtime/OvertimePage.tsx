@@ -6,7 +6,7 @@ import { OvertimeTable } from './OvertimeTable';
 import { OvertimeDetailModal } from './OvertimeDetailModal';
 import { OvertimeFormModal } from './OvertimeFormModal';
 import { OvertimeBatchEditModal, OvertimeDeleteWarningModal, OvertimeExportFormatModal } from './modals';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { OvertimeRecord, OvertimeFormData } from './types';
 
 /**

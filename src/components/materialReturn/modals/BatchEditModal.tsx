@@ -1,6 +1,6 @@
 import { ReturnRecord } from '../types';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 
 // 深度输入框样式

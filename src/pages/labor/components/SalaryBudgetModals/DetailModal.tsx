@@ -1,7 +1,7 @@
 /**
  * 工资预算详情弹窗组件
  */
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';

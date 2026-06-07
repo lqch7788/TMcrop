@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ClipboardCheck, Plus, Search, Eye, Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 const workOrders = [
   { id: 1, code: 'WO20240301', name: '张伟民', workerId: 'W001', area: '1号棚', process: '授粉', workload: '500株', date: '2024-03-01', status: '已完成', statusClass: 'normal' },

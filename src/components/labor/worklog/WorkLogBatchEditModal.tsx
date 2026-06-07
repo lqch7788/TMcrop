@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { WorkLog } from './types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface WorkLogBatchEditModalProps {
   isOpen: boolean;

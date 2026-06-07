@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { CropVariety, CropVarietyStatus } from '../../../../types/cropVariety';
 import {
   getCategoryOptions,

@@ -8,7 +8,7 @@ import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { exportTaskRecords } from '../../../services/apiFarmTaskService';
 import { X, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface OperationRecordPanelProps {
   records: UnifiedOperationRecord[];

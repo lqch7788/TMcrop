@@ -4,15 +4,15 @@
  */
 
 import React, { useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { validateDateNotFuture } from '../../../../lib/validators';
-import { Input } from '../../../ui/input';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface HarvestModalProps {

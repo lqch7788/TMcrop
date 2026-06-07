@@ -2,7 +2,7 @@
  * 加班申请页面 - 表格组件
  */
 import { Eye, Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import type { OvertimeRecord, PaginationState, BatchMode } from './types/overtimePage.types';

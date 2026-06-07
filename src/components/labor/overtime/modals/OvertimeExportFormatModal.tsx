@@ -1,6 +1,6 @@
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface OvertimeExportFormatModalProps {
   isOpen: boolean;

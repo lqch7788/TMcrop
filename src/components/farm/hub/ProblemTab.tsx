@@ -13,7 +13,7 @@ import { useUserStore } from '../../../stores';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
 import { ExportFormatModal } from '../problemDispatch/modals';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
@@ -21,8 +21,8 @@ import {
   AlertTriangle, List, X, Clock, User, MapPin, Package, Camera, Mic, Sparkles, UserPlus,
   CheckCircle, Plus, Trash2, Download, Send, FileText
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '../../ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { SourceModuleType } from '../../problemDispatch/constants/sourceConfig';
 import { SourceBadge } from '../problemDispatch/components/SourceBadge';

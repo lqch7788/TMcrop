@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { Worker, SKILL_TAGS } from '../../../types';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 interface PersonnelFormModalProps {
   worker?: Worker | null;

@@ -4,20 +4,20 @@
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck, Search, RotateCw } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { usePositionStore } from '@/stores/usePositionStore';
 import type { Position } from '@/services/apiBasicDataService';

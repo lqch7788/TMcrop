@@ -6,11 +6,11 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
+} from '@/components/ui'
+import { Checkbox } from '@/components/ui'
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Pagination } from '@/components/ui/Pagination'
+import { Button } from '@/components/ui'
+import { Pagination } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 // 列配置类型

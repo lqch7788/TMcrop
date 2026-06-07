@@ -1,9 +1,9 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import { useUserStore } from '../../../stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 // 巡查记录类型（简化版）
 interface InspectionRecord {

@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { BarChart3, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useMonthlyReport } from './hooks/useMonthlyReport';
 import { MonthlyReportFilters } from './MonthlyReportFilters';

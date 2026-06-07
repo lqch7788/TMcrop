@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { usePersistentProblems } from '../../../../hooks/usePersistentProblems';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
 import { useUserStore } from '../../../../stores';

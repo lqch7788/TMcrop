@@ -1,7 +1,7 @@
 // 物料管理主页面组件
 import { useState, useMemo } from 'react';
 import { Plus, Download, X, Search, RefreshCw } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import MaterialsHeader from './MaterialsHeader';
 import MaterialsFilters from './MaterialsFilters';
 import MaterialsTable from './MaterialsTable';

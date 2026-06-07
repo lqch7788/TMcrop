@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { MaterialItem } from '../types';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 
 // 深度输入框样式

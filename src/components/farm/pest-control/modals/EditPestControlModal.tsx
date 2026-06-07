@@ -3,12 +3,12 @@
  * 与 AddModal 类似但预填充数据
  */
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { UnitDictSelect } from '@/components/common/settings/UnitDictSelect';
 import { DictSelect } from '@/components/common/settings/DictSelect';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';

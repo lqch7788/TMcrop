@@ -1,5 +1,5 @@
 import { Search, RotateCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { TempWorkerFiltersProps, WorkerType, StaffStatus } from './types';
 
 /**

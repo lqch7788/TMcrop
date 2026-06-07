@@ -1,4 +1,4 @@
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
+import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DictSelect } from '../../../common/settings/DictSelect';
 
 interface TaskData {

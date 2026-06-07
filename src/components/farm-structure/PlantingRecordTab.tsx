@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Loader2, Leaf, CalendarCheck, History } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { usePlantingRecordStore } from '../../stores/usePlantingRecordStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';

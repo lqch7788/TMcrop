@@ -4,11 +4,11 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { Button, Label, DatePicker } from '@/components/ui';
-import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-import { TextArea } from '../../../ui/TextArea';
+import { Input } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';

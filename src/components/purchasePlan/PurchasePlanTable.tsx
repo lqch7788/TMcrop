@@ -11,11 +11,11 @@ import {
   PURCHASE_EXECUTION_STATUS_STYLE,
   type PurchaseExecutionStatus,
 } from '../../types/purchase';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { MaterialItemsTable } from './MaterialItemsTable';
 
 interface PurchasePlanTableProps {

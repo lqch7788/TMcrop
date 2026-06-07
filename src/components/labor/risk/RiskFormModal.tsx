@@ -3,9 +3,9 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { RiskAlert, AlertType, AlertLevel } from './types';
 import { AlertTypeNames, AlertLevelNames } from './types';
 import { showAlert } from '@/lib/dialogService';

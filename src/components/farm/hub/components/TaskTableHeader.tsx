@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 
 interface TaskTableHeaderProps {
   exportMode?: boolean;

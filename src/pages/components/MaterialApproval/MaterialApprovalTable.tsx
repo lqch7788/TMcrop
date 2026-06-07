@@ -7,9 +7,9 @@ import {
   CheckCircle, XCircle, Eye, ClipboardList, Download
 } from 'lucide-react';
 import { Approval, ApprovalStatus } from '@/types/approval';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
-import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { MaterialApprovalTab, TabConfig } from '../../types/materialApproval.types';
 
 interface MaterialApprovalTableProps {

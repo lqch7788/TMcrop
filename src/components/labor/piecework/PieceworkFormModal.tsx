@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import type { PieceRate, PieceworkFormData } from './types';
 import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 import { taskOptions } from './hooks/usePiecework';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 // 单位选项（共享常量）
 const unitOptions = ['斤', '箱', '个', 'kg', '筐'];

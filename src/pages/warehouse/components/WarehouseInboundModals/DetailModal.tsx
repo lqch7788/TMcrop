@@ -6,9 +6,9 @@
 import React from 'react';
 import { Package } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;

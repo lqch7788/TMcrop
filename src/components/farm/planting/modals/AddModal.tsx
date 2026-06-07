@@ -3,10 +3,10 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { X, Upload } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
 import { getSeedSources } from '../../../../services/apiSeedSourceService';
@@ -16,9 +16,9 @@ import * as cropVarietyService from '../../../../services/cropVarietyService';
 import { useProductionPlanStore, usePlantingStore } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Input } from '../../../ui/input';
-import { TextArea } from '../../../ui/TextArea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {

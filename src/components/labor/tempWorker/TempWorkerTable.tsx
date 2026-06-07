@@ -4,11 +4,11 @@ import {
   TempWorker,
   StaffStatus,
 } from './types';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 /**
  * 获取状态对应的样式

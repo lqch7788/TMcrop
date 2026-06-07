@@ -8,11 +8,11 @@
  * 业务约束：与物料库存分离"主数据维护"语义，避免和出库交易混淆
  */
 import React, { useEffect, useState } from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { useWarehouseMaterialStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { CodeGenState, categoryConfig, bigCategoriesList } from '@/types/warehouseInbound.types';

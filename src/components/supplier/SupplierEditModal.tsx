@@ -2,13 +2,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Supplier, EditFormData } from './types';
 import { getSupplierTypeName } from './data';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Input } from '../ui/input';
-import { TextArea } from '../ui/TextArea';
-import { Cascader } from '../ui/Cascader';
+import { UnifiedModal } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Cascader } from '@/components/ui';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { Label } from '../ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,

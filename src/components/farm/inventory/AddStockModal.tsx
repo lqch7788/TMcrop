@@ -6,9 +6,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Modal, FormField } from '../../ui/Modal';
-import { Input, Select } from '../../ui/Modal';
-import { TextArea } from '../../ui/TextArea';
+import { Modal, FormField } from '@/components/ui';
+import { Input, Select } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { Package, AlertCircle } from 'lucide-react';
 import { useWarehouseStore, getActiveWarehouses } from '../../../stores';
 import { useInventoryStore } from '../../../stores';

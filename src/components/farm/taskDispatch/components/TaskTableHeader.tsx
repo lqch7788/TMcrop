@@ -3,8 +3,8 @@
  */
 
 import React from 'react';
-import { Input } from '../../../ui/input';
-import { TableRow, TableHead } from '../../../ui/table';
+import { Input } from '@/components/ui';
+import { TableRow, TableHead } from '@/components/ui';
 
 interface TaskTableHeaderProps {
   exportMode?: boolean;

@@ -3,7 +3,7 @@
  * 精简后的主组件，逻辑全部抽取到 useProductionPage hook
  */
 import { FileText } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 import { useProductionPage } from './hooks/useProductionPage';
 import { ProductionStatsCards } from './ProductionStatsCards';
 import { ProductionFilters } from './ProductionFilters';

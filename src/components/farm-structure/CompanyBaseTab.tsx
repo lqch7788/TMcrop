@@ -5,8 +5,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Edit2, Trash2, Loader2, Building2, MapPin } from 'lucide-react';
 import { Button, Input, TextArea, Label } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/Pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { useBaseStore } from '../../stores';
 import type { Base } from '../../services/apiBasicDataService';
 import { showAlert } from '@/lib/dialogService';

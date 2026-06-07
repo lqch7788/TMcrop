@@ -1,6 +1,6 @@
 import { useDraggable } from '../hooks/useDraggable';
 import { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { X } from 'lucide-react';
 
 interface DraggableDialogProps {

@@ -2,8 +2,8 @@
  * 绩效考核详情弹窗组件
  */
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { PerformanceRecord, PERFORMANCE_DIMENSIONS } from './types';
 
 interface PerformanceDetailModalProps {

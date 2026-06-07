@@ -1,8 +1,8 @@
 import React from 'react';
 import type { PieceRate } from './types';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface PieceworkBatchEditModalProps {
   isOpen: boolean;

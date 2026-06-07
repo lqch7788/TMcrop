@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { MaterialItem, MaterialRequestFormState } from '../../../types/materialReceiving';
 import { useWarehouseMaterialStore } from '@/stores';

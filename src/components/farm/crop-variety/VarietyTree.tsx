@@ -6,10 +6,10 @@
 import React, { useState } from 'react';
 import { Search, Plus, ChevronLeft, ChevronRight, List, GitBranch, Edit2, Save, FolderPlus } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Table, TableHeader, TableBody, TableRow, TableHead } from '@/components/ui/table';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead } from '@/components/ui';
 import { VarietyTreeProps } from './types';
 import { useVarietyTree } from './hooks/useVarietyTree';
 import { VarietyTreeNode } from './VarietyTreeNode';

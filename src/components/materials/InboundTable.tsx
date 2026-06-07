@@ -1,7 +1,7 @@
 // 物料入库记录表格组件
 import { Eye, Edit, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 // 入库记录类型
 interface InboundRecord {

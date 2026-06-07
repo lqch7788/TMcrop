@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Label } from '../../../ui/label';
+import { Label } from '@/components/ui';
 import { getTaskTypeConfig, TaskConfigField, MultiEntryDef } from '../../../../types/farm/taskTypeConfig';
 import { TaskConfigValues } from '../hooks/useTaskTypeConfig';
 

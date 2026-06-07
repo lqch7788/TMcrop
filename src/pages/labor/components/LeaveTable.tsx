@@ -5,7 +5,7 @@ import { Eye, Check, X, Undo2 } from 'lucide-react';
 import ProTable from '../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../components/common/labor/LaborStatusBadge';
 import { LeaveRecord, LeaveStatus } from '../../../components/labor/leave/types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export interface LeaveTableProps {
   data: LeaveRecord[];

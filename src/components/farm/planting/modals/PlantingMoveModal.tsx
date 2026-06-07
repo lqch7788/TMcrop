@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import {
   Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   DatePicker, TextArea, Input

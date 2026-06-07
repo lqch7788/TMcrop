@@ -9,7 +9,7 @@ import { batchStatusColors, batchStatusLabels, SEED_BREEDING_MODES, SEEDLING_MOD
 import { ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
 import { useApprovalStore } from '@/stores';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface BatchDetailModalProps {
   batch: CropBatch | null;

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, FormField } from '@/components/ui/Modal';
+import { Modal, FormField } from '@/components/ui';
 import { RecruitmentFormData, RecruitmentSource, EmploymentType, Priority } from './types';
 import { usePositionStore, getPositionsByDepartment } from '@/stores/usePositionStore';
 import { useDepartmentStore } from '@/stores/useDepartmentStore';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 interface RecruitmentFormModalProps {
   isOpen: boolean;

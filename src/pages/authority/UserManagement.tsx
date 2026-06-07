@@ -12,7 +12,7 @@ import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
 import { Button } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 // ==================== 组件 ====================
 

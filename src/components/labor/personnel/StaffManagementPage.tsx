@@ -12,7 +12,7 @@ import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export function StaffManagementPage() {
   // 权限检查 - 已取消，所有人可使用所有功能

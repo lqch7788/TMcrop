@@ -1,5 +1,5 @@
 import { ReturnRecord, STATUS_STYLE_MAP } from '../types';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface DetailModalProps {
   record: ReturnRecord | null;

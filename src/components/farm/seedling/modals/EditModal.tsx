@@ -3,18 +3,18 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Seedling, SeedSource } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
-import { Input } from '../../../ui/input';
-import { DatePicker } from '../../../ui/DatePicker';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface EditModalProps {

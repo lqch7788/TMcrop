@@ -11,9 +11,9 @@ import { useTasksFilters } from './hooks/useTasksFilters';
 import { useTaskForm } from './hooks/useTaskForm';
 import { useTasks } from '../../../hooks/useTasks';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 导出格式弹窗

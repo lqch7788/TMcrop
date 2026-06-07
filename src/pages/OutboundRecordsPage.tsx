@@ -13,8 +13,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 import { exportOutboundCSV } from '@/services/inventoryTransactionService';

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { Download, Loader2, CheckCircle, AlertCircle, FileSpreadsheet } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 export interface ExportConfig {

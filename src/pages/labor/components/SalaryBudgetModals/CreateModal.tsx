@@ -1,7 +1,7 @@
 /**
  * 工资预算创建/编辑弹窗组件
  */
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { Button, NumberInput } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryBudgetFormData } from '../../types/salaryBudget.types';

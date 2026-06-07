@@ -1,9 +1,9 @@
 // ApplicationTable 组件
 // 领料申请单的主表格和展开行
 import { Plus, Edit, Trash2, Download, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import type { MaterialReceivingRecord } from '../../../types/materialReceiving';
 import { showAlert } from '@/lib/dialogService';
 import type { UseApplicationTabReturn } from '../hooks/useApplicationTab';

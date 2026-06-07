@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
+import { UnifiedModal } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { Search, Plus, Sprout } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';

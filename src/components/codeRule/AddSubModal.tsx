@@ -1,4 +1,4 @@
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface AddSubModalProps {
   isOpen: boolean;

@@ -2,7 +2,7 @@
 // 包含环形图、堆叠柱状图、单独月份分组柱状图、分类汇总卡片
 import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useStatisticsStore, getMonthCategoryData, getMonthSummary } from '@/stores';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface MonthlyDashboardProps {
   /** 选中的月份 */

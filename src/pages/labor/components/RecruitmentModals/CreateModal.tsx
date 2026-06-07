@@ -3,9 +3,9 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { RecruitmentFormData, EMPLOYMENT_TYPE_OPTIONS, PRIORITY_OPTIONS } from '../../types/recruitment.types';
-import { Button } from '@/components/ui/button';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 export interface CreateModalProps {
   isOpen: boolean;

@@ -5,7 +5,7 @@
 import { Megaphone, Eye, Edit, Trash2, Send, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import type { Notice } from '../../types/announcement.types';
 import { getStatusColor, getPriorityColor } from './utils';
 

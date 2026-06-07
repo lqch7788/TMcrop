@@ -1,9 +1,9 @@
 /**
  * 考勤记录 - 查看详情弹窗
  */
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { AttendanceRecord } from '../types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface DetailModalProps {
   isOpen: boolean;

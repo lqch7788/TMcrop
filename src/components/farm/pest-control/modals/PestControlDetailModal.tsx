@@ -4,8 +4,8 @@
  */
 import React, { useState } from 'react';
 import { X, History, Bug } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useDictionaryStore } from '@/stores';
 import { PestControlData } from '@/stores/usePestControlStore';
 

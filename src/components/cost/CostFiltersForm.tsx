@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, X, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
 
 export interface CostFilters {

@@ -2,7 +2,7 @@
  * 离职申请页面筛选器组件
  */
 import { Search, RotateCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { ResignationFilters as ResignationFiltersType } from '../../types/resignationPage.types';
 import { RESIGNATION_TYPE_OPTIONS, RESIGNATION_STATUS_OPTIONS } from '../../types/resignationPage.types';
 

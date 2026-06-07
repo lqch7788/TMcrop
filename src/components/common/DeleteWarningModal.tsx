@@ -1,7 +1,7 @@
 // 统一删除警告弹窗组件
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import React from 'react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 
 // 新的统一接口
 interface DeleteWarningModalProps {

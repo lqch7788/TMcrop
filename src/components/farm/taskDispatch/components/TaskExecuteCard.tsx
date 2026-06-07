@@ -6,11 +6,11 @@
 import { useState } from 'react';
 import { Play, Pause, CheckCircle, Clock, MapPin, Camera, Mic, FileText, Package } from 'lucide-react';
 import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import FeedbackInput from '../../../common/FeedbackInput';
-import { Button } from '@/components/ui/button';
-import { Label } from '../../../ui/label';
-import { TextArea } from '../../../ui/TextArea';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 
 interface TaskExecuteCardProps {
   task: Task;

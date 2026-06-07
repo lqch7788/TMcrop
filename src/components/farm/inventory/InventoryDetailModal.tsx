@@ -10,8 +10,8 @@ import {
   TrendingUp, TrendingDown, Snowflake, Lock, Unlock, Edit3,
   RefreshCw, AlertCircle, HelpCircle,
 } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Tooltip } from '../../ui/Tooltip';
+import { Button } from '@/components/ui';
+import { Tooltip } from '@/components/ui';
 import {
   StockType,
   InventoryStock,

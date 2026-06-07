@@ -4,11 +4,11 @@
 
 import React from 'react';
 import { FileText, Bell } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
 import { OvertimeBadge } from './OvertimeBadge';
-import { Input } from '../../../ui/input';
-import { TableRow, TableCell } from '../../../ui/table';
+import { Input } from '@/components/ui';
+import { TableRow, TableCell } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface TaskTableRowProps {

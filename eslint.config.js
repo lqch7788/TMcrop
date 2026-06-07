@@ -46,6 +46,32 @@ export default tseslint.config(
       'no-empty': 'warn',
       // 禁用 prefer-const 检查（解构赋值常用 let）
       'prefer-const': 'off',
+      // UI 库导入统一性 — 强制走 barrel 文件 @/components/ui，禁止直接导入底层组件路径
+      // 例外：src/components/ui/** 内部允许互相 import（通过下面 files 覆盖关闭此规则）
+      'no-restricted-imports': ['warn', {
+        patterns: [
+          '**/components/ui/*',
+          '**/ui/button', '**/ui/Modal', '**/ui/UnifiedModal', '**/ui/Dialog', '**/ui/dialog',
+          '**/ui/Drawer', '**/ui/Sheet', '**/ui/table', '**/ui/input', '**/ui/select',
+          '**/ui/checkbox', '**/ui/card', '**/ui/badge', '**/ui/Toast', '**/ui/Notification',
+          '**/ui/popover', '**/ui/dropdown-menu', '**/ui/DatePicker', '**/ui/DateRangePicker',
+          '**/ui/TextArea', '**/ui/tabs', '**/ui/Tooltip', '**/ui/Avatar', '**/ui/Tree',
+          '**/ui/TreeSelect', '**/ui/Cascader', '**/ui/TimePicker', '**/ui/FilterBar',
+          '**/ui/Pagination', '**/ui/Skeleton', '**/ui/Progress', '**/ui/Statistic',
+          '**/ui/EmptyState', '**/ui/Calendar', '**/ui/Steps', '**/ui/Breadcrumb',
+          '**/ui/Alert', '**/ui/Divider', '**/ui/Space', '**/ui/QRCode', '**/ui/ImageUploader',
+          '**/ui/KanbanBoard', '**/ui/GanttChart', '**/ui/VirtualTable', '**/ui/Timeline',
+          '**/ui/LabelResumeTimeline', '**/ui/List', '**/ui/NumberInput', '**/ui/label',
+          '**/ui/DetailModal',
+        ],
+      }],
+    },
+  },
+  {
+    // UI 库自身内部互相 import 不受 no-restricted-imports 限制
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
 )

@@ -2,8 +2,8 @@
  * 拒绝原因弹窗组件
  */
 
-import { Modal } from '@/components/ui/Modal';
-import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface TaskRejectModalProps {
   isOpen: boolean;

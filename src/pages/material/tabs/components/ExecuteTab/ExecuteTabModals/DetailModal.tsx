@@ -1,8 +1,8 @@
 // ExecuteTabDetailModal 组件
 // 领料出库详情弹窗
 import { X, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface ExecuteDetailModalProps {
   // 弹窗状态

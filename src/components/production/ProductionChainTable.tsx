@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyState } from '@/components/ui';
 import { getTechSolutions } from '@/services/apiTechSolutionService';
 
 // 表格类型

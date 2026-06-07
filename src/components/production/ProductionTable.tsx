@@ -1,7 +1,7 @@
 import { Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { showConfirm } from '@/lib/dialogService';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
 import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels } from './constants';

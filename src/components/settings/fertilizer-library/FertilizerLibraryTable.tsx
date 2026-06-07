@@ -6,9 +6,9 @@
 import React from 'react';
 import { Eye, Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { FertilizerLibrary } from '@/stores';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { getDictItemName } from '@/stores';
 
 interface FertilizerLibraryTableProps {

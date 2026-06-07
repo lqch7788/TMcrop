@@ -2,8 +2,8 @@
  * 离职申请页面详情弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
 import { ResignationRecord } from '../../../types/resignationPage.types';
 

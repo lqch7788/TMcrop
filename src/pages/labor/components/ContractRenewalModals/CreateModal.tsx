@@ -3,7 +3,7 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { Button, DatePicker, NumberInput } from '@/components/ui';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { ContractRenewalFormData, CONTRACT_PERIOD_OPTIONS } from '../../types/contractRenewal.types';
 
 export interface CreateModalProps {

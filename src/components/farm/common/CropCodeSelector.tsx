@@ -6,8 +6,8 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, ChevronDown, ChevronRight, Leaf, Plus } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { CropVariety } from '../../../types/cropVariety';
 import {
   initVarieties,

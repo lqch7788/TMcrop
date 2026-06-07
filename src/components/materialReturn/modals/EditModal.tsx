@@ -2,7 +2,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { ReturnRecord, EditFormData, MaterialItem, RETURN_REASONS } from '../types';
 import { RETURN_TYPES } from '../config';
 import { useMaterialReturnStore } from '../../../stores/useMaterialReturnStore';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 

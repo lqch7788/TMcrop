@@ -4,10 +4,10 @@
 
 import { Eye } from 'lucide-react';
 import { TableColumn } from './types';
-import { Pagination } from '@/components/ui/Pagination';
-import { Button } from '../ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
-import { Checkbox } from '../ui/checkbox';
+import { Pagination } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 
 interface SummaryTableProps<T extends { id: number | string }> {
   title?: string;

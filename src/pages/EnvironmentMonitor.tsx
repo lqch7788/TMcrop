@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useIotStore, useProductionPlanStore } from '@/stores';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const sensorTrend = [
   { time: '06:00', temp: 18, humi: 75 },

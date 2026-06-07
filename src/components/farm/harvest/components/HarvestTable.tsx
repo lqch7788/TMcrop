@@ -8,11 +8,11 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { HarvestRecord } from '../../../../types/crop';
 import { getStatusBadge, getGradeBadge } from '../statusBadgeUtils.tsx';
 import { getPlantingModeLabel, parseHarvesterNames } from '../../../../constants/cropConstants';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { INBOUND_TYPE_MAP, SUPPLEMENTARY_STATUS_MAP } from '../../../../constants/cropConstants';
 
 // 产品明细行组件

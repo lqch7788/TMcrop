@@ -2,7 +2,7 @@
  * 离职申请页面表格组件
  */
 import { Eye, Check, X, Plus, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { ResignationRecord, RESIGNATION_STATUS_CONFIG_MAP } from '../../types/resignationPage.types';

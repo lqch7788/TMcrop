@@ -1,11 +1,11 @@
 import { Search, Download, Eye, Edit, Trash2, ChevronDown, ChevronRight as ChevronRightIcon, Plus, AlertTriangle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import type { MaterialExecuteRecord, ExecuteMaterialItem, MaterialReceivingRecord, ExecuteAddFormState, ExecuteEditFormState } from '../../types/materialReceiving';
 import { showAlert } from '@/lib/dialogService';
 

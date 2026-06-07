@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface ActionBarProps {

@@ -5,12 +5,12 @@
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Search, Tag, Download } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { LabelResumeTimeline, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
 import { usePlantLabelStore } from '../../../../stores';
 import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 const PAGE_SIZE = 20;

@@ -2,10 +2,10 @@
  * 交付记录弹窗
  */
 import { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { CropOrder } from '@/types/crop';
 

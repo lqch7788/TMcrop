@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { DatePicker } from '../../../ui/DatePicker';
+import { Modal, FormField, Input, Select } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
-import { TextArea } from '../../../ui/TextArea';
+import { TextArea } from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

@@ -5,9 +5,9 @@ import {
   Download, Plus, Edit, Trash2, ChevronDown, ChevronRight as ChevronRightIcon,
   Eye
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 interface ExecuteTabTableProps {
   // 数据

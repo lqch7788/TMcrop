@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { showAlert } from '@/lib/dialogService';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useDepartmentStore } from '../../../../stores';
-import { Label } from '@/components/ui/label';
-import { NumberInput } from '@/components/ui/NumberInput';
+import { Label } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
 
 interface Position {
   id: number;

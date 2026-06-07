@@ -6,10 +6,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Plus, Edit2, Trash2, Building2, Loader2, List, Network } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
-import { Tree } from '@/components/ui/Tree';
+import { Modal } from '@/components/ui';
+import { Tree } from '@/components/ui';
 import type { TreeNode } from '@/components/ui/Tree';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui';
 import { Button, Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import {
   Table,
@@ -18,7 +18,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from '@/components/ui/table';
+} from '@/components/ui';
 import { useBaseOperationsStore } from '@/stores/useBaseOperationsStore';
 import { useBaseStore } from '@/stores/useBaseStore';
 import { useGreenhouseStore } from '@/stores/useGreenhouseStore';

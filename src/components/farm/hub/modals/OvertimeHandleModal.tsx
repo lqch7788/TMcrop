@@ -4,10 +4,10 @@
  */
 
 import { useState } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { Button, Label, DatePicker } from '@/components/ui';
-import { Input } from '../../../ui/input';
-import { TextArea } from '../../../ui/TextArea';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';

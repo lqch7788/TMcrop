@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { SeedSource, SeedlingStatus, SeedlingPlanType, SeedlingCalculateMode } from '../../../../types/crop';
 import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingService';
@@ -20,11 +20,11 @@ import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
-import { Input } from '../../../ui/input';
-import { DatePicker } from '../../../ui/DatePicker';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface AddModalProps {

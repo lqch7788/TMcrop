@@ -4,9 +4,9 @@
  */
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface FertilizerLibraryFilterProps {
   filters: Record<string, string>;

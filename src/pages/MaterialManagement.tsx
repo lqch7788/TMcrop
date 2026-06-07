@@ -11,7 +11,7 @@ import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useMaterialTypeStore } from '../stores';
 import type { MaterialType } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const CATEGORY_OPTIONS = ['肥料', '农药', '农膜', '工具', '种子', '其他'];
 

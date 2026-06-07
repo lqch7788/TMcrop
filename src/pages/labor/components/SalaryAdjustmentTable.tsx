@@ -5,7 +5,7 @@ import { Eye, Check, X } from 'lucide-react';
 import ProTable from '../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../components/common/labor/LaborStatusBadge';
 import { SalaryAdjustmentRecord } from '../types/salaryAdjustment.types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export interface SalaryAdjustmentTableProps {
   data: SalaryAdjustmentRecord[];

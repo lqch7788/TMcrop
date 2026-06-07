@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
 } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore, useToastStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
@@ -30,7 +30,7 @@ import {
   HarvestTableToolbar,
   HarvestTable,
 } from './components';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 // 初始化品种库
 cropVarietyService.initVarieties();

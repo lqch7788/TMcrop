@@ -5,8 +5,8 @@
 import React from 'react';
 import { Send, Download, Trash2 } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '../../../ui/DatePicker';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface ProblemFilterToolbarProps {

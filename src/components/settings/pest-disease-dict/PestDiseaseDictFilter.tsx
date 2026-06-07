@@ -3,8 +3,8 @@
  * 筛选字段：病虫害名称（通过父组件搜索框处理）、适用作物
  */
 import React from 'react';
-import { Label } from '../../ui/label';
-import { Input } from '../../ui/input';
+import { Label } from '@/components/ui';
+import { Input } from '@/components/ui';
 
 interface PestDiseaseDictFilterProps {
   filters: Record<string, string>;

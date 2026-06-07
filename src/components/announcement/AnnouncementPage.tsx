@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Megaphone, Plus, Edit, Eye, Trash2, Target, DollarSign, TrendingUp, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
-import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
+import { Modal } from '@/components/ui';
 
 export interface Announcement {
   id: number;

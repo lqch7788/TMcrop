@@ -9,7 +9,7 @@ import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useBranchStore } from '../stores';
 import type { Branch } from '../stores';
 import { showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',

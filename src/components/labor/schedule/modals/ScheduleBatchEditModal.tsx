@@ -1,7 +1,7 @@
 import type { ScheduleRecord, ShiftType } from '../types';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface ScheduleBatchEditModalProps {
   isOpen: boolean;
