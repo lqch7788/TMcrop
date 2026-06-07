@@ -226,15 +226,7 @@ export default function FertilizerPage() {
         </div>
       </div>
 
-      {/* FilterBar */}
-      <FertilizerFilter
-        filters={filters}
-        onChange={setFilters}
-        onSearch={handleSearch}
-        onReset={handleReset}
-      />
-
-      {/* Stats summary bar */}
+      {/* Stats summary bar - 2026-06-07: 移到 FilterBar 上方 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
           <div className="flex items-center gap-2">
@@ -281,6 +273,14 @@ export default function FertilizerPage() {
           </div>
         </div>
       </div>
+
+      {/* FilterBar */}
+      <FertilizerFilter
+        filters={filters}
+        onChange={setFilters}
+        onSearch={handleSearch}
+        onReset={handleReset}
+      />
 
       {/* 批量删除操作栏 */}
       {operationMode === 'delete' && selectedIds.length > 0 && (
