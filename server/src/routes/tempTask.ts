@@ -11,14 +11,34 @@ const router = Router();
 
 /**
  * 生成临时任务编码
+ * 格式: TT + YYYYMMDD + - + 3位流水号 (如 TT20260418-001)
+ * 流水号按当日自增（查询当日 MAX+1）
  */
 function generateTempTaskCode(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-  return `TT${year}${month}${day}${seq}`;
+  const dateStr = `${year}${month}${day}`;
+
+  // 查询当日最大序号: TT + 8位日期 + - + 3位序号 = 14 字符
+  const db = getDatabase();
+  const pattern = `TT${dateStr}-___`;
+  const stmt = db.prepare(`
+    SELECT task_code FROM temp_tasks
+    WHERE task_code LIKE ? AND LENGTH(task_code) = 14
+    ORDER BY task_code DESC LIMIT 1
+  `);
+  stmt.bind([pattern]);
+  let maxSerial = 0;
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { task_code: string };
+    maxSerial = parseInt(row.task_code.slice(-3), 10) || 0;
+  }
+  stmt.free();
+
+  const seq = String(maxSerial + 1).padStart(3, '0');
+  return `TT${dateStr}-${seq}`;
 }
 
 /**

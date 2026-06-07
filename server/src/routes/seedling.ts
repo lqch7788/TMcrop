@@ -110,15 +110,35 @@ router.delete('/batch', (req: Request, res: Response) => {
 /**
  * 生成育苗批号
  * GET /api/seedlings/generate-code
+ * 格式: YM{YYYYMMDD}-{3位流水号}, 例: YM20260607-001
+ * 流水号按当日自增（查询当日 MAX+1）
  */
 router.get('/generate-code', (req: Request, res: Response) => {
   try {
     const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
+    const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    const code = `SD${year}${month}${day}${random}`;
+    const dateStr = `${year}${month}${day}`;
+
+    // 查询当日最大序号: YM + 8位日期 + - + 3位序号 = 14 字符
+    const db = getDatabase();
+    const pattern = `YM${dateStr}-___`;
+    const stmt = db.prepare(`
+      SELECT seedling_code FROM seedlings
+      WHERE seedling_code LIKE ? AND LENGTH(seedling_code) = 14
+      ORDER BY seedling_code DESC LIMIT 1
+    `);
+    stmt.bind([pattern]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { seedling_code: string };
+      maxSerial = parseInt(row.seedling_code.slice(-3), 10) || 0;
+    }
+    stmt.free();
+
+    const seq = String(maxSerial + 1).padStart(3, '0');
+    const code = `YM${dateStr}-${seq}`;
     res.json({ success: true, data: code });
   } catch (error) {
     res.status(500).json({ success: false, error: '生成育苗批号失败' });
