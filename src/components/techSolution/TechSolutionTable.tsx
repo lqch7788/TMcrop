@@ -3,8 +3,8 @@
  * 受控展示：父组件传 techSolutions、state、handlers
  */
 import { Plus, Edit, Trash2, Download } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
 
 export interface TechSolutionTableHandlers {

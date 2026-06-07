@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Search, Plus, Edit, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 const materialData = [
   { id: 1, code: 'M001', name: '有机肥', category: '肥料', unit: '袋', price: 45, stock: 200, status: '充足', statusClass: 'normal' },

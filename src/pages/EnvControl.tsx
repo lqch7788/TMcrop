@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Settings, Play } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const strategies = [
   { id: 1, name: '高温预警通风', area: '1号温室', condition: '温度>28°C', action: '开启通风扇', status: '运行中' },

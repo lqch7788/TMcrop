@@ -5,7 +5,7 @@
  */
 
 import { CalendarRange } from 'lucide-react';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker } from '@/components/ui';
 
 export interface SummaryDateFilterProps {
   /** 当前筛选模式 */

@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getActiveSuppliers } from '../../../services/apiSupplierService';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 
 interface SupplierOption {
   value: string;

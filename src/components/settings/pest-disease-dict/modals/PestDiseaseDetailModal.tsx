@@ -3,9 +3,9 @@
  * 显示病虫害基本信息及关联的药剂列表
  */
 import React, { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
-import { Label } from '../../../ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { usePestDiseaseDictStore, usePesticideLibraryStore, PestDiseaseDict, PesticideForRelation } from '@/stores';
 
 interface PestDiseaseDetailModalProps {

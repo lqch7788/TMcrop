@@ -1,6 +1,6 @@
 import React from 'react';
 import { ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface MaterialReceivingHeaderProps {
   activeTab: string;

@@ -3,11 +3,11 @@
  * 简化的病虫害字典新增表单，用于病虫害防治记录时快速添加
  */
 import React, { useState } from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { usePestDiseaseDictStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 

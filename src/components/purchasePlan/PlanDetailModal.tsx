@@ -5,9 +5,9 @@
 
 import React, { useState } from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Clock, Edit2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { PurchasePlan } from '@/types/purchase';
 import {
   PURCHASE_EXECUTION_STATUS_OPTIONS,

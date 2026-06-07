@@ -1,7 +1,7 @@
-import { Modal, FormField } from '@/components/ui/Modal';
+import { Modal, FormField } from '@/components/ui';
 import { Task, Greenhouse, CropBatch, User } from '../../../types';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { NumberInput } from '@/components/ui/NumberInput';
+import { DatePicker } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
 
 interface TaskFormModalProps {
   isOpen: boolean;

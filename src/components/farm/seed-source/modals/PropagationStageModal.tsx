@@ -5,13 +5,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { ChevronRight, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import { SeedSource, PropagationType, PropagationStatus } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 // 2026-06-06: 抽离重复 3 处，使用 cropConstants 统一阶段标签
 import { PROPAGATION_STATUS_LABELS as STAGE_LABELS } from '../../../../constants/cropConstants';

@@ -3,14 +3,14 @@ import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft,
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { OnboardingBatchEditModal } from './OnboardingBatchEditModal';
 import type { OnboardingRecord, OnboardingFormData, OnboardingStatus } from './types';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 // 导出格式弹窗

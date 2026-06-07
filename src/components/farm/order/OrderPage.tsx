@@ -13,7 +13,7 @@ import { OrderDetailModal } from './modals/DetailModal';
 import { EditModal } from './modals/EditModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import {
   cropCategories,
 } from '@/data/cropData';

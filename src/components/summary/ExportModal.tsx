@@ -3,8 +3,8 @@
  */
 
 import { ExportFormat, EXPORT_FORMATS } from './types';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Label } from '../ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface ExportModalProps {
   isOpen: boolean;

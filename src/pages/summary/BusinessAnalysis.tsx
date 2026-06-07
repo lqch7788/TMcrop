@@ -5,7 +5,7 @@
  */
 import { useState, lazy, Suspense } from 'react';
 import { TrendingUp, DollarSign, Users, BarChart3, GitCompare } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { Skeleton } from '@/components/ui';
 import { PageHeader } from '../../components/summary';
 import YieldAnalysis from './YieldAnalysis';

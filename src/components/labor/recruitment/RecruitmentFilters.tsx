@@ -1,6 +1,6 @@
 import { Search, RotateCw } from 'lucide-react';
 import { RecruitmentStatus, RecruitmentSource } from './types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface RecruitmentFiltersProps {
   searchTerm: string;

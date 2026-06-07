@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
 import { useUserStore, useProblemStore } from '../../../../stores';
 

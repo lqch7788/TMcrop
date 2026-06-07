@@ -1,14 +1,14 @@
 import React from 'react';
 import { Search, RotateCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui';
+import { Button } from '@/components/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui';
 import { SkillFilters, SKILL_TAGS } from './types';
 import { cn } from '@/lib/utils';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';

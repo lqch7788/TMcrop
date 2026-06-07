@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Bell, CheckCircle, AlertTriangle, ClipboardList, Info, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { useAnnouncementStore, type ApiAnnouncement } from '../../stores/useAnnouncementStore';
 
 export interface Message {

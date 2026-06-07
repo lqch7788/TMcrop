@@ -8,11 +8,11 @@ import { PieceworkBatchEditModal } from './PieceworkBatchEditModal';
 import type { PieceRate, PieceworkFormData } from './types';
 import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 import { taskOptions } from './hooks/usePiecework';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Label } from '@/components/ui/label';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {

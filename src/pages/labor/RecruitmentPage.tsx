@@ -10,7 +10,7 @@ import { RecruitmentFilters } from './components/RecruitmentFilters';
 import { RecruitmentTable } from './components/RecruitmentTable';
 import { CreateModal } from './components/RecruitmentModals/CreateModal';
 import { DetailModal } from './components/RecruitmentModals/DetailModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export default function RecruitmentPage() {
   const departments = useDepartmentStore((state) => state.departments);

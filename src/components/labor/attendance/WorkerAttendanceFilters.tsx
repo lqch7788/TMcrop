@@ -3,9 +3,9 @@
  */
 import { Search, RotateCw } from 'lucide-react';
 import { AttendanceFilters, DEPT_OPTIONS } from './types';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface WorkerAttendanceFiltersProps {
   filters: AttendanceFilters;

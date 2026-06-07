@@ -3,10 +3,10 @@ import { useMemo, useEffect, useState, useCallback } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { Label } from '../ui/label';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { useDictionaryStore, useRegionStore } from '../../stores';
 
 interface SupplierFiltersProps {

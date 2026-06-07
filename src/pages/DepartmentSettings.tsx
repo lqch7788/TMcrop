@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Target, Plus, Edit, Trash2, Search, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useDepartmentStore } from '../stores';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Modal } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import type { Department } from '../services/apiBasicDataService';
 
 // 新增/编辑部门弹窗

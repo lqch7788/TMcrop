@@ -13,13 +13,13 @@
  */
 
 import React, { useMemo } from 'react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Pagination } from '../../ui/Pagination';
-import { Checkbox } from '../../ui/checkbox';
-import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { DatePicker } from '../../ui/DatePicker';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Pagination } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import { RotateCcw, Eye, ClipboardList, Box, Clock, Sprout } from 'lucide-react';
 import {
   OutboundRow,

@@ -10,7 +10,7 @@ import { Calendar, CheckCircle, Clock, AlertTriangle,
   ChevronDown, ChevronLeft, FileText, CircleCheck, TriangleAlert } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { showAlert } from '@/lib/dialogService';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';

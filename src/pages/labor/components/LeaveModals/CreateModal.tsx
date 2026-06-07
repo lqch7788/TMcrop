@@ -2,10 +2,10 @@
  * 请假申请创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { DatePicker } from '../../../../components/ui/DatePicker';
 import { LeaveType, LeaveQuota } from '../../../../components/labor/leave/types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { LEAVE_TYPE_OPTIONS } from '../../hooks/useLeave';
 
 export interface CreateModalProps {

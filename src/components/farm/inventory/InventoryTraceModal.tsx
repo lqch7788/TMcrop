@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { ChevronRight, X, Package, Leaf, Sprout } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 import {
   StockType,
   InventoryStock,

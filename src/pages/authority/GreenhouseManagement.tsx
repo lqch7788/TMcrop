@@ -18,7 +18,7 @@ import {
   Save,
   TreePine,
 } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import {
   Greenhouse,
   Base,

@@ -15,7 +15,7 @@ import {
   Legend,
 } from 'recharts';
 import { BarChart3, LineChart } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { EfficiencyTrend } from './types';
 
 interface EfficiencyChartProps {

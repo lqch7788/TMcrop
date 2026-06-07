@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Calculator } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { NumberInput, Label } from '@/components/ui';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { SalaryCalculateModalProps, SalaryCalculateData } from './types';
 
 /**

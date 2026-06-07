@@ -1,7 +1,7 @@
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Modal, FormField, Input, Select } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import { AttendanceRecord } from '../types';
 
 interface BatchEditModalProps {

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, History } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import TraceChain from '../../trace/TraceChain';
 import { QUALITY_GRADE_MAP, parseHarvesterNames } from '../../../../constants/cropConstants';
 

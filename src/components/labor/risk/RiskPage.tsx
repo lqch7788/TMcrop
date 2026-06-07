@@ -3,8 +3,8 @@
  */
 import React, { useState } from 'react';
 import { AlertTriangle, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useRisk } from './hooks/useRisk';
 import { RiskDashboard } from './RiskDashboard';
 import { RiskFilters } from './RiskFilters';

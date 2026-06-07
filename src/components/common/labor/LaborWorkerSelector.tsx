@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Search, X, Check, User } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui'
+import { Button } from '@/components/ui'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
-import { Badge } from '@/components/ui/badge'
+} from '@/components/ui'
+import { Badge } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 // 工人类型

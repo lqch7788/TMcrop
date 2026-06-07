@@ -5,8 +5,8 @@
 
 import React, { useState } from 'react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
 
 interface InboundExportModalProps {

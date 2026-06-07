@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Wifi, Thermometer, Sun, Wind, Droplets, Leaf } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const sensorData = [
   { id: 'S001', location: '1号温室-A区', temp: 25.2, humidity: 65, light: 48000, co2: 410, status: '正常', updateTime: '2026-03-14 10:30' },

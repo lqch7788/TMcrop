@@ -9,13 +9,13 @@ import { CropVarietyOption } from '@/types/cropVariety';
 import * as cropVarietyService from '@/services/cropVarietyService';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { useCustomerStore } from '@/stores';
-import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface EditModalProps {

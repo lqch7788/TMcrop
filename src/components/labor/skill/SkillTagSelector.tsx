@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { SkillTag, SkillLevel, SKILL_TAGS, SKILL_LEVELS, SkillItem } from './types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker } from '@/components/ui';
 
 interface SkillTagSelectorProps {
   selectedSkills: SkillItem[];

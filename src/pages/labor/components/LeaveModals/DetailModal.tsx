@@ -2,9 +2,9 @@
  * 请假申请详情弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { LeaveRecord } from '../../../../components/labor/leave/types';
 
 export interface DetailModalProps {

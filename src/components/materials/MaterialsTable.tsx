@@ -1,7 +1,7 @@
 // 物料管理表格组件
 import { Eye, Edit, Download } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 interface MaterialsTableProps {
   filteredMaterials: Array<{

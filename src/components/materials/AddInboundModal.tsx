@@ -1,6 +1,6 @@
 // 新增入库弹窗组件
 import { RefreshCw } from 'lucide-react';
-import { Modal } from '../ui/Modal';
+import { Modal } from '@/components/ui';
 import { NewInboundForm } from './types';
 
 // 深度输入框样式

@@ -3,8 +3,8 @@
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import type { OvertimeRecord } from '../types/overtimePage.types';
 
 interface DetailModalProps {

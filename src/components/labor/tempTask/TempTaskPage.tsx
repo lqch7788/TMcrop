@@ -8,20 +8,20 @@ import { TempTaskFormModal } from './TempTaskFormModal';
 import { useTempTaskFilters } from './hooks/useTempTaskFilters';
 import { useTempTaskForm } from './hooks/useTempTaskForm';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { NumberInput } from '@/components/ui/NumberInput';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../hooks/useTempTasks';
 
 import { useOperationRecords } from '../../../hooks/useOperationRecords';
 import type { Task, TaskRecord } from '../../../types/task';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 状态映射

@@ -1,7 +1,7 @@
 // ExecuteTabDeleteConfirmModal 组件
 // 领料出库删除确认弹窗
 import { AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface ExecuteDeleteConfirmModalProps {
   // 弹窗状态

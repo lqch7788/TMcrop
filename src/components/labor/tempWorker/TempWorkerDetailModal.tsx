@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { TempWorkerDetailModalProps, StaffStatus } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 /**
  * 获取状态对应的样式

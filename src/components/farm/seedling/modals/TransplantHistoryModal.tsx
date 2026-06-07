@@ -4,11 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { Seedling, TransplantHistory, TransplantAction } from '../../../../types/crop';
 import { getTransplantHistory } from '../../../../services/apiSeedlingService';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface TransplantHistoryModalProps {
   isOpen: boolean;

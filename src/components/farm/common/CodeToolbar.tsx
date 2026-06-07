@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 
 interface CodeToolbarProps {
   codeGenExpanded: boolean;

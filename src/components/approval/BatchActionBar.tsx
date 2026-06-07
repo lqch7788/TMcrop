@@ -8,7 +8,7 @@ import React from 'react';
 import { CheckSquare, Square, CheckCircle, XCircle, Download } from 'lucide-react';
 import { ApprovalType } from '../../types/approval';
 import type { Approval } from '../../types/approval';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 
 // HR敏感类型 - 不支持批量审批
 const HR_SENSITIVE_TYPES: ApprovalType[] = [

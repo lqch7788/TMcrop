@@ -1,7 +1,7 @@
 // 供应商详情弹窗组件
 import { Supplier } from './types';
 import { getSupplierTypeName } from './data';
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface SupplierDetailModalProps {
   isOpen: boolean;

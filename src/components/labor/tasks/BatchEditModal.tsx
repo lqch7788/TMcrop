@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Task } from '../../../types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface BatchEditModalProps {
   isOpen: boolean;

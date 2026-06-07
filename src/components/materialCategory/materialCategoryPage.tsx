@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Tags, Plus, Search, Eye, Edit } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 export interface MaterialCategory {
   id: number;

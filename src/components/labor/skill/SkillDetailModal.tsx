@@ -1,11 +1,11 @@
 import React from 'react';
 import { XCircle, Award, Calendar, Clock, BookOpen } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { StaffSkill, TrainingRecord } from './types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface SkillDetailModalProps {
   skill: StaffSkill | null;

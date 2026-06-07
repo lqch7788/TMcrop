@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, GitCompare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 type TabKey = 'overview' | 'comparison';
 

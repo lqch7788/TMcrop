@@ -5,12 +5,12 @@
 
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { TaskConfigField, MultiEntryRecord, EntryFieldDef } from '../../../../types/farm/taskTypeConfig';
-import { Input } from '../../../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-import { Label } from '../../../ui/label';
-import { TextArea } from '../../../ui/TextArea';
+import { Input } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 
 interface ConfigFieldRendererProps {
   /** 配置项定义 */

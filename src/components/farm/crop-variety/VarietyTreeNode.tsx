@@ -9,9 +9,9 @@ import { ChevronDown, ChevronRight, Plus, Eye, Edit2, Trash2, Save, X } from 'lu
 import { VarietyTreeNode as VarietyTreeNodeType } from './types';
 import { CropVariety } from '../../../types/cropVariety';
 import * as extensionService from '../../../services/cropVarietyExtensionService';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { TableRow, TableCell } from '@/components/ui/table';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TableRow, TableCell } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface VarietyTreeNodeProps {

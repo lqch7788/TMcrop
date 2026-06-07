@@ -3,9 +3,9 @@
  */
 
 import React from 'react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { SourceCell } from './SourceCell';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 
 // 状态映射：后端英文 → 前端中文
 const STATUS_CN_MAP: Record<string, string> = {

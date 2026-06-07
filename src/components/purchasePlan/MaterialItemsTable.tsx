@@ -6,8 +6,8 @@
  */
 import React from 'react';
 import { Trash2 } from 'lucide-react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
+import { Input } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { PurchasePlanItem } from '../../types/purchase';
 

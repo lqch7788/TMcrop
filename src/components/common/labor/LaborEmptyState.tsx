@@ -1,6 +1,6 @@
 import React from 'react'
 import { FileX, Search, Inbox, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 export type EmptyStateType = 'no_data' | 'no_result' | 'error' | 'custom'

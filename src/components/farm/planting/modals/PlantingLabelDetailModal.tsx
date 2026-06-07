@@ -4,7 +4,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import { X, Search, Tag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import {
   Modal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   Badge, Tabs, TabsList, TabsTrigger, TabsContent,

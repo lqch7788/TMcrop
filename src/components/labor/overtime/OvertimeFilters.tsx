@@ -1,7 +1,7 @@
 import { Search, RotateCw } from 'lucide-react';
 import type { OvertimeFilters as OvertimeFiltersType, OvertimeType, OvertimeStatus } from './types';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 /**
  * 加班筛选栏组件

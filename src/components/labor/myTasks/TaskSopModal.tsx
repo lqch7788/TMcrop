@@ -2,7 +2,7 @@
  * SOP文件查看弹窗组件
  */
 
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { getTypeColor, getTypeLabel } from './constants';
 
 interface TaskSopModalProps {

@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { Award, TrendingUp, Users, Plus, Edit2, Trash2, Download, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePerformance } from './hooks/usePerformance';
 import { PerformanceTable } from './PerformanceTable';

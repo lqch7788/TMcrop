@@ -3,7 +3,7 @@
  * 展示最近的操作历史记录，支持快速查看全部记录
  */
 import { ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 // 操作记录项类型
 export interface OperationRecord {

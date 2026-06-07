@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface InspectionToolbarProps {
   // 模式状态

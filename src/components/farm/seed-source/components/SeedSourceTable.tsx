@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Edit2, Trash2, Printer, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch, HelpCircle } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import {
   UNIT_MAP,
@@ -20,10 +20,10 @@ import {
   PROPAGATION_STATUS_COLORS,
 } from '../../../../constants/cropConstants';
 import { computeStockStatus, getCompletionRate, getStatusColorClass } from '../../../../lib/stockStatus';
-import { Checkbox } from '../../../ui/checkbox';
+import { Checkbox } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tooltip } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型（用于批量操作）

@@ -1,5 +1,5 @@
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Button } from '../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { AlertTriangle } from 'lucide-react';
 
 interface BatchEditWarningModalProps {

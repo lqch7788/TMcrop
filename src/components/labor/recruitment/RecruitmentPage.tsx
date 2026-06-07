@@ -11,9 +11,9 @@ import { RecruitmentRequest, RecruitmentFormData, RecruitmentSource, EmploymentT
 import { useApprovalContext } from '../../../contexts/ApprovalContext';
 import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval';
 import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {

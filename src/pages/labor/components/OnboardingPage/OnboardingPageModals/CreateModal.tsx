@@ -2,8 +2,8 @@
  * 入职办理页面新建/编辑表单弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { OnboardingFormData } from '../../../types/onboardingPage.types';
 

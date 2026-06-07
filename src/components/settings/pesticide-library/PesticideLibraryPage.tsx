@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bug, Plus, ArrowLeft, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
+import { Button } from '@/components/ui';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { usePesticideLibraryStore, PesticideLibrary } from '@/stores';
 import { PesticideLibraryFilter } from './PesticideLibraryFilter';
 import { PesticideLibraryTable } from './PesticideLibraryTable';

@@ -3,8 +3,8 @@
  * 显示班组基本信息（名称、班长、成员数量、描述、作业区域）
  * 由于实际 Team 类型只有 memberIds (字符串数组)，成员详情需通过 memberIds 后续查询获取
  */
-import { Badge } from '@/components/ui/badge';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Badge } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import type { Team } from './types';
 import { getWorkerName } from '@/stores/useTeamManageStore';
 

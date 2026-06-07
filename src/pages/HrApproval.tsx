@@ -15,13 +15,13 @@ import { Approval, ApprovalStatus, ApprovalType, getApprovalTypeName, getApprova
 import ProModal from '../components/common/modal/ProModal';
 import ProTable, { Column } from '../components/common/table/ProTable';
 import StatusBadge from '../components/common/badge/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { KpiCard, KpiCardGrid } from '@/components/summary';
 
 // ============================================================

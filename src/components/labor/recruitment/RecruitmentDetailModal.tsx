@@ -1,8 +1,8 @@
 import { XCircle, CheckCircle, Clock, User, Calendar, Users, Briefcase } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface RecruitmentDetailModalProps {
   recruitment: RecruitmentRequest | null;

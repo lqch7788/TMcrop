@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Leaf, CalendarCheck, History, Search, Plus, Edit2, Trash2, Loader2, MapPin, Building2, Layers } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { usePlantingRecordStore } from '@/stores/usePlantingRecordStore';
 import { useGreenhouseStore } from '@/stores/useGreenhouseStore';
 import { useZoneStore } from '@/stores/useZoneStore';
@@ -16,7 +16,7 @@ import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore';
 import type { PlantingRecord } from '@/services/apiPlantingRecordService';
 import type { Greenhouse, Zone } from '@/services/apiBasicDataService';
 import { showAlert } from '@/lib/dialogService';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 
 const PAGE_SIZE = 10;
 

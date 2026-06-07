@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { ProductionChainTable, ChainTableType } from './ProductionChainTable';
 import { useProductionChainStats, ProductionChainData } from '@/hooks/useProductionChainStats';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 // Tab配置接口
 interface TabConfig {

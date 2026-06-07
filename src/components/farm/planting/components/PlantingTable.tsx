@@ -4,15 +4,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Trash2, Printer, Image, CheckCircle, Download, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
 import * as cropVarietyService from '../../../../services/apiCropVarietyService';
 import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 操作模式类型

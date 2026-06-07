@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { FileText, FileSpreadsheet, FileType } from 'lucide-react';
 
 interface OutboundExportModalProps {

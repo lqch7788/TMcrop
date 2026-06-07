@@ -1,10 +1,10 @@
 // RejectModal 组件
 // 拒绝原因弹窗
 import { Approval } from '@/types/approval';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '@/components/ui/TextArea';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 
 interface RejectModalProps {
   // 弹窗状态

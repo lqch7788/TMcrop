@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 
 interface TabSwitchProps {
   activeTab: 'overview' | 'inbound';

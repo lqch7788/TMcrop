@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Loader2, MapPin, Layers } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { useZoneStore } from '../../stores/useZoneStore';
 import { useBlockStore } from '../../stores/useBlockStore';
 import { useGreenhouseStore } from '../../stores/useGreenhouseStore';

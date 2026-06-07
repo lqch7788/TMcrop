@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
 import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
@@ -18,7 +18,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../../ui/select';
+} from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

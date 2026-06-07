@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Clock, ChevronRight, AlertTriangle } from 'lucide
 import type { Approval, ApprovalStatus } from '../../types/approval';
 import { ApprovalLevelBadge } from './ApprovalLevelBadge';
 import { ApprovalLevel } from '../../config/approvalHierarchy';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 
 interface ApprovalListProps {
   approvals: Approval[];

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Download, Upload, Award, Edit2, Trash2, Users, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { useSkill } from './hooks/useSkill';
 import { SkillTable } from './SkillTable';
 import { SkillFiltersComponent } from './SkillFilters';
@@ -9,7 +9,7 @@ import { SkillFormModal } from './SkillFormModal';
 import { SkillDetailModal } from './SkillDetailModal';
 import { SkillBatchEditModal } from './SkillBatchEditModal';
 import { SkillFormData, StaffSkill } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 // 导出格式弹窗

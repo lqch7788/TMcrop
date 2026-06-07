@@ -7,8 +7,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bug, Plus, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { usePestDiseaseDictStore, PestDiseaseDict } from '@/stores';
 import { showConfirm } from '@/lib/dialogService';
 import { PestDiseaseDictTable } from './PestDiseaseDictTable';

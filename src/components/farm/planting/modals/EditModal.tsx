@@ -3,15 +3,15 @@
  */
 
 import React, { useState } from 'react';
-import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { Planting } from '../../../../types/crop';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
-import { Input } from '../../../ui/input';
-import { TextArea } from '../../../ui/TextArea';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface EditModalProps {

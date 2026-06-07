@@ -2,11 +2,11 @@
 // 批量编辑出库弹窗 — 参照领料申请单 BatchEditModal，支持记录选择、字段编辑、物料表格编辑
 import { useState, useMemo, useCallback } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '@/types/materialReceiving';
 
 interface ExecuteBatchEditModalProps {

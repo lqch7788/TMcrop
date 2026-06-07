@@ -3,9 +3,9 @@
  */
 
 import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { Label } from '@/components/ui/label';
+import { Modal } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { EfficiencyMetrics } from './types';
 import { showAlert } from '@/lib/dialogService';
 

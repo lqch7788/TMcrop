@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ChevronRight, ChevronDown, Package, Leaf, Sprout, Grid3X3, History, ExternalLink } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 import {
   traceSeedSource,
   traceSeedling,

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { TrendingUp, Plus, Edit2, Trash2, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { EfficiencyDashboard } from './EfficiencyDashboard';
 import { EfficiencyChart } from './EfficiencyChart';
 import { EfficiencyTable } from './EfficiencyTable';

@@ -13,7 +13,7 @@ import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useFarmActivityStore, useZoneStore, useWorkerStore } from '../stores';
 import type { FarmActivity } from '../services/apiBasicDataService';
 import { showAlert, showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 const ACTIVITY_TYPES: Record<string, { label: string; color: string }> = {
   WATERING: { label: '灌溉', color: 'bg-blue-100 text-blue-700' },

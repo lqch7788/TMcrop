@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui';
 import {
   Table,
   TableBody,
@@ -11,12 +11,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+} from '@/components/ui';
+import { Button } from '@/components/ui';
 import { AlertTriangle, AlertCircle, AlertOctagon, Clock, CheckCircle, CheckSquare, Square, X, Trash2, Plus, Edit2, Download } from 'lucide-react';
 import type { RiskAlert, AlertLevel } from './types';
 import { AlertLevelNames } from './types';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 interface RiskAlertListProps {
   alerts: RiskAlert[];

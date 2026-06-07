@@ -5,8 +5,8 @@
 import React from 'react';
 import { CropVariety } from '../../../types/cropVariety';
 import { Edit2, Leaf } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface CropVarietyDetailProps {
   variety: CropVariety | null;

@@ -4,7 +4,7 @@
  * 所有数据通过 useFertilizerStore 管理
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Button } from '../../ui/button';
+import { Button } from '@/components/ui';
 import { Sprout, Trash2 } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';

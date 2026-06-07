@@ -3,9 +3,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { RiskAlert } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface RiskBatchEditModalProps {
   isOpen: boolean;

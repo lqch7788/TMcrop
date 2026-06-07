@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Button } from '../../../ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { X, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
@@ -28,12 +28,12 @@ import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { DatePicker } from '../../../ui/DatePicker';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-import { ImageUploader } from '../../../ui/ImageUploader';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { ImageUploader } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */

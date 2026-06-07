@@ -3,15 +3,15 @@
  */
 
 import React, { useState } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
-import { Input } from '../../../ui/input';
-import { DatePicker } from '../../../ui/DatePicker';
-import { Label } from '@/components/ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 interface TransplantModalProps {

@@ -9,7 +9,7 @@ import { getDictionaries } from '../../services/dictionaryService';
 import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, getDictItemName } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { getVarietyByCode } from '../../services/cropVarietyService';
 // 使用 import type 确保类型导入在编译时被擦除

@@ -8,8 +8,8 @@ import { Task } from '../../../hooks/useTasks';
 import { useFarmTaskStore } from '@/stores';
 import { X } from 'lucide-react';
 import { Button, Label } from '@/components/ui';
-import { Input } from '../../ui/input';
-import { TextArea } from '../../ui/TextArea';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

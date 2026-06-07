@@ -1,5 +1,5 @@
-import { Modal, FormField, Input, Select } from '../../../ui/Modal';
-import { NumberInput } from '../../../ui/NumberInput';
+import { Modal, FormField, Input, Select } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS, WEATHER_OPTIONS } from '../../../../types/farm/common';
 

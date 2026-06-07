@@ -3,9 +3,9 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { RecruitmentRecord } from '../../types/recruitment.types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export interface DetailModalProps {
   isOpen: boolean;

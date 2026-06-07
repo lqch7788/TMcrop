@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/button';
-import { DatePicker } from '@/components/ui/DatePicker';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
 import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

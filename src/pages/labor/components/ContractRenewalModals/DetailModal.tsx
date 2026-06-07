@@ -3,7 +3,7 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { ContractRenewalRecord } from '../../types/contractRenewal.types';
 

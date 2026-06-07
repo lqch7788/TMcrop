@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { SeedSource, SourceType, SourceOrigin } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
 // 2026-06-04: status 改为实时计算，store 不再写入 status 字段，computeStockStatus 也不再需要
@@ -12,12 +12,12 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as supplierService from '../../../../services/supplierService';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { DatePicker } from '../../../ui/DatePicker';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-import { ImageUploader } from '../../../ui/ImageUploader';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { ImageUploader } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */

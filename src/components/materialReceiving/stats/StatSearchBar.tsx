@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, RefreshCw, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 // 搜索栏组件接口
 export interface StatSearchBarProps {

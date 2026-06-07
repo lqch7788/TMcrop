@@ -14,8 +14,8 @@ import { TempTaskFormModal } from '../../../labor/tempTask/TempTaskFormModal';
 import { useTempTaskFilters } from '../../../labor/tempTask/hooks/useTempTaskFilters';
 import { useTempTaskForm } from '../../../labor/tempTask/hooks/useTempTaskForm';
 import { SearchableSelect } from '../../../materialReturn/modals/SearchableSelect';
-import { Modal } from '../../../ui/Modal';
-import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 // 导入统一临时任务管理 Hook（数据闭环核心）
 import { useTempTasks } from '../../../../hooks/useTempTasks';

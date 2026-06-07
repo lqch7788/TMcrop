@@ -1,7 +1,7 @@
 import { Search, AlertTriangle, Clock } from 'lucide-react';
 import { TempTask, TempTaskUrgency } from '../../../types';
 import { TEMP_TASK_URGENCY_CONFIG } from '../../../types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface TempTaskFiltersProps {
   searchTerm: string;

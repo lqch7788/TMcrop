@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal } from '../../../ui/Modal';
+import { Modal } from '@/components/ui';
 import { NumberInput, Label } from '../../../ui';
 import { Pencil } from 'lucide-react';
 import { SalaryRecord } from '../types';

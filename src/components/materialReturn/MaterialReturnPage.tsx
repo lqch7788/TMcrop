@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { Plus, Download, Edit, Trash2 } from 'lucide-react';
 import { useMaterialReturn } from './hooks/useMaterialReturn';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { MaterialReturnHeader } from './MaterialReturnHeader';
 import { MaterialReturnSearch } from './MaterialReturnSearch';
 import { MaterialReturnTable } from './MaterialReturnTable';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import { DetailModal } from './modals/DetailModal';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';

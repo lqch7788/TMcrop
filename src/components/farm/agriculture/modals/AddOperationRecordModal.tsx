@@ -6,12 +6,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
-import { Modal } from '../../../ui/Modal';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { DatePicker } from '../../../ui/DatePicker';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
+import { Modal } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore, useWarehouseMaterialStore } from '../../../../stores';

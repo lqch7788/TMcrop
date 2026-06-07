@@ -1,8 +1,8 @@
 import { X, CheckCircle, XCircle } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { LeaveDetailModalProps } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 /**
  * 请假详情弹窗组件

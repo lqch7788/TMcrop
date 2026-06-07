@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Leaf, Plus, ArrowLeft, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../ui/tabs';
+import { Button } from '@/components/ui';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { useFertilizerLibraryStore, FertilizerLibrary, useToastStore } from '@/stores';
 import { FertilizerLibraryFilter } from './FertilizerLibraryFilter';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';

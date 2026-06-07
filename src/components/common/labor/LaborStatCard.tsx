@@ -1,6 +1,6 @@
 import React from 'react'
 import { TrendingUp, TrendingDown, Minus, LucideIcon } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 export interface LaborStatCardProps {

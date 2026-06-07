@@ -6,13 +6,13 @@
 
 import React, { useEffect } from 'react';
 import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../../ui/select';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../ui/table';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import {
   getProduceCategoryInfo,
 } from '../../../../data/produceCodeRule';

@@ -4,9 +4,9 @@
 
 import React from 'react';
 import { Trash2, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { showConfirm } from '@/lib/dialogService';
 

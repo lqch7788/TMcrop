@@ -1,5 +1,5 @@
 import { Download, Plus } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui';
 
 interface ActionToolbarProps {
   title: string;

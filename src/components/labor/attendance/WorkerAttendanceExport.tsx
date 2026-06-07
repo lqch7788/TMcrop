@@ -1,10 +1,10 @@
 /**
  * 工人考勤 - 导出功能组件
  */
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { ExportFormat, EXPORT_FORMAT_OPTIONS } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface WorkerAttendanceExportProps {
   show: boolean;

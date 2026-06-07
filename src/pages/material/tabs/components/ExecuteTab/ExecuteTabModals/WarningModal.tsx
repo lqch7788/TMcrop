@@ -1,7 +1,7 @@
 // ExecuteTabWarningModal 组件
 // 领料出库警告弹窗
 import { AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface ExecuteWarningModalProps {
   // 弹窗状态

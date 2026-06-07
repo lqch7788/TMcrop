@@ -1,5 +1,5 @@
 // 统一导出格式选择弹窗组件
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface ExportFormatModalProps {
   isOpen: boolean;

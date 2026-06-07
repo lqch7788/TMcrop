@@ -6,8 +6,8 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 interface InboundDeleteConfirmModalProps {
   records: InboundRecord[];

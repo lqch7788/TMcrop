@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { Layers, Link, ListTree } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { PageHeader } from '../../components/summary';
 import BatchSummary from './BatchSummary';
 import ChainTraceability from './ChainTraceability';

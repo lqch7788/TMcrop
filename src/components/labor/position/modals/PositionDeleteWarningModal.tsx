@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 
 interface PositionDeleteWarningModalProps {
   isOpen: boolean;

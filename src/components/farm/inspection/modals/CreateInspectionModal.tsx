@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Modal, FormField } from '../../../ui/Modal';
-import { NumberInput } from '../../../ui/NumberInput';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
-import { DatePicker } from '../../../ui/DatePicker';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
-import { TextArea } from '../../../ui/TextArea';
-import { Label } from '../../../ui/label';
+import { Modal, FormField } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 

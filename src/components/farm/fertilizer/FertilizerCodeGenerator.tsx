@@ -5,8 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Copy, Check } from 'lucide-react';
 import { enhancedApiClient } from '@/lib/apiClient';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
 
 interface FertilizerCodeGeneratorProps {
   value: string;

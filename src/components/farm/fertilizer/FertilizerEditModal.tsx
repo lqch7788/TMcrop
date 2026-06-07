@@ -5,11 +5,11 @@
  */
 import React, { useState, useCallback, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { TextArea } from '../../ui/TextArea';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
 import { DictSelect } from '../../common/settings/DictSelect';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { useFertilizerStore, useFertilizerLibraryStore, FertilizerData } from '@/stores';

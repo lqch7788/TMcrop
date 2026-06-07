@@ -10,10 +10,10 @@ import { Eye, Edit2, Trash2, Plus, Download, BarChart3, ChevronDown, ChevronUp }
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 interface FertilizerTableProps {
   data: FertilizerData[];

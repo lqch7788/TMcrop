@@ -5,14 +5,14 @@
 
 import { Upload } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
 import { batchStatusColors, batchStatusLabels, RESPONSIBLE_PERSONS, getModesByPlanType } from '../constants';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { CropVariety } from '../../../types/cropVariety';
 import { getVarietyByCode, searchVarieties } from '../../../services/cropVarietyService';

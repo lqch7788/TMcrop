@@ -3,13 +3,13 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Supplier, NewSupplierData } from './types';
 import { getSupplierTypeName } from './data';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { TextArea } from '../ui/TextArea';
-import { Cascader } from '../ui/Cascader';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Cascader } from '@/components/ui';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
-import { Label } from '../ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,

@@ -2,7 +2,7 @@
  * 入职办理页面筛选器组件
  */
 import { Search, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { OnboardingFilters, ONBOARDING_STATUS_OPTIONS } from '../../types/onboardingPage.types';
 

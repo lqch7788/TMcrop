@@ -1,7 +1,7 @@
 // ExecuteTabExportTypeModal 组件
 // 导出类型选择弹窗
 import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface ExportTypeModalProps {
   // 弹窗状态

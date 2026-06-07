@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '@/components/ui';
 
 interface ImageLightboxModalProps {
   isOpen: boolean;

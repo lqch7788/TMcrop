@@ -1,8 +1,8 @@
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import type { OvertimeRecord, OvertimeType } from '../types';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { NumberInput } from '@/components/ui/NumberInput';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
 
 interface OvertimeBatchEditModalProps {
   isOpen: boolean;

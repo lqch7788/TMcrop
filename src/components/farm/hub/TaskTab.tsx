@@ -10,7 +10,7 @@ import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
 import { useReminder } from '../../../hooks/useReminder';
 import { Plus, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 // 导入迁移的 TaskTable 组件

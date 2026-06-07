@@ -1,9 +1,9 @@
 import { Eye, Plus, Edit, Trash2, Download } from 'lucide-react';
 import type { WorkLog, WorkLogTableProps } from './types';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
+import { Pagination } from '@/components/ui';
 
 /**
  * 工作日志表格组件

@@ -8,14 +8,14 @@ import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
 import type { Team } from './types';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { showConfirm, showAlert } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
-import { Input } from '@/components/ui/input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { getWorkerName } from '@/stores/useTeamManageStore';
 
 interface TeamTableProps {

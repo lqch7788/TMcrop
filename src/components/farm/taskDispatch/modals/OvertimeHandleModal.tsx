@@ -4,15 +4,15 @@
  */
 
 import { useState } from 'react';
-import { Modal } from '../../../ui/Modal';
-import { Button } from '../../../ui/button';
+import { Modal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { DatePicker } from '../../../ui/DatePicker';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";

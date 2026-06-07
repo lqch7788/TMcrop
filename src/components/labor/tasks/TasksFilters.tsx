@@ -1,6 +1,6 @@
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { TaskModeFilter } from './hooks/useTasksFilters';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface TasksFiltersProps {
   searchTerm: string;

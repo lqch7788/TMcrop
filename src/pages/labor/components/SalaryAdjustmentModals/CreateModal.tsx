@@ -3,8 +3,8 @@
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryAdjustmentFormData, ADJUSTMENT_TYPE_OPTIONS } from '../../types/salaryAdjustment.types';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { DatePicker, NumberInput } from '@/components/ui';
 
 export interface CreateModalProps {

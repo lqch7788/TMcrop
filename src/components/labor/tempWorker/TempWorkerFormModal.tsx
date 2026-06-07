@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
-import { NumberInput } from '@/components/ui/NumberInput';
-import { Label } from '@/components/ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { NumberInput } from '@/components/ui';
+import { Label } from '@/components/ui';
 import {
   TempWorkerFormModalProps,
   TempWorker,

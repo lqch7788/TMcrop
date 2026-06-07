@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui';
 import { AlertTriangle, AlertCircle, AlertOctagon, Bell, Clock, CheckCircle } from 'lucide-react';
 import type { AlertLevel } from './types';
 

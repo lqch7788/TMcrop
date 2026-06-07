@@ -1,11 +1,11 @@
 import { XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
 import { Task } from '../../../types';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { TaskModeBadge } from './TaskModeBadge';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface TaskDetailModalProps {
   task: Task | null;

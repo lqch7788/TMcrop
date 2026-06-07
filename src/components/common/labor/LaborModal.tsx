@@ -6,8 +6,8 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui'
+import { Button } from '@/components/ui'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

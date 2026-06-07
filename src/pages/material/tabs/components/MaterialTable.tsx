@@ -1,8 +1,8 @@
 // MaterialTable 组件 - 物料统计表格
 // 显示领料统计表的完整数据
 import { Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import type { MaterialStatItem } from '../types/statisticsTab.types';
 
 interface MaterialTableProps {

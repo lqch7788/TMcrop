@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui';
-import { useToast } from '@/components/ui/Toast';
+import { useToast } from '@/components/ui';
 import { Download } from 'lucide-react';
 
 interface ExportButtonProps {

@@ -5,14 +5,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { UnifiedModal } from '../../../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { Plus, Clock, Thermometer, Droplets, AlertTriangle } from 'lucide-react';
 import { SeedSource, PropagationType, PropagationStatus, PropagationRecord } from '../../../../types/crop';
 import { useSeedSourceStore } from '../../../../stores/useSeedSourceStore';
-import { Input } from '../../../ui/input';
-import { Label } from '../../../ui/label';
-import { TextArea } from '../../../ui/TextArea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { TextArea } from '@/components/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 // 2026-06-06: 抽离重复 3 处，使用 cropConstants 统一标签/颜色
 import { PROPAGATION_STATUS_LABELS as STAGE_LABELS, PROPAGATION_STATUS_COLORS as STAGE_COLORS } from '../../../../constants/cropConstants';
 

@@ -1,5 +1,5 @@
 import { Sprout } from 'lucide-react';
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { translations, Language } from '../../i18n/translations';
 
 interface AboutModalProps {

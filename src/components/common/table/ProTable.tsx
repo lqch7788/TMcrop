@@ -6,9 +6,9 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from '@/components/ui/table';
-import { Pagination } from '@/components/ui/Pagination';
-import { Checkbox } from '@/components/ui/checkbox';
+} from '@/components/ui';
+import { Pagination } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
+import { Modal } from '@/components/ui';
 import { NumberInput, Label } from '@/components/ui';
 import type { MonthlyBudget } from '../types';
 

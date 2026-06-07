@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { WorkLogDetailModalProps } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 /**
  * 工作日志详情弹窗组件

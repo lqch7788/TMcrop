@@ -3,9 +3,9 @@
  * 只读视图，以网格形式展示所有字段，IoT记录显示绿色标识
  */
 import React from 'react';
-import { UnifiedModal } from '../../ui/UnifiedModal';
-import { Button } from '../../ui/button';
-import { Label } from '../../ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 

@@ -4,8 +4,8 @@
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { SalaryAdjustmentRecord } from '../../types/salaryAdjustment.types';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 export interface DetailModalProps {
   isOpen: boolean;

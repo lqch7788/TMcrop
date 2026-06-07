@@ -3,14 +3,14 @@
  */
 
 import { FileText } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Modal } from '@/components/ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { TaskMaterial, TaskWithExtras } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
 import { TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../config/taskConfig';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface TaskDetailModalProps {
   isOpen: boolean;

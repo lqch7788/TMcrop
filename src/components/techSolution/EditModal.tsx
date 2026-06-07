@@ -5,8 +5,8 @@
 import { useState } from 'react';
 import { Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui';
+import { Checkbox } from '@/components/ui';
 import { DictSelect } from '../common/settings/DictSelect';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';

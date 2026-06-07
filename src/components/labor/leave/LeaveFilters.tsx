@@ -1,6 +1,6 @@
 import { Search, RotateCw } from 'lucide-react';
 import type { LeaveFiltersProps, LeaveType, LeaveStatus } from './types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 /**
  * 请假管理筛选栏组件

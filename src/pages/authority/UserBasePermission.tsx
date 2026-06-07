@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import { Button } from '@/components/ui';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 
 // 访问级别配置
 const ACCESS_LEVELS = [

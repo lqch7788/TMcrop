@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, FormField } from '@/components/ui/Modal';
+import { Modal, FormField } from '@/components/ui';
 import { StaffSkill, SkillFormData } from './types';
 import { SkillTagSelector } from './SkillTagSelector';
 import { useDepartmentOptions } from '../../../hooks/useDepartmentOptions';

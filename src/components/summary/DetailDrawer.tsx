@@ -5,7 +5,7 @@
  */
 
 import { Loader2 } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 export interface DetailDrawerProps {
   /** 是否打开 */

@@ -1,7 +1,7 @@
 // StatisticsTab 组件 - 领料统计页面主组件
 // 负责组合所有子组件，呈现完整的统计页面功能
 import { Calendar, BarChart2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 // 导入hook
 import { useStatisticsTab } from './hooks/useStatisticsTab';
@@ -13,7 +13,7 @@ import { MonthlyFilters } from './components/MonthlyFilters';
 import { MonthlyTable } from './components/MonthlyTable';
 import { MaterialFilters } from './components/MaterialFilters';
 import { MaterialTable } from './components/MaterialTable';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 // 弹窗组件
 import { ExportTypeModal } from '../../../components/materialReceiving/modals/ExportTypeModal';

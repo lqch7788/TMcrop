@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { ScheduleRecord, ShiftConfig, ViewMode } from './types';
 
 interface ScheduleCalendarProps {

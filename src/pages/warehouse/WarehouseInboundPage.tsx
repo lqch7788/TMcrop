@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { useWarehouseInbound } from './hooks/useWarehouseInbound';
 import { WarehouseInboundFilters } from './components/WarehouseInboundFilters';
 import { WarehouseInboundTable } from './components/WarehouseInboundTable';

@@ -1,5 +1,5 @@
-import { Modal, FormField, Select } from '../../../ui/Modal';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Modal, FormField, Select } from '@/components/ui';
+import { DatePicker } from '@/components/ui';
 import type { ShiftType } from '../types';
 
 interface ScheduleAddModalProps {

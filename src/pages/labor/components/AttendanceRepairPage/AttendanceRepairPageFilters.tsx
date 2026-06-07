@@ -3,7 +3,7 @@
  */
 import { Search, RefreshCw, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker } from '@/components/ui';
 import type { AttendanceRepairFilters, BatchMode } from './types/attendanceRepairPage.types';
 import { REPAIR_REASON_OPTIONS, STATUS_OPTIONS } from './types/attendanceRepairPage.types';
 

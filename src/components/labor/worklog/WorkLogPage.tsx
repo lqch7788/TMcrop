@@ -6,9 +6,9 @@ import { WorkLogDetailModal } from './WorkLogDetailModal';
 import { WorkLogFormModal } from './WorkLogFormModal';
 import { WorkLogBatchEditModal } from './WorkLogBatchEditModal';
 import type { WorkLog, WorkLogFilters as WorkLogFiltersType, PaginationInfo } from './types';
-import { Button } from '@/components/ui/button';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { UnifiedModal } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 导出格式弹窗

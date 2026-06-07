@@ -12,9 +12,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useNavigate } from 'react-router-dom';
 import { Database, ArrowLeft } from 'lucide-react';

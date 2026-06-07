@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { InspectionRecord } from '../../../types';
 import { useInspectionDataStore } from '../../../stores';
 import { X, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface InspectionDetailModalProps {
   recordId: string;

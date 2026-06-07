@@ -1,6 +1,6 @@
 import React from 'react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
-import { Button } from '@/components/ui/button';
+import { UnifiedModal } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 interface ExportTypeModalProps {
   isOpen: boolean;

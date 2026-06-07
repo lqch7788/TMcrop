@@ -1,6 +1,6 @@
 // 删除确认对话框组件
 import { AlertTriangle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface DeleteWarningDialogProps {
   isOpen: boolean;

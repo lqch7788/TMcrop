@@ -1,6 +1,6 @@
 import { Package, Barcode } from 'lucide-react';
 import { Material } from './MaterialFilters';
-import { UnifiedModal } from '../ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 
 interface MaterialDetailModalProps {
   material: Material | null;

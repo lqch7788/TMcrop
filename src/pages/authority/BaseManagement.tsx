@@ -18,7 +18,7 @@ import {
   Save,
   Building,
 } from 'lucide-react';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 import {
   Base,
   getBases,

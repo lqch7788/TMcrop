@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Clock, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import type { ShiftConfig, ShiftType } from './types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui';
 
 interface ShiftEditorProps {
   shiftConfigs: ShiftConfig[];

@@ -2,7 +2,7 @@
  * 技术方案导出格式 Modal
  * 父组件控制 selectedFormat 和开关
  */
-import { Modal } from '../ui/Modal';
+import { Modal } from '@/components/ui';
 
 export interface ExportFormatOption {
   value: string;

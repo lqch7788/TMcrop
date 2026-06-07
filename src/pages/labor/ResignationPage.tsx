@@ -9,7 +9,7 @@ import { ResignationPageFilters } from './components/ResignationPage/Resignation
 import { ResignationPageTable } from './components/ResignationPage/ResignationPageTable';
 import { ResignationPageCreateModal } from './components/ResignationPage/ResignationPageModals/CreateModal';
 import { ResignationPageDetailModal } from './components/ResignationPage/ResignationPageModals/DetailModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 export default function ResignationPage() {
   const {

@@ -1,7 +1,7 @@
 import { X, Phone, Mail, MapPin, User, Briefcase, Calendar, Award, FileText, GraduationCap, Clock } from 'lucide-react';
-import { UnifiedModal } from '@/components/ui/UnifiedModal';
+import { UnifiedModal } from '@/components/ui';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 interface PersonnelDetailModalProps {
   worker: Worker | null;

@@ -5,10 +5,10 @@
 import React, { useMemo } from 'react';
 import { Search, RotateCcw, Plus } from 'lucide-react';
 import { PlantingFilters } from '../../../../types/crop';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Label, DatePicker, TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { TreeSelectNode } from '@/components/ui/TreeSelect';
-import { Input } from '../../../ui/input';
+import { Input } from '@/components/ui';
 
 interface PlantingFilterProps {
   filters: PlantingFilters;

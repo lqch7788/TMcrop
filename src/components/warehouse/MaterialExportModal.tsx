@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { UnifiedModal } from '../ui/UnifiedModal';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { UnifiedModal } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { Label } from '@/components/ui';
 
 interface MaterialExportModalProps {
   isOpen: boolean;

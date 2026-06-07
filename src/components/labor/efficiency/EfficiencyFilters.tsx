@@ -4,8 +4,8 @@
 
 import React from 'react';
 import { Filter, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { EfficiencyFilters as FiltersType } from './types';
 
 interface EfficiencyFiltersProps {

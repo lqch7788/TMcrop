@@ -6,9 +6,9 @@ import { ContractBatchEditModal } from './ContractBatchEditModal';
 import { Label, Modal, UnifiedModal, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
-import { Pagination } from '@/components/ui/Pagination';
+import { Pagination } from '@/components/ui';
 
 // 导出格式弹窗 - 使用 UnifiedModal 包装
 interface ExportFormatModalProps {
