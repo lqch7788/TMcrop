@@ -22,14 +22,34 @@ function generateId(prefix: string): string {
 
 /**
  * 生成技术方案编码
- * 格式：T + 年月 + 3位流水号
+ * 格式: TS + YYYYMMDD + - + 3位流水号 (如 TS20260607-001), 共 14 字符
+ * 流水号按当日自增（查询当日 MAX+1，禁止随机数）
  */
 function generateSolutionCode(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-  return `T${year}${month}${seq}`;
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
+
+  // 查询当日最大序号: TS + 8位日期 + - + 3位序号 = 14 字符
+  const db = getDatabase();
+  const pattern = `TS${dateStr}-___`;
+  const stmt = db.prepare(`
+    SELECT solution_code FROM tech_solutions
+    WHERE solution_code LIKE ? AND LENGTH(solution_code) = 14
+    ORDER BY solution_code DESC LIMIT 1
+  `);
+  stmt.bind([pattern]);
+  let maxSerial = 0;
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { solution_code: string };
+    maxSerial = parseInt(row.solution_code.slice(-3), 10) || 0;
+  }
+  stmt.free();
+
+  const seq = String(maxSerial + 1).padStart(3, '0');
+  return `TS${dateStr}-${seq}`;
 }
 
 /**

@@ -11,14 +11,34 @@ const router = Router();
 
 /**
  * 生成物料申请编码
+ * 格式: MR + YYYYMMDD + - + 3位流水号 (如 MR20260607-001), 共 14 字符
+ * 流水号按当日自增（查询当日 MAX+1，禁止随机数）
  */
 function generateMaterialRequestCode(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-  return `MR${year}${month}${day}${seq}`;
+  const dateStr = `${year}${month}${day}`;
+
+  // 查询当日最大序号: MR + 8位日期 + - + 3位序号 = 14 字符
+  const db = getDatabase();
+  const pattern = `MR${dateStr}-___`;
+  const stmt = db.prepare(`
+    SELECT request_code FROM material_requests
+    WHERE request_code LIKE ? AND LENGTH(request_code) = 14
+    ORDER BY request_code DESC LIMIT 1
+  `);
+  stmt.bind([pattern]);
+  let maxSerial = 0;
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { request_code: string };
+    maxSerial = parseInt(row.request_code.slice(-3), 10) || 0;
+  }
+  stmt.free();
+
+  const seq = String(maxSerial + 1).padStart(3, '0');
+  return `MR${dateStr}-${seq}`;
 }
 
 /**
