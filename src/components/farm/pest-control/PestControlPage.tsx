@@ -178,14 +178,15 @@ export default function PestControlPage() {
         </div>
       </div>
 
+      {/* 2026-06-07: 移到 Filter 上方 - 用户要求统计卡片在搜索工具栏上方 */}
+      <PestControlStatsCards stats={stats} />
+
       <PestControlFilter
         filters={filters}
         onChange={setFilters}
         onSearch={handleSearch}
         onReset={handleReset}
       />
-
-      <PestControlStatsCards stats={stats} />
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
