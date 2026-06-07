@@ -293,16 +293,37 @@ export class HarvestService {
    * 生成采收单号
    * @returns 采收单号
    */
+  /**
+   * 生成采收单号
+   * 格式: CS + YYYYMM + 3位月度流水号 (如 CS202601001), 共 11 字符
+   * 流水号按当月自增（查询当月 MAX+1）
+   * 与种子数据 harvest_code 历史契约一致
+   * @returns 采收单号
+   */
   generateCode(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-    return `HV${year}${month}${day}${hours}${minutes}${seconds}${random}`;
+    const monthStr = `${year}${month}`;
+
+    // 查询当月最大序号: CS + 6位年月 + 3位序号 = 11 字符
+    const db = getDatabase();
+    const pattern = `CS${monthStr}___`;
+    const stmt = db.prepare(`
+      SELECT harvest_code FROM harvest_records
+      WHERE harvest_code LIKE ? AND LENGTH(harvest_code) = 11
+      ORDER BY harvest_code DESC LIMIT 1
+    `);
+    stmt.bind([pattern]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { harvest_code: string };
+      maxSerial = parseInt(row.harvest_code.slice(-3), 10) || 0;
+    }
+    stmt.free();
+
+    const seq = String(maxSerial + 1).padStart(3, '0');
+    return `CS${monthStr}${seq}`;
   }
 }
 

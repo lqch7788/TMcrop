@@ -97,16 +97,60 @@ function mapArrayToFrontend(items: Record<string, unknown>[]): Record<string, un
 }
 
 /**
+ * 生产计划类型前缀映射（与前端 src/types/index.ts 的 PlanTypeCodePrefix 一致）
+ * - 种植计划 planting     → ZZ (Zhong Zhi)
+ * - 育种计划 seed_breeding → JZ (Ji Zhong)
+ * - 育苗计划 seedling      → YM (Yang Miao)
+ */
+const PLAN_TYPE_PREFIX: Record<string, string> = {
+  planting: 'ZZ',
+  seed_breeding: 'JZ',
+  seedling: 'YM',
+};
+
+/**
+ * 查询当日某前缀下的最大序号
+ * 匹配格式: {prefix} + YYYYMMDD + - + 3位序号 (如 ZZ20260607-001)
+ */
+function getTodayMaxSerial(prefix: string, dateStr: string): number {
+  const db = getDatabase();
+  // LIKE 模式: 前缀(2) + 日期(8) + '-' + 3位序号占位 = 14 字符
+  const pattern = `${prefix}${dateStr}-___`;
+  const expectedLength = prefix.length + 8 + 1 + 3; // 14
+  const stmt = db.prepare(`
+    SELECT plan_code FROM production_plans
+    WHERE plan_code LIKE ? AND LENGTH(plan_code) = ?
+    ORDER BY plan_code DESC LIMIT 1
+  `);
+  stmt.bind([pattern, expectedLength]);
+
+  let maxSerial = 0;
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as { plan_code: string };
+    const serialStr = row.plan_code.slice(-3);
+    maxSerial = parseInt(serialStr, 10) || 0;
+  }
+  stmt.free();
+  return maxSerial;
+}
+
+/**
  * 生成生产计划编码
+ * 格式: {前缀}{YYYYMMDD}-{3位流水号}
+ * 例: ZZ20260607-001 / JZ20260607-001 / YM20260607-001
  */
 function generatePlanCode(type: string): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-  const typePrefix = type ? type.substring(0, 2).toUpperCase() : 'PP';
-  return `PP${year}${month}${day}${typePrefix}${seq}`;
+  const dateStr = `${year}${month}${day}`;
+
+  // 未知类型 fallback 到 PP
+  const prefix = PLAN_TYPE_PREFIX[type] || 'PP';
+  const nextSerial = getTodayMaxSerial(prefix, dateStr) + 1;
+  const seq = String(nextSerial).padStart(3, '0');
+  return `${prefix}${dateStr}-${seq}`;
 }
 
 // ============================================

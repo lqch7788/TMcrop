@@ -146,14 +146,36 @@ router.get('/', (req: Request, res: Response) => {
 
 /**
  * 生成种植批号
- * GET /api/plantings/generate-code?sourceCode=xxx
+ * GET /api/plantings/generate-code
+ * 格式: ZZ + YYYYMMDD + - + 3位流水号 (如 ZZ20260228-001)
+ * 与种源/育苗保持一致；流水号按当日自增（查询当日 MAX+1）
  */
 router.get('/generate-code', (req: Request, res: Response) => {
   try {
-    const { sourceCode } = req.query;
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    const code = sourceCode ? `${sourceCode}-${dateStr}` : `PL${dateStr}`;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+
+    // 查询当日最大序号: ZZ + 8位日期 + - + 3位序号 = 14 字符
+    const db = getDatabase();
+    const pattern = `ZZ${dateStr}-___`;
+    const stmt = db.prepare(`
+      SELECT planting_code FROM plantings
+      WHERE planting_code LIKE ? AND LENGTH(planting_code) = 14
+      ORDER BY planting_code DESC LIMIT 1
+    `);
+    stmt.bind([pattern]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { planting_code: string };
+      maxSerial = parseInt(row.planting_code.slice(-3), 10) || 0;
+    }
+    stmt.free();
+
+    const seq = String(maxSerial + 1).padStart(3, '0');
+    const code = `ZZ${dateStr}-${seq}`;
     res.json({ success: true, data: code });
   } catch (error) {
     res.status(500).json({ success: false, error: '生成种植批号失败' });
