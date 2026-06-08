@@ -48,8 +48,8 @@ export function DeleteWarningModal({
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
-      {/* 弹窗本体 - 与 Modal 组件风格一致 */}
-      <div className="relative bg-white rounded-xl w-96 shadow-xl flex flex-col max-h-[90vh]">
+      {/* 弹窗本体 - 居中显示 (与 Modal 组件一致) */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl w-96 shadow-xl flex flex-col max-h-[90vh]">
         {/* 标题区 - 绿色渐变背景，与 Modal/新增弹窗风格一致 */}
         <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
           <div className="flex items-center gap-2 text-white">
