@@ -13,9 +13,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ClipboardList } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, DeleteConfirmModal } from '@/components/ui';
 import { useToast } from '@/components/ui';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 // 2026-06-04 V2.1 铁律改造：持久化数据走 Store，CSV 导出保留直调（一次性动作）
 import { exportOutboundCSV } from '@/services/inventoryTransactionService';
 import { useInventoryTransactionStore, type OutboundQuery } from '@/stores/useInventoryTransactionStore';
@@ -64,6 +64,8 @@ export default function OutboundRecordsPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);  // 选中行的 row.id（流水唯一 ID）
   const [exportOpen, setExportOpen] = useState(false);
+  // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const toast = useToast();
 
   // 数据加载：筛选条件变化即重查 + 跨页刷新订阅（出库/入库后自动重查）
@@ -128,15 +130,19 @@ export default function OutboundRecordsPage() {
     setSelectedRows([]);
   };
 
-  // 4. 校验 selectedRows 不空 → showConfirm → 调 Store action
-  const handleDeleteConfirm = async () => {
+  // 4. 校验 selectedRows 不空 → 弹 DeleteConfirmModal（与"技术方案"流程一致）
+  const handleDeleteConfirm = () => {
     if (selectedRows.length === 0) {
       showAlert('请先选择要删除的出库记录');
       return;
     }
-    const ok = await showConfirm(`确定要删除选中的 ${selectedRows.length} 条出库记录吗？此操作不可撤销。`);
-    if (!ok) return;
+    setShowDeleteModal(true);
+  };
+
+  // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
+  const handleDeleteModalConfirm = async () => {
     const result = await deleteTransactions(selectedRows);
+    setShowDeleteModal(false);
     if (result.success) {
       showAlert(`已删除 ${result.deletedCount} 条记录`);
       setSelectedRows([]);
@@ -265,6 +271,14 @@ export default function OutboundRecordsPage() {
         onClose={() => setExportOpen(false)}
         rowCount={total}
         onConfirm={handleExportConfirm}
+      />
+
+      {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteModalConfirm}
       />
     </div>
   );

@@ -20,7 +20,9 @@ import {
 } from '../types/inventory';
 import { OutboundModal } from '../components/warehouse/OutboundModal';
 import { AddStockModal } from '../components/farm/inventory/AddStockModal';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
+// 2026-06-09 统一删除警告弹窗：与"技术方案"页面一致（UI 库 DeleteConfirmModal）
+import { DeleteConfirmModal } from '@/components/ui';
 
 import { InventoryStockTypeCards } from '../components/farm/inventory/InventoryStockTypeCards';
 import { InventoryFilter, InventoryFilterState } from '../components/farm/inventory/InventoryFilter';
@@ -51,6 +53,8 @@ export default function InventoryV3Page() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailStock, setDetailStock] = useState<InventoryStock | null>(null);
+  // 2026-06-09 删除警告弹窗（与"技术方案"页面一致：DeleteConfirmModal）
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 批量操作状态（与 ActionToolbar 协同）
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -114,26 +118,22 @@ export default function InventoryV3Page() {
 
   const handleDelete = () => {
     if (deleteMode) {
-      // 确认模式
+      // 确认模式：校验已选行 → 弹 DeleteConfirmModal（与"技术方案"流程一致）
       if (selectedRows.length === 0) {
         showAlert('请先选择要删除的库存记录');
         return;
       }
-      handleConfirmDelete();
+      setShowDeleteModal(true);
       return;
     }
     setDeleteMode(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (selectedRows.length === 0) {
-      showAlert('请先选择要删除的库存记录');
-      return;
-    }
-    const ok = await showConfirm(`确定要删除选中的 ${selectedRows.length} 条库存记录吗？此操作不可撤销。`);
-    if (!ok) return;
+  // 2026-06-09 改造：弹窗回调直接调 Store action（替代旧 showConfirm 流程）
+  const handleDeleteModalConfirm = async () => {
     // 2026-06-04 V2.1 铁律改造：删除走 Store action（自动 notifyChange 跨页刷新）
     const result = await deleteBatch(selectedRows);
+    setShowDeleteModal(false);
     if (result.success) {
       showAlert(`已删除 ${result.deletedCount} 条记录`);
       setSelectedRows([]);
@@ -142,6 +142,9 @@ export default function InventoryV3Page() {
       showAlert(`删除失败：${result.error || '未知错误'}`, 'error');
     }
   };
+
+  // 保留旧名以兼容 ActionToolbar 的 onConfirmDelete prop
+  const handleConfirmDelete = () => setShowDeleteModal(true);
 
   const handleCancelDelete = () => {
     setDeleteMode(false);
@@ -384,6 +387,14 @@ export default function InventoryV3Page() {
           setDetailModalOpen(false);
           setDetailStock(null);
         }}
+      />
+
+      {/* 2026-06-09 删除警告弹窗（与"技术方案"页面统一为 DeleteConfirmModal） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteModalConfirm}
       />
     </div>
   );
