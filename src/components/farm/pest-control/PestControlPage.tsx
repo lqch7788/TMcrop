@@ -217,7 +217,7 @@ export default function PestControlPage() {
         onAdd={handleAdd}
         onBatchDeleteMode={handleBatchDeleteMode}
         onBatchDelete={handleBatchDelete}
-        onBatchDeleteConfirm={handleBatchDeleteConfirm}
+        onBatchDeleteConfirm={handleDeleteConfirm}
         onExportMode={handleExport}
       />
 
