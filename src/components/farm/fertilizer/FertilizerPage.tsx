@@ -4,7 +4,7 @@
  * 所有数据通过 useFertilizerStore 管理
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui';
+import { Button, DeleteConfirmModal } from '@/components/ui';
 import { Sprout, Trash2 } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
@@ -12,7 +12,6 @@ import { FertilizerTable } from './FertilizerTable';
 import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
-import { FertilizerBatchDeleteModal } from './FertilizerBatchDeleteModal';
 import { FertilizerStatsPanel } from './FertilizerStatsPanel';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
@@ -38,8 +37,11 @@ export default function FertilizerPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTarget, setEditTarget] = useState<FertilizerData | null>(null);
   const [detailTarget, setDetailTarget] = useState<FertilizerData | null>(null);
-  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
+  // 2026-06-09 删除警告弹窗：与技术方案/作物库存/出库记录统一用 UI 库 DeleteConfirmModal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+
+
 
   // ========== 数据加载 ==========
   useEffect(() => {
@@ -115,9 +117,11 @@ export default function FertilizerPage() {
     setDetailTarget(record);
   }, []);
 
+  // 2026-06-09 改造：单条删除走 DeleteConfirmModal（与技术方案一致）
   const handleDelete = useCallback((id: string) => {
-    store.deleteItem(id);
-  }, [store]);
+    setSelectedIds([id]);
+    setShowDeleteModal(true);
+  }, []);
 
   // ========== 批量操作 ==========
   const handleBatchDeleteMode = useCallback(() => {
@@ -125,18 +129,42 @@ export default function FertilizerPage() {
     setSelectedIds([]);
   }, []);
 
+  // 2026-06-09 改造：批量删除直接弹 DeleteConfirmModal（替代旧自写 FertilizerBatchDeleteModal）
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
-    setShowBatchDeleteModal(true);
+    setShowDeleteModal(true);
   }, [selectedIds]);
 
-  const confirmBatchDelete = useCallback(async () => {
-    await store.deleteItems(selectedIds);
-    setShowBatchDeleteModal(false);
-    setSelectedIds([]);
-    setOperationMode('normal');
-    store.fetchItems(filters);
-  }, [selectedIds, filters, store]);
+  // 2026-06-09 改造：弹窗回调统一处理单条/批量删除
+  // - 单条：store.deleteItem(id)
+  // - 批量：store.deleteItems(ids) 返回 {deleted, skipped}（IoT 记录自动跳过）
+  const handleDeleteConfirm = useCallback(async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setShowDeleteModal(false);
+    try {
+      if (ids.length === 1) {
+        const ok = await store.deleteItem(ids[0]);
+        if (ok) {
+          toast.success('已删除 1 条记录');
+        } else {
+          toast.error('删除失败');
+        }
+      } else {
+        const { deleted, skipped } = await store.deleteItems(ids);
+        if (skipped > 0) {
+          toast.success(`已删除 ${deleted} 条，跳过 ${skipped} 条 IoT 记录（不可删）`);
+        } else {
+          toast.success(`已删除 ${deleted} 条记录`);
+        }
+      }
+      setSelectedIds([]);
+      setOperationMode('normal');
+      store.fetchItems(filters);
+    } catch (err: any) {
+      toast.error(`删除失败：${err?.message || '未知错误'}`);
+    }
+  }, [selectedIds, filters, store, toast]);
 
   // ========== 导出处理 ==========
   const handleExport = useCallback(() => {
@@ -356,20 +384,18 @@ export default function FertilizerPage() {
           onClose={() => setDetailTarget(null)}
         />
       )}
-      {showBatchDeleteModal && (
-        <FertilizerBatchDeleteModal
-          isOpen={showBatchDeleteModal}
-          count={selectedIds.length}
-          selectedItems={items.filter((it) => selectedIds.includes(it.id))}
-          onClose={() => setShowBatchDeleteModal(false)}
-          onConfirm={confirmBatchDelete}
-        />
-      )}
       <FertilizerExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         onConfirm={handleExportConfirm}
         selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length}
+      />
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录一致） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedIds.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

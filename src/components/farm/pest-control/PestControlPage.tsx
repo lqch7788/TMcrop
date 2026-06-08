@@ -4,8 +4,8 @@
  * 布局：PageHeader → FilterBar → StatsCards → Table → Modals
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Sprout, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Sprout } from 'lucide-react';
+import { DeleteConfirmModal } from '@/components/ui';
 import { usePestControlStore, PestControlData, useToastStore } from '@/stores';
 import { PestControlFilter } from './PestControlFilter';
 import { PestControlTable } from './PestControlTable';
@@ -13,7 +13,6 @@ import { PestControlStatsCards } from './PestControlStatsCards';
 import { AddPestControlModal } from './modals/AddPestControlModal';
 import { EditPestControlModal } from './modals/EditPestControlModal';
 import { PestControlDetailModal } from './modals/PestControlDetailModal';
-import { BatchDeleteModal } from './modals/BatchDeleteModal';
 import { PestControlExportModal } from './modals/PestControlExportModal';
 
 type OperationMode = 'normal' | 'delete' | 'export';
@@ -33,7 +32,8 @@ export default function PestControlPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editTarget, setEditTarget] = useState<PestControlData | null>(null);
   const [detailTarget, setDetailTarget] = useState<PestControlData | null>(null);
-  const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
+  // 2026-06-09 删除警告弹窗：与技术方案/作物库存/出库记录/施肥管理统一用 UI 库 DeleteConfirmModal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
@@ -74,36 +74,47 @@ export default function PestControlPage() {
   const handleAdd = useCallback(() => setShowAddModal(true), []);
   const handleEdit = useCallback((record: PestControlData) => setEditTarget(record), []);
   const handleDetail = useCallback((record: PestControlData) => setDetailTarget(record), []);
-  const handleDelete = useCallback((id: string) => { store.deleteItem(id); }, [store]);
+  // 2026-06-09 改造：单条删除走 DeleteConfirmModal（与技术方案一致）
+  const handleDelete = useCallback((id: string) => {
+    setSelectedIds([id]);
+    setShowDeleteModal(true);
+  }, []);
 
   const handleBatchDeleteMode = useCallback(() => {
     setOperationMode(prev => prev === 'delete' ? 'normal' : 'delete');
     setSelectedIds([]);
   }, []);
 
+  // 2026-06-09 改造：批量删除直接弹 DeleteConfirmModal（替代旧自写 BatchDeleteModal + 直删逻辑）
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.length === 0) return;
-    setShowBatchDeleteModal(true);
+    setShowDeleteModal(true);
   }, [selectedIds]);
 
-  const confirmBatchDelete = useCallback(async () => {
-    const idsToDelete = [...selectedIds];
-    if (idsToDelete.length === 0) return;
-    await store.deleteItems(idsToDelete);
-    setShowBatchDeleteModal(false);
-    setSelectedIds([]);
-    setOperationMode('normal');
-    await store.fetchItems(filters);
-  }, [selectedIds, filters, store]);
-
-  const handleBatchDeleteConfirm = useCallback(async () => {
-    const idsToDelete = [...selectedIds];
-    if (idsToDelete.length === 0) return;
-    await store.deleteItems(idsToDelete);
-    setSelectedIds([]);
-    setOperationMode('normal');
-    await store.fetchItems(filters);
-  }, [selectedIds, filters, store]);
+  // 2026-06-09 改造：弹窗回调统一处理单条/批量删除
+  const handleDeleteConfirm = useCallback(async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setShowDeleteModal(false);
+    try {
+      if (ids.length === 1) {
+        const ok = await store.deleteItem(ids[0]);
+        if (ok) {
+          toast.success('已删除 1 条记录');
+        } else {
+          toast.error('删除失败');
+        }
+      } else {
+        const { deleted } = await store.deleteItems(ids);
+        toast.success(`已删除 ${deleted} 条记录`);
+      }
+      setSelectedIds([]);
+      setOperationMode('normal');
+      await store.fetchItems(filters);
+    } catch (err: any) {
+      toast.error(`删除失败：${err?.message || '未知错误'}`);
+    }
+  }, [selectedIds, filters, store, toast]);
 
   const handleExport = useCallback(() => {
     setShowExportModal(true);
@@ -219,12 +230,15 @@ export default function PestControlPage() {
       {detailTarget && (
         <PestControlDetailModal isOpen={!!detailTarget} record={detailTarget} onClose={() => setDetailTarget(null)} />
       )}
-      {showBatchDeleteModal && (
-        <BatchDeleteModal isOpen={showBatchDeleteModal} count={selectedIds.length}
-          onClose={() => setShowBatchDeleteModal(false)} onConfirm={confirmBatchDelete} />
-      )}
       <PestControlExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)}
         onConfirm={handleExportConfirm} selectedCount={selectedIds.length > 0 ? selectedIds.length : items.length} />
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案/作物库存/出库记录/施肥管理一致） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedIds.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }
