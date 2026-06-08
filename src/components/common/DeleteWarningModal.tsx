@@ -1,5 +1,5 @@
 // 统一删除警告弹窗组件
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui';
 
@@ -42,15 +42,35 @@ export function DeleteWarningModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 w-96 shadow-xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
+    <div className="fixed inset-0 z-50">
+      {/* 遮罩层 - 点击关闭 */}
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+      {/* 弹窗本体 - 与 Modal 组件风格一致 */}
+      <div className="relative bg-white rounded-xl w-96 shadow-xl flex flex-col max-h-[90vh]">
+        {/* 标题区 - 绿色渐变背景，与 Modal/新增弹窗风格一致 */}
+        <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
+          <div className="flex items-center gap-2 text-white">
+            <AlertTriangle className="w-5 h-5" />
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-white hover:bg-emerald-500"
+              aria-label="关闭"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          )}
         </div>
-        <div className="text-sm text-gray-600 space-y-2 mb-6">
+
+        {/* 内容区 - 与 Modal 一致 */}
+        <div className="px-6 py-5 text-sm text-gray-600 space-y-2 flex-1">
           {description ? (
             <p>{description}</p>
           ) : (
@@ -60,12 +80,14 @@ export function DeleteWarningModal({
             </>
           )}
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">
+
+        {/* 底部 footer - 固定在弹窗底部，与 Modal 一致 */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
+          <Button variant="secondary" onClick={onClose}>
             取消
           </Button>
-          <Button variant="destructive" onClick={onConfirm} className="flex-1">
-            确认
+          <Button variant="destructive" onClick={onConfirm}>
+            确认删除
           </Button>
         </div>
       </div>
