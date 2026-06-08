@@ -22,6 +22,8 @@ import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+// 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
+import { DeleteConfirmModal } from '@/components/ui';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
@@ -175,6 +177,8 @@ export default function SeedlingPage() {
   const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
+  // 2026-06-09 删除警告弹窗
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 操作模式状态（用于查看详情、编辑、每日记录、定植操作、打印、图片、删除等操作的统一流程）
   const [operationMode, setOperationMode] = useState<'normal' | 'detail' | 'edit' | 'dailyRecord' | 'transplant' | 'print' | 'image' | 'delete' | 'export'>('normal');
@@ -276,12 +280,22 @@ export default function SeedlingPage() {
     setLightboxOpen(true);
   };
 
-  const handleDelete = async (ids: string[]) => {
+  // 2026-06-09 改造：单条删除入口仅弹 DeleteConfirmModal
+  const handleDelete = useCallback((ids: string[]) => {
+    setSelectedRows(ids);
+    setShowDeleteModal(true);
+  }, []);
+
+  // 弹窗回调：真正调 Store action 删除
+  const handleDeleteConfirm = useCallback(async () => {
+    const ids = [...selectedRows];
+    if (ids.length === 0) return;
+    setShowDeleteModal(false);
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
     }
-  };
+  }, [selectedRows, deleteItems]);
 
   // 处理结束计划
   const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
@@ -672,6 +686,14 @@ export default function SeedlingPage() {
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
         selectedCount={selectedRows.length}
+      />
+
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

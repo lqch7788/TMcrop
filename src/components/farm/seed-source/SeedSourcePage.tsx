@@ -16,7 +16,7 @@ import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { PropagationRecordModal } from './modals/PropagationRecordModal';
 import { PropagationStageModal } from './modals/PropagationStageModal';
-import { Button } from '../../../components/ui/button';
+import { Button, DeleteConfirmModal } from '../../../components/ui';
 import {
   cropCategories,
   suppliers,
@@ -115,6 +115,8 @@ export default function SeedSourcePage() {
   // 导出状态
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
+  // 2026-06-09 删除警告弹窗（与技术方案/作物库存/出库记录/施肥管理/病虫害管理统一用 UI 库 DeleteConfirmModal）
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 2026-06-06: 合并 3 个独立 state 为 BatchOpState discriminated union
   // 原 operationMode + exportMode(bool) + printMode(bool) → 一个 state 决定 5 种批量操作模式
@@ -225,13 +227,21 @@ export default function SeedSourcePage() {
     setLightboxOpen(true);
   };
 
-  // 处理删除（通过 Store，删除前检查关联引用）
-  // 2026-06-06: CRITICAL #2 — 改用 store.checkDeletable，组件不再直调 enhancedApiClient
-  const handleDelete = async (ids: string[]) => {
+  // 2026-06-09 改造：单条/批量删除入口（仅弹 DeleteConfirmModal，不再直接删除）
+  // 删除前引用检查 + Store action 在 handleDeleteConfirm 里执行
+  const handleDelete = useCallback((ids: string[]) => {
+    setSelectedIdsFromCaller(ids);
+  }, []);
+
+  // 弹窗回调：真正执行删除（含引用检查）
+  const handleDeleteConfirm = useCallback(async () => {
+    const ids = [...selectedRows];
+    if (ids.length === 0) return;
+    setShowDeleteModal(false);
+    // 1. 删除前检查关联引用（保留原 checkDeletable 业务）
     for (const id of ids) {
       try {
         const res = await checkDeletable(id);
-
         if (!res.deletable && res.references.length) {
           const lines = res.references.slice(0, 10).map((r) => {
             const parts = [r.module, `「${r.code}」`];
@@ -248,29 +258,35 @@ export default function SeedSourcePage() {
           return;
         }
       } catch (e: any) {
-        // 2026-06-06: R4 — 不许静默 catch，检查失败必须报错给用户
-        // 删除按钮功能保持不变（用户仍可继续删除），仅将错误暴露给 UI
-        // 不 return — 让循环继续，最终仍会执行 deleteItems(ids)
+        // 2026-06-06: R4 — 检查失败不阻止删除，仅暴露错误给 UI
         const msg = e?.message || String(e);
         toast.error(`检查种源引用失败：${msg}`);
       }
     }
+    // 2. 调 Store action 删除
     try {
       await deleteItems(ids);
       setSelectedRows([]);
     } catch (e: any) {
       await showAlert(`删除失败：${e?.message || String(e)}`);
     }
-  };
+  }, [selectedRows, checkDeletable, deleteItems, showAlert, toast]);
 
-  // 处理批量删除
-  const handleBatchDelete = () => {
+  // 弹窗入口：单条删除走 handleDelete(ids: [id])；
+  // setSelectedIdsFromCaller 包装 setSelectedRows 同步弹模态
+  const setSelectedIdsFromCaller = useCallback((ids: string[]) => {
+    setSelectedRows(ids);
+    setShowDeleteModal(true);
+  }, []);
+
+  // 处理批量删除（兼容老入口，校验后弹模态）
+  const handleBatchDelete = useCallback(() => {
     if (selectedRows.length === 0) {
       toast.warning('请先选择要删除的记录');
       return;
     }
-    handleDelete(selectedRows);
-  };
+    setShowDeleteModal(true);
+  }, [selectedRows, toast]);
 
   // 处理结束计划
   // 2026-06-06: M2 — 强结种源分支下沉到 store.endSeedSource；此处保留 cropBatch 结束流程编排
@@ -627,6 +643,14 @@ export default function SeedSourcePage() {
         onClose={() => setPropagationStageOpen(false)}
         record={propagationRecord}
         onSuccess={loadItems}
+      />
+
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

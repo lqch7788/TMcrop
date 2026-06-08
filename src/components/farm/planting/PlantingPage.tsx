@@ -23,6 +23,8 @@ import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
+// 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
+import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
@@ -143,6 +145,8 @@ export default function PlantingPage() {
   const [exportMode, setExportMode] = useState(false);
   const [exportFormat, setExportFormat] = useState('xlsx');
   const [showExportModal, setShowExportModal] = useState(false);
+  // 2026-06-09 删除警告弹窗
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 操作模式状态（用于查看详情、编辑、采收登记、打印、图片、删除等操作的统一流程）
   const [operationMode, setOperationMode] = useState<'normal' | 'detail' | 'edit' | 'harvest' | 'print' | 'image' | 'delete' | 'export'>('normal');
@@ -210,8 +214,18 @@ export default function PlantingPage() {
     setLightboxOpen(true);
   };
 
-  const handleDelete = async (ids: string[]) => {
-    // 删除前检查标签履历关联
+  // 2026-06-09 改造：单条删除入口仅弹 DeleteConfirmModal
+  const handleDelete = useCallback((ids: string[]) => {
+    setSelectedRows(ids);
+    setShowDeleteModal(true);
+  }, []);
+
+  // 弹窗回调：引用检查 + 调 Store action 删除
+  const handleDeleteConfirm = useCallback(async () => {
+    const ids = [...selectedRows];
+    if (ids.length === 0) return;
+    setShowDeleteModal(false);
+    // 1. 删除前检查标签履历关联
     for (const id of ids) {
       try {
         const res = await enhancedApiClient.get<{success: boolean; data: {deletable: boolean; labelCount: number}}>(`/plantings/${id}/check-deletable`);
@@ -223,13 +237,14 @@ export default function PlantingPage() {
         // 检查失败不阻止删除（降级策略）
       }
     }
+    // 2. 调 Store action 删除
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
     } else {
       await showAlert('删除失败，请重试。');
     }
-  };
+  }, [selectedRows, deleteItems, showAlert, enhancedApiClient]);
 
   // 处理结束计划
   const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
@@ -688,6 +703,14 @@ export default function PlantingPage() {
           labelNumber: l.label_number,
         }))}
         onSubmit={handleMarkSubmit}
+      />
+
+      {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        selectedCount={selectedRows.length}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );
