@@ -11,8 +11,10 @@
 
 import { Router, Request, Response } from 'express';
 import { inventoryTransactionService } from '../services/inventoryTransaction.service';
+import { inventoryTransactionRepository } from '../repositories/inventory-tx.repository';
 import { getDatabase, saveDatabase } from '../db';
 import { authenticate } from '../middleware/auth';
+import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -183,35 +185,53 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       'UPDATE inventory_stock SET current_quantity = ?, version = version + 1, update_time = ? WHERE instance_id = ? AND version = ?'
     );
     updateStmt.run([newQty, nowIso, body.instanceId, version]);
+    // 2026-06-08 修复：乐观锁 0 rows 静默通过会导致"假流水"（库存没扣但写流水），违反 Fail Loud
+    // 这里显式检查 affected rows，0 行即版本冲突，直接 409 退出，避免后续 insert 假数据
+    const modified = db.getRowsModified();
     updateStmt.free();
+    if (modified === 0) {
+      console.warn(`[inventoryTransactions POST] 乐观锁冲突: instance=${body.instanceId} version=${version}`);
+      return res.status(409).json({
+        success: false,
+        error: `库存版本冲突：${body.instanceId} 已被其他操作修改，请刷新后重试`,
+      });
+    }
 
     // 5. 写老表 inventory_transaction
-    const txId = `TRX-OUT-${now.getTime()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    const insertStmt = db.prepare(`
+    // 2026-06-08 V2.1：4 位自增 ID（TRX + YYYYMMDD + NNNN），替代 Math.random 4 字符 base36
+    // 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"
+    // 2026-06-09 修复：用本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
+    // 5 次重试：UNIQUE 冲突时下一轮查 max（已被对方更新）→ 序号 +1 跳过
+    const txDateStr = formatLocalDateYYYYMMDD(new Date());
+    const insertSql = `
       INSERT INTO inventory_transaction (
-        id, instance_id, stock_type, transaction_type, quantity,
+        id, transaction_id, instance_id, stock_type, transaction_type, quantity,
         balance_before, balance_after, business_id, business_type, business_code,
         operator_id, operator_name, operate_date, remarks, create_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertStmt.run([
-      txId,
-      body.instanceId,
-      stock.stock_type,
-      'outbound',
-      -body.quantity,
-      currentQty,
-      newQty,
-      body.businessId || null,
-      body.businessType,
-      body.businessCode || null,
-      body.operatorId || null,
-      body.operatorName || '系统操作员',
-      nowIso.slice(0, 10),
-      body.remarks || '出库',
-      nowIso,
-    ]);
-    insertStmt.free();
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const insertParams = (txId: string) => [
+      txId, txId, body.instanceId, stock.stock_type, 'outbound',
+      -body.quantity, currentQty, newQty, body.businessId || null, body.businessType, body.businessCode || null,
+      body.operatorId || null, body.operatorName || '系统操作员', formatLocalDateISO(now),
+      body.remarks || '出库', nowIso,
+    ];
+    let txId: string | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(txDateStr);
+      const candidate = `TRX-${txDateStr}-${String(max + 1).padStart(4, '0')}`;
+      const stmt = db.prepare(insertSql);
+      try {
+        stmt.run(insertParams(candidate));
+        stmt.free();
+        txId = candidate;
+        break;
+      } catch (err) {
+        stmt.free();
+        if (attempt === 4) throw err; // 最后一次重试失败抛错
+        // 否则下一轮重查 max 跳过已存在的序号
+      }
+    }
 
     saveDatabase();
 
@@ -240,7 +260,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       businessCode: body.businessCode,
       operatorId: body.operatorId,
       operatorName: body.operatorName || '系统操作员',
-      operateDate: nowIso.slice(0, 10),
+      operateDate: formatLocalDateISO(now),
       createTime: nowIso,
       updateTime: nowIso,
       cropName: stock.crop_name,

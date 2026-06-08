@@ -86,13 +86,56 @@ export interface InventoryStock {
  */
 export class InventoryStockRepository {
   /**
+   * 获取当日 instanceId 最大 4 位序号
+   * 2026-06-08 V2.1 重构：库存实例 ID 改用 4 位自增（INS/ISE/IPR + YYYYMMDD + NNNN），
+   * 替代旧的 Math.random() 4 字符 base36 随机（碰撞风险 + 违反项目铁律"禁止 Math.random()"）。
+   * 旧 16 字符 base36 数据保留不动（格式不变性）。
+   * @param prefix INS/ISE/IPR
+   * @param dateStr YYYYMMDD
+   * @returns 当日最大 4 位序号（0 表示当日尚无记录）
+   */
+  async getInstanceIdMaxSerial(prefix: string, dateStr: string): Promise<number> {
+    const db = getDatabase();
+    // LIKE 模式: prefix(3) + '-' + 日期(8) + '-' + 4位序号 = 17 字符
+    //   INS-20260608-0001
+    //   ↑3  ↑1   ↑8     ↑1  ↑4   = 17
+    // 2026-06-08 修复：GLOB '[0-9][0-9][0-9][0-9]' 严格过滤掉 base36 旧数据（修复前生成的 4 字符 base36），
+    // 否则 base36 tail 字符串排序时字母 ASCII > 数字，max 永远取到 base36 行，parseInt 出 NaN → 0
+    // → 永远 serial=1 → 永远撞 0001（连续 5 次冲突）
+    const pattern = `${prefix}-${dateStr}-____`;
+    const expectedLength = prefix.length + 1 + 8 + 1 + 4; // 17
+    const stmt = db.prepare(`
+      SELECT instance_id FROM inventory_stock
+      WHERE instance_id LIKE ?
+        AND LENGTH(instance_id) = ?
+        AND SUBSTR(instance_id, -4) GLOB '[0-9][0-9][0-9][0-9]'
+      ORDER BY SUBSTR(instance_id, -4) DESC LIMIT 1
+    `);
+    stmt.bind([pattern, expectedLength]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { instance_id: string };
+      const tail = row.instance_id.slice(-4);
+      const n = parseInt(tail, 10);
+      maxSerial = isNaN(n) ? 0 : n;
+    }
+    stmt.free();
+    return maxSerial;
+  }
+
+  /**
    * 创建库存记录
    */
   async create(data: Partial<InventoryStock>): Promise<InventoryStock> {
     const db = getDatabase();
     const newId = data.id || `STK-${Date.now()}`;
     const now = new Date().toISOString();
-    const instanceId = data.instance_id || `IPR-${now.slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    // 2026-06-08 V2.1：instance_id 必传（service 层负责生成，4位自增格式），
+    // 此处不再 random 兜底，避免与 generateInstanceId 重复生成
+    const instanceId = data.instance_id;
+    if (!instanceId) {
+      throw new Error('instance_id 必传（请使用 generateInstanceId 生成 4 位自增 ID）');
+    }
 
     db.run(`
       INSERT INTO inventory_stock (

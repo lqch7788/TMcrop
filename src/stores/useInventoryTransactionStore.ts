@@ -128,7 +128,11 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
     }
   },
 
-  addTransaction: async (payload) => {
+  addTransaction: async (payload): Promise<OutboundRow> => {
+    // 2026-06-08 修复：V2.1 铁律 Fail Loud
+    // 旧实现 `catch { return null; }` 把真实错误吞了，OutboundModal 拿到 null 只显示"Store action 返回 null"，
+    // 真实原因（400 参数错误 / 409 乐观锁冲突 / 500 NOT NULL 约束 / 网络超时）全部丢失，调试极困难。
+    // 新实现：把错误向上抛，由 OutboundModal 的 try/catch 显示真实 message。
     try {
       const result = await enhancedApiClient.post<OutboundRow>('/inventory-transactions', payload);
       if (result) {
@@ -139,8 +143,10 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
         useInventoryStore.getState().notifyChange();
       }
       return result;
-    } catch {
-      return null;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[useInventoryTransactionStore.addTransaction] 出库失败:', err);
+      throw new Error(message);
     }
   },
 

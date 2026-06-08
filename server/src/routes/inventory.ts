@@ -13,7 +13,9 @@
 
 import { Router, Request, Response } from 'express';
 import { inventoryController } from '../controllers/inventory.controller';
+import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { getDatabase, saveDatabase } from '../db';
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -203,7 +205,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 /** POST /api/inventory 兼容老新增（直接落 V3 stock） */
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const {
       product_code, crop_name, variety, stock_type = 'product',
@@ -213,7 +215,12 @@ router.post('/', (req: Request, res: Response) => {
     } = req.body || {};
 
     const id = `STK-${Date.now()}`;
-    const instanceId = `IPR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    // 2026-06-08 V2.1：4 位自增（替代 Math.random），对齐项目 [[code-generation-contract-rule]] 铁律
+    // 2026-06-09 修复：用本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
+    const dateStr = formatLocalDateYYYYMMDD();
+    const prefix = stock_type === 'seed' ? 'INS' : stock_type === 'seedling' ? 'ISE' : 'IPR';
+    const max = await inventoryStockRepository.getInstanceIdMaxSerial(prefix, dateStr);
+    const instanceId = `${prefix}-${dateStr}-${String(max + 1).padStart(4, '0')}`;
     const now = new Date().toISOString();
 
     const db = getDatabase();

@@ -31,13 +31,53 @@ export interface InventoryTransaction {
  */
 export class InventoryTransactionRepository {
   /**
+   * 获取当日 transactionId 最大 4 位序号
+   * 2026-06-08 V2.1 重构：流水 ID 改用 4 位自增（TRX + YYYYMMDD + NNNN），
+   * 替代旧的 Math.random() 4 字符 base36 随机。
+   * @param dateStr YYYYMMDD
+   * @returns 当日最大 4 位序号（0 表示当日尚无记录）
+   */
+  async getTransactionIdMaxSerial(dateStr: string): Promise<number> {
+    const db = getDatabase();
+    // LIKE 模式: TRX(3) + '-' + 日期(8) + '-' + 4位序号 = 17 字符
+    //   TRX-20260608-0001
+    //   ↑3  ↑1  ↑8     ↑1  ↑4   = 17
+    // 2026-06-08 修复：GLOB '[0-9][0-9][0-9][0-9]' 过滤 base36 旧数据（修复前生成），
+    // 否则 base36 tail 永远"赢"字符串排序，parseInt 出 NaN → 0 → 永远 serial=1 → 撞 0001
+    const pattern = `TRX-${dateStr}-____`;
+    const expectedLength = 17;
+    const stmt = db.prepare(`
+      SELECT transaction_id FROM inventory_transaction
+      WHERE transaction_id LIKE ?
+        AND LENGTH(transaction_id) = ?
+        AND SUBSTR(transaction_id, -4) GLOB '[0-9][0-9][0-9][0-9]'
+      ORDER BY SUBSTR(transaction_id, -4) DESC LIMIT 1
+    `);
+    stmt.bind([pattern, expectedLength]);
+    let maxSerial = 0;
+    if (stmt.step()) {
+      const row = stmt.getAsObject() as { transaction_id: string };
+      const tail = row.transaction_id.slice(-4);
+      const n = parseInt(tail, 10);
+      maxSerial = isNaN(n) ? 0 : n;
+    }
+    stmt.free();
+    return maxSerial;
+  }
+
+  /**
    * 创建流水记录
    */
   async create(data: Partial<InventoryTransaction>): Promise<InventoryTransaction> {
     const db = getDatabase();
     const newId = data.id || `TXN-${Date.now()}`;
     const now = new Date().toISOString();
-    const transactionId = data.transaction_id || `TRX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    // 2026-06-08 V2.1：transaction_id 必传（service / route 层负责生成，4位自增格式），
+    // 此处不再 random 兜底
+    const transactionId = data.transaction_id;
+    if (!transactionId) {
+      throw new Error('transaction_id 必传（请使用 generateTransactionId 生成 4 位自增 ID）');
+    }
 
     db.run(`
       INSERT INTO inventory_transaction (
