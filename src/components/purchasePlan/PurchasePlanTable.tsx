@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 import { Pagination } from '@/components/ui';
 import { MaterialItemsTable } from './MaterialItemsTable';
 
@@ -382,16 +382,7 @@ export function PurchasePlanTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={async () => {
-                              // 2026-06-07: 业务调整允许删除任何状态采购计划
-                              const isTerminal = ['approved', 'purchasing', 'completed'].includes(plan.status);
-                              const confirmMsg = isTerminal
-                                ? `采购计划 ${plan.purchaseApplicationCode} 状态为「${plan.status}」，删除后不可恢复。\n\n确定要继续删除吗？`
-                                : `确定要删除采购计划 ${plan.purchaseApplicationCode} 吗？`;
-                              if (await showConfirm(confirmMsg)) {
-                                onDelete(plan);
-                              }
-                            }}
+                            onClick={() => onDelete(plan)}
                             title="删除"
                           >
                             <Trash2 className="w-4 h-4" />

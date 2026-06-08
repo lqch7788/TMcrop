@@ -662,14 +662,10 @@ export function PurchasePlanPage() {
     setShowBatchEditModal(true);
   };
 
-  // 单条删除处理（开发测试阶段：可删除所有状态）
-  const handleSingleDelete = async (plan: PurchasePlan) => {
-    try {
-      await deletePlan(plan.id);
-      await showAlert('删除成功');
-    } catch (error) {
-      await showAlert('删除失败: ' + (error as Error).message);
-    }
+  // 单行 + 批量共用 DeleteWarningModal，与生产计划页面 UI 一致
+  const handleSingleDelete = (plan: PurchasePlan) => {
+    setSelectedCodes([plan.id]);
+    setShowDeleteModal(true);
   };
 
   // 批量编辑确认
