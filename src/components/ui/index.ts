@@ -69,3 +69,10 @@ export { List } from './List'
 
 // 数字输入框
 export { NumberInput } from './NumberInput'
+
+// 通用确认弹窗
+export {
+  DeleteConfirmModal,
+  DeleteWarningModalLegacy1,
+  DeleteWarningModalLegacy2,
+} from './DeleteConfirmModal'

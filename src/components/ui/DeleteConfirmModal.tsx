@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui';
 
 // 新的统一接口
-interface DeleteWarningModalProps {
+interface DeleteConfirmModalProps {
   isOpen: boolean;
   selectedCount?: number;
   onClose?: () => void;
@@ -31,14 +31,14 @@ interface DeleteWarningModalLegacyProps2 {
   title?: string;
 }
 
-export function DeleteWarningModal({
+export function DeleteConfirmModal({
   isOpen,
   selectedCount = 0,
   onClose,
   onConfirm,
   title = '删除警告',
   description,
-}: DeleteWarningModalProps) {
+}: DeleteConfirmModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -176,4 +176,4 @@ export function DeleteWarningModalLegacy2({
 }
 
 // 默认导出
-export default DeleteWarningModal;
+export default DeleteConfirmModal;
