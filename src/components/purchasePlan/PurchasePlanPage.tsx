@@ -919,7 +919,7 @@ export function PurchasePlanPage() {
         onExportCancel={handleCancelExport}
         onBatchEditConfirm={handleBatchEditConfirm}
         onBatchEditCancel={handleBatchEditCancel}
-        onBatchDeleteConfirm={handleDeleteConfirm}
+        onBatchDeleteConfirm={() => setShowDeleteModal(true)}
         onBatchDeleteCancel={handleBatchDeleteCancel}
       />
 
