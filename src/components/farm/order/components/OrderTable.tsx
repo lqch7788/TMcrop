@@ -8,7 +8,6 @@ import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
-import { showConfirm } from '@/lib/dialogService';
 
 interface OrderTableProps {
   data: CropOrder[];
@@ -212,11 +211,7 @@ export function OrderTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={async () => {
-                              if (await showConfirm(`确定要删除订单 ${record.orderCode} 吗？`)) {
-                                onDelete([record.id]);
-                              }
-                            }}
+                            onClick={() => onDelete([record.id])}
                             title="删除"
                           >
                             <Trash2 className="w-4 h-4" />

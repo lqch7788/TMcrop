@@ -13,7 +13,7 @@ import { OrderDetailModal } from './modals/DetailModal';
 import { EditModal } from './modals/EditModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
-import { Button } from '@/components/ui';
+import { Button, DeleteConfirmModal as DeleteWarningModal } from '@/components/ui';
 import {
   cropCategories,
 } from '@/data/cropData';
@@ -21,7 +21,7 @@ import { CropOrder, CropOrderFilters, CropOrderStatus } from '@/types/crop';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { useToastStore } from '@/stores/useToastStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -159,28 +159,36 @@ export default function OrderPage() {
     setEditModalOpen(true);
   };
 
-  const handleDelete = async (ids: string[]) => {
-    // 2026-06-07: 业务调整允许删除任何状态订单；已完成/已取消订单给二次确认警告
-    const selectedOrders = orders.filter(o => ids.includes(o.id));
-    const completedOrCancelled = selectedOrders.filter(
-      o => o.status === CropOrderStatus.COMPLETED || o.status === CropOrderStatus.CANCELLED
-    );
-    const confirmMsg = completedOrCancelled.length > 0
-      ? `选中的 ${ids.length} 条订单中包含 ${completedOrCancelled.length} 条已完成/已取消订单，删除后不可恢复。\n\n确定要继续删除吗？`
-      : `确定要删除选中的 ${ids.length} 条记录吗？`;
-    if (await showConfirm(confirmMsg)) {
-      try {
-        await deleteOrders(ids);
-        setSelectedRows([]);
-        // [H-4 perf] 2026-06-06 修复：删除后立即刷新统计，保证顶部统计卡片数量同步
-        await fetchStats();
-      } catch (error) {
-        // [M-5] 2026-06-06 修复：catch 之前只弹通用文案，丢 error.message；现把 error.message 拼到 alert
-        console.error('[OrderPage] 删除订单失败:', error);
-        const msg = error instanceof Error ? error.message : String(error);
-        showAlert(`删除失败：${msg || '请稍后重试'}`);
-      }
+  // 2026-06-07: 删除前显示 DeleteWarningModal（与生产计划页面一致）
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+
+  const handleAskDelete = (ids: string[]) => {
+    setPendingDeleteIds(ids);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const ids = pendingDeleteIds;
+    setShowDeleteModal(false);
+    setPendingDeleteIds([]);
+    try {
+      await deleteOrders(ids);
+      setSelectedRows([]);
+      // [H-4 perf] 2026-06-06 修复：删除后立即刷新统计，保证顶部统计卡片数量同步
+      await fetchStats();
+    } catch (error) {
+      // [M-5] 2026-06-06 修复：catch 之前只弹通用文案，丢 error.message；现把 error.message 拼到 alert
+      console.error('[OrderPage] 删除订单失败:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      showAlert(`删除失败：${msg || '请稍后重试'}`);
     }
+  };
+
+  const handleDelete = async (ids: string[]) => {
+    // 已弃用：删除前需弹 DeleteWarningModal 确认（统一与生产计划一致）
+    // 保留函数名以兼容 OrderTable 旧 props，新逻辑走 handleAskDelete
+    handleAskDelete(ids);
   };
 
   const handleSearch = () => {
@@ -388,7 +396,7 @@ export default function OrderPage() {
         onExport={handleExportClick}
         onConfirmBatchEdit={() => {}}
         onCancelBatchEdit={() => setBatchEditMode(false)}
-        onConfirmDelete={() => handleDelete(selectedRows)}
+        onConfirmDelete={() => handleAskDelete(selectedRows)}
         onCancelDelete={() => { setDeleteMode(false); setSelectedRows([]); }}
         onConfirmExport={handleExportClickConfirm}
         onCancelExport={handleExportCancel}
@@ -420,7 +428,7 @@ export default function OrderPage() {
         onSelectionChange={setSelectedRows}
         onDetail={handleDetail}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={handleAskDelete}
         onAdd={() => setAddModalOpen(true)}
         exportMode={exportMode}
         batchEditMode={batchEditMode}
@@ -474,6 +482,17 @@ export default function OrderPage() {
         onClose={() => setShowExportModal(false)}
         onConfirm={handleConfirmExport}
         selectedCount={selectedRows.length}
+      />
+
+      {/* 删除警告弹窗 - 单行/批量删除都使用此弹窗（与生产计划页面一致） */}
+      <DeleteWarningModal
+        isOpen={showDeleteModal}
+        selectedCount={pendingDeleteIds.length}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPendingDeleteIds([]);
+        }}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );
