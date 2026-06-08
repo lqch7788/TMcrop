@@ -66,15 +66,15 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
         operatorId: 'system',
         operatorName: '系统操作员',
         remarks: remarks || undefined,
-      } as any);
+      });
 
+      // 2026-06-08 修复：addTransaction 现在按 Fail Loud 铁律 throw 真实错误（不再吞掉返回 null），
+      // 成功路径才走这里；失败时抛错被下方 catch (err) 接手显示真实 message
       if (result) {
         // 防御性兜底：Store action 内部已调 notifyChange，但若未生效则手动调一次
         useInventoryStore.getState().notifyChange();
         onSuccess();
         handleClose();
-      } else {
-        setError('出库失败：Store action 返回 null');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '出库失败');

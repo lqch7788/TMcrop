@@ -107,7 +107,11 @@ export class InventoryTransactionRepository {
         ON s.instance_id = t.instance_id
         ${onSql}
       WHERE ${where.join(' AND ')}
-      ORDER BY t.operate_date DESC, t.create_time DESC
+      -- 2026-06-08 出库记录列表：按业务类型分组（种源→种苗→成品），同类型实例ID聚在一起
+      -- stock_type 业务顺序映射：seed=种源(INS) → seedling=种苗(ISE) → product=成品(IPR)
+      ORDER BY t.operate_date DESC,
+        CASE t.stock_type WHEN 'seed' THEN 1 WHEN 'seedling' THEN 2 WHEN 'product' THEN 3 ELSE 4 END,
+        t.create_time DESC
       LIMIT ? OFFSET ?
     `;
     const listParams = [...whereParams, limit, (page - 1) * limit];

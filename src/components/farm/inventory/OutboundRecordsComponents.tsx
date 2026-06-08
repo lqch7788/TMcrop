@@ -33,6 +33,7 @@ import {
 } from '../../../constants/outboundConstants';
 import {
   getPlantingModeLabel,
+  QUALITY_GRADE_MAP,
 } from '../../../constants/cropConstants';
 
 // ============ 1. Stats 4 卡 ============
@@ -282,7 +283,7 @@ export function OutboundRecordsTable({
     return OUTBOUND_BUSINESS_TYPE_META[normalized];
   };
 
-  const colSpan = (exportMode || deleteMode) ? 16 : 15;
+  const colSpan = (exportMode || deleteMode) ? 17 : 16;
   const allSelected = data.length > 0 && selectedRows.length === data.length;
   const someSelected = selectedRows.length > 0 && selectedRows.length < data.length;
 
@@ -314,6 +315,7 @@ export function OutboundRecordsTable({
                 </th>
               )}
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">实例ID</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">流水号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">业务单号</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">类型</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物</th>
@@ -367,6 +369,9 @@ export function OutboundRecordsTable({
                       {row.instanceId}
                     </button>
                   </td>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900 whitespace-nowrap" title="系统自动生成，4 位顺序递增 (2026-06-08 V2.1)">
+                    {row.id}
+                  </td>
                   <td className="px-4 py-3 text-sm font-mono text-gray-700 whitespace-nowrap">{row.businessCode || '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 ${stockColor(row.stockType)} text-white text-xs rounded-full`}>
@@ -377,7 +382,9 @@ export function OutboundRecordsTable({
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{row.varietyName || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{getPlantingModeLabel(row.plantingMode) || '-'}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={row.greenhouseName}>{row.greenhouseName || '-'}</td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">{row.grade || '-'}</td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {QUALITY_GRADE_MAP[row.grade]?.label || row.grade || '-'}
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium text-right text-emerald-600 whitespace-nowrap">
                     {row.quantityOut} {row.unit || ''}
                   </td>

@@ -160,6 +160,7 @@ export const PLANTING_MODE_MAP: Record<string, string> = {
   cutting:                '扦插',
   division:               '分株繁殖',
   spore:                  '孢子/菌种',
+  soil_seedling:          '土壤育苗', // 2026-06-08 补：出库记录 1 条数据漏翻译
   // 老数据兼容（v1.0 时代用过的中文写法）
   '温室':     '温室种植',
   '水培':     '水培',

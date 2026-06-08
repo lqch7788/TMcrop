@@ -7,6 +7,38 @@ import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository, InventoryStock } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository, InventoryTransaction } from '../repositories/inventory-tx.repository';
 import { queryToObjects } from '../utils/queryHelper';
+import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
+
+// ========== V2.1 编码生成（2026-06-08 重构：4 位自增，替代 Math.random） ==========
+// 对齐项目 [[code-generation-contract-rule]] 铁律"禁止 Math.random()"+ 格式契约：
+// 库存实例 ID:  ${prefix}-${YYYYMMDD}-${NNNN}  (17 字符)   例: INS-20260608-0001
+// 流水 ID:      TRX-${YYYYMMDD}-${NNNN}         (17 字符)   例: TRX-20260608-0001
+// 旧 4 字符 base36 随机数据（同样 17 字符）保留不动 —— 格式不变性
+// 与种源/育苗 14 字符 3 位 NNN 不同：库存/流水业务量更大，4 位 NNNN 容量更安全（日上限 9999）
+
+const MAX_RETRY = 5;
+
+async function generateInstanceId(prefix: string, dateStr: string): Promise<string> {
+  for (let i = 0; i < MAX_RETRY; i++) {
+    const max = await inventoryStockRepository.getInstanceIdMaxSerial(prefix, dateStr);
+    const serial = max + 1;
+    const id = `${prefix}-${dateStr}-${String(serial).padStart(4, '0')}`;
+    // 二次验证：避免同日并发时撞到旧 base36 数据（虽然 base36 不可能等于 NNNN，但保险起见查一次）
+    const existing = await inventoryStockRepository.findByInstanceId(id);
+    if (!existing) return id;
+  }
+  throw new Error(`生成 instanceId 失败：${prefix} ${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
+}
+
+async function generateTransactionId(dateStr: string): Promise<string> {
+  for (let i = 0; i < MAX_RETRY; i++) {
+    const max = await inventoryTransactionRepository.getTransactionIdMaxSerial(dateStr);
+    const serial = max + 1;
+    // 流水不再二次查（UNIQUE 约束保护），省一次 IO（同日并发极端场景下 5 次重试内能解决）
+    return `TRX-${dateStr}-${String(serial).padStart(4, '0')}`;
+  }
+  throw new Error(`生成 transactionId 失败：${dateStr} 连续 ${MAX_RETRY} 次序号冲突`);
+}
 
 export interface Inventory {
   id: string;
@@ -216,13 +248,14 @@ export class InventoryService {
         };
       }
 
-      // 3. 生成 instanceId
+      // 3. 生成 instanceId（V2.1：4 位自增，替代 Math.random）
       const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      // 2026-06-09 修复：本地日期（不是 UTC），避免中国时区早上 0:00-8:00 显示昨天日期
+      const dateStr = formatLocalDateYYYYMMDD(now);
       const prefix = request.stockType === 'seed' ? 'INS'
         : request.stockType === 'seedling' ? 'ISE'
         : 'IPR';
-      const instanceId = `${prefix}-${dateStr}-${String(Math.random().toString(36).slice(2, 6)).toUpperCase()}`;
+      const instanceId = await generateInstanceId(prefix, dateStr);
 
       // 4. 创建库存记录
       const stock = await inventoryStockRepository.create({
@@ -241,7 +274,7 @@ export class InventoryService {
         unit: request.unit,
         warehouse_id: request.warehouseId,
         warehouse_name: request.warehouseName,
-        inbound_date: request.inboundDate || now.toISOString().slice(0, 10),
+        inbound_date: request.inboundDate || formatLocalDateISO(now),
         source_type: request.sourceType || 'self_produced',
         production_plan_code: request.productionPlanCode,
         source_instance_id: request.sourceInstanceId,
@@ -256,8 +289,8 @@ export class InventoryService {
         greenhouse_name: request.greenhouseName,
       });
 
-      // 5. 创建入库流水
-      const transactionId = `TRX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      // 5. 创建入库流水（V2.1：4 位自增，替代 Math.random）
+      const transactionId = await generateTransactionId(dateStr);
       await inventoryTransactionRepository.create({
         transaction_id: transactionId,
         instance_id: instanceId,
@@ -271,7 +304,7 @@ export class InventoryService {
         business_code: request.businessCode,
         operator_id: request.operatorId,
         operator_name: request.operatorName || '系统管理员',
-        operate_date: now.toISOString().slice(0, 10),
+        operate_date: formatLocalDateISO(now),
         remarks: request.remarks || '采收入库',
       });
 
