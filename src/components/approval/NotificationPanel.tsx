@@ -75,19 +75,23 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
     >
       {/* Tab切换 */}
       <div className="flex border-b border-gray-200">
-        <button
+        <Button
+          variant="ghost"
+          size="default"
           onClick={() => setActiveTab('notifications')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${
+          className={`flex-1 rounded-none ${
             activeTab === 'notifications'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           通知消息
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="default"
           onClick={() => setActiveTab('delegations')}
-          className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${
+          className={`flex-1 rounded-none ${
             activeTab === 'delegations'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-500 hover:text-gray-700'
@@ -99,7 +103,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               {activeDelegations.length}
             </span>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* 内容区 */}

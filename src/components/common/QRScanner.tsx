@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, X, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface QRScannerProps {
   isOpen: boolean;
@@ -169,12 +170,14 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
             <Camera className="w-6 h-6 text-white" />
             <h3 className="text-lg font-semibold text-white">扫描二维码</h3>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => { stopScanner(); onClose(); }}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            className="hover:bg-white/20"
           >
             <X className="w-5 h-5 text-white" />
-          </button>
+          </Button>
         </div>
 
         {/* 内容 */}
@@ -200,21 +203,23 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
             {/* 控制按钮 */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-3">
               {!isScanning ? (
-                <button
+                <Button
+                  variant="default"
+                  size="default"
                   onClick={startScanner}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-emerald-600 transition-colors"
                 >
                   <Camera className="w-4 h-4" />
                   开始扫描
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="destructive"
+                  size="default"
                   onClick={stopScanner}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-red-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                   停止扫描
-                </button>
+                </Button>
               )}
             </div>
 
@@ -244,12 +249,13 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                 placeholder="输入二维码数据 (JSON格式)"
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <button
+              <Button
+                variant="blue"
+                size="default"
                 onClick={handleManualSubmit}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
               >
                 确认
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
               格式: {"{\"type\":\"farm\",\"code\":\"G001\",\"name\":\"玻璃温室A区\"}"}
@@ -258,12 +264,13 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
 
           {/* 演示按钮 */}
           <div className="text-center">
-            <button
+            <Button
+              variant="link"
+              size="sm"
               onClick={handleDemoScan}
-              className="text-sm text-emerald-600 hover:text-emerald-700 underline"
             >
               演示：模拟扫码
-            </button>
+            </Button>
           </div>
         </div>
       </div>

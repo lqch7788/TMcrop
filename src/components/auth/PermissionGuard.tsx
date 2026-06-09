@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores';
 import { Shield, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface PermissionGuardProps {
   /** 需要的工序路由（权限标识），不传则只检查登录状态 */
@@ -65,13 +66,14 @@ export function PermissionGuard({ processRoute, actionCode, children }: Permissi
             <p className="text-gray-500 mb-6">
               您没有该页面的访问权限，如需访问请联系管理员
             </p>
-            <button
+            <Button
+              variant="outline"
+              size="default"
               onClick={() => window.history.back()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               返回上一页
-            </button>
+            </Button>
           </div>
         </div>
       );

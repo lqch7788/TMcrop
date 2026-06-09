@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Check, X, Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 export interface BatchActionBarProps {
   /** 已选中的记录数量 */
@@ -55,24 +56,27 @@ export function BatchActionBar({
           <div className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full text-sm font-semibold">
             已选择 {selectedCount} 条记录
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClear}
-            className="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1 transition-colors"
             disabled={loading}
+            className="text-gray-500 hover:text-gray-700"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" />
             清空选择
-          </button>
+          </Button>
         </div>
 
         {/* 右侧：批量操作按钮 */}
         <div className="flex items-center gap-2">
           {/* 批量导出按钮 */}
           {onBatchExport && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onBatchExport}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -80,15 +84,16 @@ export function BatchActionBar({
                 <Download className="w-4 h-4" />
               )}
               批量导出
-            </button>
+            </Button>
           )}
 
           {/* 批量拒绝按钮 */}
           {onBatchReject && (
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={onBatchReject}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -96,15 +101,16 @@ export function BatchActionBar({
                 <X className="w-4 h-4" />
               )}
               批量拒绝
-            </button>
+            </Button>
           )}
 
           {/* 批量通过按钮 */}
           {onBatchApprove && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onBatchApprove}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -112,7 +118,7 @@ export function BatchActionBar({
                 <Check className="w-4 h-4" />
               )}
               批量通过
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -235,14 +235,14 @@ export default function UserManagement() {
             <option value="active">启用</option>
             <option value="inactive">禁用</option>
           </select>
-          <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+          <Button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
             className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700">
             重置
-          </button>
-          <button onClick={openAddModal}
-            className="h-8 px-3 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> 新增用户
-          </button>
+          </Button>
+          <Button onClick={openAddModal}
+            className="h-8 px-3 bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1">
+            <Plus className="w-4 h-4" /> 新增用户
+          </Button>
         </div>
       </div>
 
@@ -303,18 +303,18 @@ export default function UserManagement() {
                 </td>
                 <td className="py-2 px-4">
                   <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => openEditModal(user)} className="p-1 border border-gray-300 rounded text-blue-500 hover:border-blue-500" title="编辑">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-500 hover:border-amber-500" title="修改密码">
-                      <Key className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => handleToggleStatus(user)} className="p-1 border border-gray-300 rounded text-purple-500 hover:border-purple-500" title={user.status === 'active' ? '禁用' : '启用'}>
-                      {user.status === 'active' ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                    </button>
-                    <button onClick={() => setDeleteTarget(user.oid)} className="p-1 border border-gray-300 rounded text-red-500 hover:border-red-500" title="删除">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <Button variant="ghost" size="icon" onClick={() => openEditModal(user)} className="p-1 border border-gray-300 rounded text-blue-500 hover:border-blue-500" title="编辑">
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-500 hover:border-amber-500" title="修改密码">
+                      <Key className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)} className="p-1 border border-gray-300 rounded text-purple-500 hover:border-purple-500" title={user.status === 'active' ? '禁用' : '启用'}>
+                      {user.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(user.oid)} className="p-1 border border-gray-300 rounded text-red-500 hover:border-red-500" title="删除">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -356,7 +356,7 @@ export default function UserManagement() {
               onMouseDown={d1.startDrag}
             >
               <h3 className="text-white font-semibold">{editingUser ? '编辑用户' : '新增用户'}</h3>
-              <button onClick={() => setShowUserModal(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowUserModal(false)} className="text-white/70 hover:text-white hover:bg-white/20"><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
@@ -430,8 +430,8 @@ export default function UserManagement() {
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">取消</button>
-              <button onClick={handleUserSave} className="h-8 px-4 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
+              <Button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">取消</Button>
+              <Button onClick={handleUserSave} className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600">保存</Button>
             </div>
           </div>
         </div>
@@ -453,7 +453,7 @@ export default function UserManagement() {
               onMouseDown={d2.startDrag}
             >
               <h3 className="text-white font-semibold">修改密码 - {passwordUser.real_name || passwordUser.name}</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="text-white/70 hover:text-white"><X className="w-5 h-5" /></button>
+              <Button variant="ghost" size="icon" onClick={() => setShowPasswordModal(false)} className="text-white/70 hover:text-white hover:bg-white/20"><X className="w-5 h-5" /></Button>
             </div>
             <div className="p-5">
               <label className="block text-xs text-gray-500 mb-1">新密码</label>
@@ -461,8 +461,8 @@ export default function UserManagement() {
                 className="w-full h-9 px-2 border border-gray-200 rounded text-sm" placeholder="输入新密码" />
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</button>
-              <button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-500 text-white rounded hover:bg-amber-600">确认修改</button>
+              <Button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</Button>
+              <Button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-500 text-white hover:bg-amber-600">确认修改</Button>
             </div>
           </div>
         </div>
@@ -489,8 +489,8 @@ export default function UserManagement() {
               <p className="text-sm text-gray-600">删除后用户将无法登录系统，确定要删除吗？</p>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</button>
-              <button onClick={handleDelete} className="h-8 px-4 text-sm bg-red-500 text-white rounded hover:bg-red-600">确认删除</button>
+              <Button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</Button>
+              <Button onClick={handleDelete} className="h-8 px-4 text-sm bg-red-500 text-white hover:bg-red-600">确认删除</Button>
             </div>
           </div>
         </div>

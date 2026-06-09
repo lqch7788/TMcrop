@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, NumberInput, TextArea, Label } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, NumberInput, TextArea, Label } from '@/components/ui';
 import type { Approval, BusinessLink } from '../../types/approval';
 
 interface MaterialApprovalFormProps {
@@ -191,18 +191,20 @@ export function MaterialApprovalForm({
 
       {/* 操作按钮 */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-        <button
+        <Button
+          variant="outline"
+          size="default"
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
         >
           取消
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="blue"
+          size="default"
           onClick={onSubmit}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
         >
           确认部分通过
-        </button>
+        </Button>
       </div>
     </div>
   );

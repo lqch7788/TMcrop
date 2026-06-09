@@ -6,6 +6,7 @@
 
 import { Download } from 'lucide-react';
 import { ReactNode } from 'react';
+import { Button } from '@/components/ui';
 
 interface ExportActionToolbarProps {
   /** 是否处于导出模式 */
@@ -45,12 +46,13 @@ export function ExportActionToolbar({
         {exportMode && showSelectAll && (
           <>
             <span className="text-sm text-gray-600">已选择 {selectedCount} 项</span>
-            <button
+            <Button
+              variant="link"
+              size="sm"
               onClick={onSelectAll}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
             >
               {selectedCount === totalCount ? '全不选' : '全选'}
-            </button>
+            </Button>
           </>
         )}
         {!exportMode && (
@@ -61,30 +63,33 @@ export function ExportActionToolbar({
         {!exportMode ? (
           <>
             {defaultActions}
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onExport}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               导出
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={onConfirmExport}
               disabled={selectedCount === 0}
-              className="h-9 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4" />
               确认导出{selectedCount > 0 ? ` (${selectedCount})` : ''}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onCancelExport}
-              className="h-9 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
             >
               取消选择
-            </button>
+            </Button>
           </>
         )}
       </div>
