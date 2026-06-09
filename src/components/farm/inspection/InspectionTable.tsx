@@ -215,7 +215,7 @@ export function InspectionTable({
                     onClick={() => onViewDetail(record)}
                     variant="link"
                     size="sm"
-                    className="font-medium"
+                    className="font-medium h-6"
                   >
                     {record.recordCode}
                   </Button>
@@ -426,6 +426,7 @@ export function InspectionTable({
                           onClick={() => onAcceptance?.(problem!)}
                           variant="default"
                           size="sm"
+                          className="h-6"
                         >
                           <CheckCircle className="w-4 h-4" /> 验收
                         </Button>
