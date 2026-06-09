@@ -5,10 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Gauge, Star, Target, TrendingUp, DollarSign,
-  CheckCircle2, Loader2
-} from 'lucide-react';
+import { CheckCircle2, DollarSign, Gauge, Loader2, RefreshCw, Star, Target, TrendingUp } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip
@@ -103,7 +100,7 @@ function EmptyView({ onRetry }: { onRetry: () => void }) {
       <div className="bg-white rounded-xl p-12 text-center">
         <Gauge className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <p className="text-gray-500 text-lg mb-4">暂无指标数据</p>
-        <Button onClick={onRetry} size="sm" className="bg-slate-600 hover:bg-slate-700">重新加载</Button>
+        <Button onClick={onRetry} size="sm" className="bg-slate-600 hover:bg-slate-700"><RefreshCw className="w-4 h-4" /> 重新加载</Button>
       </div>
     </div>
   );

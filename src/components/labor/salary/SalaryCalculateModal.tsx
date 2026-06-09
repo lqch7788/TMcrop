@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calculator } from 'lucide-react';
+import { Calculator, Check, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { NumberInput, Label } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -156,14 +156,14 @@ export function SalaryCalculateModal({
   const footer = (
     <div className="flex gap-3">
       <Button variant="outline" onClick={onClose} className="flex-1">
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={preview === 0}
         className="flex-1 bg-blue-600 hover:bg-blue-700"
       >
-        确认计算
+        <Check className="w-4 h-4" /> 确认计算
       </Button>
     </div>
   );

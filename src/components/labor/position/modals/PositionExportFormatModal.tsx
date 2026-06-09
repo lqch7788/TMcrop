@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -57,8 +57,8 @@ export function PositionExportFormatModal({
         ))}
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-        <Button variant="secondary" onClick={onClose}>取消</Button>
-        <Button onClick={onConfirm}>导出</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+        <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
       </div>
     </UnifiedModal>
   );

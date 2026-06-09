@@ -181,7 +181,7 @@ export function VarietyTree({
             onClick={handleAddCategory}
           >
             <FolderPlus className="w-4 h-4" />
-            新增类别
+            <Plus className="w-4 h-4" /> 新增类别
           </Button>
           <Button
             size="sm"
@@ -207,7 +207,7 @@ export function VarietyTree({
               className="bg-gray-500 hover:bg-gray-600 text-white flex-shrink-0"
               onClick={() => onTreeEditingChange?.(false)}
             >
-              退出编辑
+              <Edit2 className="w-4 h-4" /> 退出编辑
             </Button>
           )}
         </div>

@@ -2,6 +2,8 @@
  * 新增入库弹窗组件
  */
 import type { NewInboundForm, CategoryConfig } from '../../../types/materials.types';
+import { Save, Wand2, X } from 'lucide-react';
+
 import { Button } from '../../../../components/ui/button';
 
 interface AddInboundModalProps {
@@ -108,7 +110,7 @@ export default function AddInboundModal({
                 />
               </div>
               <Button variant="blue" onClick={onGenerateOrderCode} className="mt-6">
-                生成单号
+                <Wand2 className="w-4 h-4" /> 生成单号
               </Button>
             </div>
 
@@ -269,8 +271,8 @@ export default function AddInboundModal({
 
         {/* 底部 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button variant="blue" onClick={onSave}>保存</Button>
+          <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button variant="blue" onClick={onSave}><Save className="w-4 h-4" /> 保存</Button>
         </div>
       </div>
     </div>

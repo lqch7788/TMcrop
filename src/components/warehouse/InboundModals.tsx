@@ -1,4 +1,4 @@
-import { Package, Plus, Trash2, ChevronRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Download, Package, Plus, Save, Send, Trash2, X, XCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { InboundRecord, InboundMaterial } from './MaterialInboundTab';
 import { useUserStore } from '../../stores/useUserStore';
@@ -31,7 +31,7 @@ export function InboundDetailModal({ record, isOpen, onClose }: InboundDetailMod
       size="xxl"
       showFooter={true}
       footer={
-        <Button variant="secondary" onClick={onClose}>关闭</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 关闭</Button>
       }
       showMaximize={false}
       enableDrag={false}
@@ -201,16 +201,16 @@ export function InboundEditModal({ record, isOpen, onClose, onSave }: InboundEdi
         <>
           {record.status === 'completed' && (
             <Button variant="warning" onClick={() => showAlert('申请作废功能待实现')}>
-              申请作废
+              <XCircle className="w-4 h-4" /> 申请作废
             </Button>
           )}
           {record.status === 'pending' && (
             <Button variant="blue" onClick={handleSave}>
-              保存
+              <Save className="w-4 h-4" /> 保存
             </Button>
           )}
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </>
       }
@@ -544,14 +544,14 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
       footer={
         <>
           <Button variant="warning" onClick={() => setShowVoidModal(true)}>
-            申请作废
+            <XCircle className="w-4 h-4" /> 申请作废
           </Button>
           <Button variant="secondary" onClick={handleNext}>
             确认{currentIndex < records.length - 1 ? '(下一个)' : '(已最后一个)'}
             <ChevronRight className="w-4 h-4" />
           </Button>
           <Button variant="blue" onClick={handleSaveAll}>
-            保存全部（{records.length}个）
+            <Save className="w-4 h-4" /> 保存全部（{records.length}个）
           </Button>
         </>
       }
@@ -900,13 +900,13 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowVoidModal(false)}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="warning" onClick={() => {
               showAlert('作废申请已提交');
               setShowVoidModal(false);
             }}>
-              确认作废
+              <XCircle className="w-4 h-4" /> 确认作废
             </Button>
           </>
         }
@@ -1231,10 +1231,10 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={handleExport}>
-            确认导出
+            <Download className="w-4 h-4" /> 确认导出
           </Button>
         </>
       }
@@ -1395,10 +1395,10 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={handleSubmit}>
-            提交
+            <Send className="w-4 h-4" /> 提交
           </Button>
         </>
       }
@@ -1646,10 +1646,10 @@ export function InboundDeleteConfirmModal({ records, isOpen, onClose, onConfirm 
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            确认删除
+            <Trash2 className="w-4 h-4" /> 确认删除
           </Button>
         </>
       }

@@ -401,7 +401,7 @@ export default function AuthorityConfiguration() {
               activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <FolderTree className="w-4 h-4 mr-1 inline" /> 工序与菜单管理
+            <FolderTree className="w-4 h-4 mr-1 inline" /> <Settings className="w-4 h-4" /> 工序与菜单管理
           </Button>
         </div>
       </div>
@@ -531,10 +531,10 @@ export default function AuthorityConfiguration() {
               </div>
               <div className="flex items-center gap-2">
                 <Button onClick={grantAll} className="h-7 px-3 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
-                  全部授权
+                  <Shield className="w-4 h-4" /> 全部授权
                 </Button>
                 <Button onClick={revokeAll} className="h-7 px-3 text-xs bg-red-50 text-red-700 hover:bg-red-100">
-                  全部取消
+                  <X className="w-4 h-4" /> 全部取消
                 </Button>
                 {hasChanges && (
                   <Button onClick={saveAuthority} className="h-7 px-3 text-xs bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1">
@@ -604,11 +604,11 @@ export default function AuthorityConfiguration() {
             <div className="flex justify-end gap-2 px-5 pb-4">
               <Button onClick={() => setShowProcessModal(false)}
                 className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button onClick={handleProcessSave}
                 className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600">
-                保存
+                <Save className="w-4 h-4" /> 保存
               </Button>
             </div>
           </div>

@@ -175,7 +175,7 @@ export function ContractFormModal({
       {/* 操作按钮 */}
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button variant="outline" onClick={onCancel}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button variant="default" onClick={onSubmit}>
           {isEdit ? '保存' : '创建合同'}

@@ -6,7 +6,7 @@
  * - 头部支持鼠标拖动
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Send, AlertTriangle, FileText } from 'lucide-react';
+import { AlertTriangle, Edit, FileText, Plus, Send, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { TextArea } from '../../../../components/ui/TextArea';
@@ -283,7 +283,7 @@ export default function FormModal({ isOpen, notice, mode, onClose, onSave }: For
 
           {/* 底部按钮 */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-            <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
+            <Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
             <Button variant="default" size="sm" onClick={handleSubmit}>{mode === 'send' ? '确认发布' : '保存'}</Button>
           </div>
         </div>

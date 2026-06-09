@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Plus, Save, Trash2, X, XCircle } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -107,16 +107,16 @@ export const InboundEditModal: React.FC<InboundEditModalProps> = ({
         <div className="flex justify-end gap-3">
           {record.status === 'completed' && (
             <Button variant="warning" onClick={() => showAlert('申请作废功能待实现')}>
-              申请作废
+              <XCircle className="w-4 h-4" /> 申请作废
             </Button>
           )}
           {record.status === 'pending' && (
             <Button variant="blue" onClick={handleSave}>
-              保存
+              <Save className="w-4 h-4" /> 保存
             </Button>
           )}
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       }

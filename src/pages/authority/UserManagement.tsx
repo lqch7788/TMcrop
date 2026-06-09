@@ -5,9 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
-import {
-  Users, Plus, Edit2, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
-} from 'lucide-react';
+import { Edit2, Key, Plus, RefreshCw, RotateCcw, Save, Search, Shield, Trash2, UserCheck, UserX, Users, X } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
 import * as authorityService from '@/services/authorityService';
@@ -237,7 +235,7 @@ export default function UserManagement() {
           </select>
           <Button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
             className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700">
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button onClick={openAddModal}
             className="h-8 px-3 bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1">
@@ -430,8 +428,8 @@ export default function UserManagement() {
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">取消</Button>
-              <Button onClick={handleUserSave} className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600">保存</Button>
+              <Button onClick={() => setShowUserModal(false)} className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={handleUserSave} className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600"><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>
@@ -461,8 +459,8 @@ export default function UserManagement() {
                 className="w-full h-9 px-2 border border-gray-200 rounded text-sm" placeholder="输入新密码" />
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</Button>
-              <Button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-500 text-white hover:bg-amber-600">确认修改</Button>
+              <Button onClick={() => setShowPasswordModal(false)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={handlePasswordChange} className="h-8 px-4 text-sm bg-amber-500 text-white hover:bg-amber-600"><Edit2 className="w-4 h-4" /> 确认修改</Button>
             </div>
           </div>
         </div>
@@ -489,8 +487,8 @@ export default function UserManagement() {
               <p className="text-sm text-gray-600">删除后用户将无法登录系统，确定要删除吗？</p>
             </div>
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <Button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded">取消</Button>
-              <Button onClick={handleDelete} className="h-8 px-4 text-sm bg-red-500 text-white hover:bg-red-600">确认删除</Button>
+              <Button onClick={() => setDeleteTarget(null)} className="h-8 px-4 text-sm text-gray-500 border border-gray-200 rounded"><X className="w-4 h-4" /> 取消</Button>
+              <Button onClick={handleDelete} className="h-8 px-4 text-sm bg-red-500 text-white hover:bg-red-600"><Trash2 className="w-4 h-4" /> 确认删除</Button>
             </div>
           </div>
         </div>

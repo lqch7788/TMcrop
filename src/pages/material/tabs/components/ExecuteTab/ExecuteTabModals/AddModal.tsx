@@ -1,7 +1,7 @@
 // ExecuteAddModal 组件
 // 领料出库新增弹窗 — 从已有领料申请单中选择物料进行出库
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Search, Send, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -395,10 +395,10 @@ export function ExecuteAddModal({
   const renderFooter = () => (
     <div className="flex items-center gap-3">
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={onSave} disabled={materialPool.length === 0}>
-        提交出库
+        <Send className="w-4 h-4" /> 提交出库
       </Button>
     </div>
   );

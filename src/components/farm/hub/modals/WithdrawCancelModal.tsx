@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { RotateCcw, XCircle, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, RotateCcw, X, XCircle } from 'lucide-react';
 import { Task } from '../../../../types/task';
 
 // 深度输入框样式
@@ -131,7 +131,7 @@ export function WithdrawCancelModal({
               onClose();
             }}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant={isWithdraw ? 'blue' : 'destructive'}
@@ -139,7 +139,7 @@ export function WithdrawCancelModal({
             onClick={handleSubmit}
             disabled={!reason.trim()}
           >
-            确认{title}
+            <Check className="w-4 h-4" /> 确认{title}
           </Button>
         </div>
       </div>

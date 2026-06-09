@@ -119,7 +119,7 @@ export function ExecuteDetailModal({
           {/* 操作按钮 */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button variant="secondary" onClick={onClose}>
-              关闭
+              <X className="w-4 h-4" /> 关闭
             </Button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Save, Trash2 } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -214,10 +214,10 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
       {/* 操作按钮 */}
       <div className="flex justify-end gap-3 mt-6">
         <Button variant="outline" onClick={onNextRecord} className="whitespace-nowrap">
-          确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
+          <Check className="w-4 h-4" /> 确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
         </Button>
         <Button onClick={onSaveAll} className="whitespace-nowrap">
-          保存全部 ({editedCount} 个)
+          <Save className="w-4 h-4" /> 保存全部 ({editedCount} 个)
         </Button>
       </div>
     </UnifiedModal>

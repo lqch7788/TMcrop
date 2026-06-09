@@ -107,7 +107,7 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
   const footer = (
     <>
       <Button size="sm" variant="secondary" onClick={onClose}>
-        关闭
+        <X className="w-4 h-4" /> 关闭
       </Button>
       {record.status === '待审批' && (
         <>

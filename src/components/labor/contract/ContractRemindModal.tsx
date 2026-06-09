@@ -63,7 +63,7 @@ export function ContractRemindModal({ expiringContracts, open, onClose }: Contra
       )}
       <div className="flex justify-end mt-4 pt-4 border-t">
         <Button variant="secondary" onClick={onClose}>
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </UnifiedModal>

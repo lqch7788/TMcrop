@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Download } from 'lucide-react';
+import { BarChart3, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -137,7 +137,7 @@ export const StatMonthlyTable: React.FC<StatMonthlyTableProps> = ({
                   variant="secondary"
                   onClick={onExportCancel}
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             ) : (

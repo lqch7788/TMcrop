@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Target, Plus, Edit, Trash2, Search, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Edit, Plus, Search, Target, Trash2, X } from 'lucide-react';
 import { useDepartmentStore } from '../stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -149,7 +149,7 @@ function DepartmentModal({
           />
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -178,8 +178,8 @@ function DeleteConfirmModal({
           确定要删除部门 <span className="font-semibold text-gray-900">{itemName}</span> 吗？如果存在子部门，请先删除子部门。
         </p>
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
-          <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
         </div>
       </div>
     </Modal>

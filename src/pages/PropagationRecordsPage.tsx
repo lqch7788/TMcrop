@@ -279,7 +279,7 @@ export default function PropagationRecordsPage() {
             {exportMode ? (
               <>
                 <Button variant="secondary" onClick={handleExportCancel} disabled={loading}>
-                  取消导出
+                  <Download className="w-4 h-4" /> 取消导出
                 </Button>
                 <Button onClick={handleExportClickConfirm} disabled={loading}>
                   <Download className="w-4 h-4 mr-1" />

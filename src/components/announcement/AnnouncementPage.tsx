@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Megaphone, Plus, Edit2, Eye, Trash2, Target, DollarSign, TrendingUp, Search, RotateCcw } from 'lucide-react';
+import { DollarSign, Edit2, Eye, Megaphone, Plus, RotateCcw, Save, Search, Send, Target, Trash2, TrendingUp, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Modal } from '@/components/ui';
@@ -126,8 +126,8 @@ export function AnnouncementPage() {
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={handleCloseModal}>取消</Button>
-            <Button onClick={handleSubmit}>发布</Button>
+            <Button variant="secondary" onClick={handleCloseModal}><X className="w-4 h-4" /> 取消</Button>
+            <Button onClick={handleSubmit}><Send className="w-4 h-4" /> 发布</Button>
           </div>
         }
         showMaximize={true}
@@ -185,7 +185,7 @@ export function AnnouncementPage() {
         title="查看公告"
         size="lg"
         showFooter={true}
-        footer={<Button variant="secondary" onClick={() => setShowViewModal(false)}>关闭</Button>}
+        footer={<Button variant="secondary" onClick={() => setShowViewModal(false)}><X className="w-4 h-4" /> 关闭</Button>}
         showMaximize={true}
         enableDrag={true}
         enableResize={true}
@@ -210,7 +210,7 @@ export function AnnouncementPage() {
         title="公告详情"
         size="xl"
         showFooter={true}
-        footer={<Button variant="secondary" onClick={() => setShowDetailModal(false)}>关闭</Button>}
+        footer={<Button variant="secondary" onClick={() => setShowDetailModal(false)}><X className="w-4 h-4" /> 关闭</Button>}
         showMaximize={true}
         enableDrag={true}
         enableResize={true}
@@ -240,8 +240,8 @@ export function AnnouncementPage() {
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
-            <Button variant="blue" onClick={handleEditSubmit}>保存</Button>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button variant="blue" onClick={handleEditSubmit}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
         showMaximize={true}
@@ -272,8 +272,8 @@ export function AnnouncementPage() {
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>取消</Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>删除</Button>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}><Trash2 className="w-4 h-4" /> 删除</Button>
           </div>
         }
         showMaximize={false}

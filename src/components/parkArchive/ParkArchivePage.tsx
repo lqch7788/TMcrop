@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map as MapIcon, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MapPin, AlertTriangle, Maximize2, Minimize2, Settings } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Download, Eye, Map as MapIcon, MapPin, Maximize2, Minimize2, Search, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -626,7 +626,7 @@ export function ParkArchivePage() {
                               }`}>{item.statusText}</span>
                               <span className="text-xs text-gray-500 whitespace-nowrap truncate max-w-[60px]" title={item.manager}>{item.manager}</span>
                               <Button variant="ghost" size="sm" className="flex-shrink-0 text-xs whitespace-nowrap ml-auto" onClick={(e) => { e.stopPropagation(); handleViewDetail(item); }}>
-                                详情&gt;&gt;
+                                <Eye className="w-4 h-4" /> 详情&gt;&gt;
                               </Button>
                             </div>
                           ))}
@@ -648,8 +648,8 @@ export function ParkArchivePage() {
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setExportMode(false)}>取消</Button>
-                <Button variant="blue" size="sm" onClick={() => { showAlert('导出功能'); setExportMode(false); }}>确认导出</Button>
+                <Button variant="secondary" size="sm" onClick={() => setExportMode(false)}><X className="w-4 h-4" /> 取消</Button>
+                <Button variant="blue" size="sm" onClick={() => { showAlert('导出功能'); setExportMode(false); }}><Download className="w-4 h-4" /> 确认导出</Button>
               </div>
             </div>
           )}
@@ -665,7 +665,7 @@ export function ParkArchivePage() {
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" size="sm" onClick={() => setShowDetailModal(false)}>关闭</Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowDetailModal(false)}><X className="w-4 h-4" /> 关闭</Button>
             <Button size="sm" onClick={() => navigate('/dashboard', { state: { baseId: selectedField?.id, baseName: selectedField?.name } })}>进入{'>>>'}</Button>
           </div>
         }

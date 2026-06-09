@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload, Search, RotateCcw } from 'lucide-react';
+import { Coins, Download, Edit2, Package, Plus, RefreshCw, RotateCcw, Search, Trash2, Upload, Users, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
@@ -60,8 +60,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button onClick={onConfirm}>导出</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
     </>
   );
 
@@ -85,8 +85,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </>
   );
 

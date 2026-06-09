@@ -2,6 +2,8 @@
  * 工资预算汇总弹窗组件
  */
 import { Button } from '@/components/ui';
+import { X } from 'lucide-react';
+
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import ProTable from '../../../../components/common/table/ProTable';
 import { BudgetSummary } from '../../types/salaryBudget.types';
@@ -132,7 +134,7 @@ export function SummaryModal({
 
         <div className="flex justify-end mt-4">
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       </div>

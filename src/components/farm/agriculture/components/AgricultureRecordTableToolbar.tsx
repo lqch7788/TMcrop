@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Trash2, Download } from 'lucide-react';
+import { Download, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface AgricultureRecordTableToolbarProps {
@@ -45,7 +45,7 @@ export function AgricultureRecordTableToolbar({
               variant="secondary"
               onClick={onCancelBatchDelete}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         ) : (

@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui';
-import { AlertTriangle, AlertCircle, AlertOctagon, Clock, CheckCircle, User, Building } from 'lucide-react';
+import { AlertCircle, AlertOctagon, AlertTriangle, Building, CheckCircle, Clock, Tag, User } from 'lucide-react';
 import type { RiskAlert, AlertLevel } from './types';
 import { AlertLevelNames } from './types';
 
@@ -167,7 +167,7 @@ export function RiskAlertDetailModal({ alert, open, onClose, onHandle }: RiskAle
           </Button>
           {alert.status === 'pending' && (
             <Button onClick={handleSubmit} disabled={!remarks.trim()}>
-              标记已处理
+              <Tag className="w-4 h-4" /> 标记已处理
             </Button>
           )}
         </div>

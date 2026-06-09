@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { RotateCcw, XCircle, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, RotateCcw, X, XCircle } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -132,7 +132,7 @@ export function WithdrawCancelModal({
             variant="secondary"
             size="sm"
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             onClick={handleSubmit}
@@ -140,7 +140,7 @@ export function WithdrawCancelModal({
             variant={isWithdraw ? "blue" : "destructive"}
             size="sm"
           >
-            确认{title}
+            <Check className="w-4 h-4" /> 确认{title}
           </Button>
         </div>
       </div>

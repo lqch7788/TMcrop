@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Edit, Package, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -111,7 +111,7 @@ export function MaterialManagementPage() {
           </div>
           <div className="flex gap-2">
             <Button>
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
             <Button>
               <Search className="w-4 h-4" />

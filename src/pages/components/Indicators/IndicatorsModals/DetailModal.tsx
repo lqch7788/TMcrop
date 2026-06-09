@@ -2,7 +2,7 @@
  * 指标详情/分析/评价弹窗组件
  * 用于查看指标详情、达成分析、考核评价
  */
-import { Eye, Target, Award } from 'lucide-react';
+import { Award, Eye, Target, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Modal } from '../../../../components/ui/Modal';
 import type { Indicator, ModalType } from '../../../types/indicators.types';
@@ -35,7 +35,7 @@ export default function DetailModal({ isOpen, indicator, modalType, onClose }: D
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <Button size="sm" variant="secondary" onClick={onClose}>关闭</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 关闭</Button>
     </div>
   );
 

@@ -2,6 +2,8 @@
  * 工资预算详情弹窗组件
  */
 import { Label } from '@/components/ui';
+import { Check, XCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
@@ -114,10 +116,10 @@ export function DetailModal({
         {record.status === ApprovalStatus.PENDING && (
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
             <Button variant="destructive" onClick={() => { onReject(record); onClose(); }}>
-              驳回
+              <XCircle className="w-4 h-4" /> 驳回
             </Button>
             <Button variant="blue" onClick={() => { onApprove(record); onClose(); }}>
-              通过
+              <Check className="w-4 h-4" /> 通过
             </Button>
           </div>
         )}

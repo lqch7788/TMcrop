@@ -4,6 +4,8 @@
  */
 import React, { useState, useCallback, useEffect } from 'react';
 
+import { X } from 'lucide-react';
+
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '@/components/ui';
@@ -435,7 +437,7 @@ export function EditPesticideModal({ isOpen, record, onClose, onSaved }: EditPes
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

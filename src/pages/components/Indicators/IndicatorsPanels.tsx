@@ -87,7 +87,7 @@ export default function CategoryPanel({ categorySummary, indicators }: CategoryP
                   <td className="px-3 py-3 text-sm text-amber-600 font-mono">{ind.warning}</td>
                   <td className="px-3 py-3 text-sm text-gray-700 font-mono">{ind.weight}%</td>
                   <td className="px-3 py-3">
-                    <Button size="sm" variant="ghost" className="text-blue-600 text-sm">配置</Button>
+                    <Button size="sm" variant="ghost" className="text-blue-600 text-sm"><Settings className="w-4 h-4" /> 配置</Button>
                   </td>
                 </tr>
               ))}

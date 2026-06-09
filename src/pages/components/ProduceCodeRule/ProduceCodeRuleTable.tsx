@@ -126,7 +126,7 @@ const renderEditCell = (
   );
 };
 
-import { Save, X, Edit2 } from 'lucide-react';
+import { Edit2, Plus, Save, X } from 'lucide-react';
 
 export function ProduceCodeRuleTable({
   categories,
@@ -398,7 +398,7 @@ export function ProduceCodeRuleTable({
                                       size="sm"
                                       onClick={() => onAddSubVariety1(category.code, type.code, sub.code)}
                                     >
-                                      添加
+                                      <Plus className="w-4 h-4" /> 添加
                                     </Button>
                                     <Button
                                       variant="secondary"
@@ -409,7 +409,7 @@ export function ProduceCodeRuleTable({
                                         onNewSubVariety1NameChange('');
                                       }}
                                     >
-                                      取消
+                                      <X className="w-4 h-4" /> 取消
                                     </Button>
                                   </div>
                                 </td>
@@ -459,7 +459,7 @@ export function ProduceCodeRuleTable({
                                 size="sm"
                                 onClick={() => onAddSub(category.code, type.code)}
                               >
-                                添加
+                                <Plus className="w-4 h-4" /> 添加
                               </Button>
                               <Button
                                 variant="secondary"
@@ -470,7 +470,7 @@ export function ProduceCodeRuleTable({
                                   onNewSubNameChange('');
                                 }}
                               >
-                                取消
+                                <X className="w-4 h-4" /> 取消
                               </Button>
                             </div>
                           </td>
@@ -527,7 +527,7 @@ export function ProduceCodeRuleTable({
                           size="sm"
                           onClick={() => onAddType(category.code)}
                         >
-                          添加
+                          <Plus className="w-4 h-4" /> 添加
                         </Button>
                         <Button
                           variant="secondary"
@@ -538,7 +538,7 @@ export function ProduceCodeRuleTable({
                             onNewTypeNameChange('');
                           }}
                         >
-                          取消
+                          <X className="w-4 h-4" /> 取消
                         </Button>
                       </div>
                     </td>
@@ -585,7 +585,7 @@ export function ProduceCodeRuleTable({
               className="w-40 px-3 py-2 border border-gray-400 rounded-lg text-sm"
             />
             <Button variant="default" onClick={onAddCategory}>
-              添加
+              <Plus className="w-4 h-4" /> 添加
             </Button>
             <Button
               variant="secondary"
@@ -595,7 +595,7 @@ export function ProduceCodeRuleTable({
                 onNewCategoryNameChange('');
               }}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         </div>

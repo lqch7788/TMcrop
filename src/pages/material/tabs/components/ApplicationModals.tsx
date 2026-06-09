@@ -2,7 +2,7 @@
 // 领料申请单的编辑弹窗和新增弹窗
 // 使用统一的 Modal 组件，支持拖动、调整大小、最大化功能
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Save, Send, Trash2, Wand2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -303,15 +303,15 @@ export function EditModal({
   const renderFooter = () => (
     <div className="flex items-center gap-3">
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       {(record.status === '待审批' || record.status === '已审批') && (
         <Button variant="warning" onClick={onVoidApply}>
-          作废申请
+          <XCircle className="w-4 h-4" /> 作废申请
         </Button>
       )}
       <Button onClick={onSave}>
-        保存提交
+        <Save className="w-4 h-4" /> 保存提交
       </Button>
     </div>
   );
@@ -400,7 +400,7 @@ export function AddModal({
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Button variant="secondary" onClick={onGenerateCode}>
-            生成
+            <Wand2 className="w-4 h-4" /> 生成
           </Button>
         </div>
       </div>
@@ -639,10 +639,10 @@ export function AddModal({
   const renderFooter = () => (
     <div className="flex items-center gap-3">
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={onSave}>
-        提交申请
+        <Send className="w-4 h-4" /> 提交申请
       </Button>
     </div>
   );

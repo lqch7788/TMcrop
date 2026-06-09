@@ -4,7 +4,7 @@
  * 数据流：组件 → useTeamStore/useShiftStore → API → SQLite
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2, AlertTriangle, Clock, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronLeft, Clock, Edit2, Loader2, Plus, Save, Search, Trash2, Users, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Pagination } from '../components/ui/Pagination';
@@ -408,8 +408,8 @@ export default function TeamManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <Button variant="secondary" onClick={() => { setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' }); }}>取消</Button>
-              <Button variant="default" onClick={handleSaveTeam}>保存</Button>
+              <Button variant="secondary" onClick={() => { setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' }); }}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="default" onClick={handleSaveTeam}><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>
@@ -471,8 +471,8 @@ export default function TeamManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <Button variant="secondary" onClick={() => { setShowShiftModal(false); setEditingShift(null); setNewShift({ status: 'active', shiftType: '早班' }); }}>取消</Button>
-              <Button variant="default" onClick={handleSaveShift}>保存</Button>
+              <Button variant="secondary" onClick={() => { setShowShiftModal(false); setEditingShift(null); setNewShift({ status: 'active', shiftType: '早班' }); }}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="default" onClick={handleSaveShift}><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>

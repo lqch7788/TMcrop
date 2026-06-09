@@ -5,9 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, CheckCircle, Clock, AlertTriangle,
-  Bot, AlertCircle, RotateCw, Send,
-  ChevronDown, ChevronLeft, FileText, CircleCheck, TriangleAlert } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Bot, Calendar, CheckCircle, ChevronDown, ChevronLeft, CircleCheck, Clock, FileText, RefreshCw, RotateCw, Send, TriangleAlert } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -288,7 +286,7 @@ export default function DailyPlanningPage() {
             </div>
             <Button variant="secondary" size="sm" onClick={handleRefresh}>
               <RotateCw className="w-4 h-4" />
-              刷新数据
+              <RefreshCw className="w-4 h-4" /> 刷新数据
             </Button>
           </div>
           <Button size="sm" onClick={handleConfirmDispatch} disabled={!todayPlan.tasks.length}>

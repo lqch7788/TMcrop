@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { CalendarDays, CheckCircle, Clock, X, XCircle } from 'lucide-react';
 import { useLeave } from './hooks/useLeave';
 import { LeaveFilters } from './LeaveFilters';
 import { LeaveTable } from './LeaveTable';
@@ -338,7 +338,7 @@ export function LeavePage() {
             {batchDeleteMode && '（确认删除选中的记录）'}
           </div>
           <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
         </div>
       )}

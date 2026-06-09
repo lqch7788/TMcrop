@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
+
 import { LaborTable, Column } from '@/components/common/labor/LaborTable';
 import { StaffSkill } from './types';
 import { Badge } from '@/components/ui';
@@ -186,14 +188,14 @@ export function SkillTable({
             size="sm"
             onClick={() => onViewDetail(row)}
           >
-            详情
+            <Eye className="w-4 h-4" /> 详情
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onEdit(row)}
           >
-            编辑
+            <Edit2 className="w-4 h-4" /> 编辑
           </Button>
           {onDelete && (
             <Button
@@ -201,7 +203,7 @@ export function SkillTable({
               size="sm"
               onClick={() => onDelete(row)}
             >
-              删除
+              <Trash2 className="w-4 h-4" /> 删除
             </Button>
           )}
         </div>
@@ -226,14 +228,14 @@ export function SkillTable({
                       onClick={onBatchEditClick}
                       disabled={selectedRows.length === 0}
                     >
-                      批量编辑
+                      <Edit2 className="w-4 h-4" /> 批量编辑
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={onCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -245,14 +247,14 @@ export function SkillTable({
                       onClick={onBatchDeleteClick}
                       disabled={selectedRows.length === 0}
                     >
-                      确认删除
+                      <Trash2 className="w-4 h-4" /> 确认删除
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={onCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -263,14 +265,14 @@ export function SkillTable({
                       onClick={onBatchExportClick}
                       disabled={selectedRows.length === 0}
                     >
-                      确认导出
+                      <Download className="w-4 h-4" /> 确认导出
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={onCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -282,7 +284,7 @@ export function SkillTable({
                     size="sm"
                     onClick={onAddClick}
                   >
-                    新增
+                    <Plus className="w-4 h-4" /> 新增
                   </Button>
                 )}
                 <Button
@@ -290,7 +292,7 @@ export function SkillTable({
                   variant="blue"
                   onClick={onBatchEditClick}
                 >
-                  编辑
+                  <Edit2 className="w-4 h-4" /> 编辑
                 </Button>
                 {onBatchDeleteClick && (
                   <Button
@@ -298,7 +300,7 @@ export function SkillTable({
                     variant="destructive"
                     onClick={onBatchDeleteClick}
                   >
-                    删除
+                    <Trash2 className="w-4 h-4" /> 删除
                   </Button>
                 )}
                 {onBatchExportClick && (
@@ -306,7 +308,7 @@ export function SkillTable({
                     size="sm"
                     onClick={onBatchExportClick}
                   >
-                    导出
+                    <Download className="w-4 h-4" /> 导出
                   </Button>
                 )}
               </>
@@ -395,14 +397,14 @@ export function SkillTable({
                           size="sm"
                           onClick={() => onViewDetail(skill)}
                         >
-                          详情
+                          <Eye className="w-4 h-4" /> 详情
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onEdit(skill)}
                         >
-                          编辑
+                          <Edit2 className="w-4 h-4" /> 编辑
                         </Button>
                         {onDelete && (
                           <Button
@@ -410,7 +412,7 @@ export function SkillTable({
                             size="sm"
                             onClick={() => onDelete(skill)}
                           >
-                            删除
+                            <Trash2 className="w-4 h-4" /> 删除
                           </Button>
                         )}
                       </div>

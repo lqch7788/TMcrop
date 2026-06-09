@@ -17,10 +17,7 @@ import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../../types/dispatch';
-import {
-  AlertTriangle, List, X, Clock, User, MapPin, Package, Camera, Mic, Sparkles, UserPlus,
-  CheckCircle, Plus, Trash2, Download, Send, FileText
-} from 'lucide-react';
+import { AlertTriangle, Camera, Check, CheckCircle, Clock, Download, Eye, FileText, Hand, List, MapPin, Mic, Package, Plus, Send, Sparkles, Trash2, User, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label, DatePicker, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -636,14 +633,14 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               setDispatchMode('ai_assisted');
             }}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant={selectedWorkers.length > 0 ? 'blue' : 'secondary'}
             onClick={dispatchModal.batchMode ? handleBatchDispatch : handleDispatch}
             disabled={selectedWorkers.length === 0}
           >
-            确认分派
+            <Check className="w-4 h-4" /> 确认分派
           </Button>
         </div>
       }
@@ -1090,7 +1087,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               variant="secondary"
               onClick={() => setDetailModal({ isOpen: false, problem: null })}
             >
-              关闭
+              <X className="w-4 h-4" /> 关闭
             </Button>
           </div>
         </div>
@@ -1262,10 +1259,10 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
                 </p>
                 <div className="flex gap-2">
                   <Button variant="default" size="sm">
-                    查看AI推荐
+                    <Eye className="w-4 h-4" /> 查看AI推荐
                   </Button>
                   <Button variant="ghost" size="sm">
-                    手动选择执行人
+                    <Hand className="w-4 h-4" /> 手动选择执行人
                   </Button>
                 </div>
               </div>

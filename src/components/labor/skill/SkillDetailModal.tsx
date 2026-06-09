@@ -1,5 +1,5 @@
 import React from 'react';
-import { XCircle, Award, Calendar, Clock, BookOpen } from 'lucide-react';
+import { Award, BookOpen, Calendar, Clock, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { StaffSkill, TrainingRecord } from './types';
 import { Badge } from '@/components/ui';
@@ -169,7 +169,7 @@ export function SkillDetailModal({ skill, trainingRecords, onClose }: SkillDetai
 
   const footer = (
     <Button onClick={onClose} className="text-gray-700">
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

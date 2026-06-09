@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Coins } from 'lucide-react';
+import { Check, Coins, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '@/components/ui';
 import type { PieceRate, PieceworkFormData } from './types';
@@ -223,10 +223,10 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
   const footer = (
     <>
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={handleSubmit}>
-        确认
+        <Check className="w-4 h-4" /> 确认
       </Button>
     </>
   );

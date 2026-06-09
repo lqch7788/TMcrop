@@ -1,7 +1,7 @@
 /**
  * 加班申请页面 - 筛选栏组件
  */
-import { Search, RefreshCw, Plus, Download } from 'lucide-react';
+import { Check, Download, Plus, RefreshCw, Search, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { OvertimeFilters, BatchMode } from './types/overtimePage.types';
@@ -111,10 +111,10 @@ export function OvertimePageFilters({
         {batchMode === 'none' && (
           <>
             <Button variant="blue" onClick={() => onBatchModeChange('approve')}>
-              批量通过
+              <Check className="w-4 h-4" /> 批量通过
             </Button>
             <Button variant="destructive" onClick={() => onBatchModeChange('reject')}>
-              批量驳回
+              <XCircle className="w-4 h-4" /> 批量驳回
             </Button>
             <Button variant="outline" onClick={() => onBatchModeChange('export')} className="gap-1">
               <Download className="w-4 h-4" />
@@ -131,7 +131,7 @@ export function OvertimePageFilters({
                 onClick={onBatchApprove}
                 disabled={selectedRowKeys.length === 0}
               >
-                确认通过 ({selectedRowKeys.length})
+                <Check className="w-4 h-4" /> 确认通过 ({selectedRowKeys.length})
               </Button>
             )}
             {batchMode === 'reject' && (
@@ -140,16 +140,16 @@ export function OvertimePageFilters({
                 onClick={onBatchReject}
                 disabled={selectedRowKeys.length === 0}
               >
-                确认驳回 ({selectedRowKeys.length})
+                <Check className="w-4 h-4" /> 确认驳回 ({selectedRowKeys.length})
               </Button>
             )}
             {batchMode === 'export' && (
               <Button variant="outline" onClick={onExport}>
-                确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                <Download className="w-4 h-4" /> 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
               </Button>
             )}
             <Button variant="secondary" onClick={onCancelBatch}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         )}

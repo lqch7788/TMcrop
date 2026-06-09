@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { RotateCw } from 'lucide-react';
+import { RotateCcw, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -119,7 +119,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
             onClick={onReset}
           >
             <RotateCw className="w-4 h-4" />
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>
       </div>

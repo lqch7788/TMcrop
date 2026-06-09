@@ -1,4 +1,4 @@
-import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCcw } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, Edit2, FileText, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
@@ -50,8 +50,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         ))}
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-        <Button variant="secondary" onClick={onClose}>取消</Button>
-        <Button onClick={onConfirm}>导出</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+        <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
       </div>
     </UnifiedModal>
   );
@@ -81,8 +81,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
         <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
       </div>
       <div className="flex gap-3">
-        <Button variant="secondary" onClick={onClose}>取消</Button>
-        <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+        <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
       </div>
     </UnifiedModal>
   );
@@ -486,7 +486,7 @@ export function ContractTable() {
                       variant="secondary"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -506,7 +506,7 @@ export function ContractTable() {
                       variant="secondary"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -517,14 +517,14 @@ export function ContractTable() {
                       onClick={handleConfirmExport}
                       disabled={selectedRows.length === 0}
                     >
-                      确认导出
+                      <Download className="w-4 h-4" /> 确认导出
                     </Button>
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={handleCancelExport}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -544,7 +544,7 @@ export function ContractTable() {
                   删除
                 </Button>
                 <Button size="sm" onClick={handleExportClick}>
-                  导出
+                  <Download className="w-4 h-4" /> 导出
                 </Button>
               </>
             )}
@@ -613,7 +613,7 @@ export function ContractTable() {
                           variant="ghost"
                           onClick={() => openEditModal(contract)}
                         >
-                          编辑
+                          <Edit2 className="w-4 h-4" /> 编辑
                         </Button>
                         {computedStatus !== '已终止' && computedStatus !== '已到期' && (
                           <Button
@@ -629,7 +629,7 @@ export function ContractTable() {
                           variant="ghost"
                           onClick={() => handleDelete(contract)}
                         >
-                          删除
+                          <Trash2 className="w-4 h-4" /> 删除
                         </Button>
                       </div>
                     </TableCell>

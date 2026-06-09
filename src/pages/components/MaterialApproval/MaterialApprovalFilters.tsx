@@ -1,6 +1,6 @@
 // MaterialApprovalFilters 组件
 // 物料审批页面的筛选区域组件
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -139,7 +139,7 @@ export function MaterialApprovalFilters({
         {/* 按钮区域 */}
         <div className="flex gap-2">
           <Button variant="default" className="h-8 px-4">
-            搜索
+            <Search className="w-4 h-4" /> 搜索
           </Button>
           <Button
             onClick={onReset}

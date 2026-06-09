@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, List, RotateCcw, Sparkles, Upload } from 'lucide-react';
 import { Button, Label } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -161,7 +161,7 @@ export function FilterToolbar({
             onClick={onResetFilters}
             className="shadow-sm"
           >
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           {canImport && (
             <Button

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, Upload, Award, Edit2, Trash2, Users, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { AlertCircle, Award, CheckCircle, Download, Edit2, Plus, Trash2, Upload, Users, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSkill } from './hooks/useSkill';
@@ -31,8 +31,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
 
   const footer = (
     <div className="flex justify-end gap-3">
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button onClick={onConfirm}>导出</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
     </div>
   );
 
@@ -80,8 +80,8 @@ interface DeleteWarningModalProps {
 function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: DeleteWarningModalProps) {
   const footer = (
     <div className="flex gap-3">
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </div>
   );
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Check } from 'lucide-react';
+import { Check, Clock, Edit2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ShiftConfig, ShiftType } from './types';
 import { Label } from '@/components/ui';
@@ -75,14 +75,14 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                       size="sm"
                       onClick={handleCancel}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                     <Button
                       variant="default"
                       size="sm"
                       onClick={handleSave}
                     >
-                      保存
+                      <Save className="w-4 h-4" /> 保存
                     </Button>
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export function ShiftEditor({ shiftConfigs, onUpdateConfig, onClose }: ShiftEdit
                   onClick={() => handleStartEdit(config.name)}
                   className="text-blue-600 hover:bg-blue-50"
                 >
-                  编辑
+                  <Edit2 className="w-4 h-4" /> 编辑
                 </Button>
               </div>
             )}

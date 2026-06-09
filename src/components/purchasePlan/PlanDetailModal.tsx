@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui';
-import { Clock, Edit2 } from 'lucide-react';
+import { Clock, Edit2, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { PurchasePlan } from '@/types/purchase';
 import {
@@ -151,7 +151,7 @@ export function PlanDetailModal({
               {saving ? '保存中…' : '保存'}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setEditingExecStatus(false)} disabled={saving}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : (
@@ -228,7 +228,7 @@ export function PlanDetailModal({
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button variant="secondary" size="sm" onClick={onClose}>
-        关闭
+        <X className="w-4 h-4" /> 关闭
       </Button>
     </div>
   );

@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useState } from 'react';
-import { Bell, Check, CheckCheck, Clock, UserPlus, AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Bell, Check, CheckCheck, Clock, Info, Plus, Settings, UserPlus } from 'lucide-react';
 import { Button, UnifiedModal } from '@/components/ui';
 import { useNotification, useDelegation } from '../../hooks/useApprovalNotification';
 import {
@@ -85,7 +85,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          通知消息
+          <Bell className="w-4 h-4" /> 通知消息
         </Button>
         <Button
           variant="ghost"
@@ -97,7 +97,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          委托管理
+          <Settings className="w-4 h-4" /> 委托管理
           {activeDelegations.length > 0 && (
             <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">
               {activeDelegations.length}
@@ -226,7 +226,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
 
             {/* 创建委托按钮 */}
             <Button variant="blue" className="w-full mt-4">
-              创建新委托
+              <Plus className="w-4 h-4" /> 创建新委托
             </Button>
           </div>
         )}

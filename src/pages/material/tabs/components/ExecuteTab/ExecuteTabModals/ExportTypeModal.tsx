@@ -1,6 +1,6 @@
 // ExecuteTabExportTypeModal 组件
 // 导出类型选择弹窗
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ExportTypeModalProps {
@@ -85,10 +85,10 @@ export function ExportTypeModal({
         {/* 底部 */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={onConfirm}>
-            确认导出
+            <Download className="w-4 h-4" /> 确认导出
           </Button>
         </div>
       </div>

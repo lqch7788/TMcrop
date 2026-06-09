@@ -5,7 +5,7 @@ import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Scan, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Camera, ChevronDown, ChevronUp, Scan, Wand2, X } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
 
 // 深度输入框样式
@@ -163,7 +163,7 @@ export function CreateInspectionModal({
                   size="sm"
                   onClick={() => updateField('recordCode', generateRecordCode())}
                 >
-                  生成
+                  <Wand2 className="w-4 h-4" /> 生成
                 </Button>
               </div>
             </FormField>

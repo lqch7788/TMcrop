@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, ChevronLeft, ChevronRight, Plus, Edit2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Edit2, Filter, Plus, Search, Trash2, X } from 'lucide-react';
 import type { ScheduleRecord, ShiftConfig } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -167,7 +167,7 @@ export function ScheduleTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -187,7 +187,7 @@ export function ScheduleTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -206,7 +206,7 @@ export function ScheduleTable({
                     variant="secondary"
                     onClick={onBatchExportClick}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

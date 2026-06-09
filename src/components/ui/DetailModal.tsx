@@ -5,6 +5,8 @@
 
 import React from 'react';
 
+import { X } from 'lucide-react';
+
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { Modal } from './Modal';
@@ -63,7 +65,7 @@ export function DetailModal({
   const defaultFooter = (
     <div className="flex items-center justify-end gap-3">
       <Button variant="secondary" size="sm" onClick={onClose}>
-        关闭
+        <X className="w-4 h-4" /> 关闭
       </Button>
     </div>
   );

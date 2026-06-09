@@ -126,7 +126,7 @@ function ThresholdModal({
           </Select>
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -227,7 +227,7 @@ function LevelConfigModal({
           />
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -346,7 +346,7 @@ function TypeRuleModal({
           <Input value={remark} onChange={(e) => setRemark(e.target.value)} />
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>
             {saving ? '保存中...' : '保存'}
           </Button>
@@ -376,8 +376,8 @@ function DeleteConfirmModal({
       <div className="space-y-4">
         <p className="text-gray-600">{message}</p>
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
-          <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
         </div>
       </div>
     </Modal>

@@ -1,7 +1,7 @@
 // ExecuteBatchEditModal 组件
 // 批量编辑出库弹窗 — 参照领料申请单 BatchEditModal，支持记录选择、字段编辑、物料表格编辑
 import { useState, useMemo, useCallback } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -223,14 +223,14 @@ export function ExecuteBatchEditModal({
           </Button>
         )}
         <Button variant="secondary" onClick={onClose} className="whitespace-nowrap">
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           onClick={() => onSaveAll(batchEditedRecords)}
           disabled={editedCount === 0}
           className="whitespace-nowrap"
         >
-          保存全部 ({editedCount} 条)
+          <Save className="w-4 h-4" /> 保存全部 ({editedCount} 条)
         </Button>
       </div>
     </UnifiedModal>

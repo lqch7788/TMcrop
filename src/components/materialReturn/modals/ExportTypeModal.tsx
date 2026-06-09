@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ExportTypeModalProps {
@@ -62,10 +62,10 @@ export function ExportTypeModal({
           {/* 底部按钮 */}
           <div className="flex gap-3 mt-6">
             <Button variant="secondary" onClick={onClose}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button onClick={onConfirm}>
-              确认导出
+              <Download className="w-4 h-4" /> 确认导出
             </Button>
           </div>
         </div>

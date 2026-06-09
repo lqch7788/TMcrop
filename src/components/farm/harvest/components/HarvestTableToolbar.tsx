@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface HarvestTableToolbarProps {
@@ -71,7 +71,7 @@ export function HarvestTableToolbar({
                 variant="secondary"
                 onClick={onCancelExport}
               >
-                取消选择
+                <X className="w-4 h-4" /> 取消选择
               </Button>
             </>
           )}
@@ -90,7 +90,7 @@ export function HarvestTableToolbar({
                 variant="secondary"
                 onClick={onCancelBatchEdit}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}
@@ -109,7 +109,7 @@ export function HarvestTableToolbar({
                 variant="secondary"
                 onClick={onCancelBatchDelete}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}

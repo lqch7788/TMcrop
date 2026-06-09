@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Search, Eye, Download, AlertTriangle, ArrowLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronRight, ClipboardList, Download, Eye, FileText, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
@@ -362,12 +362,12 @@ export default function AuditLog() {
             className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Button size="sm" onClick={fetchData}>
-            刷新
+            <RefreshCw className="w-4 h-4" /> 刷新
           </Button>
           {exportMode ? (
             <>
               <Button size="sm" variant="outline" onClick={() => { setExportMode(false); setSelectedIds([]); }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button size="sm" onClick={handleExportClick}>
                 <Download className="w-4 h-4" />

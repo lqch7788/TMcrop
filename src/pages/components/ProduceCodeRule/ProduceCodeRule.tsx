@@ -3,7 +3,7 @@
  * 编码结构：类别(2位) + 类型(2位) + 品种(2位) + 子品种(3位) + 详细品种(2位) = 11位
  */
 import React from 'react';
-import { Hash, Plus, Save, Edit2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Edit2, Hash, Plus, Save, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { useProduceCodeRule } from './hooks/useProduceCodeRule';
@@ -93,7 +93,7 @@ export default function ProduceCodeRule() {
             ) : (
               <>
                 <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex items-center gap-2">
-                  取消修改
+                  <Edit2 className="w-4 h-4" /> 取消修改
                 </Button>
                 <Button variant="default" onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2">
                   <Save className="w-4 h-4" />
@@ -237,10 +237,10 @@ export default function ProduceCodeRule() {
             </div>
             <div className="flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setShowSaveConfirm(false)}>
-                取消保存
+                <X className="w-4 h-4" /> 取消保存
               </Button>
               <Button variant="destructive" onClick={() => { setShowSaveConfirm(false); setIsEditing(false); handleSave(); }}>
-                确认保存
+                <Check className="w-4 h-4" /> 确认保存
               </Button>
             </div>
           </div>

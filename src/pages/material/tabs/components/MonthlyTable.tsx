@@ -1,6 +1,6 @@
 // MonthlyTable 组件 - 月度汇总表格
 // 按物料分类统计的月度汇总表格（折叠模式）
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import {
@@ -94,7 +94,7 @@ export function MonthlyTable({
                 确认导出
               </Button>
               <Button size="sm" variant="secondary" onClick={onCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (

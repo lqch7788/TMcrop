@@ -1,4 +1,4 @@
-import { Eye, Calculator, Download, ChevronLeft, ChevronRight, Edit2, Trash2, Plus } from 'lucide-react';
+import { Calculator, ChevronLeft, ChevronRight, Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import type { SalaryTableProps } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -76,7 +76,7 @@ export function SalaryTable({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -96,7 +96,7 @@ export function SalaryTable({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -115,7 +115,7 @@ export function SalaryTable({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

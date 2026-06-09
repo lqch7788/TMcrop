@@ -5,7 +5,7 @@
  * 表格显示：编码、名称、类型、适用作物、描述、操作
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bug, Plus, Search, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Bug, Plus, RotateCcw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -196,10 +196,10 @@ export default function PestDiseaseDictPage() {
               </select>
             </div>
             <Button variant="default" size="sm" onClick={handleSearch}>
-              搜索
+              <Search className="w-4 h-4" /> 搜索
             </Button>
             <Button variant="outline" size="sm" onClick={handleReset}>
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           </div>
           <Button size="sm" onClick={handleAdd}>

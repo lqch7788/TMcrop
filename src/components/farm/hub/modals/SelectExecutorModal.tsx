@@ -6,7 +6,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
-import { UserPlus, Users, Clock, AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Clock, Sparkles, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../hooks/useTasks';
 import { useWorkerStore } from '../../../../stores';
 import { AIRecommendationPanel } from '../../../dispatch/AIRecommendationPanel';
@@ -353,7 +353,7 @@ export function SelectExecutorModal({
             size="sm"
             onClick={handleClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="default"

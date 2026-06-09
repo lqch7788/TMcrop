@@ -3,7 +3,7 @@
  * 支持 CSV / Excel / Word 三种格式
  */
 import React, { useState } from 'react';
-import { X, FileText, FileSpreadsheet, File } from 'lucide-react';
+import { Download, File, FileSpreadsheet, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface FertilizerExportModalProps {
@@ -56,10 +56,10 @@ export default function FertilizerExportModal({ isOpen, onClose, onConfirm, sele
 
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
           <Button variant="secondary" size="sm" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="default" size="sm" onClick={() => onConfirm(format)}>
-            确认导出
+            <Download className="w-4 h-4" /> 确认导出
           </Button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Plus, Download, Edit, Trash2 } from 'lucide-react';
+import { Download, Edit, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { useMaterialReturn } from './hooks/useMaterialReturn';
 import { Button } from '@/components/ui';
 import { MaterialReturnHeader } from './MaterialReturnHeader';
@@ -73,7 +73,7 @@ export function MaterialReturnPage() {
                 variant="secondary"
                 onClick={hook.handleCancelExport}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (
@@ -96,7 +96,7 @@ export function MaterialReturnPage() {
                     onClick={() => { hook.setBatchEditMode(true); hook.setShowEditWarning(true); }}
                   >
                     <Edit className="w-4 h-4" />
-                    编辑
+                    <Edit2 className="w-4 h-4" /> 编辑
                   </Button>
                   <Button
                     size="sm"
@@ -117,14 +117,14 @@ export function MaterialReturnPage() {
                     variant="destructive"
                     onClick={() => hook.setShowBatchDeleteConfirm(true)}
                   >
-                    确认删除
+                    <Trash2 className="w-4 h-4" /> 确认删除
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => { hook.setDeleteMode(false); hook.setSelectedRows([]); }}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </div>
               )}
@@ -136,14 +136,14 @@ export function MaterialReturnPage() {
                     size="sm"
                     onClick={hook.handleBatchEditWarning}
                   >
-                    确认编辑
+                    <Edit2 className="w-4 h-4" /> 确认编辑
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => { hook.setBatchEditMode(false); hook.setSelectedRows([]); }}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </div>
               )}

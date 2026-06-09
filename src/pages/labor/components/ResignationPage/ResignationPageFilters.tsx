@@ -1,7 +1,7 @@
 /**
  * 离职申请页面筛选器组件
  */
-import { Search, RotateCw } from 'lucide-react';
+import { RotateCcw, RotateCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { ResignationFilters as ResignationFiltersType } from '../../types/resignationPage.types';
 import { RESIGNATION_TYPE_OPTIONS, RESIGNATION_STATUS_OPTIONS } from '../../types/resignationPage.types';
@@ -63,7 +63,7 @@ export function ResignationPageFilters({
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={onResetFilters}>
             <RotateCw className="w-4 h-4" />
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button size="sm" variant="default" onClick={onSearch}>
             <Search className="w-4 h-4" />

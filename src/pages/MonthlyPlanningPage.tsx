@@ -5,22 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Calendar,
-  FileText,
-  ShoppingCart,
-  Users,
-  DollarSign,
-  RotateCw,
-  Download,
-  CheckCircle,
-  AlertTriangle,
-  Zap,
-  ChevronLeft,
-  Timer,
-  Banknote,
-  ClipboardList,
-} from 'lucide-react';
+import { AlertTriangle, Banknote, Calendar, CheckCircle, ChevronLeft, ClipboardList, DollarSign, Download, FileText, RefreshCw, RotateCw, ShoppingCart, Timer, Users, X, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -436,7 +421,7 @@ export default function MonthlyPlanningPage() {
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={handleRefresh}>
               <RotateCw className="w-4 h-4" />
-              刷新数据
+              <RefreshCw className="w-4 h-4" /> 刷新数据
             </Button>
             <Button variant="default" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4" />
@@ -458,7 +443,7 @@ export default function MonthlyPlanningPage() {
           </div>
           {selectedBatches.length > 0 && (
             <Button variant="link" size="sm" onClick={() => setSelectedBatches([])} className="text-gray-500 hover:text-red-600 h-auto p-0">
-              清除选择
+              <X className="w-4 h-4" /> 清除选择
             </Button>
           )}
         </div>

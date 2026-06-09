@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { type Task, type TaskRecord } from '../../../hooks/useTasks';
-import { X, FileText, User, Camera, MapPin, Mic, Download } from 'lucide-react';
+import { Camera, CheckCircle, Download, FileText, MapPin, Mic, User, X } from 'lucide-react';
 import { Button, Label, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { STATUS_MAP, PRIORITY_MAP, TASK_TYPES } from '../taskDispatch/constants/taskDispatchConstants';
 import { TASK_ACTION_CONFIG } from '../../../config/taskConfig';
@@ -507,14 +507,14 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
           {canVerify && (
             <Button
               variant="default"
               onClick={() => onVerify?.(taskId)}
             >
-              验收
+              <CheckCircle className="w-4 h-4" /> 验收
             </Button>
           )}
         </div>

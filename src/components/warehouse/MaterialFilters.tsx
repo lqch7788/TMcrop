@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { RotateCcw } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -207,7 +209,7 @@ export function MaterialFilters({
               showLowStock: false,
             })}
           >
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>
       </div>

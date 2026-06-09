@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -36,10 +36,10 @@ export const InboundDeleteConfirmModal: React.FC<InboundDeleteConfirmModalProps>
       footer={
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="destructive" onClick={onConfirm} className="flex-1">
-            确认删除
+            <Trash2 className="w-4 h-4" /> 确认删除
           </Button>
         </div>
       }

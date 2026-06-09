@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tags, Plus, Search, Eye, Edit } from 'lucide-react';
+import { Edit, Eye, Plus, RotateCcw, Search, Tags } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -68,7 +68,7 @@ export function MaterialCategoryPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary">重置</Button>
+            <Button variant="secondary"><RotateCcw className="w-4 h-4" /> 重置</Button>
             <Button>
               <Search className="w-4 h-4" />
               搜索

@@ -3,7 +3,7 @@
  * 架构：usePositionStore (Zustand Store) 替代 React Query
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Edit2, Eye, ChevronLeft, ChevronRight, Trash2, Download, ClipboardCheck, Search, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardCheck, Download, Edit2, Eye, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
@@ -503,7 +503,7 @@ export function PersonnelManagementPage() {
                       size="sm"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -523,7 +523,7 @@ export function PersonnelManagementPage() {
                       size="sm"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -542,7 +542,7 @@ export function PersonnelManagementPage() {
                       size="sm"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}

@@ -4,7 +4,7 @@
  * 所有页面导出功能统一使用此组件
  */
 
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ExportToolbarProps {
@@ -86,7 +86,7 @@ export function ExportToolbar({
               size="sm"
               onClick={onCancelExport}
             >
-              取消选择
+              <X className="w-4 h-4" /> 取消选择
             </Button>
           </>
         )}

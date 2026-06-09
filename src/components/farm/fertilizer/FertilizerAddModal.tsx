@@ -743,7 +743,7 @@ export function FertilizerAddModal({ isOpen, onClose, onSaved }: FertilizerAddMo
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button, DeleteConfirmModal } from '@/components/ui';
-import { Sprout, Trash2 } from 'lucide-react';
+import { Sprout, Trash2, X } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
@@ -327,7 +327,7 @@ export default function FertilizerPage() {
             size="sm"
             onClick={() => { setOperationMode('normal'); setSelectedIds([]); }}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
         </div>
       )}

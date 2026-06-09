@@ -1,10 +1,7 @@
 // ExecuteTabTable 组件
 // 领料出库页面的表格组件
 import React from 'react';
-import {
-  Download, Plus, Edit, Trash2, ChevronDown, ChevronRight as ChevronRightIcon,
-  Eye
-} from 'lucide-react';
+import { ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -100,27 +97,27 @@ export function ExecuteTabTable({
               确认导出
             </Button>
             <Button variant="secondary" size="sm" onClick={onCancelExport}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : batchEditMode === 'edit' ? (
           /* 批量编辑模式 */
           <div className="flex gap-2">
             <Button variant="blue" size="sm" onClick={onBatchEditConfirm}>
-              确认编辑
+              <Edit2 className="w-4 h-4" /> 确认编辑
             </Button>
             <Button variant="secondary" size="sm" onClick={onBatchCancel}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : batchEditMode === 'delete' ? (
           /* 批量删除模式 */
           <div className="flex gap-2">
             <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
-              确认删除
+              <Trash2 className="w-4 h-4" /> 确认删除
             </Button>
             <Button variant="secondary" size="sm" onClick={onBatchCancel}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : (
@@ -132,7 +129,7 @@ export function ExecuteTabTable({
             </Button>
             <Button variant="blue" size="sm" onClick={onBatchEditClick}>
               <Edit className="w-4 h-4" />
-              编辑
+              <Edit2 className="w-4 h-4" /> 编辑
             </Button>
             <Button variant="destructive" size="sm" onClick={onBatchDeleteClick}>
               <Trash2 className="w-4 h-4" />

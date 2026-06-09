@@ -1,4 +1,6 @@
 import { Material } from './MaterialFilters';
+import { Check, Save } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -225,10 +227,10 @@ export function MaterialBatchEditModal({
 
       <div className="flex gap-3 mt-6">
         <Button size="sm" variant="outline" className="flex-1" onClick={onNext}>
-          确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
+          <Check className="w-4 h-4" /> 确认 {currentBatchEditIndex + 1 < selectedRows.length ? '(下一个)' : '(已最后一个)'}
         </Button>
         <Button size="sm" variant="blue" className="flex-1" onClick={onSaveAll}>
-          保存全部 ({editedCount} 个)
+          <Save className="w-4 h-4" /> 保存全部 ({editedCount} 个)
         </Button>
       </div>
     </UnifiedModal>

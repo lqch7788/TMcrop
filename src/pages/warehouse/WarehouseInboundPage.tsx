@@ -6,7 +6,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Download } from 'lucide-react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit2, Trash2, X } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
 import { Button } from '@/components/ui';
 import { useWarehouseInbound } from './hooks/useWarehouseInbound';
@@ -226,10 +226,10 @@ export default function WarehouseInboundPage() {
                 {editMode && (
                   <>
                     <Button size="sm" variant="blue" onClick={onConfirmEdit}>
-                      确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Edit2 className="w-4 h-4" /> 确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={onCancelSelection}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -237,10 +237,10 @@ export default function WarehouseInboundPage() {
                 {deleteMode && (
                   <>
                     <Button size="sm" variant="destructive" onClick={onConfirmDelete}>
-                      确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Trash2 className="w-4 h-4" /> 确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={onCancelSelection}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -252,7 +252,7 @@ export default function WarehouseInboundPage() {
                       确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={onCancelSelection}>
-                      取消选择
+                      <X className="w-4 h-4" /> 取消选择
                     </Button>
                   </>
                 )}

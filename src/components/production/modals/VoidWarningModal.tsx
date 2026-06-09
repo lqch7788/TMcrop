@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface VoidWarningModalProps {
@@ -38,10 +38,10 @@ export function VoidWarningModal({
           </div>
           <div className="flex gap-3">
             <Button size="sm" variant="secondary" onClick={onClose}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button size="sm" variant="warning" onClick={onConfirm}>
-              确认作废
+              <XCircle className="w-4 h-4" /> 确认作废
             </Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 /**
  * 离职申请页面表格组件
  */
-import { Eye, Check, X, Plus, Download } from 'lucide-react';
+import { Check, Download, Eye, Plus, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import ProTable from '../../../../components/common/table/ProTable';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
@@ -162,12 +162,12 @@ export function ResignationPageTable({
               )}
               {onBatchApprove && (
                 <Button variant="blue" size="sm" onClick={onBatchApprove}>
-                  批量通过
+                  <Check className="w-4 h-4" /> 批量通过
                 </Button>
               )}
               {onBatchReject && (
                 <Button variant="destructive" size="sm" onClick={onBatchReject}>
-                  批量驳回
+                  <XCircle className="w-4 h-4" /> 批量驳回
                 </Button>
               )}
               {onBatchExport && (
@@ -186,7 +186,7 @@ export function ResignationPageTable({
                   onClick={onConfirmBatchApprove}
                   disabled={selectedRowKeys.length === 0}
                 >
-                  确认通过 ({selectedRowKeys.length})
+                  <Check className="w-4 h-4" /> 确认通过 ({selectedRowKeys.length})
                 </Button>
               )}
               {batchMode === 'reject' && onConfirmBatchReject && (
@@ -196,17 +196,17 @@ export function ResignationPageTable({
                   onClick={onConfirmBatchReject}
                   disabled={selectedRowKeys.length === 0}
                 >
-                  确认驳回 ({selectedRowKeys.length})
+                  <Check className="w-4 h-4" /> 确认驳回 ({selectedRowKeys.length})
                 </Button>
               )}
               {batchMode === 'export' && onConfirmBatchExport && (
                 <Button variant="default" size="sm" onClick={onConfirmBatchExport}>
-                  确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                  <Download className="w-4 h-4" /> 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
                 </Button>
               )}
               {onCancelBatch && (
                 <Button variant="outline" size="sm" onClick={onCancelBatch}>
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               )}
             </>

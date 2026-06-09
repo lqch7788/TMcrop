@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Download, Edit2, Trash2, X } from 'lucide-react';
+
 import { usePersistentWorkLogs, WorkLogEntry } from '../../../hooks/usePersistentWorkLogs';
 import { WorkLogFilters } from './WorkLogFilters';
 import { WorkLogTable } from './WorkLogTable';
@@ -57,8 +59,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button onClick={onConfirm}>导出</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
     </>
   );
 
@@ -82,8 +84,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </>
   );
 
@@ -371,14 +373,14 @@ export function WorkLogPage() {
                   onClick={handleBatchEdit}
                   disabled={selectedRows.length === 0}
                 >
-                  批量编辑
+                  <Edit2 className="w-4 h-4" /> 批量编辑
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={handleCancelBatch}
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             )}
@@ -390,14 +392,14 @@ export function WorkLogPage() {
                   onClick={handleBatchDelete}
                   disabled={selectedRows.length === 0}
                 >
-                  确认删除
+                  <Trash2 className="w-4 h-4" /> 确认删除
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={handleCancelBatch}
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             )}
@@ -408,14 +410,14 @@ export function WorkLogPage() {
                   onClick={handleConfirmExport}
                   disabled={selectedRows.length === 0}
                 >
-                  确认导出
+                  <Download className="w-4 h-4" /> 确认导出
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={handleCancelExport}
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             )}

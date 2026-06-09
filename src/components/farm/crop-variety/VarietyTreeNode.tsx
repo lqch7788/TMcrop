@@ -587,10 +587,10 @@ export function VarietyTreeNode({
                 className="w-40 px-2 py-1.5 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Button variant="default" size="sm" onClick={onInlineAddSave}>
-                保存
+                <Save className="w-4 h-4" /> 保存
               </Button>
               <Button variant="secondary" size="sm" onClick={onInlineAddCancel}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           </TableCell>

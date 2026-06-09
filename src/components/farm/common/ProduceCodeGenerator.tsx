@@ -4,6 +4,8 @@
  */
 
 import React, { useState } from 'react';
+import { RotateCcw, Wand2 } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -172,7 +174,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
               disabled={!codeGen.subCategory}
               className="whitespace-nowrap gap-1"
             >
-              生成
+              <Wand2 className="w-4 h-4" /> 生成
             </Button>
             <Button
               variant="blue"
@@ -187,7 +189,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
               onClick={handleReset}
               className="whitespace-nowrap gap-1"
             >
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           </div>
         </div>

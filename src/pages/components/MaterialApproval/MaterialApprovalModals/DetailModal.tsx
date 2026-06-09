@@ -1,7 +1,7 @@
 // DetailModal 组件
 // 物料审批详情弹窗
 import { Approval, ApprovalStatus } from '@/types/approval';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { Check, CheckCircle, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -47,7 +47,7 @@ export function DetailModal({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
           {canApprove && (
             <>
@@ -55,13 +55,13 @@ export function DetailModal({
                 variant="default"
                 onClick={() => item && onApprove(item)}
               >
-                通过
+                <Check className="w-4 h-4" /> 通过
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => item && onRejectClick(item)}
               >
-                拒绝
+                <XCircle className="w-4 h-4" /> 拒绝
               </Button>
             </>
           )}

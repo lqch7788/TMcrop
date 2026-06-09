@@ -1017,7 +1017,7 @@ export function EditPestControlModal({ isOpen, record, onClose, onSaved }: EditP
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" size="sm" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

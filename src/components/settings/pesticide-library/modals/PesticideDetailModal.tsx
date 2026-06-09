@@ -3,6 +3,8 @@
  * 只读视图，以网格形式展示所有字段
  */
 import React from 'react';
+import { X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -180,7 +182,7 @@ export function PesticideDetailModal({ isOpen, record, onClose }: PesticideDetai
           size="sm"
           onClick={onClose}
         >
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </UnifiedModal>

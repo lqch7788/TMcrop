@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import PageHeader from './PageHeader';
 import SupplierFilters, { filterSuppliers } from './SupplierFilters';
 import SupplierTable from './SupplierTable';
@@ -492,10 +492,10 @@ export default function SupplierManagementPage() {
                 {batchEditMode && (
                   <>
                     <Button size="sm" variant="blue" onClick={handleBatchEdit}>
-                      确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Edit2 className="w-4 h-4" /> 确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelBatchEdit}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -503,10 +503,10 @@ export default function SupplierManagementPage() {
                 {deleteMode && (
                   <>
                     <Button size="sm" variant="destructive" onClick={handleDelete}>
-                      确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Trash2 className="w-4 h-4" /> 确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelDelete}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -518,7 +518,7 @@ export default function SupplierManagementPage() {
                       确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelExport}>
-                      取消选择
+                      <X className="w-4 h-4" /> 取消选择
                     </Button>
                   </>
                 )}

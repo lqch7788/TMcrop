@@ -237,7 +237,7 @@ export function InspectionDetailModal({ recordId, onClose, onReportProblem }: In
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       </div>

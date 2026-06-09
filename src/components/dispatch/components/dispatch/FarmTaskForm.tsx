@@ -420,7 +420,7 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
           <Button variant="secondary" type="button" onClick={onCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="blue" type="submit">
             <Save className="w-4 h-4" />

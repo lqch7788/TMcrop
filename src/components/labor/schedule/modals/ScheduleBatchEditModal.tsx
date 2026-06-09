@@ -1,4 +1,6 @@
 import type { ScheduleRecord, ShiftType } from '../types';
+import { Check, Edit2, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -161,13 +163,13 @@ export function ScheduleBatchEditModal({
   const footer = (
     <>
       <Button onClick={onConfirmNext}>
-        确认（下一个）
+        <Check className="w-4 h-4" /> 确认（下一个）
       </Button>
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button variant="blue" onClick={onConfirm}>
-        保存修改
+        <Edit2 className="w-4 h-4" /> 保存修改
       </Button>
     </>
   );

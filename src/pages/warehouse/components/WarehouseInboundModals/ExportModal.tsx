@@ -4,6 +4,8 @@
  */
 
 import React, { useState } from 'react';
+import { Download, X } from 'lucide-react';
+
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -128,8 +130,8 @@ export const InboundExportModal: React.FC<InboundExportModalProps> = ({
       showFooter={true}
       footer={
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">取消</Button>
-          <Button onClick={handleExport} className="flex-1">确认导出</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1"><X className="w-4 h-4" /> 取消</Button>
+          <Button onClick={handleExport} className="flex-1"><Download className="w-4 h-4" /> 确认导出</Button>
         </div>
       }
     >

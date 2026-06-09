@@ -3,7 +3,7 @@
  * 用于新增指标或编辑已有指标
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit } from 'lucide-react';
+import { Edit, Plus, Save, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -87,8 +87,8 @@ export default function CreateModal({ isOpen, indicator, onClose, onSave }: Crea
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" variant="default" onClick={handleSubmit}>保存</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button size="sm" variant="default" onClick={handleSubmit}><Save className="w-4 h-4" /> 保存</Button>
     </div>
   );
 

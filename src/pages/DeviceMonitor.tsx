@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Power, Wifi, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, FileText, Plus, Power, Wifi, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 
@@ -38,7 +38,7 @@ export default function DeviceMonitor() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-900">设备列表</h3>
-          <Button variant="default">添加设备</Button>
+          <Button variant="default"><Plus className="w-4 h-4" /> 添加设备</Button>
         </div>
         <table className="w-full">
           <thead className="bg-gray-50">

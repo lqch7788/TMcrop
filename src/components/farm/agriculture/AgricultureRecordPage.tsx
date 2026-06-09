@@ -8,9 +8,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import {
-  ChevronDown, ChevronRight
-} from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type FarmOperationRecordChild } from '../../../hooks/useOperationRecords';
 import { useTasks } from '../../../hooks/useTasks';
@@ -501,7 +499,7 @@ export default function AgricultureRecordPage() {
                               className="text-green-600 hover:bg-green-50"
                               title="审核通过"
                             >
-                              通过
+                              <Check className="w-4 h-4" /> 通过
                             </Button>
                             <Button
                               onClick={() => handleRejectRecord(record)}
@@ -510,7 +508,7 @@ export default function AgricultureRecordPage() {
                               className="text-red-600 hover:bg-red-50"
                               title="审核驳回"
                             >
-                              驳回
+                              <XCircle className="w-4 h-4" /> 驳回
                             </Button>
                           </div>
                         )}

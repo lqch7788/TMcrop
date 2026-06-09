@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { GitBranch, Plus, Edit2, Trash2, ArrowRight, Search, ChevronDown, ChevronUp, ChevronLeft, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, ChevronLeft, ChevronUp, Edit2, GitBranch, Loader2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   UnifiedModal, TextArea,
@@ -271,8 +271,8 @@ export default function ApprovalWorkflowConfig() {
         showFooter
         footer={
           <div className="flex items-center justify-end gap-3">
-            <Button variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-            <Button onClick={handleSaveWorkflow}>保存</Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button onClick={handleSaveWorkflow}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
       >

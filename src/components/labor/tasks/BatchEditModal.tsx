@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Check, Send } from 'lucide-react';
+
 import { Task } from '../../../types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
 import { Button } from '@/components/ui';
@@ -190,8 +192,8 @@ export function BatchEditModal({ isOpen, selectedRows, tasks, users, greenhouses
 
   const footer = (
     <>
-      <Button variant="blue" onClick={handleConfirmNext}>确认（下一个）</Button>
-      <Button onClick={handlePublish}>发布</Button>
+      <Button variant="blue" onClick={handleConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+      <Button onClick={handlePublish}><Send className="w-4 h-4" /> 发布</Button>
     </>
   );
 

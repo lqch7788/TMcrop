@@ -1,7 +1,7 @@
 /**
  * 指标删除确认弹窗组件
  */
-import { Trash2 } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Modal } from '../../../../components/ui/Modal';
 import type { Indicator } from '../../../types/indicators.types';
@@ -19,8 +19,8 @@ export default function DeleteModal({ isOpen, item, onClose, onConfirm }: Delete
   // 底部按钮
   const footer = (
     <div className="flex justify-center gap-3">
-      <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button size="sm" variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </div>
   );
 

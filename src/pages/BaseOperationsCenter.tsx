@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Leaf, CalendarCheck, History, Search, Plus, Edit2, Trash2, Loader2, MapPin, Building2, Layers } from 'lucide-react';
+import { ArrowLeft, Building2, CalendarCheck, Check, Edit2, History, Layers, Leaf, Loader2, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { usePlantingRecordStore } from '@/stores/usePlantingRecordStore';
@@ -322,8 +322,8 @@ export function FacilityTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-            <Button size="sm" onClick={handleSave}>保存</Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" onClick={handleSave}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
       >
@@ -397,8 +397,8 @@ export function FacilityTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
-            <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
+            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" variant="destructive" onClick={handleDelete}><Trash2 className="w-4 h-4" /> 删除</Button>
           </div>
         }
       >
@@ -532,8 +532,8 @@ export function ZoneTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>取消</Button>
-            <Button size="sm" onClick={handleSave}>保存</Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" onClick={handleSave}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
       >
@@ -596,8 +596,8 @@ export function ZoneTab({
           showFooter
           footer={
             <div className="flex justify-end gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
-              <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
+              <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" variant="destructive" onClick={handleDelete}><Trash2 className="w-4 h-4" /> 删除</Button>
             </div>
           }
         >
@@ -773,8 +773,8 @@ export function PlantingTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>取消</Button>
-            <Button size="sm" onClick={handleSaveAdd}>创建</Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" onClick={handleSaveAdd}><Plus className="w-4 h-4" /> 创建</Button>
           </div>
         }
       >
@@ -834,8 +834,8 @@ export function PlantingTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
-            <Button size="sm" onClick={handleSaveEdit}>保存</Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" onClick={handleSaveEdit}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
       >
@@ -874,8 +874,8 @@ export function PlantingTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}>取消</Button>
-            <Button size="sm" onClick={handleSaveEnd}>确认结束</Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" onClick={handleSaveEnd}><Check className="w-4 h-4" /> 确认结束</Button>
           </div>
         }
       >
@@ -917,8 +917,8 @@ export function PlantingTab({
         showFooter
         footer={
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}>取消</Button>
-            <Button size="sm" variant="destructive" onClick={handleDelete}>删除</Button>
+            <Button size="sm" variant="secondary" onClick={() => setDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+            <Button size="sm" variant="destructive" onClick={handleDelete}><Trash2 className="w-4 h-4" /> 删除</Button>
           </div>
         }
       >

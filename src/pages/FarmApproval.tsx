@@ -6,11 +6,7 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Sprout, Search, ChevronLeft,
-  CheckCircle, XCircle, Clock, FileText,
-  AlertTriangle, CheckSquare, Eye, Square, CheckSquare as CheckSquareIcon, Download
-} from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle, CheckSquare, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Download, Eye, FileText, Search, Sprout, Square, XCircle } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
@@ -372,14 +368,14 @@ export default function FarmApproval() {
                           size="sm"
                           onClick={() => approve(approval.id)}
                         >
-                          通过
+                          <Check className="w-4 h-4" /> 通过
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => reject(approval.id, '审批拒绝')}
                         >
-                          拒绝
+                          <XCircle className="w-4 h-4" /> 拒绝
                         </Button>
                       </>
                     )}

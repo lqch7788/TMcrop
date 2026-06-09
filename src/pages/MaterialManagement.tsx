@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Search, Plus, Edit, Trash2, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Edit, Loader2, Package, Plus, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Modal, FormField, Input, Textarea } from '../components/ui/Modal';
 import { useMaterialTypeStore } from '../stores';
@@ -158,7 +158,7 @@ export default function MaterialManagement() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="default" onClick={() => { setSearchTerm(''); setCategoryFilter('全部'); }}>重置</Button>
+            <Button variant="default" onClick={() => { setSearchTerm(''); setCategoryFilter('全部'); }}><RotateCcw className="w-4 h-4" /> 重置</Button>
             <Button variant="default" onClick={() => handleOpenModal()}>
               <Plus className="w-4 h-4" /> 添加物料
             </Button>

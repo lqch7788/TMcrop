@@ -6,7 +6,7 @@ import React, { useState, useCallback } from 'react';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2, Wand2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -243,7 +243,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                     onClick={generateCode}
                     className="px-3"
                   >
-                    生成
+                    <Wand2 className="w-4 h-4" /> 生成
                   </Button>
                 </div>
                 {form.fertilizerCode && checkCodeExists(form.fertilizerCode) && (
@@ -318,7 +318,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
                 size="sm"
                 onClick={handleAddSpec}
               >
-                添加规格
+                <Plus className="w-4 h-4" /> 添加规格
               </Button>
             </div>
 
@@ -512,7 +512,7 @@ export function AddFertilizerModal({ isOpen, onClose, onSaved }: AddFertilizerMo
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

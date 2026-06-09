@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { Check } from 'lucide-react';
+
 import { StaffSkill, SkillLevel } from './types';
 import { useDepartmentStore, useDictionaryStore, getDictItems } from '../../../stores';
 import { Button } from '@/components/ui';
@@ -87,10 +89,10 @@ export function SkillBatchEditModal({
   const footer = (
     <div className="flex justify-end gap-3">
       <Button onClick={onConfirmNext}>
-        确认（下一个）
+        <Check className="w-4 h-4" /> 确认（下一个）
       </Button>
       <Button variant="blue" onClick={onConfirm}>
-        确认保存
+        <Check className="w-4 h-4" /> 确认保存
       </Button>
     </div>
   );

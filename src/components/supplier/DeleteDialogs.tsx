@@ -1,5 +1,5 @@
 // 删除确认对话框组件
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface DeleteWarningDialogProps {
@@ -32,10 +32,10 @@ export function DeleteWarningDialog({ isOpen, onClose, onConfirm, title = '确�
           </ul>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="destructive" onClick={onConfirm}>
-              确认删除
+              <Trash2 className="w-4 h-4" /> 确认删除
             </Button>
           </div>
         </div>
@@ -97,10 +97,10 @@ export function BatchDeleteConfirmDialog({ isOpen, count, supplierNames, onClose
         {/* 操作按钮 */}
         <div className="flex gap-3">
           <Button size="sm" variant="secondary" className="flex-1" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button size="sm" variant="destructive" className="flex-1" onClick={onConfirm}>
-            已知晓风险，确认删除
+            <Trash2 className="w-4 h-4" /> 已知晓风险，确认删除
           </Button>
         </div>
       </div>

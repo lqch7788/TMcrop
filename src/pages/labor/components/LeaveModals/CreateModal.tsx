@@ -2,6 +2,8 @@
  * 请假申请创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Send, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { DatePicker } from '../../../../components/ui/DatePicker';
 import { LeaveType, LeaveQuota } from '../../../../components/labor/leave/types';
@@ -206,14 +208,14 @@ export function CreateModal({
           variant="secondary"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"
           onClick={onSubmit}
           disabled={currentQuota ? formData.days > availableDays : false}
         >
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

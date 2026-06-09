@@ -1,4 +1,4 @@
-import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import {
   TempWorkerTableProps,
   TempWorker,
@@ -106,7 +106,7 @@ export function TempWorkerTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -126,7 +126,7 @@ export function TempWorkerTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -145,7 +145,7 @@ export function TempWorkerTable({
                     variant="secondary"
                     onClick={onCancelExport}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

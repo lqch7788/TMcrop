@@ -1,6 +1,6 @@
 // ExecuteTabWarningModal 组件
 // 领料出库警告弹窗
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ExecuteWarningModalProps {
@@ -39,10 +39,10 @@ export function ExecuteWarningModal({
         </div>
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
           <Button variant="secondary" onClick={onCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={onConfirm}>
-            确定
+            <Check className="w-4 h-4" /> 确定
           </Button>
         </div>
       </div>

@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, Printer } from 'lucide-react';
+import { Download, Printer, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling } from '../../../../types/crop';
@@ -211,7 +211,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               size="sm"
               onClick={onClose}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button
               variant="blue"

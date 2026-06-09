@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -374,10 +374,10 @@ export const AddModal: React.FC<AddModalProps> = ({
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button onClick={onSave}>
-          保存
+          <Save className="w-4 h-4" /> 保存
         </Button>
       </div>
     </UnifiedModal>

@@ -1,15 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  User, Shield, Key, Phone, Mail, Bell, ChevronRight,
-  ClipboardList, CheckSquare, AlertTriangle, BarChart3, FileText,
-  Settings, Clock, Package, Calendar, Edit, Eye, MapPin,
-  EyeOff, Star, MessageCircle, ExternalLink, Users, Database,
-  Activity, Leaf, Sprout, Target, ClipboardCheck, LayoutDashboard,
-  Warehouse, Gauge, TrendingUp, DollarSign, Target as TargetIcon,
-  Truck, Archive, BookMarked, Wifi, Thermometer, Search, AlertTriangle as AlertIcon,
-  Send, CheckCircle2, XCircle, ArrowUpDown, Gauge as GaugeIcon
-} from 'lucide-react';
+import { Activity, AlertTriangle, AlertTriangle as AlertIcon, Archive, ArrowUpDown, BarChart3, Bell, BookMarked, Calendar, CheckCircle2, CheckSquare, ChevronRight, ClipboardCheck, ClipboardList, Clock, Database, DollarSign, Edit, Edit2, ExternalLink, Eye, EyeOff, FileText, Gauge, Gauge as GaugeIcon, Key, LayoutDashboard, Leaf, Mail, MapPin, MessageCircle, Package, Phone, Search, Send, Settings, Shield, Sprout, Star, Target, Target as TargetIcon, Thermometer, TrendingUp, Truck, User, Users, Warehouse, Wifi, XCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
 // ============================================================
@@ -300,7 +291,7 @@ export default function Profile() {
             {permission.profileAccess === 'full' && (
               <Button variant="ghost" size="sm" className="flex items-center gap-1">
                 <Edit className="w-4 h-4" />
-                编辑
+                <Edit2 className="w-4 h-4" /> 编辑
               </Button>
             )}
           </div>

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { CheckCircle, XCircle, Clock, User, MapPin, Camera, Mic, FileText } from 'lucide-react';
+import { Camera, Check, CheckCircle, Clock, FileText, MapPin, Mic, User, X, XCircle } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -274,7 +274,7 @@ export function TaskAcceptanceModal({
                   variant="secondary"
                   size="sm"
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
                 <Button
                   onClick={handleReject}
@@ -282,7 +282,7 @@ export function TaskAcceptanceModal({
                   variant="destructive"
                   size="sm"
                 >
-                  确认驳回
+                  <Check className="w-4 h-4" /> 确认驳回
                 </Button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
@@ -34,10 +34,10 @@ export const EditWarningModal: React.FC<EditWarningModalProps> = ({
       footer={
         <div className="flex gap-3">
           <Button variant="secondary" onClick={handleCancel} className="flex-1">
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={handleConfirm} className="flex-1">
-            确认
+            <Check className="w-4 h-4" /> 确认
           </Button>
         </div>
       }

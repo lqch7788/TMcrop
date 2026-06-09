@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Download, Edit2, Trash2, ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
@@ -355,7 +355,7 @@ export function StaffManagementPage() {
               onClick={handleCancelBatchEdit}
               className="gap-2"
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : batchDeleteMode ? (
@@ -373,7 +373,7 @@ export function StaffManagementPage() {
               onClick={handleCancelBatchDelete}
               className="gap-2"
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : exportMode ? (
@@ -390,7 +390,7 @@ export function StaffManagementPage() {
               onClick={handleCancelExport}
               className="gap-2"
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : (

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Check } from 'lucide-react';
+
 import type { PieceRate } from './types';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
@@ -173,10 +175,10 @@ export function PieceworkBatchEditModal({
   const footer = (
     <>
       <Button onClick={onConfirmNext}>
-        确认（下一个）
+        <Check className="w-4 h-4" /> 确认（下一个）
       </Button>
       <Button variant="blue" onClick={onConfirm}>
-        确认保存
+        <Check className="w-4 h-4" /> 确认保存
       </Button>
     </>
   );

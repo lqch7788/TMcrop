@@ -2,6 +2,8 @@
  * 工资预算创建/编辑弹窗组件
  */
 import { Label } from '@/components/ui';
+import { Send, X } from 'lucide-react';
+
 import { Button, NumberInput } from '@/components/ui';
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
 import { SalaryBudgetFormData } from '../../types/salaryBudget.types';
@@ -151,14 +153,14 @@ export function CreateModal({
       {/* 弹窗底部按钮 */}
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
         <Button variant="secondary" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"
           onClick={onSubmit}
           disabled={!formData.deptId || !formData.budgetMonth || formData.totalBaseSalary <= 0}
         >
-          提交审批
+          <Send className="w-4 h-4" /> 提交审批
         </Button>
       </div>
     </UnifiedModal>

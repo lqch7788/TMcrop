@@ -9,7 +9,7 @@ import { Task } from '../../../hooks/useTasks';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import { TASK_STATUS_CONFIG } from '../../../hooks/useTasks';
 import { useReminder } from '../../../hooks/useReminder';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, RotateCcw, Upload } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
@@ -446,7 +446,7 @@ export function TaskTab({
           onClick={onResetFilters}
           className="flex-shrink-0"
         >
-          重置
+          <RotateCcw className="w-4 h-4" /> 重置
         </Button>
         {/* 视图切换 */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4 flex-shrink-0">

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Save, X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
@@ -369,9 +371,9 @@ export function TempWorkerFormModal({
   const footer = (
     <div className="flex justify-end gap-2">
       <Button variant="outline" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
-      <Button onClick={handleSubmit}>保存</Button>
+      <Button onClick={handleSubmit}><Save className="w-4 h-4" /> 保存</Button>
     </div>
   );
 

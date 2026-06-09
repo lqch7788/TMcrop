@@ -1,14 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Calendar,
-  Clock,
-  Users,
-  Settings,
-  Plus,
-  List,
-  CalendarDays,
-  ChevronDown,
-} from 'lucide-react';
+import { Calendar, CalendarDays, ChevronDown, Clock, List, Plus, Settings, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { useSchedule } from './hooks/useSchedule';
@@ -519,7 +510,7 @@ export function SchedulePage() {
                     size="sm"
                     onClick={handleCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </div>
               )}
@@ -582,7 +573,7 @@ export function SchedulePage() {
                     onClick={() => cancelSchedule(selectedSchedule.id)}
                     className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                   >
-                    取消排班
+                    <X className="w-4 h-4" /> 取消排班
                   </Button>
                 </div>
               )}

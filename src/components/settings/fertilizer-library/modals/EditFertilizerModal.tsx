@@ -6,7 +6,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -342,7 +342,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
                 onClick={handleAddSpec}
                 className="bg-green-500 hover:bg-green-600 text-white border-green-500 hover:border-green-600"
               >
-                + 新增
+                <Plus className="w-4 h-4" /> + 新增
               </Button>
             </div>
 
@@ -536,7 +536,7 @@ export function EditFertilizerModal({ isOpen, record, onClose, onSaved }: EditFe
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

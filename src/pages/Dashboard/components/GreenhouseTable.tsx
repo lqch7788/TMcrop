@@ -1,5 +1,5 @@
 // 温室区域表格组件
-import { Sprout } from 'lucide-react';
+import { Eye, Sprout } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { GreenhouseDetailData } from '../types/dashboard.types';
 
@@ -94,7 +94,7 @@ export function GreenhouseTable({ expanded, onToggle, onDetailClick }: Greenhous
                       onClick={() => onDetailClick({ type: 'greenhouse', data: item })}
                       className="btn-detail"
                     >
-                      详情&gt;
+                      <Eye className="w-4 h-4" /> 详情&gt;
                     </Button>
                   </td>
                 </tr>

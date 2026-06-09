@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Warehouse, Search, Plus, Edit2, Trash2, Layers, ChevronLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, Edit2, Layers, Loader2, Plus, Save, Search, Trash2, Warehouse, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -364,8 +364,8 @@ export default function WarehouseManagement() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 mt-6">
-              <Button variant="secondary" onClick={handleCloseModal}>取消</Button>
-              <Button variant="default" onClick={editingWarehouse ? handleUpdate : handleCreate}>保存</Button>
+              <Button variant="secondary" onClick={handleCloseModal}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="default" onClick={editingWarehouse ? handleUpdate : handleCreate}><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>

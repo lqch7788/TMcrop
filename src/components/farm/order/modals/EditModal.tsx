@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Edit2, Search, X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
 import { CropVarietyOption } from '@/types/cropVariety';
 import * as cropVarietyService from '@/services/cropVarietyService';
@@ -552,10 +552,10 @@ export function EditModal({
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button onClick={onClose} variant="secondary" size="sm">
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={handleSubmit} variant="default" size="sm">
-        保存修改
+        <Edit2 className="w-4 h-4" /> 保存修改
       </Button>
     </div>
   );

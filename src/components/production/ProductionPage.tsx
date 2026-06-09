@@ -2,7 +2,7 @@
  * 生产计划页面
  * 精简后的主组件，逻辑全部抽取到 useProductionPage hook
  */
-import { FileText, Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Download, Edit2, FileText, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useProductionPage } from './hooks/useProductionPage';
 import { ProductionStatsCards } from './ProductionStatsCards';
@@ -76,7 +76,7 @@ export default function ProductionPage() {
                 确认导出
               </Button>
               <Button size="sm" variant="secondary" onClick={hook.handleCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : hook.batchEditMode ? (
@@ -94,7 +94,7 @@ export default function ProductionPage() {
                 hook.setBatchEditMode(false);
                 hook.setSelectedRows([]);
               }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : hook.batchDeleteMode ? (
@@ -112,7 +112,7 @@ export default function ProductionPage() {
                 hook.setBatchDeleteMode(false);
                 hook.setSelectedRows([]);
               }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (

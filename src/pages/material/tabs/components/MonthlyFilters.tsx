@@ -1,6 +1,8 @@
 // MonthlyFilters 组件 - 月度筛选表单
 // 月度汇总Tab专用的年份和月份筛选
 import { Button } from '@/components/ui';
+import { RotateCcw } from 'lucide-react';
+
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
@@ -91,7 +93,7 @@ export function MonthlyFilters({
             onPageChange(1);
           }}
         >
-          重置
+          <RotateCcw className="w-4 h-4" /> 重置
         </Button>
       </div>
     </div>

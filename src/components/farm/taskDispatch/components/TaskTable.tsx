@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Download, Plus, Edit, Trash2 } from 'lucide-react';
+import { Download, Edit, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody } from '@/components/ui';
 import { TaskTableHeader } from './TaskTableHeader';
@@ -153,7 +153,7 @@ export function TaskTable({
                 size="sm"
                 onClick={onCancelExport}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchEditMode ? (
@@ -165,14 +165,14 @@ export function TaskTable({
                 disabled={selectedRows.length === 0}
               >
                 <Edit className="w-4 h-4" />
-                确认编辑
+                <Edit2 className="w-4 h-4" /> 确认编辑
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => { onCancelBatchEdit?.(); }}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchDeleteMode ? (
@@ -191,7 +191,7 @@ export function TaskTable({
                 size="sm"
                 onClick={() => {}}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (
@@ -214,7 +214,7 @@ export function TaskTable({
                   onClick={onBatchEdit}
                 >
                   <Edit className="w-4 h-4" />
-                  编辑
+                  <Edit2 className="w-4 h-4" /> 编辑
                 </Button>
               )}
               {onBatchDelete && (

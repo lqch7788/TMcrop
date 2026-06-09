@@ -4,7 +4,7 @@
  * 所有数据通过 usePesticideLibraryStore 管理
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bug, Plus, ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Bug, Download, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
@@ -254,7 +254,7 @@ export default function PesticideLibraryPage() {
                     确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    取消选择
+                    <X className="w-4 h-4" /> 取消选择
                   </Button>
                 </>
               )}
@@ -314,7 +314,7 @@ export default function PesticideLibraryPage() {
                     确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    取消选择
+                    <X className="w-4 h-4" /> 取消选择
                   </Button>
                 </>
               )}
@@ -373,7 +373,7 @@ export default function PesticideLibraryPage() {
                     确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handleExportCancel}>
-                    取消选择
+                    <X className="w-4 h-4" /> 取消选择
                   </Button>
                 </>
               )}

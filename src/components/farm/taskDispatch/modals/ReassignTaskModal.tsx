@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { UserPlus, AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';
 
@@ -150,7 +150,7 @@ export function ReassignTaskModal({
         {/* 操作按钮 */}
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
           <Button onClick={onClose} variant="secondary" size="sm">
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             onClick={handleSubmit}

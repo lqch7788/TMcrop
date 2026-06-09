@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Trash2, RotateCcw, RotateCw } from 'lucide-react';
-import { X } from 'lucide-react';
+import { Edit2, RotateCcw, Trash2, X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -423,7 +423,7 @@ export function MaterialInboundTab({
                 setInboundSearchMaterialCode('');
               }}>
               <RotateCw className="w-4 h-4" />
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
             <Button size="sm">
               <Search className="w-4 h-4" />
@@ -453,7 +453,7 @@ export function MaterialInboundTab({
                 {canEdit && (
                   <Button size="sm" variant="blue" onClick={() => setEditMode(true)}>
                     <Edit className="w-4 h-4" />
-                    编辑
+                    <Edit2 className="w-4 h-4" /> 编辑
                   </Button>
                 )}
                 {canDelete && (
@@ -482,10 +482,10 @@ export function MaterialInboundTab({
                 {editMode && (
                   <>
                     <Button size="sm" variant="blue" onClick={handleConfirmEdit}>
-                      确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Edit2 className="w-4 h-4" /> 确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -493,10 +493,10 @@ export function MaterialInboundTab({
                 {deleteMode && (
                   <>
                     <Button size="sm" variant="destructive" onClick={handleConfirmDelete}>
-                      确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
+                      <Trash2 className="w-4 h-4" /> 确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -508,7 +508,7 @@ export function MaterialInboundTab({
                       确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleCancelSelection}>
-                      取消选择
+                      <X className="w-4 h-4" /> 取消选择
                     </Button>
                   </>
                 )}
@@ -674,7 +674,7 @@ export function MaterialInboundTab({
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setShowEditWarning(false)} className="flex-1">
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="blue" onClick={handleProceedToEdit} className="flex-1">
               已知晓

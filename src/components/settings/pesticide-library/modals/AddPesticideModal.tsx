@@ -4,6 +4,8 @@
  */
 import React, { useState, useCallback } from 'react';
 
+import { Wand2, X } from 'lucide-react';
+
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 import { UnifiedModal } from '@/components/ui';
@@ -219,7 +221,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
                     onClick={generateCode}
                     className="px-3"
                   >
-                    生成
+                    <Wand2 className="w-4 h-4" /> 生成
                   </Button>
                 </div>
                 {form.pesticideCode && checkCodeExists(form.pesticideCode) && (
@@ -339,7 +341,7 @@ export function AddPesticideModal({ isOpen, controlType, onClose, onSaved }: Add
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"

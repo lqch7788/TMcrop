@@ -5,14 +5,7 @@
 // ============================================================
 
 import React, { useState, useMemo } from 'react';
-import {
-  Send,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
-  DollarSign,
-  Info,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, DollarSign, Info, Send, X } from 'lucide-react';
 import { ApprovalType } from '../../types/approval';
 import { ApprovalLevel, getApprovalLevelName } from '../../config/approvalHierarchy';
 import { useApprovalLevel } from '../../hooks/useApprovalLevel';
@@ -254,7 +247,7 @@ export function ApprovalSubmitPanel({
         footer={
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => setShowConfirm(false)} className="flex-1">
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button
               onClick={handleSubmit}

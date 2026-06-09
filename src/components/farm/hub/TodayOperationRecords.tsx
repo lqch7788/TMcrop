@@ -2,7 +2,7 @@
  * 今日操作记录组件
  * 展示最近的操作历史记录，支持快速查看全部记录
  */
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Eye } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 // 操作记录项类型
@@ -39,7 +39,7 @@ export function TodayOperationRecords({ records, onShowAll }: TodayOperationReco
           onClick={onShowAll}
           className="text-emerald-600 hover:text-emerald-700 font-bold text-base"
         >
-          查看全部
+          <Eye className="w-4 h-4" /> 查看全部
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>

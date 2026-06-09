@@ -245,7 +245,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
             size="sm"
             onClick={onClose}
           >
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       </div>

@@ -2,6 +2,8 @@
  * 请假申请撤回确认弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Check, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { LeaveRecord } from '../../../../components/labor/leave/types';
 
@@ -44,13 +46,13 @@ export function WithdrawModal({
             variant="secondary"
             onClick={onClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="warning"
             onClick={onConfirm}
           >
-            确认撤回
+            <Check className="w-4 h-4" /> 确认撤回
           </Button>
         </div>
       </div>

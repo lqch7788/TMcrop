@@ -1,6 +1,6 @@
 // ExecuteTab 组件
 // 领料出库页面
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -460,10 +460,10 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <Button variant="outline" onClick={handleExecuteCancelEdit}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button variant="default" onClick={handleExecuteSaveEdit}>
-                保存
+                <Save className="w-4 h-4" /> 保存
               </Button>
             </div>
           </div>
@@ -485,10 +485,10 @@ export default function ExecuteTab({ materialData = [] }: ExecuteTabProps) {
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setExecuteShowDeleteConfirm(false)}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button variant="destructive" onClick={confirmExecuteDelete}>
-                确认删除
+                <Trash2 className="w-4 h-4" /> 确认删除
               </Button>
             </div>
           </div>

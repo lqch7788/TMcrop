@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, ChevronRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Plus, Save, Trash2, X, XCircle } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -142,14 +142,14 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="warning" onClick={() => setShowVoidModal(true)}>
-            申请作废
+            <XCircle className="w-4 h-4" /> 申请作废
           </Button>
           <Button variant="secondary" onClick={handleNext}>
             确认{currentIndex < records.length - 1 ? '(下一个)' : '(已最后一个)'}
             <ChevronRight className="w-4 h-4" />
           </Button>
           <Button variant="blue" onClick={handleSaveAll}>
-            保存全部（{records.length}个）
+            <Save className="w-4 h-4" /> 保存全部（{records.length}个）
           </Button>
         </div>
       }
@@ -490,13 +490,13 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
         footer={
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setShowVoidModal(false)}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="warning" onClick={() => {
               showAlert('作废申请已提交');
               setShowVoidModal(false);
             }}>
-              确认作废
+              <XCircle className="w-4 h-4" /> 确认作废
             </Button>
           </div>
         }

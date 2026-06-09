@@ -1,4 +1,6 @@
 import React from 'react';
+import { Eye } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -65,7 +67,7 @@ export const StatMaterialTable: React.FC<StatMaterialTableProps> = ({
                   size="sm"
                   onClick={() => onViewDetail(item)}
                 >
-                  查看明细
+                  <Eye className="w-4 h-4" /> 查看明细
                 </Button>
               </TableCell>
             </TableRow>

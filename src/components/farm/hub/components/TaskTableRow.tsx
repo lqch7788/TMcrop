@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { FileText, Bell } from 'lucide-react';
+import { Bell, CheckCircle, FileText, Play, Send, Undo2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants_taskDispatch';
@@ -280,7 +280,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onPublish}
               className="text-xs"
             >
-              发布
+              <Send className="w-4 h-4" /> 发布
             </Button>
           )}
 
@@ -292,7 +292,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onAccept}
               className="text-xs"
             >
-              验收
+              <CheckCircle className="w-4 h-4" /> 验收
             </Button>
           )}
 
@@ -304,7 +304,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onSelectExecutor}
               className="text-xs"
             >
-              选择执行人
+              <Play className="w-4 h-4" /> 选择执行人
             </Button>
           )}
 
@@ -331,7 +331,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       onClick={onWithdraw}
                       className="text-xs"
                     >
-                      拒绝
+                      <XCircle className="w-4 h-4" /> 拒绝
                     </Button>
                   )}
                 </>
@@ -345,7 +345,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       onClick={onWithdraw}
                       className="text-xs"
                     >
-                      撤回
+                      <Undo2 className="w-4 h-4" /> 撤回
                     </Button>
                   )}
                   {onCancel && (
@@ -355,7 +355,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       onClick={onCancel}
                       className="text-xs"
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   )}
                 </>
@@ -371,7 +371,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onCancel}
               className="text-xs"
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           )}
 
@@ -393,7 +393,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onReassign}
               className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
             >
-              重新派发
+              <Send className="w-4 h-4" /> 重新派发
             </Button>
           )}
 
@@ -404,7 +404,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               onClick={onReassign}
               className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
             >
-              重新派发
+              <Send className="w-4 h-4" /> 重新派发
             </Button>
           )}
 

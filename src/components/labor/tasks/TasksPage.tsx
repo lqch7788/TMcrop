@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, ClipboardCheck, Edit2, Trash2, Download, Eye } from 'lucide-react';
+import { ClipboardCheck, Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../../stores';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
@@ -62,8 +62,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button onClick={onConfirm}>导出</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
     </>
   );
 
@@ -109,8 +109,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </>
   );
 
@@ -449,7 +449,7 @@ export function TasksPage() {
                 size="sm"
                 onClick={handleCancelExport}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchEditMode ? (
@@ -468,7 +468,7 @@ export function TasksPage() {
                 size="sm"
                 onClick={handleCancelBatch}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchDeleteMode ? (
@@ -487,7 +487,7 @@ export function TasksPage() {
                 size="sm"
                 onClick={handleCancelBatch}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (

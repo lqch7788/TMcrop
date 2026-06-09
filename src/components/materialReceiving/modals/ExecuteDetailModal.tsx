@@ -1,4 +1,6 @@
 import React from 'react';
+import { X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -140,7 +142,7 @@ export const ExecuteDetailModal: React.FC<ExecuteDetailModalProps> = ({
           variant="secondary"
           onClick={onClose}
         >
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </UnifiedModal>

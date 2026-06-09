@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Send, Download, Trash2 } from 'lucide-react';
+import { Download, Send, Trash2, X } from 'lucide-react';
 import { SourceFilter } from './SourceFilter';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -183,7 +183,7 @@ export function ProblemFilterToolbar({
               variant="secondary"
               onClick={onCancelExport}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : batchDeleteMode ? (
@@ -202,7 +202,7 @@ export function ProblemFilterToolbar({
               variant="secondary"
               onClick={onCancelBatchDelete}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : batchDispatchMode ? (
@@ -221,7 +221,7 @@ export function ProblemFilterToolbar({
               variant="secondary"
               onClick={onCancelBatchDispatch}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </div>
         ) : null}

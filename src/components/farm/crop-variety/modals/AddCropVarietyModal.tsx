@@ -23,7 +23,7 @@ import {
   getVarietyOptionsByType,
   getSubVariety1Options as getSubVariety1OptionsFromExtension
 } from '../../../../services/cropVarietyExtensionService';
-import { Search, Check, X, RefreshCw } from 'lucide-react';
+import { Check, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 
 // 深度输入框样式
@@ -690,7 +690,7 @@ export function AddCropVarietyModal({
                 size="sm"
                 onClick={() => setFormData({ ...formData, image: '' })}
               >
-                删除
+                <Trash2 className="w-4 h-4" /> 删除
               </Button>
             )}
           </div>

@@ -1,4 +1,6 @@
 import { Modal, FormField, Input, Select } from '@/components/ui';
+import { Check, Edit2, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -67,14 +69,14 @@ export function BatchEditModal({
         <div className="flex items-center justify-end gap-3">
           {onConfirmNext && (
             <Button size="sm" variant="default" onClick={onConfirmNext}>
-              确认（下一个）
+              <Check className="w-4 h-4" /> 确认（下一个）
             </Button>
           )}
           <Button size="sm" variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button size="sm" variant="default" onClick={onConfirm}>
-            保存修改
+            <Edit2 className="w-4 h-4" /> 保存修改
           </Button>
         </div>
       }

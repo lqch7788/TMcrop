@@ -1,7 +1,7 @@
 /**
  * 工资预算筛选器组件
  */
-import { Search, RotateCw } from 'lucide-react';
+import { RotateCcw, RotateCw, Search } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
   Select,
@@ -98,7 +98,7 @@ export function SalaryBudgetFilters({
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={onReset}>
             <RotateCw className="w-4 h-4" />
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button size="sm" variant="default">
             <Search className="w-4 h-4" />

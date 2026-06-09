@@ -157,7 +157,7 @@ export const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({
                 <div>{alert.message}</div>
                 {onAcknowledgeAlert && (
                   <Button variant="link" size="sm" onClick={() => onAcknowledgeAlert(alert.id)} className="mt-1 h-6 p-0">
-                    确认
+                    <Check className="w-4 h-4" /> 确认
                   </Button>
                 )}
               </div>

@@ -71,7 +71,7 @@ export function WorkLogDetailModal({ log, open, onClose }: WorkLogDetailModalPro
 
   const footer = (
     <Button variant="secondary" onClick={onClose}>
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

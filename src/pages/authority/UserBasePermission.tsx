@@ -5,9 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import {
-  Building2, Search, Save, Check, X, Loader2, CheckSquare, Square,
-} from 'lucide-react';
+import { Building2, Check, CheckSquare, Loader2, Save, Search, Shield, Square, X } from 'lucide-react';
 import { useOrganizationStore } from '@/stores';
 import { Button } from '@/components/ui';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
@@ -440,7 +438,7 @@ export default function UserBasePermission() {
                               disabled={saving}
                               className="h-8 px-3 text-xs"
                             >
-                              授权
+                              <Shield className="w-4 h-4" /> 授权
                             </Button>
                           )}
                         </td>

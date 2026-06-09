@@ -1,5 +1,5 @@
 // 统一删除警告弹窗组件
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, Trash2, X } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui';
 
@@ -84,10 +84,10 @@ export function DeleteConfirmModal({
         {/* 底部 footer - 固定在弹窗底部，与 Modal 一致 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
           <Button variant="secondary" size="sm" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="destructive" size="sm" onClick={onConfirm}>
-            确认删除
+            <Trash2 className="w-4 h-4" /> 确认删除
           </Button>
         </div>
       </div>
@@ -124,10 +124,10 @@ export function DeleteWarningModalLegacy1({
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" size="sm" onClick={onCancel} className="flex-1">
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="destructive" size="sm" onClick={onConfirm} className="flex-1">
-            确认
+            <Check className="w-4 h-4" /> 确认
           </Button>
         </div>
       </div>
@@ -163,10 +163,10 @@ export function DeleteWarningModalLegacy2({
           </div>
           <div className="flex gap-3">
             <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="destructive" size="sm" onClick={onConfirm} className="flex-1">
-              确认删除
+              <Trash2 className="w-4 h-4" /> 确认删除
             </Button>
           </div>
         </div>

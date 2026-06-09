@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, User, Clock, Eye, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
+import { AlertTriangle, Bell, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, MapPin, Play, Send, Undo2, User, X, XCircle } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { Button } from '@/components/ui';
@@ -308,21 +308,21 @@ export function TempTaskTable({
                     {/* 草稿状态 - 发布按钮 */}
                     {task.status === 'draft' && onPublish && (
                       <Button size="sm" variant="blue" onClick={() => onPublish(task)}>
-                        发布
+                        <Send className="w-4 h-4" /> 发布
                       </Button>
                     )}
 
                     {/* 待验收 - 验收按钮（仅 status 判断，避免 progress===100 导致已完成/已驳回仍显示） */}
                     {task.status === 'waiting_acceptance' && onAccept && (
                       <Button size="sm" onClick={() => onAccept(task)}>
-                        验收
+                        <CheckCircle className="w-4 h-4" /> 验收
                       </Button>
                     )}
 
                     {/* pending 且无执行人 - 选择执行人 */}
                     {task.status === 'pending' && !task.assigneeId && onReassign && (
                       <Button size="sm" variant="blue" onClick={() => onReassign(task)}>
-                        选择执行人
+                        <Play className="w-4 h-4" /> 选择执行人
                       </Button>
                     )}
 
@@ -335,16 +335,16 @@ export function TempTaskTable({
                               <Button size="sm" onClick={() => onAccept(task)}>接受</Button>
                             )}
                             {onReject && (
-                              <Button size="sm" variant="destructive" onClick={() => onReject(task)}>拒绝</Button>
+                              <Button size="sm" variant="destructive" onClick={() => onReject(task)}><XCircle className="w-4 h-4" /> 拒绝</Button>
                             )}
                           </>
                         ) : (
                           <>
                             {onWithdraw && (
-                              <Button size="sm" variant="warning" onClick={() => onWithdraw(task)}>撤回</Button>
+                              <Button size="sm" variant="warning" onClick={() => onWithdraw(task)}><Undo2 className="w-4 h-4" /> 撤回</Button>
                             )}
                             {onCancel && (
-                              <Button size="sm" variant="destructive" onClick={() => onCancel(task)}>取消</Button>
+                              <Button size="sm" variant="destructive" onClick={() => onCancel(task)}><X className="w-4 h-4" /> 取消</Button>
                             )}
                           </>
                         )}
@@ -354,21 +354,21 @@ export function TempTaskTable({
                     {/* accepted/in_progress - 取消按钮 */}
                     {(task.status === 'accepted' || task.status === 'in_progress') && onCancel && (
                       <Button size="sm" variant="destructive" onClick={() => onCancel(task)}>
-                        取消
+                        <X className="w-4 h-4" /> 取消
                       </Button>
                     )}
 
                     {/* rejected/pending_reassign/failed/abandoned - 重新派发 */}
                     {(task.status === 'rejected' || task.status === 'pending_reassign' || task.status === 'failed' || task.status === 'abandoned') && onReassign && (
                       <Button size="sm" variant="blue" onClick={() => onReassign(task)}>
-                        重新派发
+                        <Send className="w-4 h-4" /> 重新派发
                       </Button>
                     )}
 
                     {/* 已完成或已驳回后可继续执行 */}
                     {(task.status === 'completed' || task.status === 'rejected') && onContinue && (
                       <Button size="sm" variant="outline" onClick={() => onContinue(task)}>
-                        继续执行
+                        <Play className="w-4 h-4" /> 继续执行
                       </Button>
                     )}
 

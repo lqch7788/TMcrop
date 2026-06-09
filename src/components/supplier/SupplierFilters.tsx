@@ -1,6 +1,6 @@
 // 供应商筛选组件 - 含四级区域级联筛选（方案6.1）
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '@/components/ui';
@@ -203,7 +203,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
             onClick={onReset}
             className="whitespace-nowrap"
           >
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>
       </div>

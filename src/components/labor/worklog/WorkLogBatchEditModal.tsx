@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Check, Send } from 'lucide-react';
+
 import { WorkLog } from './types';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
 import { Button } from '@/components/ui';
@@ -208,10 +210,10 @@ export function WorkLogBatchEditModal({
   const footer = (
     <>
       <Button variant="blue" onClick={handleConfirmNext}>
-        确认（下一个）
+        <Check className="w-4 h-4" /> 确认（下一个）
       </Button>
       <Button onClick={handlePublish}>
-        发布
+        <Send className="w-4 h-4" /> 发布
       </Button>
     </>
   );

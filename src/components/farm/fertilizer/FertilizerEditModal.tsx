@@ -4,7 +4,7 @@
  * 提交时调用 store.updateItem()
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -420,7 +420,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         {!isIot && (
           <Button

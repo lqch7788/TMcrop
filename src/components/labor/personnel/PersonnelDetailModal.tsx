@@ -297,7 +297,7 @@ export function PersonnelDetailModal({ worker, onClose }: PersonnelDetailModalPr
           onClick={onClose}
           variant="secondary"
         >
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </div>

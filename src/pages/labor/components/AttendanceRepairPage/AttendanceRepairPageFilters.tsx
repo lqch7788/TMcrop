@@ -1,7 +1,7 @@
 /**
  * 考勤补录页面 - 筛选栏组件
  */
-import { Search, RefreshCw, Plus, Download } from 'lucide-react';
+import { Check, Download, Plus, RefreshCw, Search, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { AttendanceRepairFilters, BatchMode } from './types/attendanceRepairPage.types';
@@ -132,14 +132,14 @@ export function AttendanceRepairPageFilters({
               variant="blue"
               size="default"
             >
-              批量通过
+              <Check className="w-4 h-4" /> 批量通过
             </Button>
             <Button
               onClick={() => onBatchModeChange('reject')}
               variant="destructive"
               size="default"
             >
-              批量驳回
+              <XCircle className="w-4 h-4" /> 批量驳回
             </Button>
             <Button
               onClick={() => onBatchModeChange('export')}
@@ -161,7 +161,7 @@ export function AttendanceRepairPageFilters({
                 variant="blue"
                 size="default"
               >
-                确认通过 ({selectedRowKeys.length})
+                <Check className="w-4 h-4" /> 确认通过 ({selectedRowKeys.length})
               </Button>
             )}
             {batchMode === 'reject' && (
@@ -171,7 +171,7 @@ export function AttendanceRepairPageFilters({
                 variant="destructive"
                 size="default"
               >
-                确认驳回 ({selectedRowKeys.length})
+                <Check className="w-4 h-4" /> 确认驳回 ({selectedRowKeys.length})
               </Button>
             )}
             {batchMode === 'export' && (
@@ -180,7 +180,7 @@ export function AttendanceRepairPageFilters({
                 variant="default"
                 size="default"
               >
-                确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                <Download className="w-4 h-4" /> 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
               </Button>
             )}
             <Button
@@ -188,7 +188,7 @@ export function AttendanceRepairPageFilters({
               variant="secondary"
               size="default"
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         )}

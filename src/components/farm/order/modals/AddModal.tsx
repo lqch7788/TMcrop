@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Leaf, RefreshCw } from 'lucide-react';
+import { Leaf, Plus, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -467,14 +467,14 @@ export function AddModal({
         size="sm"
         onClick={onClose}
       >
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button
         variant="default"
         size="sm"
         onClick={handleSubmit}
       >
-        确认创建
+        <Plus className="w-4 h-4" /> 确认创建
       </Button>
     </div>
   );

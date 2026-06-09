@@ -2,6 +2,8 @@
  * 请假申请筛选器组件
  */
 import { Button } from '../../../components/ui/button';
+import { Check, Download, Plus, X, XCircle } from 'lucide-react';
+
 import { DatePicker } from '../../../components/ui/DatePicker';
 import { FilterBar, FilterItem } from '../../../components/ui/FilterBar';
 import type { LeaveFilters as LeaveFiltersType, LeaveType } from '../../../components/labor/leave/types';
@@ -99,16 +101,16 @@ export function LeaveFilters({
         {batchMode === 'none' && (
           <>
             <Button variant="default" size="sm" onClick={onAdd}>
-              新增请假
+              <Plus className="w-4 h-4" /> 新增请假
             </Button>
             <Button variant="outline" size="sm" onClick={() => onBatchApprove()}>
-              批量通过
+              <Check className="w-4 h-4" /> 批量通过
             </Button>
             <Button variant="outline" size="sm" onClick={() => onBatchReject()}>
-              批量驳回
+              <XCircle className="w-4 h-4" /> 批量驳回
             </Button>
             <Button variant="outline" size="sm" onClick={() => onExport()}>
-              导出
+              <Download className="w-4 h-4" /> 导出
             </Button>
           </>
         )}
@@ -117,21 +119,21 @@ export function LeaveFilters({
           <>
             {batchMode === 'approve' && (
               <Button variant="default" size="sm" onClick={onBatchApprove} disabled={selectedCount === 0}>
-                确认通过 ({selectedCount})
+                <Check className="w-4 h-4" /> 确认通过 ({selectedCount})
               </Button>
             )}
             {batchMode === 'reject' && (
               <Button variant="default" size="sm" onClick={onBatchReject} disabled={selectedCount === 0}>
-                确认驳回 ({selectedCount})
+                <Check className="w-4 h-4" /> 确认驳回 ({selectedCount})
               </Button>
             )}
             {batchMode === 'export' && (
               <Button variant="default" size="sm" onClick={onExport}>
-                确认导出 {selectedCount > 0 ? `(${selectedCount}条)` : '(全部)'}
+                <Download className="w-4 h-4" /> 确认导出 {selectedCount > 0 ? `(${selectedCount}条)` : '(全部)'}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={onCancelBatch}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         )}
