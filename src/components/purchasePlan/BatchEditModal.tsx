@@ -454,6 +454,7 @@ export function BatchEditModal({
                   <Button
                     type="button"
                     size="sm"
+                    variant="default"
                     onClick={() => {
                       const newItem: PurchasePlanItem = {
                         id: `new_${Date.now()}`,

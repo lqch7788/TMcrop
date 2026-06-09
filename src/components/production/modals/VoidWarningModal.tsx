@@ -37,10 +37,10 @@ export function VoidWarningModal({
             <p className="font-medium text-gray-700">请谨慎操作，确认要申请作废吗？</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose}>
+            <Button size="sm" variant="secondary" onClick={onClose}>
               取消
             </Button>
-            <Button variant="warning" onClick={onConfirm}>
+            <Button size="sm" variant="warning" onClick={onConfirm}>
               确认作废
             </Button>
           </div>

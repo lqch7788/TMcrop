@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { Eye } from 'lucide-react';
 import { CropBatch } from '@/types';
 import { batchStatusColors, batchStatusLabels, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../constants';
 import { ProductionPlanApproval, ApprovalRecord } from '@/services/productionPlanService';
@@ -207,11 +208,12 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
   // 底部按钮
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <Button variant="secondary" onClick={onClose}>
+      <Button variant="secondary" size="sm" onClick={onClose}>
         关闭
       </Button>
       {onViewWorkOrders && (
-        <Button onClick={onViewWorkOrders}>
+        <Button size="sm" variant="blue" onClick={onViewWorkOrders}>
+          <Eye className="w-4 h-4" />
           查看工单
         </Button>
       )}

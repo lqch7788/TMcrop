@@ -1,4 +1,4 @@
-import { Download, Plus } from 'lucide-react';
+import { Download, Plus, Edit2, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ActionToolbarProps {
@@ -91,11 +91,13 @@ export default function ActionToolbar({
             )}
             {canEdit && (
               <Button size="sm" variant="blue" onClick={onBatchEdit}>
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
             )}
             {canDelete && (
               <Button size="sm" variant="destructive" onClick={onDelete}>
+                <Trash2 className="w-4 h-4" />
                 删除
               </Button>
             )}
@@ -107,6 +109,7 @@ export default function ActionToolbar({
             )}
             {showCustomerButton && onCustomer && (
               <Button size="sm" variant="blue" onClick={onCustomer}>
+                <Users className="w-4 h-4" />
                 客户管理
               </Button>
             )}
@@ -116,6 +119,7 @@ export default function ActionToolbar({
         {batchEditMode && (
           <>
             <Button size="sm" variant="blue" onClick={onConfirmBatchEdit}>
+              <Edit2 className="w-4 h-4" />
               确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
             </Button>
             <Button size="sm" variant="secondary" onClick={onCancelBatchEdit}>
@@ -127,6 +131,7 @@ export default function ActionToolbar({
         {deleteMode && !batchEditMode && (
           <>
             <Button size="sm" variant="destructive" onClick={onConfirmDelete}>
+              <Trash2 className="w-4 h-4" />
               确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
             </Button>
             <Button size="sm" variant="secondary" onClick={onCancelDelete}>

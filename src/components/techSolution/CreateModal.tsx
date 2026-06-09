@@ -2,7 +2,7 @@
  * 技术方案新增弹窗
  * 父组件传：form、setForm、scopeExpanded、selectedCrop、handleCropChange、generateCode、operatorOptions、onSubmitDraft/onSubmitApprove
  */
-import { Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, Leaf, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -92,10 +92,10 @@ export function CreateModal({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onSubmitDraft}>
+          <Button type="button" size="sm" variant="secondary" onClick={onSubmitDraft}>
             存为草稿
           </Button>
-          <Button type="button" variant="default" onClick={onSubmitApprove}>
+          <Button type="button" size="sm" variant="default" onClick={onSubmitApprove}>
             提交审批
           </Button>
         </div>
@@ -119,6 +119,7 @@ export function CreateModal({
                 type="button"
                 onClick={() => onFormChange({ ...form, code: onGenerateCode() })}
               >
+                <RefreshCw className="w-4 h-4" />
                 生成
               </Button>
             </div>
@@ -259,7 +260,7 @@ export function CreateModal({
         <FormField label="方案详细">
           <div className="flex items-center gap-3">
             <Button type="button" variant="blue" size="sm" onClick={handleFileUpload}>
-              <Upload className="w-3 h-3 mr-1" />
+              <Upload className="w-4 h-4 mr-1" />
               导入文件
             </Button>
             <span className="text-xs text-gray-500">支持 .txt, .md 格式</span>

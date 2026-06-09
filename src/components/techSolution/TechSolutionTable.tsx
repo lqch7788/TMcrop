@@ -2,7 +2,7 @@
  * 技术方案数据表格 + 工具栏
  * 受控展示：父组件传 techSolutions、state、handlers
  */
-import { Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
@@ -66,7 +66,7 @@ export function TechSolutionTable({
               {batchEditMode && (
                 <>
                   <Button variant="blue" size="sm" onClick={handlers.onConfirmBatchEdit}>
-                    <Edit className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     编辑
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handlers.onCancelBatchEdit}>
@@ -107,7 +107,7 @@ export function TechSolutionTable({
               )}
               {canEdit && (
                 <Button variant="blue" size="sm" onClick={handlers.onEnterBatchEdit}>
-                  <Edit className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}
@@ -228,7 +228,7 @@ export function TechSolutionTable({
                             title="编辑"
                             onClick={() => handlers.onEditClick(tech)}
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -259,10 +259,11 @@ export function TechSolutionTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
                         title="点击下载方案详情"
                         onClick={() => handlers.onDownloadDetail(tech)}
                       >
+                        <Download className="w-4 h-4" />
                         {tech.planDetailFileName}
                       </Button>
                     ) : (

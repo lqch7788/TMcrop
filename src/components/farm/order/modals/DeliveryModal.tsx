@@ -39,12 +39,12 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" onClick={handleSave}>确认交付</Button>
+      <Button size="sm" variant="default" onClick={handleSave}>确认交付</Button>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="添加交付记录" size="md" showFooter={footer}>
+    <Modal isOpen={isOpen} onClose={onClose} title="添加交付记录" size="md" showFooter={true} footer={footer}>
       <div className="space-y-4">
         <div>
           <Label className="text-gray-700">订单编号</Label>

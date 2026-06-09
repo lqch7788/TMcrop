@@ -1,4 +1,4 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, Edit2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -196,7 +196,7 @@ export function ProductionTable({
                 </td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800" title="点击下载生产计划文件" onClick={() => {
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1" title="点击下载生产计划文件" onClick={() => {
                       // M-05: 一律下载为 .md 文件（planDetail 是 markdown 字符串）
                       // 之前后缀保留 .docx 但内容是 markdown，Word 打开报错
                       const fileName = batch.planDetailFileName!.replace(/\.docx$/i, '.md');
@@ -213,6 +213,7 @@ export function ProductionTable({
                       document.body.removeChild(link);
                       URL.revokeObjectURL(url);
                     }}>
+                      <Download className="w-4 h-4" />
                       {batch.planDetailFileName}
                     </Button>
                   ) : (
@@ -229,7 +230,7 @@ export function ProductionTable({
                         className="text-gray-600 hover:text-blue-600"
                         title="编辑"
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4" />
                       </Button>
                     )}
                   </div>

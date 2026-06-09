@@ -2,7 +2,7 @@
  * 生产计划页面
  * 精简后的主组件，逻辑全部抽取到 useProductionPage hook
  */
-import { FileText } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useProductionPage } from './hooks/useProductionPage';
 import { ProductionStatsCards } from './ProductionStatsCards';
@@ -72,6 +72,7 @@ export default function ProductionPage() {
           {hook.exportMode ? (
             <div className="flex gap-2">
               <Button size="sm" onClick={hook.handleConfirmExport}>
+                <Download className="w-4 h-4" />
                 确认导出
               </Button>
               <Button size="sm" variant="secondary" onClick={hook.handleCancelExport}>
@@ -86,6 +87,7 @@ export default function ProductionPage() {
                 onClick={() => hook.setShowBatchEditModal(true)}
                 disabled={hook.selectedRows.length === 0}
               >
+                <Edit2 className="w-4 h-4" />
                 批量编辑
               </Button>
               <Button size="sm" variant="secondary" onClick={() => {
@@ -103,6 +105,7 @@ export default function ProductionPage() {
                 onClick={() => hook.setShowDeleteWarning(true)}
                 disabled={hook.selectedRows.length === 0}
               >
+                <Trash2 className="w-4 h-4" />
                 确认删除
               </Button>
               <Button size="sm" variant="secondary" onClick={() => {
@@ -116,6 +119,7 @@ export default function ProductionPage() {
             <div className="flex gap-2">
               {canCreate && (
                 <Button size="sm" onClick={() => hook.setShowCreateModal(true)}>
+                  <Plus className="w-4 h-4" />
                   新增
                 </Button>
               )}
@@ -124,6 +128,7 @@ export default function ProductionPage() {
                   hook.setBatchEditMode(true);
                   hook.setSelectedRows([]);
                 }}>
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}
@@ -132,11 +137,13 @@ export default function ProductionPage() {
                   hook.setBatchDeleteMode(true);
                   hook.setSelectedRows([]);
                 }}>
+                  <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
               )}
               {canExport && (
                 <Button size="sm" onClick={hook.handleExportClick}>
+                  <Download className="w-4 h-4" />
                   导出
                 </Button>
               )}

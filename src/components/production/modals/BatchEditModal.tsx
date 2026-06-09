@@ -3,7 +3,7 @@
  * 字段来源与新建弹窗保持一致
  */
 
-import { Upload } from 'lucide-react';
+import { Upload, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal } from '@/components/ui';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
@@ -230,13 +230,14 @@ export function BatchEditModal({
       showFooter={true}
       footer={
         <div className="flex gap-3">
-          <Button onClick={onConfirmNext}>
+          <Button size="sm" onClick={onConfirmNext}>
             确认（下一个）
           </Button>
-          <Button variant="warning" onClick={onVoidWarning}>
+          <Button size="sm" variant="warning" onClick={onVoidWarning}>
+            <AlertTriangle className="w-4 h-4" />
             申请作废
           </Button>
-          <Button variant="blue" onClick={currentBatch?.batchStatus === 'pending' || currentBatch?.batchStatus === 'rejected' ? onPublish : onSave}>
+          <Button size="sm" variant="blue" onClick={currentBatch?.batchStatus === 'pending' || currentBatch?.batchStatus === 'rejected' ? onPublish : onSave}>
             {currentBatch?.batchStatus === 'pending' || currentBatch?.batchStatus === 'rejected' ? '提交' : '保存'}
           </Button>
         </div>
@@ -542,7 +543,7 @@ export function BatchEditModal({
                         variant="blue"
                         onClick={triggerFilePicker}
                       >
-                        <Upload className="w-3 h-3" />
+                        <Upload className="w-4 h-4" />
                         重新上传
                       </Button>
                     </div>
@@ -551,7 +552,7 @@ export function BatchEditModal({
                       size="sm"
                       onClick={triggerFilePicker}
                     >
-                      <Upload className="w-3 h-3" />
+                      <Upload className="w-4 h-4" />
                       上传计划文件
                     </Button>
                   )}

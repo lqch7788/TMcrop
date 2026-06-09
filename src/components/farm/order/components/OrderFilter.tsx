@@ -118,7 +118,7 @@ export function OrderFilter({
         {/* 按钮 */}
         <div className="flex gap-2">
           <Button
-            variant="secondary"
+            variant="warning"
             size="sm"
             onClick={onReset}
             className="whitespace-nowrap"

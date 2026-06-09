@@ -3,6 +3,7 @@
  * 父组件传：selectedTech、editForm、setEditForm、scopeExpandedEdit、setScopeExpandedEdit、selectedCropEdit、handleCropChangeEdit
  */
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
@@ -250,7 +251,7 @@ export function EditModal({
           <FormField label="方案详情文件">
             <div className="flex items-center gap-3">
               <Button type="button" variant="blue" size="sm" onClick={handleFileUpload}>
-                <Upload className="w-3 h-3 mr-1" />
+                <Upload className="w-4 h-4 mr-1" />
                 导入文件
               </Button>
               <span className="text-xs text-gray-500">支持 .txt, .md 格式</span>
@@ -265,6 +266,7 @@ export function EditModal({
                   onClick={() => onFormChange({ ...form, content: '', planDetailFileName: '' })}
                   className="text-red-500 hover:text-red-700"
                 >
+                  <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
               )}
