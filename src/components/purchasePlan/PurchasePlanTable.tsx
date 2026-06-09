@@ -2,7 +2,7 @@
  * 采购计划数据表格组件
  */
 import React from 'react';
-import { ChevronDown, ChevronRightIcon, Plus, Edit, Trash2, Download, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRightIcon, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import {
   calculateOverdueAlert,
@@ -203,7 +203,7 @@ export function PurchasePlanTable({
                     onBatchEditConfirm?.();
                   }}
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
                 <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
@@ -255,7 +255,7 @@ export function PurchasePlanTable({
             )}
             {canEdit && onBatchEdit && (
               <Button size="sm" variant="blue" onClick={onBatchEdit}>
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
             )}
@@ -377,7 +377,7 @@ export function PurchasePlanTable({
                             onClick={() => onEdit(plan)}
                             title="编辑"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

@@ -2,7 +2,7 @@
  * 采购计划操作栏组件
  */
 import React from 'react';
-import { Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
@@ -76,7 +76,7 @@ export function ActionBar({
                   onBatchEditConfirm();
                 }}
               >
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
               <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
@@ -130,7 +130,7 @@ export function ActionBar({
           )}
           {canEdit && (
             <Button size="sm" variant="blue" onClick={onBatchEdit}>
-              <Edit className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
               编辑
             </Button>
           )}

@@ -538,7 +538,7 @@ export function CreatePlanModal({
                           size="icon"
                           onClick={() => handleDeleteItem(item.id)}
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </td>
                       <td className="px-1 py-1.5 whitespace-nowrap">

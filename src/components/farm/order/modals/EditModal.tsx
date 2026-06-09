@@ -349,7 +349,7 @@ export function EditModal({
                 }}
                 variant="ghost"
                 size="icon"
-                className="absolute right-3 top-1/2 -translate-y-1/2"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent hover:bg-gray-100"
               >
                 <X className="w-4 h-4 text-gray-400" />
               </Button>

@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { batchStatusLabels, PlanTypeLabels } from './constants';
 import { PlanType } from '../../types';
 import { Button } from '@/components/ui';
@@ -123,10 +123,11 @@ export function ProductionFilters({
         </div>
         {/* 操作按钮 */}
         <div className="flex gap-2 ml-2">
-          <Button size="sm" onClick={onReset}>
+          <Button size="sm" variant="warning" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          <Button size="sm" onClick={onSearch}>
+          <Button size="sm" variant="default" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
           </Button>

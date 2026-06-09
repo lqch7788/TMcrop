@@ -4,6 +4,7 @@
 
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
+import { RefreshCw } from 'lucide-react';
 // M-07: 移除未使用的 RadixSelect import（之前定义了但实际未使用）
 import { Checkbox } from '@/components/ui';
 import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
@@ -124,8 +125,8 @@ export function CreateBatchModal({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onSaveDraft}>存为草稿</Button>
-          <Button onClick={onSubmitForApproval}>提交审批</Button>
+          <Button size="sm" variant="secondary" onClick={onSaveDraft}>存为草稿</Button>
+          <Button size="sm" variant="default" onClick={onSubmitForApproval}>提交审批</Button>
         </div>
       }
     >
@@ -169,7 +170,10 @@ export function CreateBatchModal({
                   className="w-full"
                 />
               </div>
-              <Button size="sm" onClick={onGenerateCode}>生成</Button>
+              <Button size="sm" onClick={onGenerateCode}>
+                <RefreshCw className="w-4 h-4" />
+                生成
+              </Button>
             </div>
           </FormField>
           <FormField label="发布人">
@@ -432,7 +436,7 @@ export function CreateBatchModal({
                 variant="blue"
                 onClick={triggerFilePicker}
               >
-                <Upload className="w-3 h-3 mr-1" />
+                <Upload className="w-4 h-4 mr-1" />
                 导入文件
               </Button>
               <span className="text-xs text-gray-500">支持 .txt, .md, .docx 格式</span>

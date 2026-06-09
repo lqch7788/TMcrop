@@ -2,7 +2,7 @@
  * 技术方案筛选工具栏
  * 受控组件：父组件传 filter state 和 onChange
  */
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -109,7 +109,8 @@ export function TechSolutionFilters({
             <Search className="w-4 h-4" />
             搜索
           </Button>
-          <Button variant="default" size="sm" onClick={onReset}>
+          <Button variant="warning" size="sm" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
         </div>

@@ -1,7 +1,7 @@
 /**
  * 采购计划筛选表单组件
  */
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -141,7 +141,8 @@ export function PurchasePlanFilters({
           />
         </div>
         <div className="flex gap-2 items-end ml-auto">
-          <Button size="sm" onClick={onReset}>
+          <Button size="sm" variant="warning" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           <Button size="sm" onClick={onSearch}>

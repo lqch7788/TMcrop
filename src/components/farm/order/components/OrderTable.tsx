@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -206,7 +206,7 @@ export function OrderTable({
                             onClick={() => onEdit(record)}
                             title="编辑"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

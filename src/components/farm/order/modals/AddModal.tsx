@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Leaf } from 'lucide-react';
+import { Leaf, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -225,6 +225,7 @@ export function AddModal({
             onClick={() => setFormData(prev => ({ ...prev, orderCode: generateOrderCode() }))}
             className="whitespace-nowrap"
           >
+            <RefreshCw className="w-4 h-4" />
             生成
           </Button>
         </div>

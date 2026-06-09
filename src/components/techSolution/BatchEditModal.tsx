@@ -324,14 +324,14 @@ export function BatchEditModal({
                       {editedData.planDetailFileName ?? currentTech.planDetailFileName}
                     </span>
                     <Button variant="blue" size="sm" onClick={handleUploadClick}>
-                      <Upload className="w-3 h-3" />
+                      <Upload className="w-4 h-4" />
                       重新上传
                     </Button>
                     <span className="text-xs text-gray-500">支持 .md, .txt 格式</span>
                   </div>
                 ) : (
                   <Button variant="default" size="sm" onClick={handleUploadClick}>
-                    <Upload className="w-3 h-3" />
+                    <Upload className="w-4 h-4" />
                     上传方案文件
                   </Button>
                 )}
@@ -342,10 +342,10 @@ export function BatchEditModal({
 
         {/* Footer Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button size="sm" variant="secondary" onClick={onCancel}>
             取消
           </Button>
-          <Button variant="default" onClick={onSave}>
+          <Button size="sm" variant="default" onClick={onSave}>
             保存
           </Button>
         </div>

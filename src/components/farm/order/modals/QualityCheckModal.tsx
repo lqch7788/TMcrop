@@ -2,6 +2,7 @@
  * 质检记录弹窗
  */
 import { useState } from 'react';
+import { Trash2, Plus } from 'lucide-react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -35,12 +36,12 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" onClick={handleSave}>保存</Button>
+      <Button size="sm" variant="default" onClick={handleSave}>保存</Button>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="质检记录" size="lg" showFooter={footer}>
+    <Modal isOpen={isOpen} onClose={onClose} title="质检记录" size="lg" showFooter={true} footer={footer}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -105,6 +106,7 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
                   size="sm"
                   onClick={() => setCheckItems(checkItems.filter((_, i) => i !== index))}
                 >
+                  <Trash2 className="w-4 h-4" />
                   删除
                 </Button>
               </div>
@@ -114,6 +116,7 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
               size="sm"
               onClick={() => setCheckItems([...checkItems, { item: '', result: '合格' }])}
             >
+              <Plus className="w-4 h-4" />
               + 添加项目
             </Button>
           </div>

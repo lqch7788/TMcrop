@@ -165,7 +165,7 @@ export function PlanDetailModal({
               onClick={handleStartEditExec}
               title="修改执行状态"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="w-4 h-4" />
             </Button>
           </div>
         ),
