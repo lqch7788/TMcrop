@@ -9,6 +9,7 @@ import { Sparkles, MapPin, Zap, RefreshCw, UserPlus, CheckCircle2, AlertTriangle
 import type { AIRecommendConfig, UnifiedTaskInput } from '../../types/dispatch';
 import type { WorkerRecommendation } from '../../hooks/useComprehensiveDispatch';
 import { DEFAULT_AI_RECOMMEND_CONFIG } from '../../types/dispatch';
+import { Button } from '@/components/ui';
 
  /** AI推荐面板组件Props */
 export interface AIRecommendationPanelProps {
@@ -235,31 +236,23 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         <div className="flex items-center gap-2">
           {/* 重新推荐按钮 */}
           {config.enableReRecommend && onReRecommend && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onReRecommend();
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:bg-purple-50 rounded transition-colors"
-              title="重新推荐"
-            >
-              <RefreshCw className="w-3 h-3" />
+            <Button variant="ghost" size="sm" onClick={(e) => {
+              e.stopPropagation();
+              onReRecommend();
+            }} className="text-purple-600 hover:bg-purple-50" title="重新推荐">
+              <RefreshCw className="w-4 h-4" />
               重新推荐
-            </button>
+            </Button>
           )}
           {/* 手动选择按钮 */}
           {config.enableManualSelect && onManualSelect && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onManualSelect();
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
-              title="手动选择"
-            >
-              <UserPlus className="w-3 h-3" />
+            <Button variant="ghost" size="sm" onClick={(e) => {
+              e.stopPropagation();
+              onManualSelect();
+            }} className="text-blue-600 hover:bg-blue-50" title="手动选择">
+              <UserPlus className="w-4 h-4" />
               手动选择
-            </button>
+            </Button>
           )}
         </div>
       </div>

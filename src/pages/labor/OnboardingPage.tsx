@@ -3,6 +3,7 @@
  * 使用通用组件实现完整功能
  */
 import { UserPlus, Plus, Download } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { useOnboardingPage } from './hooks/useOnboardingPage';
 import { OnboardingPageFilters } from './components/OnboardingPage/OnboardingPageFilters';
 import { OnboardingPageTable } from './components/OnboardingPage/OnboardingPageTable';
@@ -61,72 +62,46 @@ export default function OnboardingPage() {
 
         {/* 操作按钮栏 */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-          <button
-            onClick={handleOpenFormModal}
-            className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-          >
+          <Button onClick={handleOpenFormModal}>
             <Plus className="w-4 h-4" />
             新增入职
-          </button>
+          </Button>
 
           {batchMode === 'none' && (
             <>
-              <button
-                onClick={() => setBatchMode('approve')}
-                className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              >
+              <Button variant="blue" onClick={() => setBatchMode('approve')}>
                 批量通过
-              </button>
-              <button
-                onClick={() => setBatchMode('reject')}
-                className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
-              >
+              </Button>
+              <Button variant="destructive" onClick={() => setBatchMode('reject')}>
                 批量驳回
-              </button>
-              <button
-                onClick={() => setBatchMode('export')}
-                className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1"
-              >
+              </Button>
+              <Button onClick={() => setBatchMode('export')}>
                 <Download className="w-4 h-4" />
                 导出
-              </button>
+              </Button>
             </>
           )}
 
           {batchMode !== 'none' && (
             <>
               {batchMode === 'approve' && (
-                <button
-                  onClick={handleBatchApprove}
-                  disabled={selectedRowKeys.length === 0}
-                  className="h-10 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                >
+                <Button variant="blue" onClick={handleBatchApprove} disabled={selectedRowKeys.length === 0}>
                   确认通过 ({selectedRowKeys.length})
-                </button>
+                </Button>
               )}
               {batchMode === 'reject' && (
-                <button
-                  onClick={handleBatchReject}
-                  disabled={selectedRowKeys.length === 0}
-                  className="h-10 px-4 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-                >
+                <Button variant="destructive" onClick={handleBatchReject} disabled={selectedRowKeys.length === 0}>
                   确认驳回 ({selectedRowKeys.length})
-                </button>
+                </Button>
               )}
               {batchMode === 'export' && (
-                <button
-                  onClick={handleExport}
-                  className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
-                >
+                <Button onClick={handleExport}>
                   确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
-                </button>
+                </Button>
               )}
-              <button
-                onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}
-                className="h-10 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-              >
+              <Button variant="secondary" onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}>
                 取消
-              </button>
+              </Button>
             </>
           )}
         </div>

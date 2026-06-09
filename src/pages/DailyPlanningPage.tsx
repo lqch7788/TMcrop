@@ -11,6 +11,7 @@ import { Calendar, CheckCircle, Clock, AlertTriangle,
 import { Badge } from '@/components/ui';
 import { Progress } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useDailyWorkOrderAnalysis, DailyWorkOrderReport, TaskProgressAnalysis, WorkerLoadAnalysis } from '../hooks/useDailyWorkOrderAnalysis';
 import { showAlert } from '@/lib/dialogService';
 import { useDailyTaskPlanning } from '../hooks/useDailyTaskPlanning';
@@ -285,22 +286,15 @@ export default function DailyPlanningPage() {
                 className="px-3 py-2 border border-gray-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
-            <button
-              onClick={handleRefresh}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
-            >
-              <RotateCw />
+            <Button variant="secondary" size="sm" onClick={handleRefresh}>
+              <RotateCw className="w-4 h-4" />
               刷新数据
-            </button>
+            </Button>
           </div>
-          <button
-            onClick={handleConfirmDispatch}
-            disabled={!todayPlan.tasks.length}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send />
+          <Button size="sm" onClick={handleConfirmDispatch} disabled={!todayPlan.tasks.length}>
+            <Send className="w-4 h-4" />
             一键确认派发 ({todayPlan.totalTasks} 项)
-          </button>
+          </Button>
         </div>
       </div>
 

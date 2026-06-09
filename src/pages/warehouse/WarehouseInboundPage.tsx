@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
 import { Button } from '@/components/ui';
@@ -208,7 +208,7 @@ export default function WarehouseInboundPage() {
                   新增
                 </Button>
                 <Button size="sm" variant="blue" onClick={() => setEditMode(true)}>
-                  <Pencil className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>

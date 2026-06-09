@@ -9,6 +9,7 @@ import { useTasks } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { TASK_CODE_PREFIX, DispatchMode } from '../../types/dispatch';
 import { showAlert } from '@/lib/dialogService';
+import { Button } from '@/components/ui';
 
 // 农事类型选项（从mockData导入）
 const TASK_TYPES = [
@@ -410,32 +411,21 @@ export const FarmTaskForm: React.FC<FarmTaskFormProps> = ({
               ))}
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleAddMaterial}
-            className="mt-2 flex items-center gap-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-          >
+          <Button variant="ghost" size="sm" type="button" onClick={handleAddMaterial} className="mt-2 text-blue-600 hover:bg-blue-50">
             <Plus className="w-4 h-4" />
             添加物资
-          </button>
+          </Button>
         </div>
 
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <Button variant="secondary" type="button" onClick={onCancel}>
             取消
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-          >
+          </Button>
+          <Button variant="blue" type="submit">
             <Save className="w-4 h-4" />
             保存
-          </button>
+          </Button>
         </div>
       </form>
     </div>

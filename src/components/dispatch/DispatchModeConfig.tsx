@@ -21,6 +21,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useDispatchModeConfig } from '../../hooks/useDispatchModeConfig';
+import { Button } from '@/components/ui';
 import type { DispatchMode, DispatchModeConfig } from '../../types/dispatch';
 
 // 模式图标映射
@@ -174,25 +175,14 @@ export const DispatchModeConfigPanel: React.FC<DispatchModeConfigPanelProps> = (
               {saveMessage}
             </span>
           )}
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" />
+          <Button variant="warning" size="sm" onClick={handleReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              hasChanges
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <Save className="w-3 h-3" />
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={!hasChanges}>
+            <Save className="w-4 h-4" />
             保存配置
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -9,6 +9,7 @@ import { useTasks } from '../../../../hooks/useTasks';
 import type { Task } from '../../../../types/task';
 import { DispatchMode } from '../../types/dispatch';
 import { showAlert } from '@/lib/dialogService';
+import { Button } from '@/components/ui';
 
 // 紧急程度选项
 const PRIORITY_OPTIONS = [
@@ -201,20 +202,13 @@ export const TempTaskForm: React.FC<TempTaskFormProps> = ({
 
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <Button variant="secondary" type="button" onClick={onCancel}>
             取消
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors"
-          >
+          </Button>
+          <Button className="bg-orange-600 text-white hover:bg-orange-700" type="submit">
             <Save className="w-4 h-4" />
             保存
-          </button>
+          </Button>
         </div>
       </form>
     </div>

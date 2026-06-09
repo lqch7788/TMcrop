@@ -380,9 +380,9 @@ export function VerifyTempTaskModal({
                   取消
                 </Button>
                 <Button
+                  variant={mode === 'confirm' ? 'default' : 'destructive'}
                   onClick={handleConfirm}
                   disabled={mode === 'reject' && !rejectReason.trim()}
-                  className={mode === 'confirm' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}
                 >
                   {mode === 'confirm' ? '确认验收通过' : '确认驳回'}
                 </Button>

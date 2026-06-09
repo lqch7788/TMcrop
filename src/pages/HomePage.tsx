@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { translations, Language } from '../i18n/translations';
 import { AboutModal } from '../components/home/AboutModal';
+import { Button } from '@/components/ui';
 
 interface ModuleCardProps {
   icon: React.ReactNode;
@@ -277,13 +278,10 @@ export default function HomePage() {
               </>
             ) : (
               <>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
-                >
+                <Button size="sm" onClick={() => navigate('/login')}>
                   <LogIn className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t.login}</span>
-                </button>
+                  {t.login}
+                </Button>
               </>
             )}
 
@@ -302,13 +300,10 @@ export default function HomePage() {
             </div>
 
             {/* 关于按钮 - 始终显示 */}
-            <button
-              onClick={() => setShowAbout(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-            >
+            <Button variant="secondary" size="sm" onClick={() => setShowAbout(true)}>
               <Info className="w-4 h-4" />
-              <span className="text-sm">{t.about}</span>
-            </button>
+              {t.about}
+            </Button>
           </div>
 
         </div>
@@ -377,21 +372,13 @@ export default function HomePage() {
               <p className="text-gray-500 mb-6">确定要退出登录吗？</p>
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
-
-                >
+                <Button variant="outline" size="sm" onClick={() => setShowLogoutConfirm(false)} className="flex-1 h-10">
                   取消
-                </button>
+                </Button>
 
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
-
-                >
+                <Button variant="destructive" size="sm" onClick={handleLogout} className="flex-1 h-10">
                   确认退出
-                </button>
+                </Button>
 
               </div>
 
