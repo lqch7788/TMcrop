@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDragResize } from './useDragResize';
 import {
-  Users, Plus, Pencil, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
+  Users, Plus, Edit2, Trash2, Search, RefreshCw, X, Save, Key, Shield, UserCheck, UserX,
 } from 'lucide-react';
 import { useOrganizationStore, useDepartmentStore } from '@/stores';
 import type { User } from '@/types/authority';
@@ -304,7 +304,7 @@ export default function UserManagement() {
                 <td className="py-2 px-4">
                   <div className="flex items-center justify-end gap-1">
                     <button onClick={() => openEditModal(user)} className="p-1 border border-gray-300 rounded text-blue-500 hover:border-blue-500" title="编辑">
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => openPasswordModal(user)} className="p-1 border border-gray-300 rounded text-amber-500 hover:border-amber-500" title="修改密码">
                       <Key className="w-3.5 h-3.5" />

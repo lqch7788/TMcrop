@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Save, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, Save, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, Edit2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useSystemConfigStore } from '@/stores/useSystemConfigStore';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -353,7 +353,7 @@ export default function CropGrowthConfigPanel() {
             </>
           ) : (
             <Button size="sm" onClick={enterEditMode}>
-              <Pencil className="w-3.5 h-3.5" />
+              <Edit2 className="w-3.5 h-3.5" />
               编辑
             </Button>
           )}

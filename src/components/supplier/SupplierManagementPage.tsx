@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import PageHeader from './PageHeader';
 import SupplierFilters, { filterSuppliers } from './SupplierFilters';
 import SupplierTable from './SupplierTable';
@@ -474,7 +474,7 @@ export default function SupplierManagementPage() {
                   新增
                 </Button>
                 <Button size="sm" variant="blue" onClick={() => setBatchEditMode(true)}>
-                  <Pencil className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteMode(true)}>
