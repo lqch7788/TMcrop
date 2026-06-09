@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Download, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload, Search, RotateCw } from 'lucide-react';
+import { Plus, Download, RefreshCw, Users, Package, Coins, Edit2, Trash2, Upload, Search, RotateCcw } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { usePiecework } from './hooks/usePiecework';
 import { PieceworkTable } from './PieceworkTable';
@@ -390,8 +390,8 @@ export const PieceworkPage: React.FC = () => {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={resetFilters}>
-              <RotateCw className="w-4 h-4" />
+            <Button size="sm" variant="warning" onClick={resetFilters}>
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
             <Button size="sm" variant="default">

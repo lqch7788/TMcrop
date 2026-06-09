@@ -1,4 +1,4 @@
-import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCw } from 'lucide-react';
+import { FileText, Search, AlertTriangle, Plus, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCcw } from 'lucide-react';
 import { useContract } from './hooks/useContract';
 import { ContractFormModal } from './ContractFormModal';
 import { ContractRemindModal } from './ContractRemindModal';
@@ -442,8 +442,8 @@ export function ContractTable() {
             <option value="劳务合同">劳务合同</option>
           </select>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setFilters({ keyword: '', status: '', contractType: '' })}>
-              <RotateCw className="w-4 h-4" />
+            <Button size="sm" variant="warning" onClick={() => setFilters({ keyword: '', status: '', contractType: '' })}>
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
             <Button size="sm" variant="default">

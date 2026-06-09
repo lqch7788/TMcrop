@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, ClipboardCheck, Edit, Trash2, Download, Eye } from 'lucide-react';
+import { Plus, ClipboardCheck, Edit2, Trash2, Download, Eye } from 'lucide-react';
 import { useUserStore, useGreenhouseStore, useProductionPlanStore } from '../../../stores';
 import { Task } from '../../../types';
 import { TasksFilters } from './TasksFilters';
@@ -460,7 +460,7 @@ export function TasksPage() {
                 onClick={() => setShowBatchEditModal(true)}
                 disabled={selectedRows.length === 0}
               >
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 批量编辑
               </Button>
               <Button
@@ -507,7 +507,7 @@ export function TasksPage() {
                   setSelectedRows([]);
                 }}
               >
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
               <Button

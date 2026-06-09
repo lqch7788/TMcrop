@@ -1,4 +1,4 @@
-import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Pencil, Download } from 'lucide-react';
+import { Eye, Edit2, Trash2, ChevronLeft, ChevronRight, Plus, Download } from 'lucide-react';
 import {
   TempWorkerTableProps,
   TempWorker,
@@ -98,7 +98,7 @@ export function TempWorkerTable({
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     批量编辑
                   </Button>
                   <Button

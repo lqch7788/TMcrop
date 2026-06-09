@@ -1,4 +1,4 @@
-import { Eye, Edit, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Edit2, Pencil, Download } from 'lucide-react';
+import { Eye, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Download } from 'lucide-react';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -98,7 +98,7 @@ export function RecruitmentTable({
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     批量编辑
                   </Button>
                   <Button
@@ -316,7 +316,7 @@ export function RecruitmentTable({
                           onClick={() => onEdit(rec)}
                           title="编辑"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4" />
                         </Button>
                       )}
                       <Button

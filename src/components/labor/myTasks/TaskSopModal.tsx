@@ -2,7 +2,7 @@
  * SOP文件查看弹窗组件
  */
 
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { getTypeColor, getTypeLabel } from './constants';
 
 interface TaskSopModalProps {
@@ -30,12 +30,12 @@ export function TaskSopModal({
       showFooter={false}
       bottomContent={
         <div className="flex justify-end">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
           >
             关闭
-          </button>
+          </Button>
         </div>
       }
     >

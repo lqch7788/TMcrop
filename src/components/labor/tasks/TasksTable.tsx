@@ -1,4 +1,4 @@
-import { Calendar, Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Eye, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Task } from '../../../types';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
@@ -220,7 +220,7 @@ export function TasksTable({
                       onClick={() => onEditTask(task)}
                       title="编辑"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit2 className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"

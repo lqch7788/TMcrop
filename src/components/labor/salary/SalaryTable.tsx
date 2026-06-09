@@ -1,4 +1,4 @@
-import { Eye, Calculator, Download, ChevronLeft, ChevronRight, Edit, Trash2, Plus } from 'lucide-react';
+import { Eye, Calculator, Download, ChevronLeft, ChevronRight, Edit2, Trash2, Plus } from 'lucide-react';
 import type { SalaryTableProps } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -68,7 +68,7 @@ export function SalaryTable({
                     onClick={onBatchEditConfirm}
                     disabled={selectedRows.length === 0}
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     批量编辑
                   </Button>
                   <Button
@@ -137,7 +137,7 @@ export function SalaryTable({
                   variant="blue"
                   onClick={onBatchEditClick}
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}

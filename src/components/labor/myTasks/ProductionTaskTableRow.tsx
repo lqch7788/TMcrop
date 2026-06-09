@@ -2,7 +2,8 @@
  * 生产任务表格行组件
  */
 
-import { CheckCircle, XCircle, Play, Eye, Edit, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Play, Eye, Edit2, FileText } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { TaskWithExtras, TaskDispatchTask } from './types';
 import { STATUS_MAP, PRIORITY_MAP, getTypeColor, getTypeLabel } from './constants';
 
@@ -59,13 +60,15 @@ export function ProductionTaskTableRow({
     <>
       {/* 任务ID */}
       <td className="px-3 py-3 text-sm font-medium whitespace-nowrap">
-        <button
+        <Button
+          variant="link"
+          size="sm"
           onClick={() => onOpenDetailModal(task)}
           className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
           title="点击查看详情"
         >
           {task.id}
-        </button>
+        </Button>
       </td>
       {/* 任务类型 */}
       <td className="px-3 py-3 whitespace-nowrap">
@@ -126,13 +129,15 @@ export function ProductionTaskTableRow({
       {/* 作业标准 */}
       <td className="px-3 py-3 whitespace-nowrap">
         {types.length >= 2 && task.sopContent ? (
-          <button
+          <Button
+            variant="link"
+            size="sm"
             onClick={(e) => onOpenSopModal(task, e)}
             className="text-blue-600 hover:text-blue-800 underline text-xs flex items-center gap-1"
           >
-            <FileText className="w-3 h-3" />
+            <FileText className="w-4 h-4" />
             SOP文件
-          </button>
+          </Button>
         ) : (
           <span className="text-gray-400 text-xs">-</span>
         )}
@@ -141,63 +146,69 @@ export function ProductionTaskTableRow({
       <td className="px-3 py-3 whitespace-nowrap">
         {task.status === 'pending' && (
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              size="sm"
+              variant="default"
               onClick={() => onAccept(task)}
-              className="flex items-center gap-1 px-2 py-1.5 text-white bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium transition-colors"
               title="接受任务"
             >
-              <CheckCircle className="w-3 h-3" />
+              <CheckCircle className="w-4 h-4" />
               接受
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={() => onReject(task)}
-              className="flex items-center gap-1 px-2 py-1.5 text-white bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium transition-colors"
               title="拒绝任务"
             >
-              <XCircle className="w-3 h-3" />
+              <XCircle className="w-4 h-4" />
               拒绝
-            </button>
+            </Button>
           </div>
         )}
         {(task.status === 'accepted' || task.status === 'in_progress') && (
-          <button
+          <Button
+            size="sm"
+            variant="blue"
             onClick={() => onOpenFeedbackModal(task)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors"
             title="点击提交进度"
           >
-            <Edit className="w-4 h-4" />
+            <Edit2 className="w-4 h-4" />
             提交进度
-          </button>
+          </Button>
         )}
         {task.status === 'rejected' && (
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              size="sm"
+              variant="warning"
               onClick={() => onContinueExecution(task)}
-              className="flex items-center gap-1 px-2 py-1.5 text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-xs font-medium transition-colors"
               title="点击继续执行"
             >
-              <Play className="w-3 h-3" />
+              <Play className="w-4 h-4" />
               继续执行
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => onOpenDetailModal(task)}
-              className="flex items-center gap-1 px-2 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-xs font-medium transition-colors"
               title="点击查看详情"
             >
-              <Eye className="w-3 h-3" />
+              <Eye className="w-4 h-4" />
               查看
-            </button>
+            </Button>
           </div>
         )}
         {(task.status === 'waiting_acceptance' || task.status === 'completed') && (
-          <button
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => onOpenDetailModal(task)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-white bg-gray-100 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
             title="点击查看详情"
           >
             <Eye className="w-4 h-4" />
             查看
-          </button>
+          </Button>
         )}
       </td>
     </>

@@ -4,6 +4,7 @@
 
 import { TaskFilterType } from './types';
 import { BookMarked } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface TaskFilterTabsProps {
   taskFilter: TaskFilterType;
@@ -27,9 +28,10 @@ export function TaskFilterTabs({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="flex border-b border-gray-200">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => onFilterChange('all')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
             taskFilter === 'all'
               ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -39,10 +41,11 @@ export function TaskFilterTabs({
           <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs">
             {taskCounts.all}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => onFilterChange('production')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
             taskFilter === 'production'
               ? 'border-blue-500 text-blue-600 bg-blue-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -52,10 +55,11 @@ export function TaskFilterTabs({
           <span className="px-2 py-0.5 bg-blue-200 text-blue-600 rounded-full text-xs">
             {taskCounts.production}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => onFilterChange('temp')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
             taskFilter === 'temp'
               ? 'border-orange-500 text-orange-600 bg-orange-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -65,10 +69,11 @@ export function TaskFilterTabs({
           <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
             {taskCounts.temp}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => onFilterChange('problem')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
             taskFilter === 'problem'
               ? 'border-orange-500 text-orange-600 bg-orange-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -78,10 +83,11 @@ export function TaskFilterTabs({
           <span className="px-2 py-0.5 bg-orange-200 text-orange-600 rounded-full text-xs">
             {taskCounts.problem}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={() => onFilterChange('worklog')}
-          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-6 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors rounded-none ${
             taskFilter === 'worklog'
               ? 'border-purple-500 text-purple-600 bg-purple-50'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
@@ -89,7 +95,7 @@ export function TaskFilterTabs({
         >
           <BookMarked className="w-4 h-4" />
           工作日志
-        </button>
+        </Button>
       </div>
     </div>
   );

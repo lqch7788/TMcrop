@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCw } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui';
 import { Button } from '@/components/ui';
 import {
@@ -107,8 +107,8 @@ export function SkillFiltersComponent({ filters, onChange, onReset, allSkillTags
 
         {/* 重置和搜索按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onReset}>
-            <RotateCw className="w-4 h-4" />
+          <Button size="sm" variant="warning" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           <Button size="sm" variant="default">
