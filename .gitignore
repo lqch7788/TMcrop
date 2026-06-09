@@ -9,6 +9,10 @@ public/
 .claude/
 .superpowers/
 
+# Claude Code 私人配置（不提交到 git）
+CLAUDE.md
+PROJECT_MEMO.md
+
 # Claude Code 本地设置（不提交）
 .claude/settings.local.json
 
