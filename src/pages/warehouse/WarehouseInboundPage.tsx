@@ -5,8 +5,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Download } from 'lucide-react';
-import { ChevronDown, ChevronRight, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download, ChevronDown, ChevronRight, X } from 'lucide-react';
 import PageHeader from '@/components/warehouse/PageHeader';
 import { Button } from '@/components/ui';
 import { useWarehouseInbound } from './hooks/useWarehouseInbound';

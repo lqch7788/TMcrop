@@ -3,7 +3,7 @@
  * 处理树形嵌套结构的表格渲染
  */
 import React from 'react';
-import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronRight, Edit2, Save, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { getProduceTypesByCategory } from '../../../data/produceCodeRule';
 import type { ProduceCategories, EditingCell } from './types/produceCodeRule.types';
@@ -125,8 +125,6 @@ const renderEditCell = (
     </div>
   );
 };
-
-import { Edit2, Plus, Save, X } from 'lucide-react';
 
 export function ProduceCodeRuleTable({
   categories,

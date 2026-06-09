@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Trash2, RotateCcw, RotateCw } from 'lucide-react';
-import { Edit2, RotateCcw, Trash2, X } from 'lucide-react';
+import { Plus, Hash, Search, Download, ChevronRight, ChevronDown, Eye, Edit, Edit2, Trash2, RotateCcw, RotateCw, X } from 'lucide-react';
 import { InboundExportModal, InboundBatchEditModal } from './InboundModals';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';

@@ -4,13 +4,12 @@
 
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronUp, FileText, Send, Upload } from 'lucide-react';
 // M-07: 移除未使用的 RadixSelect import（之前定义了但实际未使用）
 import { Checkbox } from '@/components/ui';
 import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, FileText, Send, Upload } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { DictSelect } from '../../common/settings/DictSelect';
