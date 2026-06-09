@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Download, Pencil, Trash2
+  Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, ChevronLeft, ChevronRight, Download, Trash2, Check
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore, useToastStore } from '../../../stores';
@@ -1023,10 +1023,12 @@ export default function HarvestPage() {
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
               <div className="flex items-center gap-4">
                 <Button
-                  variant="link"
+                  variant="ghost"
                   size="sm"
                   onClick={handleSelectAll}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                 >
+                  <Check className="w-4 h-4" />
                   {selectedRows.length === filteredRecords.length ? '全不选' : '全选'}
                 </Button>
                 <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>

@@ -63,6 +63,7 @@ export function AgricultureRecordTableToolbar({
             {canExport && (
               <Button
                 size="sm"
+                variant="default"
                 onClick={onExport}
               >
                 <Download className="w-4 h-4" />

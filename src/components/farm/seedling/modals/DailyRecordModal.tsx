@@ -562,7 +562,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                               variant="ghost"
                               size="icon"
                               onClick={handleSaveEdit}
-                              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               <Check className="w-4 h-4" />
                             </Button>
@@ -570,7 +570,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                               variant="ghost"
                               size="icon"
                               onClick={handleCancelEdit}
-                              className="h-7 w-7 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                              className="text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                             >
                               <X className="w-4 h-4" />
                             </Button>
@@ -581,17 +581,17 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                               variant="ghost"
                               size="icon"
                               onClick={() => handleStartEdit(r)}
-                              className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDelete(r)}
-                              className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         )}

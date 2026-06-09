@@ -9,8 +9,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import {
-  Leaf, Search, Plus, Download, ChevronDown, ChevronRight,
-  X, Pencil, Trash2, Sprout, Droplets, AlertTriangle
+  ChevronDown, ChevronRight
 } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { useOperationRecords, SOURCE_CONFIG, type FarmOperationRecord, type FarmOperationRecordChild } from '../../../hooks/useOperationRecords';

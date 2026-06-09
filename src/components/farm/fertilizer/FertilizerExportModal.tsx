@@ -30,7 +30,7 @@ export default function FertilizerExportModal({ isOpen, onClose, onConfirm, sele
         <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">导出格式选择</h3>
           <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-emerald-700">
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </Button>
         </div>
 

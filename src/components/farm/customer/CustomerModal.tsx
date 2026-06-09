@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
+import { RefreshCw } from 'lucide-react';
 import { useCustomerStore } from '@/stores';
 import { Customer } from '@/types/customer.types';
 import { showAlert } from '@/lib/dialogService';
@@ -129,7 +130,7 @@ export function CustomerModal({ isOpen, customer, onClose, onSave }: CustomerMod
       <Button variant="secondary" size="sm" onClick={onClose} disabled={loading}>
         取消
       </Button>
-      <Button size="sm" onClick={handleSubmit} disabled={loading}>
+      <Button variant="default" size="sm" onClick={handleSubmit} disabled={loading}>
         {loading ? '保存中...' : '保存'}
       </Button>
     </div>
@@ -168,6 +169,7 @@ export function CustomerModal({ isOpen, customer, onClose, onSave }: CustomerMod
                 onClick={handleGenerateCode}
                 className="whitespace-nowrap"
               >
+                <RefreshCw className="w-4 h-4" />
                 生成
               </Button>
             </div>

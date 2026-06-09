@@ -46,7 +46,7 @@ export default function IotDataIndicator({ devices, loading = false, className =
           key={device.device_id}
           className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm"
         >
-          <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+          <Wifi className="w-4 h-4 text-emerald-600" />
           <span className="font-medium text-emerald-700">{device.device_name}</span>
           <span className="text-emerald-500">|</span>
           <span className="text-emerald-600">

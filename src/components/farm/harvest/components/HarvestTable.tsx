@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { HarvestRecord } from '../../../../types/crop';
 import { getStatusBadge, getGradeBadge } from '../statusBadgeUtils.tsx';
 import { getPlantingModeLabel, parseHarvesterNames } from '../../../../constants/cropConstants';
@@ -136,7 +136,7 @@ export function HarvestTableRow({
         </TableCell>
       )}
       <TableCell className="px-4 py-3">
-        <Button variant="ghost" size="icon" onClick={onToggleExpand} className="p-1 hover:bg-gray-100 rounded">
+        <Button variant="ghost" size="icon" onClick={onToggleExpand} className="hover:bg-gray-100">
           {isExpanded ? (
             <ChevronDown className="w-4 h-4 text-gray-500" />
           ) : (
@@ -317,6 +317,7 @@ export function BatchActionBar({ selectedCount, totalCount, onSelectAll }: Batch
           onClick={onSelectAll}
           className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
         >
+          <Check className="w-4 h-4" />
           {selectedCount === totalCount ? '全不选' : '全选'}
         </Button>
         <span className="text-sm text-gray-500">已选择 {selectedCount} 项</span>

@@ -179,7 +179,11 @@ export function PestControlTable({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={onAdd}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onAdd}
+            >
               <Plus className="w-4 h-4" />
               新增
             </Button>
@@ -191,7 +195,11 @@ export function PestControlTable({
               <Trash2 className="w-4 h-4" />
               批量删除
             </Button>
-            <Button size="sm" onClick={onExportMode}>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onExportMode}
+            >
               <Download className="w-4 h-4" />
               导出
             </Button>

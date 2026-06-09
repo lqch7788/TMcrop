@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -154,10 +154,11 @@ export function HarvestFilterToolbar({
 
         {/* 按钮行 - 放同一行后面 */}
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={onReset}>
+          <Button variant="warning" size="sm" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          <Button size="sm" onClick={onSearch}>
+          <Button variant="default" size="sm" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
           </Button>
