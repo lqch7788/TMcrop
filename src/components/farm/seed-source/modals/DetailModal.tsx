@@ -53,6 +53,7 @@ export function DetailModal({
       <div className="flex border-b border-gray-200 mb-4">
         <Button
           variant="ghost"
+          size="sm"
           onClick={() => setActiveTab('info')}
           className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
             activeTab === 'info'
@@ -64,6 +65,7 @@ export function DetailModal({
         </Button>
         <Button
           variant="ghost"
+          size="sm"
           onClick={() => setActiveTab('trace')}
           className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none -mb-px hover:bg-transparent ${
             activeTab === 'trace'

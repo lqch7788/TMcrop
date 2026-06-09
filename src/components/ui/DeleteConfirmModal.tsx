@@ -83,10 +83,10 @@ export function DeleteConfirmModal({
 
         {/* 底部 footer - 固定在弹窗底部，与 Modal 一致 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" size="sm" onClick={onClose}>
             取消
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button variant="destructive" size="sm" onClick={onConfirm}>
             确认删除
           </Button>
         </div>
@@ -123,10 +123,10 @@ export function DeleteWarningModalLegacy1({
           </ul>
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onCancel} className="flex-1">
+          <Button variant="secondary" size="sm" onClick={onCancel} className="flex-1">
             取消
           </Button>
-          <Button variant="destructive" onClick={onConfirm} className="flex-1">
+          <Button variant="destructive" size="sm" onClick={onConfirm} className="flex-1">
             确认
           </Button>
         </div>
@@ -162,10 +162,10 @@ export function DeleteWarningModalLegacy2({
             <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={onClose} className="flex-1">
+            <Button variant="secondary" size="sm" onClick={onClose} className="flex-1">
               取消
             </Button>
-            <Button variant="destructive" onClick={onConfirm} className="flex-1">
+            <Button variant="destructive" size="sm" onClick={onConfirm} className="flex-1">
               确认删除
             </Button>
           </div>

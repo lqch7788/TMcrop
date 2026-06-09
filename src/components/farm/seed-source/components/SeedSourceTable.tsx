@@ -314,7 +314,7 @@ export function SeedSourceTable({
               )}
               {canExport && (
                 <Button
-                  variant="default"
+                  variant="blue"
                   size="sm"
                   onClick={() => { onOperationModeChange('export'); }}
                 >
