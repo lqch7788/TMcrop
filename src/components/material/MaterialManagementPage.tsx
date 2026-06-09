@@ -110,7 +110,7 @@ export function MaterialManagementPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button>
+            <Button variant="warning">
               <RotateCcw className="w-4 h-4" /> 重置
             </Button>
             <Button>

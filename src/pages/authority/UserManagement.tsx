@@ -234,6 +234,7 @@ export default function UserManagement() {
             <option value="inactive">禁用</option>
           </select>
           <Button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
+            variant="warning"
             className="h-8 px-2 text-xs text-gray-500 hover:text-gray-700">
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>

@@ -79,7 +79,7 @@ export function PerformanceFilters({
         {/* 操作按钮 */}
         <div className="flex gap-2">
           <Button
-            variant="secondary"
+            variant="warning"
             onClick={onReset}
             className="gap-2"
           >

@@ -197,6 +197,7 @@ export function MaterialFilters({
         <div className="flex items-end gap-2">
           <Button
             size="sm"
+            variant="warning"
             onClick={() => onFiltersChange({
               code: '',
               name: '',

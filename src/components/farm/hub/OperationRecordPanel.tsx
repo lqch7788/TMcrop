@@ -259,7 +259,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
           </div>
           {(filterType !== 'all' || filterStartDate || filterEndDate) && (
             <Button
-              variant="ghost"
+              variant="warning"
               size="sm"
               onClick={() => { setFilterType('all'); setFilterStartDate(''); setFilterEndDate(''); }}
             >

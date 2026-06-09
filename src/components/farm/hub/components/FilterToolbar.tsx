@@ -156,7 +156,7 @@ export function FilterToolbar({
         {/* 操作按钮 */}
         <div className="flex items-center gap-2">
           <Button
-            variant="default"
+            variant="warning"
             size="sm"
             onClick={onResetFilters}
             className="shadow-sm"

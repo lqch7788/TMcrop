@@ -721,7 +721,7 @@ export default function WarehouseMaterialsPage() {
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="warning"
                   onClick={() => setCodeGen({ bigCategory: '', midCategory: '', subCategory: '', generatedCode: '' })}
                 >
                   <RotateCcw className="w-4 h-4" /> 重置

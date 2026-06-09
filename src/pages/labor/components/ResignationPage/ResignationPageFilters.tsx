@@ -61,7 +61,7 @@ export function ResignationPageFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onResetFilters}>
+          <Button size="sm" variant="warning" onClick={onResetFilters}>
             <RotateCw className="w-4 h-4" />
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>

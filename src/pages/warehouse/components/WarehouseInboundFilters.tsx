@@ -115,7 +115,7 @@ export const WarehouseInboundFilters: React.FC<WarehouseInboundFiltersProps> = (
         <div className="flex gap-2">
           <Button
             size="sm"
-            variant="secondary"
+            variant="warning"
             onClick={onReset}
           >
             <RotateCw className="w-4 h-4" />

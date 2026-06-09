@@ -276,7 +276,7 @@ export default function ApplicationTab({
               </SelectContent>
             </Select>
           </div>
-          <Button variant="secondary" onClick={onReset}>
+          <Button variant="warning" onClick={onReset}>
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>

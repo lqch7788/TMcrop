@@ -441,7 +441,7 @@ export function TaskTab({
           </Select>
         </div>
         <Button
-          variant="default"
+          variant="warning"
           size="sm"
           onClick={onResetFilters}
           className="flex-shrink-0"

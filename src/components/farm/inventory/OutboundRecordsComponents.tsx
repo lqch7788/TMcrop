@@ -240,7 +240,7 @@ export function OutboundRecordsFilter({ value, onChange, onReset }: OutboundReco
         </div>
         {/* 按钮 */}
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={onReset} className="whitespace-nowrap">
+          <Button variant="warning" size="sm" onClick={onReset} className="whitespace-nowrap">
             <RotateCcw className="w-4 h-4" />
             重置
           </Button>

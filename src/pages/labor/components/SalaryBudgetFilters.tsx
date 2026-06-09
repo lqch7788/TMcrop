@@ -96,7 +96,7 @@ export function SalaryBudgetFilters({
 
         {/* 重置和搜索按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onReset}>
+          <Button size="sm" variant="warning" onClick={onReset}>
             <RotateCw className="w-4 h-4" />
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
