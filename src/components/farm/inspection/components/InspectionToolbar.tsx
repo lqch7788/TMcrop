@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface InspectionToolbarProps {
@@ -77,7 +77,7 @@ export function InspectionToolbar({
                 size="sm"
                 onClick={onConfirmBatchEdit}
               >
-                <Pencil className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 确认编辑
               </Button>
               <Button
@@ -126,7 +126,7 @@ export function InspectionToolbar({
               variant="blue"
               onClick={onBatchEdit}
             >
-              <Pencil className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
               编辑
             </Button>
           )}
