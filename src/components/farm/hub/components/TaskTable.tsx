@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Check, CheckCircle, ChevronDown, ChevronUp, Download, Edit, Edit2, Plus, RotateCcw, Send, Trash2, Upload, X } from 'lucide-react';
+import { Check, CheckCircle, ChevronDown, ChevronUp, Download, Edit2, Plus, RotateCcw, Send, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
@@ -214,7 +214,6 @@ export function TaskTable({
                 onClick={onConfirmBatchEdit}
                 disabled={selectedIds.length === 0}
               >
-                <Edit className="w-4 h-4" />
                 <Edit2 className="w-4 h-4" /> 确认编辑
               </Button>
               <Button
@@ -247,10 +246,10 @@ export function TaskTable({
           ) : batchDispatchMode ? (
             <>
               <Button
+                variant="purple"
                 size="sm"
                 onClick={onConfirmBatchDispatch}
                 disabled={selectedIds.length === 0}
-                className="bg-purple-600 text-white hover:bg-purple-700"
               >
                 <Send className="w-4 h-4" /> 确认派发
               </Button>
@@ -317,7 +316,6 @@ export function TaskTable({
                   size="sm"
                   onClick={onBatchEdit}
                 >
-                  <Edit className="w-4 h-4" />
                   <Edit2 className="w-4 h-4" /> 编辑
                 </Button>
               )}
@@ -340,15 +338,16 @@ export function TaskTable({
                     onClick={() => setShowMoreActions(!showMoreActions)}
                   >
                     更多
-                    {showMoreActions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {showMoreActions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </Button>
                   {showMoreActions && (
                     <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-1.5 flex items-center gap-1">
                       {onBatchDispatch && (
                         <Button
+                          variant="purple"
                           size="sm"
                           onClick={() => { onBatchDispatch?.(); setShowMoreActions(false); }}
-                          className="bg-purple-600 text-white hover:bg-purple-700 whitespace-nowrap"
+                          className="whitespace-nowrap"
                         >
                           <Send className="w-4 h-4" />
                           派发

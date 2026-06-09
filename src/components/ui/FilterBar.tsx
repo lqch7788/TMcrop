@@ -52,7 +52,7 @@ const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
         <div className="flex items-center gap-2">
           {onReset && (
             <Button
-              variant="outline"
+              variant="warning"
               size="sm"
               onClick={onReset}
               className="flex items-center gap-1"
@@ -63,6 +63,7 @@ const FilterBar = React.forwardRef<HTMLDivElement, FilterBarProps>(
           )}
           {onSearch && (
             <Button
+              variant="default"
               size="sm"
               onClick={onSearch}
               className="flex items-center gap-1"

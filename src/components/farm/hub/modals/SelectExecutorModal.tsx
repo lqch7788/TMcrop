@@ -245,7 +245,7 @@ export function SelectExecutorModal({
                     onClick={fetchAIRecommendations}
                     className="w-full py-4 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 hover:border-purple-500 hover:bg-purple-50"
                   >
-                    <Sparkles className="w-5 h-5" />
+                    <Sparkles className="w-4 h-4" />
                     点击获取AI智能推荐
                   </Button>
                 )}

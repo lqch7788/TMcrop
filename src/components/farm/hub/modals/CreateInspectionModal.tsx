@@ -639,7 +639,7 @@ export function CreateInspectionModal({
                           newPhotos.splice(idx, 1);
                           updateField('issuePhotos', newPhotos);
                         }}
-                        className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-bl-lg"
+                        className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white rounded-bl-lg p-0"
                       >
                         <X className="w-3 h-3" />
                       </Button>
@@ -693,7 +693,7 @@ export function CreateInspectionModal({
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleFeedbackUser(userId)}
-                        className="ml-1 hover:text-red-900"
+                        className="ml-1 hover:text-red-900 w-6 h-6"
                       >
                         <X className="w-3 h-3" />
                       </Button>

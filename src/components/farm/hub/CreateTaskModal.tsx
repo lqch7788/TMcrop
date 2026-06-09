@@ -184,7 +184,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
             )}
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 text-white" />
           </Button>
         </div>
 

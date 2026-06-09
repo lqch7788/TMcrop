@@ -220,7 +220,7 @@ export function TaskDetailModal({ taskId, onClose, onVerify, tasks, getTaskRecor
             </span>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 text-white" />
           </Button>
         </div>
 
