@@ -165,7 +165,7 @@ export function ProblemTable({
                       variant="link"
                       size="sm"
                       onClick={() => onViewDetail(problem)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-blue-600 hover:text-blue-800 font-medium h-6"
                       title="点击查看详情"
                     >
                       {problem.problemCode}
@@ -208,6 +208,7 @@ export function ProblemTable({
                         variant="warning"
                         size="sm"
                         onClick={() => onSingleDispatch?.(problem)}
+                        className="h-6"
                       >
                         分派
                       </Button>
@@ -217,6 +218,7 @@ export function ProblemTable({
                         variant="blue"
                         size="sm"
                         onClick={() => onViewDetail(problem)}
+                        className="h-6"
                       >
                         <Eye className="w-4 h-4" /> 详情
                       </Button>
@@ -226,6 +228,7 @@ export function ProblemTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewDetail(problem)}
+                        className="h-6"
                       >
                         <CheckCircle className="w-4 h-4" /> 验收
                       </Button>
