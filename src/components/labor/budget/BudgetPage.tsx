@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, AlertCircle, Info, Calculator, Plus, Download } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import { useBudget } from './hooks/useBudget';
 import { BudgetChart } from './BudgetChart';
 import { BudgetInputForm } from './BudgetInputForm';

@@ -1,4 +1,4 @@
-import { Search, RotateCw } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import type { LeaveFiltersProps, LeaveType, LeaveStatus } from './types';
 import { Button } from '@/components/ui';
 
@@ -64,8 +64,8 @@ export function LeaveFilters({ filters, onFiltersChange, onSearch }: LeaveFilter
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleReset}>
-            <RotateCw className="w-4 h-4" />
+          <Button size="sm" variant="warning" onClick={handleReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           <Button size="sm" variant="default" onClick={onSearch}>

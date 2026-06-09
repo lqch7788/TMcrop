@@ -1,4 +1,4 @@
-import { Eye, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import type { LeaveTableProps } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -82,7 +82,7 @@ export function LeaveTable({
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     批量编辑
                   </Button>
                   <Button
@@ -118,6 +118,7 @@ export function LeaveTable({
                 <>
                   <Button
                     size="sm"
+                    variant="default"
                     onClick={onBatchExportClick}
                     disabled={selectedRows.length === 0}
                   >
@@ -139,6 +140,7 @@ export function LeaveTable({
               {onAddClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onAddClick}
                 >
                   <Plus className="w-4 h-4" />
@@ -151,7 +153,7 @@ export function LeaveTable({
                   variant="blue"
                   onClick={onBatchEditClick}
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}
@@ -168,6 +170,7 @@ export function LeaveTable({
               {onBatchExportClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onBatchExportClick}
                 >
                   <Download className="w-4 h-4" />

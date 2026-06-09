@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Eye, Edit2, Trash2, Download, Plus } from 'lucide-react';
 import type { MonthlyBudget } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
@@ -105,6 +105,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
                 <>
                   <Button
                     size="sm"
+                    variant="default"
                     onClick={onBatchExportClick}
                     disabled={selectedRows.length === 0}
                   >
@@ -126,6 +127,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
               {onAddClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onAddClick}
                 >
                   <Plus className="w-4 h-4" />
@@ -155,6 +157,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
               {onBatchExportClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onBatchExportClick}
                 >
                   <Download className="w-4 h-4" />
