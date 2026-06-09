@@ -357,12 +357,13 @@ export function Modal({
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex-shrink-0">
             {footer ? footer : (
               <>
-                <Button variant="secondary" onClick={onClose}>
+                <Button variant="secondary" size="sm" onClick={onClose}>
                   {cancelText}
                 </Button>
                 {onSubmit && (
                   <Button
                     variant="default"
+                    size="sm"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
                   >

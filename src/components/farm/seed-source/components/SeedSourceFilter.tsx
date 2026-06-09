@@ -132,7 +132,7 @@ export function SeedSourceFilter({
         {/* 按钮行：重置、搜索 — 放在所有搜索框之后，固定不缩小 */}
         <div className="flex gap-2 items-end flex-shrink-0 ml-auto">
           <Button
-            variant="secondary"
+            variant="warning"
             size="sm"
             onClick={onReset}
           >

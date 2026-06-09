@@ -35,7 +35,7 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
         onClick={onClose}
         className="absolute top-4 right-4 text-white hover:bg-white/20"
       >
-        <X className="w-6 h-6" />
+        <X className="w-4 h-4" />
       </Button>
 
       {/* 上一张 */}
@@ -46,7 +46,7 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
           onClick={handlePrev}
           className="absolute left-4 text-white hover:bg-white/20"
         >
-          <ChevronLeft className="w-8 h-8" />
+          <ChevronLeft className="w-4 h-4" />
         </Button>
       )}
 
@@ -67,7 +67,7 @@ export function ImageLightboxModal({ isOpen, onClose, images }: ImageLightboxMod
           onClick={handleNext}
           className="absolute right-4 text-white hover:bg-white/20"
         >
-          <ChevronRight className="w-8 h-8" />
+          <ChevronRight className="w-4 h-4" />
         </Button>
       )}
 

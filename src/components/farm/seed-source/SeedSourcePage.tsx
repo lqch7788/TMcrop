@@ -525,6 +525,7 @@ export default function SeedSourcePage() {
           <div className="flex items-center gap-2">
             <Button
               variant="blue"
+              size="sm"
               onClick={() => navigate('/crop/propagation-records')}
             >
               <ClipboardList className="w-4 h-4 mr-1" />
