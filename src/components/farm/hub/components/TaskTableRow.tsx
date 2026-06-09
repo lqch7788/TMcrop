@@ -278,7 +278,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="blue"
               size="sm"
               onClick={onPublish}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <Send className="w-4 h-4" /> 发布
             </Button>
@@ -290,7 +290,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="default"
               size="sm"
               onClick={onAccept}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <CheckCircle className="w-4 h-4" /> 验收
             </Button>
@@ -302,7 +302,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="blue"
               size="sm"
               onClick={onSelectExecutor}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <Play className="w-4 h-4" /> 选择执行人
             </Button>
@@ -319,7 +319,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       variant="default"
                       size="sm"
                       onClick={onAccept}
-                      className="text-xs"
+                      className="text-xs h-5"
                     >
                       接受
                     </Button>
@@ -329,7 +329,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       variant="destructive"
                       size="sm"
                       onClick={onWithdraw}
-                      className="text-xs"
+                      className="text-xs h-5"
                     >
                       <XCircle className="w-4 h-4" /> 拒绝
                     </Button>
@@ -343,7 +343,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       variant="warning"
                       size="sm"
                       onClick={onWithdraw}
-                      className="text-xs"
+                      className="text-xs h-5"
                     >
                       <Undo2 className="w-4 h-4" /> 撤回
                     </Button>
@@ -353,7 +353,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                       variant="destructive"
                       size="sm"
                       onClick={onCancel}
-                      className="text-xs"
+                      className="text-xs h-5"
                     >
                       <X className="w-4 h-4" /> 取消
                     </Button>
@@ -369,7 +369,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="destructive"
               size="sm"
               onClick={onCancel}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <X className="w-4 h-4" /> 取消
             </Button>
@@ -381,7 +381,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="purple"
               size="sm"
               onClick={onOvertime}
-              className="text-xs"
+              className="text-xs h-5"
             >
               超时处理
             </Button>
@@ -393,7 +393,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="purple"
               size="sm"
               onClick={onReassign}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <Send className="w-4 h-4" /> 重新派发
             </Button>
@@ -405,7 +405,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               variant="purple"
               size="sm"
               onClick={onReassign}
-              className="text-xs"
+              className="text-xs h-5"
             >
               <Send className="w-4 h-4" /> 重新派发
             </Button>
@@ -432,7 +432,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
                 }
               }}
               disabled={!remindProps?.allowed}
-              className="text-xs"
+              className="text-xs h-5"
               title={remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}分钟后可催办` : `今日已催办${remindProps?.todayCount || 0}次`}
             >
               <Bell className="w-4 h-4 inline mr-1" />
