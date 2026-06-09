@@ -57,9 +57,9 @@ export function LeaveBatchEditModal({
 
   const footer = (
     <div className="flex gap-3">
-      <Button onClick={onConfirmNext}>确认（下一个）</Button>
-      <Button variant="ghost" onClick={onClose}>取消</Button>
-      <Button variant="blue" onClick={onConfirm}>保存修改</Button>
+      <Button size="sm" variant="default" onClick={onConfirmNext}>确认（下一个）</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
+      <Button size="sm" variant="blue" onClick={onConfirm}>保存修改</Button>
     </div>
   );
 

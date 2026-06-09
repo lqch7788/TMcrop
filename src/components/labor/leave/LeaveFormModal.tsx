@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -204,10 +203,10 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>
+      <Button size="sm" variant="secondary" onClick={onClose}>
         取消
       </Button>
-      <Button variant="default" onClick={handleSubmit}>
+      <Button size="sm" variant="default" onClick={handleSubmit}>
         保存
       </Button>
     </>

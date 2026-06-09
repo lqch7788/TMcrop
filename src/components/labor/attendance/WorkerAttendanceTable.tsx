@@ -2,8 +2,8 @@
  * 工人考勤 - 考勤记录表格组件
  */
 import { useRef } from 'react';
-import { Eye, ChevronLeft, ChevronRight, Edit, Trash2, Download, Plus, Upload } from 'lucide-react';
-import { AttendanceRecord, PAGE_SIZE_OPTIONS } from './types';
+import { Eye, Edit2, Trash2, Download, Plus, Upload } from 'lucide-react';
+import { AttendanceRecord } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -98,7 +98,7 @@ export function WorkerAttendanceTable({
                     onClick={onBatchEditClick}
                     disabled={selectedRows.length === 0}
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     批量编辑
                   </Button>
                   <Button
@@ -134,6 +134,7 @@ export function WorkerAttendanceTable({
                 <>
                   <Button
                     size="sm"
+                    variant="default"
                     onClick={onExportClick}
                     disabled={selectedRows.length === 0}
                   >
@@ -155,6 +156,7 @@ export function WorkerAttendanceTable({
               {onAddClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onAddClick}
                 >
                   <Plus className="w-4 h-4" />
@@ -163,6 +165,7 @@ export function WorkerAttendanceTable({
               )}
               <Button
                 size="sm"
+                variant="default"
                 onClick={handleImportClick}
               >
                 <Upload className="w-4 h-4" />
@@ -174,7 +177,7 @@ export function WorkerAttendanceTable({
                   variant="blue"
                   onClick={onBatchEditClick}
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit2 className="w-4 h-4" />
                   编辑
                 </Button>
               )}
@@ -191,6 +194,7 @@ export function WorkerAttendanceTable({
               {onExportClick && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={onExportClick}
                 >
                   <Download className="w-4 h-4" />

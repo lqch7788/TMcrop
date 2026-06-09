@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Filter, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { EfficiencyFilters as FiltersType } from './types';
@@ -87,11 +87,12 @@ export const EfficiencyFilters: React.FC<EfficiencyFiltersProps> = ({
 
         {/* 重置按钮 */}
         <Button
-          variant="secondary"
+          size="sm"
+          variant="warning"
           onClick={onReset}
           className="ml-auto"
         >
-          <RefreshCw className="w-4 h-4 mr-1.5" />
+          <RotateCcw className="w-4 h-4" />
           重置
         </Button>
       </div>

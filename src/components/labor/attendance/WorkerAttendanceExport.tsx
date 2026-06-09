@@ -63,11 +63,11 @@ export function WorkerAttendanceExport({
 
       {/* 底部按钮 */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-        <Button variant="secondary" onClick={onCancel}>
+        <Button size="sm" variant="secondary" onClick={onCancel}>
           取消
         </Button>
         {canExport && (
-          <Button onClick={onConfirm}>
+          <Button size="sm" variant="default" onClick={onConfirm}>
             导出
           </Button>
         )}

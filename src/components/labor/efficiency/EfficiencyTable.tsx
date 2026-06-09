@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Eye, Download, Plus, Edit2, Trash2, CheckSquare, Square, X } from 'lucide-react';
+import { Eye, Download, Plus, Edit2, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { EfficiencyMetrics } from './types';
@@ -88,40 +88,44 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
           {/* 取消按钮 */}
           {showCheckbox && (
             <Button
+              size="sm"
               variant="secondary"
               onClick={onCancelBatch}
             >
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-4 h-4" />
               取消
             </Button>
           )}
           {/* 新增按钮 - 正常模式显示 */}
           {!showCheckbox && (
             <Button
+              size="sm"
               variant="default"
               onClick={onAddClick}
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus className="w-4 h-4" />
               新增
             </Button>
           )}
           {/* 编辑/批量编辑按钮 - 同一位置 */}
           {batchEditMode ? (
             <Button
-              variant="default"
+              size="sm"
+              variant="blue"
               onClick={onBatchEditClick}
               disabled={selectedRows.length === 0}
             >
-              <Edit2 className="w-4 h-4 mr-1" />
+              <Edit2 className="w-4 h-4" />
               批量编辑
             </Button>
           ) : (
             !showCheckbox && (
               <Button
-                variant="default"
+                size="sm"
+                variant="blue"
                 onClick={onBatchEditClick}
               >
-                <Edit2 className="w-4 h-4 mr-1" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
             )
@@ -129,20 +133,22 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
           {/* 删除/批量删除按钮 - 同一位置 */}
           {batchDeleteMode ? (
             <Button
-              variant="default"
+              size="sm"
+              variant="destructive"
               onClick={onBatchDeleteClick}
               disabled={selectedRows.length === 0}
             >
-              <Trash2 className="w-4 h-4 mr-1" />
+              <Trash2 className="w-4 h-4" />
               批量删除
             </Button>
           ) : (
             !showCheckbox && (
               <Button
-                variant="default"
+                size="sm"
+                variant="destructive"
                 onClick={onBatchDeleteClick}
               >
-                <Trash2 className="w-4 h-4 mr-1" />
+                <Trash2 className="w-4 h-4" />
                 删除
               </Button>
             )
@@ -150,20 +156,22 @@ export const EfficiencyTable: React.FC<EfficiencyTableProps> = ({
           {/* 导出按钮 - 同一位置 */}
           {exportMode ? (
             <Button
+              size="sm"
               variant="default"
               onClick={onBatchExportClick}
               disabled={selectedRows.length === 0}
             >
-              <Download className="w-4 h-4 mr-1" />
+              <Download className="w-4 h-4" />
               导出
             </Button>
           ) : (
             !showCheckbox && (
               <Button
+                size="sm"
                 variant="default"
                 onClick={onBatchExportClick}
               >
-                <Download className="w-4 h-4 mr-1" />
+                <Download className="w-4 h-4" />
                 导出
               </Button>
             )

@@ -4,7 +4,7 @@
  * 排班对比：读取排班数据，展示计划出勤 vs 实际打卡对比
  */
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Edit, Trash2, Download, Upload, CalendarDays, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CalendarDays, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { useWorkerAttendance } from './hooks/useWorkerAttendance';
 import { WorkerAttendanceFilters } from './WorkerAttendanceFilters';
 import { WorkerAttendanceTable } from './WorkerAttendanceTable';

@@ -1,7 +1,7 @@
 /**
  * 工人考勤 - 筛选栏组件
  */
-import { Search, RotateCw } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { AttendanceFilters, DEPT_OPTIONS } from './types';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -76,8 +76,8 @@ export function WorkerAttendanceFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleReset}>
-            <RotateCw className="w-4 h-4" />
+          <Button size="sm" variant="warning" onClick={handleReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           <Button size="sm" variant="default" onClick={() => onFiltersChange({ ...filters })}>

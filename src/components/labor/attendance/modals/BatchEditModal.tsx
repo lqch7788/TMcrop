@@ -66,14 +66,14 @@ export function BatchEditModal({
       footer={
         <div className="flex items-center justify-end gap-3">
           {onConfirmNext && (
-            <Button onClick={onConfirmNext}>
+            <Button size="sm" variant="default" onClick={onConfirmNext}>
               确认（下一个）
             </Button>
           )}
-          <Button onClick={onClose} variant="outline">
+          <Button size="sm" variant="secondary" onClick={onClose}>
             取消
           </Button>
-          <Button onClick={onConfirm}>
+          <Button size="sm" variant="default" onClick={onConfirm}>
             保存修改
           </Button>
         </div>

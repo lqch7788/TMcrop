@@ -106,16 +106,16 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>
+      <Button size="sm" variant="secondary" onClick={onClose}>
         关闭
       </Button>
       {record.status === '待审批' && (
         <>
-          <Button variant="destructive" onClick={() => onReject(record)} className="flex items-center gap-1">
+          <Button size="sm" variant="destructive" onClick={() => onReject(record)}>
             <XCircle className="w-4 h-4" />
             驳回
           </Button>
-          <Button variant="default" onClick={() => onApprove(record)} className="flex items-center gap-1">
+          <Button size="sm" variant="default" onClick={() => onApprove(record)}>
             <CheckCircle className="w-4 h-4" />
             批准
           </Button>
@@ -133,7 +133,7 @@ export function LeaveDetailModal({ record, open, onClose, onApprove, onReject }:
       showFooter={true}
       headerAction={
         <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </Button>
       }
       footer={footer}
