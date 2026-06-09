@@ -622,7 +622,7 @@ export default function StatisticsTab({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button variant="secondary" onClick={() => {
+                <Button variant="warning" onClick={() => {
                     setYearFilter('2025');
                     setMonthFilter('all');
                     setExpandedMonths(new Set());

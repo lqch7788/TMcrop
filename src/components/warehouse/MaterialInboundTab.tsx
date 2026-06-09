@@ -414,7 +414,7 @@ export function MaterialInboundTab({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => {
+            <Button size="sm" variant="warning" onClick={() => {
                 setInboundSearchCode('');
                 setInboundSearchSupplier('');
                 setInboundSearchStatus('');

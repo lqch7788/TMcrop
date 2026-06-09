@@ -185,7 +185,7 @@ export default function ProduceCodeGenerator({ codeGenExpanded }: ProduceCodeGen
               {copySuccess ? '已复制!' : '复制'}
             </Button>
             <Button
-              variant="secondary"
+              variant="warning"
               onClick={handleReset}
               className="whitespace-nowrap gap-1"
             >

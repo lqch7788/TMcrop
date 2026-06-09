@@ -141,7 +141,7 @@ export function InspectionSearch({
         {/* 按钮行 */}
         <div className="flex gap-2">
           <Button
-            variant="default"
+            variant="warning"
             size="sm"
             onClick={onReset}
           >

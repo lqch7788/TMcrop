@@ -158,7 +158,7 @@ export default function MaterialManagement() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="default" onClick={() => { setSearchTerm(''); setCategoryFilter('全部'); }}><RotateCcw className="w-4 h-4" /> 重置</Button>
+            <Button variant="warning" onClick={() => { setSearchTerm(''); setCategoryFilter('全部'); }}><RotateCcw className="w-4 h-4" /> 重置</Button>
             <Button variant="default" onClick={() => handleOpenModal()}>
               <Plus className="w-4 h-4" /> 添加物料
             </Button>

@@ -142,7 +142,7 @@ export function InspectionSearch({
 
         {/* 按钮行 */}
         <div className="flex gap-2">
-          <Button onClick={onReset} variant="default" size="default">
+          <Button onClick={onReset} variant="warning" size="default">
             <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button onClick={onSearch} variant="default" size="default">

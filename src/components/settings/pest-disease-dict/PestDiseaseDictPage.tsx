@@ -198,7 +198,7 @@ export default function PestDiseaseDictPage() {
             <Button variant="default" size="sm" onClick={handleSearch}>
               <Search className="w-4 h-4" /> 搜索
             </Button>
-            <Button variant="outline" size="sm" onClick={handleReset}>
+            <Button variant="warning" size="sm" onClick={handleReset}>
               <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           </div>

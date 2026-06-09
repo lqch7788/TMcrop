@@ -156,7 +156,7 @@ export default function MaterialsFilters({
                 className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-24"
               />
             </div>
-            <Button variant="secondary" onClick={onReset} size="sm"><RotateCcw className="w-4 h-4" /> 重置</Button>
+            <Button variant="warning" onClick={onReset} size="sm"><RotateCcw className="w-4 h-4" /> 重置</Button>
             {canExport && (
               <Button variant="blue" onClick={onExportClick} size="sm"><Download className="w-4 h-4" /> 导出</Button>
             )}

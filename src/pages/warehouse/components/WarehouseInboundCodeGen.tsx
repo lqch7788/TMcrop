@@ -168,7 +168,7 @@ export const WarehouseInboundCodeGen: React.FC<WarehouseInboundCodeGenProps> = (
             {/* 重置按钮 */}
             <Button
               size="default"
-              variant="secondary"
+              variant="warning"
               onClick={onReset}
             >
               <RotateCcw className="w-4 h-4" /> 重置

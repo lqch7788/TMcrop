@@ -68,7 +68,7 @@ export function MaterialCategoryPage() {
             </select>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary"><RotateCcw className="w-4 h-4" /> 重置</Button>
+            <Button variant="warning"><RotateCcw className="w-4 h-4" /> 重置</Button>
             <Button>
               <Search className="w-4 h-4" />
               搜索

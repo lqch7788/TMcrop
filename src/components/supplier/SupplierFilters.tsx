@@ -200,6 +200,7 @@ export default function SupplierFilters({ filters, onFilterChange, onReset }: Su
           </Button>
           <Button
             size="sm"
+            variant="warning"
             onClick={onReset}
             className="whitespace-nowrap"
           >

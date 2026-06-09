@@ -85,7 +85,7 @@ export function MonthlyFilters({
           </Select>
         </div>
         <Button
-          variant="ghost"
+          variant="warning"
           onClick={() => {
             onYearChange('2025');
             onMonthChange('all');
