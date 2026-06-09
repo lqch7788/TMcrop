@@ -3,6 +3,7 @@
  * 防治类型选择（化学/生物/物理），各类型字段动态显示
  */
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -403,13 +404,15 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 border border-emerald-200"
                       >
                         {gh}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => updateField('greenhouses', form.greenhouses.filter((_, i) => i !== idx))}
-                          className="ml-1.5 text-emerald-500 hover:text-emerald-700 font-bold"
+                          className="ml-1 h-4 w-4 text-emerald-500 hover:text-emerald-700"
                         >
-                          ×
-                        </button>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </span>
                     ))}
                   </div>
@@ -450,16 +453,18 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200"
                         >
                           {pest}
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               const newList = form.targetPests.filter((_, i) => i !== idx);
                               updateField('targetPests', newList);
                             }}
-                            className="ml-1.5 text-orange-500 hover:text-orange-700 font-bold"
+                            className="ml-1 h-4 w-4 text-orange-500 hover:text-orange-700"
                           >
-                            ×
-                          </button>
+                            <X className="w-4 h-4" />
+                          </Button>
                         </span>
                       ))}
                     </div>
@@ -497,7 +502,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                     updateField('pesticides', newList);
                   }}
                 >
-                  + 新增药剂
+                  <Plus className="w-4 h-4" />
+                  新增药剂
                 </Button>
               </div>
               {form.pesticides.length === 0 ? (
@@ -585,6 +591,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           updateField('pesticides', newList);
                         }}
                       >
+                        <Trash2 className="w-4 h-4" />
                         删除
                       </Button>
                     </div>
@@ -611,7 +618,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                     updateField('bioAgents', newList);
                   }}
                 >
-                  + 新增生物制剂
+                  <Plus className="w-4 h-4" />
+                  新增生物制剂
                 </Button>
               </div>
               {form.bioAgents.length === 0 ? (
@@ -699,6 +707,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           updateField('bioAgents', newList);
                         }}
                       >
+                        <Trash2 className="w-4 h-4" />
                         删除
                       </Button>
                     </div>
@@ -725,7 +734,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                     updateField('equipment', newList);
                   }}
                 >
-                  + 新增设备/方式
+                  <Plus className="w-4 h-4" />
+                  新增设备/方式
                 </Button>
               </div>
               {form.equipment.length === 0 ? (
@@ -773,6 +783,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                           updateField('equipment', newList);
                         }}
                       >
+                        <Trash2 className="w-4 h-4" />
                         删除
                       </Button>
                     </div>
@@ -822,7 +833,8 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                         updateField('leafFertilizers', newList);
                       }}
                     >
-                      + 新增叶面肥
+                      <Plus className="w-4 h-4" />
+                      新增叶面肥
                     </Button>
                   </div>
                   {form.leafFertilizers.length === 0 ? (
@@ -898,6 +910,7 @@ export function AddPestControlModal({ isOpen, onClose, onSaved }: AddPestControl
                               updateField('leafFertilizers', newList);
                             }}
                           >
+                            <Trash2 className="w-4 h-4" />
                             删除
                           </Button>
                         </div>

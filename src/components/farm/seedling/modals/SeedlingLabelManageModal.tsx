@@ -142,7 +142,7 @@ export default function SeedlingLabelManageModal({
                 size="sm"
                 className="text-xs hover:bg-emerald-50 hover:border-emerald-300"
               >
-                <Download className="w-3 h-3" />
+                <Download className="w-4 h-4" />
                 {size === 0 ? '全部' : `${size}条`}
               </Button>
             ))}

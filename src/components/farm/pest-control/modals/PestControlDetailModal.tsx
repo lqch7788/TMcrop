@@ -3,7 +3,7 @@
  * 只读显示所有字段信息
  */
 import React, { useState } from 'react';
-import { X, History, Bug } from 'lucide-react';
+import { Bug } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { useDictionaryStore } from '@/stores';
@@ -52,19 +52,23 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* 标签页切换 */}
         <div className="flex border-b border-gray-200">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('info')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`rounded-none px-4 py-2 text-sm font-medium border-b-2 -mb-px h-auto ${
               activeTab === 'info'
                 ? 'border-emerald-500 text-emerald-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             基本信息
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('detail')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1 ${
+            className={`rounded-none px-4 py-2 text-sm font-medium border-b-2 -mb-px h-auto flex items-center gap-1 ${
               activeTab === 'detail'
                 ? 'border-emerald-500 text-emerald-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -72,7 +76,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
           >
             <Bug className="w-4 h-4" />
             防治详情
-          </button>
+          </Button>
         </div>
 
         {/* 基本信息标签页 */}

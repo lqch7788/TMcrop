@@ -72,7 +72,7 @@ export function HarvestDetailModal({ isOpen, record, onClose }: HarvestDetailMod
             onClick={onClose}
             className="text-white hover:bg-emerald-700"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </Button>
         </div>
 

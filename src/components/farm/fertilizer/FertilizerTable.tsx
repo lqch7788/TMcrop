@@ -132,6 +132,7 @@ export function FertilizerTable({
           <IotDataIndicator devices={iotDevices} loading={iotLoading} />
           {onToggleStats && (
             <Button
+              variant="default"
               size="sm"
               onClick={onToggleStats}
             >
@@ -143,6 +144,7 @@ export function FertilizerTable({
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant="default"
             size="sm"
             onClick={onAdd}
           >
@@ -159,6 +161,7 @@ export function FertilizerTable({
             批量删除
           </Button>
           <Button
+            variant="default"
             size="sm"
             onClick={onExportMode}
           >

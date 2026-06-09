@@ -424,7 +424,7 @@ export function FertilizerEditModal({ isOpen, record, onClose, onSaved }: Fertil
         </Button>
         {!isIot && (
           <Button
-            variant="warning"
+            variant="default"
             size="sm"
             onClick={handleSubmit}
             disabled={submitting || !form.fertilizerName.trim()}

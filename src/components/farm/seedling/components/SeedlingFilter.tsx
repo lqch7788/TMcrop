@@ -136,11 +136,11 @@ export function SeedlingFilter({
 
         {/* 按钮行 */}
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={onReset}>
+          <Button variant="warning" size="sm" onClick={onReset}>
             <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          <Button size="sm" onClick={onSearch}>
+          <Button variant="default" size="sm" onClick={onSearch}>
             <Search className="w-4 h-4" />
             搜索
           </Button>

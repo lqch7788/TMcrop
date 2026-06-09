@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Planting } from '../../../../types/crop';
@@ -216,7 +216,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               取消
             </Button>
             <Button
-              variant="blue"
+              variant="default"
               size="sm"
               onClick={handleExportExcel}
               disabled={loading}
@@ -230,6 +230,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
               onClick={handlePrint}
               disabled={loading}
             >
+              <Printer className="w-4 h-4" />
               {loading ? '处理中...' : '打印'}
             </Button>
           </div>

@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -300,6 +300,7 @@ export function SeedlingTable({
                 size="sm"
                 onClick={() => { onExportCancel(); onSelectionChange([]); }}
               >
+                <X className="w-4 h-4" />
                 取消
               </Button>
             </>
@@ -321,6 +322,7 @@ export function SeedlingTable({
                 size="sm"
                 onClick={cancelOperation}
               >
+                <X className="w-4 h-4" />
                 取消
               </Button>
             </>
@@ -342,6 +344,7 @@ export function SeedlingTable({
                 size="sm"
                 onClick={cancelOperation}
               >
+                <X className="w-4 h-4" />
                 取消
               </Button>
             </>
@@ -350,8 +353,8 @@ export function SeedlingTable({
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
               <Button
+                variant="purple"
                 size="sm"
-                className="bg-purple-600 text-white hover:bg-purple-700"
                 onClick={confirmPrint}
                 disabled={selectedRows.length === 0}
               >
@@ -363,6 +366,7 @@ export function SeedlingTable({
                 size="sm"
                 onClick={cancelPrintMode}
               >
+                <X className="w-4 h-4" />
                 取消
               </Button>
             </>
@@ -411,8 +415,8 @@ export function SeedlingTable({
               )}
               {canPrint && (
                 <Button
+                  variant="purple"
                   size="sm"
-                  className="bg-purple-600 text-white hover:bg-purple-700"
                   onClick={() => { onPrintModeChange(true); }}
                 >
                   <Printer className="w-4 h-4" />

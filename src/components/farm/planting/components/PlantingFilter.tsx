@@ -153,16 +153,16 @@ export function PlantingFilter({
         {/* 按钮行 */}
         <div className="flex gap-2 items-end">
           {onAdd && (
-            <Button onClick={onAdd} size="sm">
+            <Button variant="default" onClick={onAdd} size="sm">
               <Plus className="w-4 h-4" />
               新增
             </Button>
           )}
-          <Button variant="secondary" onClick={onReset} size="sm">
+          <Button variant="warning" onClick={onReset} size="sm">
             <RotateCcw className="w-4 h-4" />
             重置
           </Button>
-          <Button onClick={onSearch} size="sm">
+          <Button variant="default" onClick={onSearch} size="sm">
             <Search className="w-4 h-4" />
             搜索
           </Button>

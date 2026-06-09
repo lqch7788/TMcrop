@@ -241,11 +241,11 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-emerald-500" />
+            <div className="w-2.5 h-2.5 rounded bg-emerald-500" />
             <span className="text-xs text-gray-500">施肥量 (kg)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-amber-500" />
+            <div className="w-2.5 h-2.5 rounded bg-amber-500" />
             <span className="text-xs text-gray-500">成本 (元)</span>
           </div>
           <div className="text-xs text-gray-400 ml-auto">

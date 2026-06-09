@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, RotateCcw } from 'lucide-react';
 import { SOURCE_CONFIG, type FarmOperationRecord } from '../../../../hooks/useOperationRecords';
 import { FARM_OPERATION_TYPES } from '../../../../types/farm/common';
 import { useGreenhouseStore, useWorkerStore } from '../../../../stores';
@@ -186,11 +186,12 @@ export function AgricultureRecordFilterToolbar({
 
         {/* 按钮组 */}
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={onReset}>
+          <Button variant="warning" size="sm" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           {canCreate && (
-            <Button onClick={onAdd}>
+            <Button variant="default" size="sm" onClick={onAdd}>
               <Plus className="w-4 h-4" />
               新增
             </Button>

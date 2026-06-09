@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface HarvestTableToolbarProps {
@@ -59,6 +59,7 @@ export function HarvestTableToolbar({
             <>
               <Button
                 size="sm"
+                variant="default"
                 onClick={onConfirmExport}
                 disabled={selectedRows.length === 0}
               >
@@ -78,9 +79,10 @@ export function HarvestTableToolbar({
             <>
               <Button
                 size="sm"
+                variant="default"
                 onClick={onConfirmBatchEdit}
               >
-                <Pencil className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 确认编辑
               </Button>
               <Button
@@ -117,6 +119,7 @@ export function HarvestTableToolbar({
           {canCreate && (
             <Button
               size="sm"
+              variant="default"
               onClick={onCreate}
             >
               <Plus className="w-4 h-4" />
@@ -129,7 +132,7 @@ export function HarvestTableToolbar({
               variant="blue"
               onClick={onBatchEdit}
             >
-              <Pencil className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
               编辑
             </Button>
           )}
@@ -146,6 +149,7 @@ export function HarvestTableToolbar({
           {canExport && (
             <Button
               size="sm"
+              variant="default"
               onClick={onExport}
             >
               <Download className="w-4 h-4" />

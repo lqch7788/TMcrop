@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling, SeedSource } from '../../../../types/crop';
@@ -244,7 +245,7 @@ export function EditModal({
                 size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                ×
+                <X className="w-4 h-4" />
               </Button>
             )}
             {sourcePopoverOpen && (

@@ -62,7 +62,7 @@ export function DetailModal({
           variant="ghost"
           size="sm"
           onClick={() => setActiveTab('info')}
-          className={`border-b-2 -mb-px rounded-none ${
+          className={`border-b-2 -mb-px rounded-none flex items-center gap-1 ${
             activeTab === 'info'
               ? 'border-emerald-500 text-emerald-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'

@@ -264,7 +264,7 @@ export default function PlantingMarkModal({
           <Button variant="secondary" size="sm" onClick={onClose}>
             取消
           </Button>
-          <Button size="sm" onClick={handleSubmit}>
+          <Button variant="default" size="sm" onClick={handleSubmit}>
             确认标记
           </Button>
         </div>

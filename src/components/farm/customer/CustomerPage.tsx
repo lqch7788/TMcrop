@@ -5,7 +5,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, ArrowLeft, UserPlus, Building2, Phone, MapPin } from 'lucide-react';
+import {
+  Users,
+  ArrowLeft,
+  UserPlus,
+  Building2,
+  Phone,
+  MapPin,
+  Search,
+  RotateCcw,
+  Edit2,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -189,7 +200,7 @@ export function CustomerPage() {
               size="icon"
               onClick={() => navigate('/crop/order')}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
@@ -265,9 +276,11 @@ export function CustomerPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="default" onClick={handleSearch}>
+              <Search className="w-4 h-4" />
               搜索
             </Button>
-            <Button size="sm" variant="outline" onClick={handleReset}>
+            <Button size="sm" variant="warning" onClick={handleReset}>
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
           </div>
@@ -364,10 +377,7 @@ export function CustomerPage() {
                           onClick={() => handleEdit(customer)}
                           title="编辑"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                            <path d="m15 5 4 4"/>
-                          </svg>
+                          <Edit2 className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -381,13 +391,7 @@ export function CustomerPage() {
                           title="删除"
                           className="text-red-600 hover:text-red-700"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18"/>
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                            <line x1="10" x2="10" y1="11" y2="17"/>
-                            <line x1="14" x2="14" y1="11" y2="17"/>
-                          </svg>
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </td>

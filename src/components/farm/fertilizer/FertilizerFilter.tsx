@@ -118,7 +118,7 @@ export function FertilizerFilter({
         {/* 按钮行 */}
         <div className="flex gap-2">
           <Button
-            variant="secondary"
+            variant="warning"
             size="sm"
             onClick={onReset}
           >

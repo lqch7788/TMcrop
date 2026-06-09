@@ -193,7 +193,7 @@ export default function PlantingMoveModal({
           <Button variant="secondary" size="sm" onClick={onClose}>
             取消
           </Button>
-          <Button size="sm" onClick={handleSubmit} disabled={isHarvested}>
+          <Button variant="default" size="sm" onClick={handleSubmit} disabled={isHarvested}>
             提交
           </Button>
         </div>

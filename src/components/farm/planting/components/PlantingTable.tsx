@@ -645,8 +645,8 @@ export function PlantingTable({
                 </Button>
               )}
               <Button
+                variant="purple"
                 size="sm"
-                className="bg-purple-600 text-white hover:bg-purple-700"
                 onClick={confirmPrint}
                 disabled={selectedRows.length === 0}
               >
@@ -748,8 +748,8 @@ export function PlantingTable({
               )}
               {canPrint && (
                 <Button
+                  variant="purple"
                   size="sm"
-                  className="bg-purple-600 text-white hover:bg-purple-700"
                   onClick={() => { if (onPrintModeChange) onPrintModeChange(true); }}
                 >
                   <Printer className="w-4 h-4" />

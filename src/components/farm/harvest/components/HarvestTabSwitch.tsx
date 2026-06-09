@@ -3,7 +3,7 @@
  * 参照物料入库TabSwitch设计
  */
 
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface HarvestTabSwitchProps {
@@ -31,6 +31,7 @@ export default function HarvestTabSwitch({
             onClick={onCodeRuleClick}
             className="gap-1"
           >
+            <BookOpen className="w-4 h-4" />
             编码规则 &gt;&gt;
           </Button>
           <span className="text-sm font-bold text-gray-900">产品编码生成</span>
@@ -41,9 +42,9 @@ export default function HarvestTabSwitch({
             title={codeGenExpanded ? '收起' : '展开'}
           >
             {codeGenExpanded ? (
-              <ChevronDown className="w-6 h-6 text-gray-600 font-bold" />
+              <ChevronDown className="w-4 h-4 text-gray-600" />
             ) : (
-              <ChevronRight className="w-5 h-5 text-gray-600 font-bold" />
+              <ChevronRight className="w-4 h-4 text-gray-600" />
             )}
           </Button>
         </>
