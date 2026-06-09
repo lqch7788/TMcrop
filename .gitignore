@@ -7,6 +7,7 @@ public/
 # Claude Code 工作目录
 .omc/
 .claude/
+.superpowers/
 
 # Claude Code 本地设置（不提交）
 .claude/settings.local.json
@@ -67,6 +68,16 @@ electron/
 # 其他临时资料（不提交）
 others/
 temp_backup/
+test-results/
+slides-new/
+deliverables/
+
+# 参考数据（非运行时必需）
+参考数据/
+参考数据/
+
+# 临时辅助脚本
+scripts/
 
 # 工具/规范目录（不提交）
 .codegraph/
