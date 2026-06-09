@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Megaphone, Plus, Edit, Eye, Trash2, Target, DollarSign, TrendingUp, Search } from 'lucide-react';
+import { Megaphone, Plus, Edit2, Eye, Trash2, Target, DollarSign, TrendingUp, Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { Modal } from '@/components/ui';
@@ -300,7 +300,7 @@ export function AnnouncementPage() {
           <div className="flex-1 min-w-[150px]"><label className="block text-sm font-medium text-gray-700 mb-1">开始日期</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" /></div>
           <div className="flex-1 min-w-[150px]"><label className="block text-sm font-medium text-gray-700 mb-1">结束日期</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" /></div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={resetFilters}>重置</Button>
+            <Button variant="warning" size="sm" onClick={resetFilters}><RotateCcw className="w-4 h-4" />重置</Button>
             <Button size="sm" onClick={() => {}}><Search className="w-4 h-4" />搜索</Button>
             <Button size="sm" onClick={handleOpenModal}><Plus className="w-4 h-4" />新增公告</Button>
           </div>
@@ -334,7 +334,7 @@ export function AnnouncementPage() {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" onClick={() => handleViewClick(item)} title="查看"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} title="编辑"><Edit className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} title="编辑"><Edit2 className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item)} title="删除"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>

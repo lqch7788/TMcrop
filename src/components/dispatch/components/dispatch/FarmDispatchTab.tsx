@@ -13,6 +13,7 @@ import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
 import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
 import { useAuthPermission } from '../../../../hooks/usePermission';
 import { showConfirm } from '@/lib/dialogService';
+import { Button } from '@/components/ui';
 
 /**
  * 农事任务Tab组件
@@ -230,13 +231,10 @@ export const FarmDispatchTab: React.FC = () => {
 
             <div className="flex items-center gap-2">
               {canCreate && (
-                <button
-                  onClick={handleCreate}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
+                <Button variant="blue" onClick={handleCreate}>
                   <Plus className="w-4 h-4" />
                   新建任务
-                </button>
+                </Button>
               )}
             </div>
           </div>

@@ -4,7 +4,7 @@
  */
 
 import { useState, useReducer, useEffect, useCallback } from 'react';
-import { Plus, AlertTriangle, Edit, Trash2, Download, FileText, Clock, User, Camera, MapPin, Mic } from 'lucide-react';
+import { Plus, AlertTriangle, Edit2, Trash2, Download, FileText, Clock, User, Camera, MapPin, Mic } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
@@ -1475,7 +1475,7 @@ export const TempTaskTab: React.FC = () => {
                 onClick={handleBatchEdit}
                 disabled={selectedRows.length === 0}
               >
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 批量编辑
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
@@ -1507,7 +1507,7 @@ export const TempTaskTab: React.FC = () => {
                   setBatchEditMode(true);
                   setSelectedRows([]);
                 }}>
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
               <Button variant="destructive" size="sm" onClick={() => {

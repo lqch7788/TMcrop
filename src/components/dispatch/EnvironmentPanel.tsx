@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { Sun, Cloud, CloudRain, Wind, Droplets, AlertTriangle, Thermometer, Lightbulb } from 'lucide-react';
+import { Sun, Cloud, CloudRain, Wind, Droplets, AlertTriangle, Thermometer, Lightbulb, Check } from 'lucide-react';
 import type { WeatherForecast, SensorData, EnvironmentAlert } from '../../types/environment';
+import { Button } from '@/components/ui';
 
 interface EnvironmentPanelProps {
   todayWeather: WeatherForecast | null;
@@ -155,12 +156,9 @@ export const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({
                 <div className="font-medium">{alert.greenhouseName}</div>
                 <div>{alert.message}</div>
                 {onAcknowledgeAlert && (
-                  <button
-                    onClick={() => onAcknowledgeAlert(alert.id)}
-                    className="mt-1 text-xs underline hover:no-underline"
-                  >
+                  <Button variant="link" size="sm" onClick={() => onAcknowledgeAlert(alert.id)} className="mt-1 h-6 p-0">
                     确认
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Target, Plus, Edit, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search } from 'lucide-react';
+import { Target, Plus, Edit2, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -251,7 +251,7 @@ export function IndicatorsPage() {
             <div className="flex items-center justify-between p-6 border-b border-gray-100 cursor-move" onMouseDown={handleEditMouseDown}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-                  <Edit className="w-5 h-5 text-white" />
+                  <Edit2 className="w-5 h-5 text-white" />
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">变更目标</h2>
               </div>
@@ -368,7 +368,7 @@ export function IndicatorsPage() {
             <Input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={resetFilters}>重置</Button>
+            <Button variant="warning" size="sm" onClick={resetFilters}><RotateCcw className="w-4 h-4" />重置</Button>
             <Button variant="default" size="sm"><Search className="w-4 h-4" />搜索</Button>
             <Button variant="default" size="sm" onClick={handleOpenModal}><Plus className="w-4 h-4" />新增</Button>
           </div>
@@ -412,7 +412,7 @@ export function IndicatorsPage() {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" title="查看"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(ind)} title="编辑"><Edit className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(ind)} title="编辑"><Edit2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>

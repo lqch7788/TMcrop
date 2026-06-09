@@ -10,6 +10,7 @@ import { SmartTaskTable } from './SmartTaskTable';
 import { SmartTaskForm } from './SmartTaskForm';
 import { TaskDetailModal } from '../modals/TaskDetailModal';
 import { TASK_STATUS_CONFIG } from '../../../../hooks/useTasks';
+import { Button } from '@/components/ui';
 import type { Task, TaskStatus, TaskRecord } from '../../../../types/task';
 
 /**
@@ -207,13 +208,10 @@ export const SmartDispatchTab: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleCreate}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
-              >
+              <Button variant="purple" onClick={handleCreate}>
                 <Sparkles className="w-4 h-4" />
                 新建智能派工
-              </button>
+              </Button>
             </div>
           </div>
 

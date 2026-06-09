@@ -11,6 +11,7 @@ import type { Task } from '../../../../types/task';
 import { DispatchMode } from '../../types/dispatch';
 import type { RecommendedExecutor } from '../../types/dispatch';
 import { showAlert } from '@/lib/dialogService';
+import { Button } from '@/components/ui';
 
 // 温室/地块选项
 const GREENHOUSE_OPTIONS = [
@@ -341,13 +342,9 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRecommendations(true)}
-                className="text-sm text-purple-600 hover:text-purple-700"
-              >
+              <Button variant="link" size="sm" type="button" onClick={() => setShowRecommendations(true)} className="text-purple-600 hover:text-purple-700 h-auto p-0">
                 重新推荐
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -396,20 +393,13 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
 
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-400 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+          <Button variant="secondary" type="button" onClick={onCancel}>
             取消
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
-          >
+          </Button>
+          <Button variant="purple" type="submit">
             <Save className="w-4 h-4" />
             保存
-          </button>
+          </Button>
         </div>
       </form>
     </div>

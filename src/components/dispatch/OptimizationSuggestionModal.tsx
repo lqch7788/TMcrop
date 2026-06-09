@@ -8,6 +8,7 @@ import React from 'react';
 import { Sparkles, UserCheck, X, ArrowRight, CheckCircle2, AlertTriangle, TrendingUp } from 'lucide-react';
 import type { AIOptimizationSuggestion } from '../../types/dispatch';
 import { DraggableDialog } from '../DraggableDialog';
+import { Button } from '@/components/ui';
 
  /** 优化建议弹窗组件Props */
 export interface OptimizationSuggestionModalProps {
@@ -177,20 +178,14 @@ export const OptimizationSuggestionModal: React.FC<OptimizationSuggestionModalPr
 
         {/* 操作按钮 */}
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center gap-3">
-          <button
-            onClick={onReject}
-            className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
-          >
+          <Button variant="secondary" size="sm" onClick={onReject} className="flex-1 h-10">
             <X className="w-4 h-4" />
             保持原选择
-          </button>
-          <button
-            onClick={onAccept}
-            className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
-          >
+          </Button>
+          <Button variant="purple" size="sm" onClick={onAccept} className="flex-1 h-10">
             <Sparkles className="w-4 h-4" />
             接受AI建议
-          </button>
+          </Button>
         </div>
       </div>
     </div>

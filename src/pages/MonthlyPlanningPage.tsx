@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useMonthlyTaskPlanning, MonthlyPlan, WeeklySummary, MaterialRequirement, WorkerRequirement } from '../hooks/useMonthlyTaskPlanning';
 import { useProductionPlanStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
@@ -433,20 +434,14 @@ export default function MonthlyPlanningPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors"
-            >
-              <RotateCw />
+            <Button variant="secondary" size="sm" onClick={handleRefresh}>
+              <RotateCw className="w-4 h-4" />
               刷新数据
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg shadow-sm transition-colors"
-            >
-              <Download />
+            </Button>
+            <Button variant="default" size="sm" onClick={handleExport}>
+              <Download className="w-4 h-4" />
               导出规划
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -462,12 +457,9 @@ export default function MonthlyPlanningPage() {
             </p>
           </div>
           {selectedBatches.length > 0 && (
-            <button
-              onClick={() => setSelectedBatches([])}
-              className="text-sm text-gray-500 hover:text-red-600 transition-colors"
-            >
+            <Button variant="link" size="sm" onClick={() => setSelectedBatches([])} className="text-gray-500 hover:text-red-600 h-auto p-0">
               清除选择
-            </button>
+            </Button>
           )}
         </div>
 
