@@ -216,7 +216,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
               </div>
             )}
             <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </Button>
           </div>
         </div>

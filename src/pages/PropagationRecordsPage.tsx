@@ -259,7 +259,7 @@ export default function PropagationRecordsPage() {
               className="text-gray-500 hover:text-emerald-600"
               title="返回种源管理"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             {/* icon 渐变方块（与种源管理一致：bg-gradient-to-br from-emerald-500 to-green-600） */}
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
@@ -272,22 +272,22 @@ export default function PropagationRecordsPage() {
           </div>
           {/* 右侧操作（与种源管理一致：刷新 + 主操作按钮） */}
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={loadData} disabled={loading}>
+            <Button variant="secondary" size="sm" onClick={loadData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
               刷新
             </Button>
             {exportMode ? (
               <>
-                <Button variant="secondary" onClick={handleExportCancel} disabled={loading}>
-                  <Download className="w-4 h-4" /> 取消导出
+                <Button variant="secondary" size="sm" onClick={handleExportCancel} disabled={loading}>
+                  <Download className="w-4 h-4 mr-1" /> 取消导出
                 </Button>
-                <Button onClick={handleExportClickConfirm} disabled={loading}>
+                <Button size="sm" onClick={handleExportClickConfirm} disabled={loading}>
                   <Download className="w-4 h-4 mr-1" />
                   确认导出
                 </Button>
               </>
             ) : (
-              <Button onClick={handleExportClick} disabled={loading}>
+              <Button size="sm" onClick={handleExportClick} disabled={loading}>
                 <Download className="w-4 h-4 mr-1" />
                 导出 Excel
               </Button>

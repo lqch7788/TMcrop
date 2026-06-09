@@ -112,7 +112,7 @@ export function VerifyTaskModal({ taskId, onClose, onVerified, tasks, getTaskRec
         <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-500 flex-shrink-0 rounded-t-xl">
           <h3 className="text-lg font-semibold text-white">任务验收</h3>
           <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 text-white" />
           </Button>
         </div>
 

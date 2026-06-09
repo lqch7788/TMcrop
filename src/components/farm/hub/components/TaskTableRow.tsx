@@ -378,9 +378,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
           {/* 超时严重 - 超时处理按钮 */}
           {task.timeout?.severity === 'critical' && onOvertime && (
             <Button
+              variant="purple"
               size="sm"
               onClick={onOvertime}
-              className="bg-purple-600 text-white hover:bg-purple-700 text-xs"
+              className="text-xs"
             >
               超时处理
             </Button>
@@ -389,9 +390,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
           {/* rejected - 重新派发按钮（执行人拒绝后需要重新派发给其他人） */}
           {task.status === 'rejected' && onReassign && (
             <Button
+              variant="purple"
               size="sm"
               onClick={onReassign}
-              className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
+              className="text-xs"
             >
               <Send className="w-4 h-4" /> 重新派发
             </Button>
@@ -400,9 +402,10 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
           {/* failed/abandoned - 重新派发按钮 */}
           {(task.status === 'failed' || task.status === 'abandoned') && onReassign && (
             <Button
+              variant="purple"
               size="sm"
               onClick={onReassign}
-              className="bg-indigo-500 text-white hover:bg-indigo-600 text-xs"
+              className="text-xs"
             >
               <Send className="w-4 h-4" /> 重新派发
             </Button>
@@ -432,7 +435,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               className="text-xs"
               title={remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}分钟后可催办` : `今日已催办${remindProps?.todayCount || 0}次`}
             >
-              <Bell className="w-3 h-3 inline mr-1" />
+              <Bell className="w-4 h-4 inline mr-1" />
               {remindProps?.cooldownSec ? `${Math.ceil(remindProps.cooldownSec / 60)}m` : '催办'}
             </Button>
           )}

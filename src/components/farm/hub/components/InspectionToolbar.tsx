@@ -67,6 +67,7 @@ export function InspectionToolbar({
           {exportMode && (
             <>
               <Button
+                variant="default"
                 size="sm"
                 onClick={onConfirmExport}
               >
@@ -85,6 +86,7 @@ export function InspectionToolbar({
           {batchEditMode && (
             <>
               <Button
+                variant="blue"
                 size="sm"
                 onClick={onConfirmBatchEdit}
               >
@@ -123,6 +125,7 @@ export function InspectionToolbar({
       ) : (
         <div className="flex gap-2">
           <Button
+            variant="default"
             size="sm"
             onClick={onCreate}
           >
@@ -146,6 +149,7 @@ export function InspectionToolbar({
             删除
           </Button>
           <Button
+            variant="default"
             size="sm"
             onClick={onExport}
           >

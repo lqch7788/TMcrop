@@ -184,7 +184,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
                   )}
                   {req.type === 'voice' && (
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => {}}><Mic className="w-3 h-3" />录音</Button>
+                      <Button size="sm" variant="secondary" onClick={() => {}}><Mic className="w-4 h-4" />录音</Button>
                     </div>
                   )}
                   {req.type === 'text' && (

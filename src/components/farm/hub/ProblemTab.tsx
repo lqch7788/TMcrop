@@ -953,7 +953,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
               onClick={() => setDetailModal({ isOpen: false, problem: null })}
               className="hover:bg-white/20 rounded-full"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-4 h-4 text-white" />
             </Button>
           </div>
 

@@ -169,7 +169,7 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
             <h3 className="text-lg font-semibold text-gray-900">批量导入任务</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={handleClose}>
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-4 h-4 text-gray-400" />
           </Button>
         </div>
 
