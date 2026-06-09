@@ -3,8 +3,7 @@
  * 父组件传：selectedTech、editForm、setEditForm、scopeExpandedEdit、setScopeExpandedEdit、selectedCropEdit、handleCropChangeEdit
  */
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
-import { Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Upload, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
