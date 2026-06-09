@@ -3,7 +3,7 @@
  */
 
 import { FileText } from 'lucide-react';
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
@@ -115,7 +115,9 @@ export function TaskDetailModal({
               {task.sopContent ? (
                 <div className="bg-white rounded-lg p-3 border border-blue-100">
                   <p className="text-sm text-gray-600 mb-2">已导入SOP文档</p>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       const blob = new Blob([task.sopContent || ''], { type: 'text/plain' });
                       const url = URL.createObjectURL(blob);
@@ -129,7 +131,7 @@ export function TaskDetailModal({
                   >
                     <FileText className="w-4 h-4" />
                     下载SOP文件
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">暂无SOP文件</p>

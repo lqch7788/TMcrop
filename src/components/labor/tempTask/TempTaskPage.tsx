@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, AlertTriangle, Edit, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
+import { Plus, AlertTriangle, Edit2, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
 import { TempTask, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore } from '../../../stores';
 import { TempTaskFilters } from './TempTaskFilters';
@@ -1207,7 +1207,7 @@ export function TempTaskPage() {
                 onClick={handleBatchEdit}
                 disabled={selectedRows.length === 0}
               >
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 批量编辑
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
@@ -1239,7 +1239,7 @@ export function TempTaskPage() {
                   setBatchEditMode(true);
                   setSelectedRows([]);
                 }}>
-                <Edit className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
               <Button variant="destructive" size="sm" onClick={() => {

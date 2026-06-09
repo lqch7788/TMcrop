@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Trash2, UserPlus, Settings, Pencil, Eye } from 'lucide-react';
+import { Users, Plus, Trash2, UserPlus, Settings, Edit2, Eye, RotateCcw } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
@@ -261,9 +261,10 @@ export function TeamTable({
           <div className="flex gap-2 ml-auto">
             <Button
               size="sm"
-              variant="secondary"
+              variant="warning"
               onClick={() => setFilters({ name: '', leaderName: '', workZone: '' })}
             >
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
             <Button
@@ -408,7 +409,7 @@ export function TeamTable({
                             onClick={() => openEditModal(team)}
                             title="编辑"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                         )}
                         {canDelete && (

@@ -2,7 +2,7 @@
  * 拒绝原因弹窗组件
  */
 
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 
 interface TaskRejectModalProps {
@@ -34,19 +34,19 @@ export function TaskRejectModal({
       showFooter={false}
       bottomContent={
         <div className="flex justify-end gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
           >
             取消
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
             onClick={onConfirm}
             disabled={!rejectReason.trim()}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             确认拒绝
-          </button>
+          </Button>
         </div>
       }
     >

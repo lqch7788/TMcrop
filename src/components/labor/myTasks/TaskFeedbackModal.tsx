@@ -2,7 +2,7 @@
  * 任务反馈表单弹窗组件
  */
 
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { FeedbackFormData } from './types';
@@ -47,27 +47,24 @@ export function TaskFeedbackModal({
       showFooter={false}
       bottomContent={
         <div className="flex justify-end gap-3">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
           >
             取消
-          </button>
+          </Button>
           {/* 新增：无法继续按钮 */}
-          <button
+          <Button
+            variant={feedbackForm.cannotContinue ? 'destructive' : 'outline'}
             onClick={() => {
               // 切换无法继续模式
               setFeedbackForm(prev => ({ ...prev, cannotContinue: !prev.cannotContinue }));
             }}
-            className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-              feedbackForm.cannotContinue
-                ? 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
-                : 'border-red-300 text-red-600 hover:bg-red-50'
-            }`}
           >
             {feedbackForm.cannotContinue ? '取消无法继续' : '无法继续'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={feedbackForm.cannotContinue ? 'destructive' : 'warning'}
             onClick={onSubmit}
             disabled={
               feedbackForm.cannotContinue
@@ -77,14 +74,9 @@ export function TaskFeedbackModal({
                    ((feedbackForm.resultStatus === '其他' || feedbackForm.resultStatus === '无法继续') && !feedbackForm.resultText.trim())  // 选择"其他"或"无法继续"时需要填写备注
                 )
             }
-            className={`px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-              feedbackForm.cannotContinue
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-amber-500 hover:bg-amber-600'
-            }`}
           >
             {feedbackForm.cannotContinue ? '确认无法继续' : '提交反馈'}
-          </button>
+          </Button>
         </div>
       }
     >

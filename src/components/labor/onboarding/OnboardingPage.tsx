@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCw } from 'lucide-react';
+import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCcw } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
@@ -398,8 +398,8 @@ export function OnboardingPage() {
             <option value="已入职">已入职</option>
           </select>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setFilters({ keyword: '', status: '' })}>
-              <RotateCw className="w-4 h-4" />
+            <Button size="sm" variant="warning" onClick={() => setFilters({ keyword: '', status: '' })}>
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
             <Button size="sm" variant="default">

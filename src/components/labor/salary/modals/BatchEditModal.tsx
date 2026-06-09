@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui';
 import { NumberInput, Label } from '../../../ui';
-import { Pencil } from 'lucide-react';
 import { SalaryRecord } from '../types';
 
 interface BatchEditModalProps {

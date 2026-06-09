@@ -1,4 +1,4 @@
-import { Search, RotateCw } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { RecruitmentStatus, RecruitmentSource } from './types';
 import { Button } from '@/components/ui';
 
@@ -80,8 +80,8 @@ export function RecruitmentFilters({
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onReset}>
-            <RotateCw className="w-4 h-4" />
+          <Button size="sm" variant="warning" onClick={onReset}>
+            <RotateCcw className="w-4 h-4" />
             重置
           </Button>
           <Button size="sm" variant="default">

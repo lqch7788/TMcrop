@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Download, Pencil, Trash2, ChevronLeft } from 'lucide-react';
+import { Users, Plus, Download, Edit2, Trash2, ChevronLeft } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
@@ -347,7 +347,7 @@ export function StaffManagementPage() {
               onClick={() => setShowBatchEditModal(true)}
               className="gap-2"
             >
-              <Pencil className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
               确认编辑
             </Button>
             <Button
@@ -401,7 +401,7 @@ export function StaffManagementPage() {
                 onClick={handleBatchEditClick}
                 className="gap-2"
               >
-                <Pencil className="w-4 h-4" />
+                <Edit2 className="w-4 h-4" />
                 编辑
               </Button>
             )}

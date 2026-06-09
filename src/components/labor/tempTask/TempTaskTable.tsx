@@ -1,4 +1,4 @@
-import { AlertTriangle, MapPin, User, Clock, Eye, Edit, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
+import { AlertTriangle, MapPin, User, Clock, Eye, ChevronLeft, ChevronRight, Bell } from 'lucide-react';
 import { TempTask, TEMP_TASK_URGENCY_CONFIG } from '../../../types';
 import { getTaskOverdueStatus, getTaskOverdueDesc } from '../../../hooks/useTempTasks';
 import { Button } from '@/components/ui';
@@ -374,18 +374,16 @@ export function TempTaskTable({
 
                     {/* 催办按钮 - 已发布且非终态 */}
                     {!['draft', 'completed', 'cancelled', 'abandoned', 'pending'].includes(task.status) && sendReminder && (
-                      <button
+                      <Button
+                        size="sm"
+                        variant="destructive"
                         onClick={() => sendReminder(task)}
                         disabled={canRemind ? !canRemind(task.id).allowed : false}
-                        className={`px-2 py-1 text-xs rounded transition-colors ${
-                          canRemind?.(task.id)?.allowed !== false
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                        }`}
                         title={canRemind?.(task.id)?.reason || ''}
                       >
+                        <Bell className="w-4 h-4" />
                         催办
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </TableCell>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, UsersRound, Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Users, UsersRound, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTempWorker } from './hooks/useTempWorker';
 import { TempWorkerFilters } from './TempWorkerFilters';

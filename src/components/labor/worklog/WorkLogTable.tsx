@@ -1,4 +1,4 @@
-import { Eye, Plus, Edit, Trash2, Download } from 'lucide-react';
+import { Eye, Plus, Edit2, Trash2, Download } from 'lucide-react';
 import type { WorkLog, WorkLogTableProps } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -63,7 +63,7 @@ export function WorkLogTable({
               variant="blue"
               onClick={onBatchEditClick}
             >
-              <Edit className="w-4 h-4" />
+              <Edit2 className="w-4 h-4" />
               编辑
             </Button>
           )}

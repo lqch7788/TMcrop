@@ -3,7 +3,7 @@
  * 架构：usePositionStore (Zustand Store) 替代 React Query
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Edit, Eye, ChevronLeft, ChevronRight, Pencil, Trash2, Download, ClipboardCheck, Search, RotateCw } from 'lucide-react';
+import { Plus, Edit2, Eye, ChevronLeft, ChevronRight, Trash2, Download, ClipboardCheck, Search, RotateCcw } from 'lucide-react';
 import { Pagination } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportFormatModal, PositionFormModal } from '../position/modals';
@@ -468,8 +468,8 @@ export function PersonnelManagementPage() {
 
           {/* 重置和搜索按钮 */}
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleResetFilters}>
-              <RotateCw className="w-4 h-4" />
+            <Button size="sm" variant="warning" onClick={handleResetFilters}>
+              <RotateCcw className="w-4 h-4" />
               重置
             </Button>
             <Button size="sm" variant="default" onClick={handleSearch}>
@@ -495,7 +495,7 @@ export function PersonnelManagementPage() {
                       onClick={handleBatchEditClick}
                       disabled={selectedRows.length === 0}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Edit2 className="w-4 h-4" />
                       批量编辑
                     </Button>
                     <Button
@@ -557,7 +557,7 @@ export function PersonnelManagementPage() {
                 )}
                 {canEdit && (
                   <Button variant="blue" size="sm" onClick={handleBatchEditClick}>
-                    <Pencil className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     编辑
                   </Button>
                 )}
@@ -651,7 +651,7 @@ export function PersonnelManagementPage() {
                             onClick={() => handleEdit(pos)}
                             title="编辑"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="icon" title="查看">
                             <Eye className="w-4 h-4" />
