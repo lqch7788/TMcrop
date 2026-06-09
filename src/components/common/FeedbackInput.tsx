@@ -5,6 +5,7 @@
 
 import { useState, useRef } from 'react';
 import { MapPin, Camera, Package, Mic, CheckCircle, X, Play, Square, RotateCcw, Clock } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 // 反馈选项配置
@@ -103,13 +104,15 @@ function WorkloadInput({ value, onChange }: { value: { days: number; hours: numb
             </div>
           </div>
         </div>
-        <button
+        <Button
+          variant="default"
+          size="default"
           onClick={handleConfirm}
-          className={`w-full py-2 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 flex items-center justify-center gap-2 transition-colors`}
+          className="w-full bg-emerald-500 hover:bg-emerald-600"
         >
           <CheckCircle className="w-4 h-4" />
           确认工作量
-        </button>
+        </Button>
         {value && (
           <p className="text-xs text-emerald-600 text-center">
             已确认：{value.days} 天 {value.hours} 小时 {value.workers} 人
@@ -186,20 +189,24 @@ function GpsInput({ value, onChange }: { value: { lat: number; lng: number } | n
               </div>
             </div>
           </div>
-          <button
+          <Button
+            variant="link"
+            size="sm"
             onClick={() => onChange(null)}
-            className="mt-2 text-xs text-emerald-600 hover:text-emerald-800 flex items-center gap-1"
+            className="mt-2 text-xs text-emerald-600 hover:text-emerald-800"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-4 h-4" />
             重新获取
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-2">
-          <button
+          <Button
+            variant="default"
+            size="default"
             onClick={handleCapture}
             disabled={loading}
-            className={`w-full py-3 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors`}
+            className="w-full bg-emerald-500 hover:bg-emerald-600"
           >
             {loading ? (
               <>
@@ -212,7 +219,7 @@ function GpsInput({ value, onChange }: { value: { lat: number; lng: number } | n
                 点击获取当前位置
               </>
             )}
-          </button>
+          </Button>
           {error && (
             <p className="text-xs text-red-500 text-center">{error}</p>
           )}
@@ -279,24 +286,28 @@ function PhotoInput({ value, onChange, captureType }: { value: string[]; onChang
                 alt={`${label}照片 ${idx + 1}`}
                 className="w-16 h-16 object-cover rounded-lg border border-gray-200"
               />
-              <button
+              <Button
+                variant="destructive"
+                size="icon"
                 onClick={() => handleRemove(idx)}
-                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
       )}
 
-      <button
+      <Button
+        variant="default"
+        size="default"
         onClick={handleCapture}
-        className={`w-full py-3 rounded-lg bg-${colorClass}-500 text-white font-medium hover:bg-${colorClass}-600 flex items-center justify-center gap-2 transition-colors`}
+        className={`w-full bg-${colorClass}-500 hover:bg-${colorClass}-600`}
       >
         <Camera className="w-4 h-4" />
         {value.length > 0 ? '继续添加照片' : '点击拍照'}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -443,13 +454,15 @@ function MaterialInput({ value, onChange }: { value: string; onChange: (v: strin
             <div className="absolute left-0 right-0 h-0.5 bg-purple-500 animate-pulse" style={{ top: '50%' }} />
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="default"
+              size="default"
               onClick={handleStop}
-              className="flex-1 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 bg-gray-500 hover:bg-gray-600"
             >
               <X className="w-4 h-4" />
               取消
-            </button>
+            </Button>
           </div>
           <p className="text-xs text-purple-600 text-center">将条形码或二维码放入框内即可自动扫描</p>
         </div>
@@ -463,13 +476,15 @@ function MaterialInput({ value, onChange }: { value: string; onChange: (v: strin
               placeholder="扫描或输入物资编码"
               className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            <button
+            <Button
+              variant="default"
+              size="default"
               onClick={startScanning}
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 flex items-center gap-2 transition-colors"
+              className="bg-purple-500 hover:bg-purple-600"
             >
               <Package className="w-4 h-4" />
               扫码
-            </button>
+            </Button>
           </div>
           {error && (
             <p className="text-xs text-red-500">{error}</p>
@@ -583,9 +598,11 @@ function VoiceInput({ value, onChange }: { value: string; onChange: (v: string) 
             onEnded={() => setPlaying(false)}
           />
           <div className="flex items-center gap-3">
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={playAudio}
-              className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              className="bg-red-500 hover:bg-red-600"
             >
               {playing ? (
                 <>
@@ -598,25 +615,29 @@ function VoiceInput({ value, onChange }: { value: string; onChange: (v: string) 
                   播放
                 </>
               )}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="link"
+              size="sm"
               onClick={removeAudio}
-              className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1"
+              className="text-xs text-red-600 hover:text-red-800"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-4 h-4" />
               重新录音
-            </button>
+            </Button>
           </div>
           <p className="mt-2 text-xs text-red-600">录音时长：{audioChunks.length > 0 ? '...' : '0秒'}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          <button
+          <Button
+            variant="default"
+            size="default"
             onClick={recording ? stopRecording : startRecording}
-            className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+            className={`w-full ${
               recording
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-red-500 text-white hover:bg-red-600'
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-red-500 hover:bg-red-600'
             }`}
           >
             {recording ? (
@@ -630,7 +651,7 @@ function VoiceInput({ value, onChange }: { value: string; onChange: (v: string) 
                 点击开始录音
               </>
             )}
-          </button>
+          </Button>
           <p className="text-xs text-gray-500 text-center">请说话并描述处理情况</p>
         </div>
       )}

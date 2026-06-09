@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { Search, X, Filter } from 'lucide-react';
-import { DatePicker, Label } from '@/components/ui';
+import { Button, DatePicker, Label } from '@/components/ui';
 import type { ApprovalFilters, ApprovalType, ApprovalStatus } from '../../types/approval';
 
 interface ApprovalFiltersProps {
@@ -102,32 +102,31 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
             />
           </div>
         </div>
-        <button
+        <Button
+          variant="default"
+          size="default"
           onClick={handleKeywordSearch}
-          className="h-10 px-4 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
         >
           <Search className="w-4 h-4" />
           搜索
-        </button>
-        <button
+        </Button>
+        <Button
+          variant={showAdvanced || hasActiveFilters ? 'blue' : 'outline'}
+          size="default"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`h-10 px-4 border rounded-lg text-sm font-medium flex items-center gap-2 ${
-            showAdvanced || hasActiveFilters
-              ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
-              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
         >
           <Filter className="w-4 h-4" />
           高级筛选
-        </button>
+        </Button>
         {hasActiveFilters && (
-          <button
+          <Button
+            variant="warning"
+            size="default"
             onClick={onReset}
-            className="h-10 px-4 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2"
           >
             <X className="w-4 h-4" />
             清除筛选
-          </button>
+          </Button>
         )}
       </div>
 
@@ -139,17 +138,14 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
             <Label className="text-gray-700 mb-2">审批类型</Label>
             <div className="flex flex-wrap gap-2">
               {approvalTypeOptions.map((option) => (
-                <button
+                <Button
                   key={option.value}
+                  size="sm"
+                  variant={filters.type?.includes(option.value) ? 'default' : 'outline'}
                   onClick={() => toggleArrayFilter('type', option.value, filters.type)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filters.type?.includes(option.value)
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -159,17 +155,14 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
             <Label className="text-gray-700 mb-2">审批状态</Label>
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => (
-                <button
+                <Button
                   key={option.value}
+                  size="sm"
+                  variant={filters.status?.includes(option.value) ? 'default' : 'outline'}
                   onClick={() => toggleArrayFilter('status', option.value, filters.status)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filters.status?.includes(option.value)
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -179,17 +172,14 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
             <Label className="text-gray-700 mb-2">审批类别</Label>
             <div className="flex flex-wrap gap-2">
               {categoryOptions.map((option) => (
-                <button
+                <Button
                   key={option.value}
+                  size="sm"
+                  variant={filters.category?.includes(option.value) ? 'default' : 'outline'}
                   onClick={() => toggleArrayFilter('category', option.value, filters.category)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filters.category?.includes(option.value)
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -199,17 +189,14 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
             <Label className="text-gray-700 mb-2">优先级</Label>
             <div className="flex flex-wrap gap-2">
               {priorityOptions.map((option) => (
-                <button
+                <Button
                   key={option.value}
+                  size="sm"
+                  variant={filters.priority?.includes(option.value) ? 'default' : 'outline'}
                   onClick={() => toggleArrayFilter('priority', option.value, filters.priority)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    filters.priority?.includes(option.value)
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
                 >
                   {option.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

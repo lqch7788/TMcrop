@@ -44,9 +44,9 @@ export default function GlobalDialog() {
             </span>
           </div>
           {state.type === 'alert' && (
-            <button onClick={handleConfirm} className="text-white/80 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={handleConfirm} className="text-white/80 hover:text-white hover:bg-white/20">
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           )}
         </div>
 

@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { MapPin, Camera, Package, Mic, X, ChevronLeft, ChevronRight, Copy, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui';
 import type { ProblemAttachment, AttachmentType } from '../../types/problemAttachment';
 
 // 附件类型配置
@@ -89,19 +90,23 @@ function PhotoGrid({ photos, mode }: { photos: ProblemAttachment[]; mode: 'compa
       {/* Lightbox */}
       {lightboxOpen && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center">
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={closeLightbox}
             className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full"
           >
             <X className="w-6 h-6" />
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={goPrev}
             className="absolute left-4 p-2 text-white hover:bg-white/20 rounded-full"
           >
             <ChevronLeft className="w-8 h-8" />
-          </button>
+          </Button>
 
           <img
             src={photos[currentIndex].data}
@@ -109,12 +114,14 @@ function PhotoGrid({ photos, mode }: { photos: ProblemAttachment[]; mode: 'compa
             className="max-w-[90vw] max-h-[90vh] object-contain"
           />
 
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={goNext}
             className="absolute right-4 p-2 text-white hover:bg-white/20 rounded-full"
           >
             <ChevronRight className="w-8 h-8" />
-          </button>
+          </Button>
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
             {currentIndex + 1} / {photos.length}
@@ -171,20 +178,24 @@ function GpsDisplay({ gpsData, mode, compact }: { gpsData: GpsData; mode: 'compa
         </div>
       </div>
       <div className="flex gap-2">
-        <button
+        <Button
+          size="sm"
+          variant="default"
           onClick={copyCoordinates}
-          className={`flex items-center gap-1 px-3 py-1.5 bg-${colorClass}-500 text-white rounded text-xs hover:bg-${colorClass}-600 transition-colors`}
+          className={`flex items-center gap-1 bg-${colorClass}-500 hover:bg-${colorClass}-600`}
         >
-          <Copy className="w-3 h-3" />
+          <Copy className="w-4 h-4" />
           {copied ? '已复制' : '复制坐标'}
-        </button>
-        <button
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
           onClick={openMaps}
-          className={`flex items-center gap-1 px-3 py-1.5 bg-white border border-${colorClass}-300 text-${colorClass}-700 rounded text-xs hover:bg-${colorClass}-50 transition-colors`}
+          className={`flex items-center gap-1 border-${colorClass}-300 text-${colorClass}-700 hover:bg-${colorClass}-50`}
         >
-          <ExternalLink className="w-3 h-3" />
+          <ExternalLink className="w-4 h-4" />
           打开地图
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -220,13 +231,15 @@ function VoicePlayer({ attachment }: { attachment: ProblemAttachment }) {
           </div>
           <span className="font-medium text-gray-700">语音备注</span>
         </div>
-        <button
+        <Button
+          size="default"
+          variant="default"
           onClick={playAudio}
-          className={`px-4 py-2 bg-${colorClass}-500 text-white rounded-lg hover:bg-${colorClass}-600 transition-colors flex items-center gap-2`}
+          className={`bg-${colorClass}-500 hover:bg-${colorClass}-600`}
         >
           <Mic className="w-4 h-4" />
           {playing ? '暂停' : '播放'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -258,12 +271,14 @@ function MaterialDisplay({ attachment }: { attachment: ProblemAttachment }) {
             <p className="text-sm text-gray-600 font-mono">{attachment.data}</p>
           </div>
         </div>
-        <button
+        <Button
+          size="sm"
+          variant="default"
           onClick={copyCode}
-          className={`px-3 py-1.5 bg-${colorClass}-500 text-white rounded text-xs hover:bg-${colorClass}-600 transition-colors`}
+          className={`bg-${colorClass}-500 hover:bg-${colorClass}-600`}
         >
           {copied ? '已复制' : '复制'}
-        </button>
+        </Button>
       </div>
     </div>
   );

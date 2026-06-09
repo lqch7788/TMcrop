@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, Clock, User, Calendar, FileText, MessageSquare } from 'lucide-react';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Approval, ApprovalStatus, ApprovalAction } from '../../types/approval';
 import { BusinessPreview } from './BusinessPreview';
 
@@ -246,20 +246,22 @@ export function ApprovalDetail({
       {showActions && approval.status === ApprovalStatus.PENDING && (
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
           {onReject && canReject && (
-            <button
+            <Button
+              variant="destructive"
+              size="default"
               onClick={() => onReject(approval.id)}
-              className="h-10 px-4 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
             >
               拒绝
-            </button>
+            </Button>
           )}
           {onApprove && canApprove && (
-            <button
+            <Button
+              variant="default"
+              size="default"
               onClick={() => onApprove(approval.id)}
-              className="h-10 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium"
             >
               通过
-            </button>
+            </Button>
           )}
         </div>
       )}

@@ -279,9 +279,9 @@ export default function AuthorityConfiguration() {
           style={{ paddingLeft: depth * 20 + 8 }}
         >
           {hasChildren ? (
-            <button onClick={() => toggleExpand(node.oid)} className="p-0.5 text-gray-400 hover:text-gray-600">
-              {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
+            <Button variant="ghost" size="icon" onClick={() => toggleExpand(node.oid)} className="p-0.5 text-gray-400 hover:text-gray-600">
+              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
           ) : (
             <span className="w-4" />
           )}
@@ -291,15 +291,15 @@ export default function AuthorityConfiguration() {
             <span className="text-xs text-gray-400 font-mono ml-1">（{node.aid}）</span>
           </span>
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => openProcessAdd(node.oid)} className="p-1 text-gray-400 hover:text-green-600" title="新增子工序">
+            <Button variant="ghost" size="icon" onClick={() => openProcessAdd(node.oid)} className="p-1 text-gray-400 hover:text-green-600" title="新增子工序">
               <Plus className="w-4 h-4" />
-            </button>
-            <button onClick={() => openProcessEdit(node)} className="p-1 text-gray-400 hover:text-blue-600" title="编辑">
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => openProcessEdit(node)} className="p-1 text-gray-400 hover:text-blue-600" title="编辑">
               <Settings className="w-4 h-4" />
-            </button>
-            <button onClick={() => handleProcessDelete(node.oid)} className="p-1 text-gray-400 hover:text-red-600" title="删除">
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => handleProcessDelete(node.oid)} className="p-1 text-gray-400 hover:text-red-600" title="删除">
               <Trash2 className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
         {hasChildren && isExpanded && node.children!.map((c) => renderProcessTreeNode(c, depth + 1))}
@@ -353,16 +353,18 @@ export default function AuthorityConfiguration() {
                   const val = getAuthValue(proc.oid, act.code);
                   return (
                     <td key={act.code} className="text-center py-1.5 px-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => toggleAuthority(proc.oid, act.code)}
-                        className={`w-7 h-7 rounded border flex items-center justify-center transition-colors font-bold text-base ${
+                        className={`w-7 h-7 rounded border font-bold text-base ${
                           val === 1
                             ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50'
                             : 'border-gray-300 text-red-500 hover:bg-red-50'
                         }`}
                       >
                         {val === 1 ? '✓' : '✗'}
-                      </button>
+                      </Button>
                     </td>
                   );
                 })}
@@ -381,22 +383,26 @@ export default function AuthorityConfiguration() {
       {/* 工具栏：标题 + 内部Tab */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('authority')}
-            className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
-              activeTab === 'authority' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`px-3 py-1 rounded-md text-sm font-semibold ${
+              activeTab === 'authority' ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Key className="w-3 h-3 inline mr-1" /> 角色权限配置
-          </button>
-          <button
+            <Key className="w-4 h-4 mr-1 inline" /> 角色权限配置
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveTab('processes')}
-            className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
-              activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            className={`px-3 py-1 rounded-md text-sm font-semibold ${
+              activeTab === 'processes' ? 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <FolderTree className="w-3 h-3 inline mr-1" /> 工序与菜单管理
-          </button>
+            <FolderTree className="w-4 h-4 mr-1 inline" /> 工序与菜单管理
+          </Button>
         </div>
       </div>
 
@@ -461,14 +467,16 @@ export default function AuthorityConfiguration() {
             {/* 数据权限面板 */}
             {selectedRoleOid && (
               <div className="bg-white rounded-xl shadow-sm p-3">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowDataAuthPanel(!showDataAuthPanel)}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-700 w-full"
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 w-full justify-start"
                 >
-                  <Building2 className="w-3.5 h-3.5" />
+                  <Building2 className="w-4 h-4" />
                   数据权限范围
-                  <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${showDataAuthPanel ? 'rotate-180' : ''}`} />
-                </button>
+                  <ChevronDown className={`w-4 h-4 ml-auto transition-transform ${showDataAuthPanel ? 'rotate-180' : ''}`} />
+                </Button>
                 {showDataAuthPanel && (
                   <div className="mt-2 max-h-48 overflow-y-auto border-t pt-2">
                     <p className="text-xs text-gray-400 mb-1">
@@ -522,22 +530,22 @@ export default function AuthorityConfiguration() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={grantAll} className="h-7 px-3 text-xs bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100">
+                <Button onClick={grantAll} className="h-7 px-3 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
                   全部授权
-                </button>
-                <button onClick={revokeAll} className="h-7 px-3 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100">
+                </Button>
+                <Button onClick={revokeAll} className="h-7 px-3 text-xs bg-red-50 text-red-700 hover:bg-red-100">
                   全部取消
-                </button>
+                </Button>
                 {hasChanges && (
-                  <button onClick={saveAuthority} className="h-7 px-3 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1">
-                    <Save className="w-3 h-3" /> 保存
-                  </button>
+                  <Button onClick={saveAuthority} className="h-7 px-3 text-xs bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1">
+                    <Save className="w-4 h-4" /> 保存
+                  </Button>
                 )}
-                <button onClick={() => { loadProcesses({ appType: selectedAppType }); setHasChanges(false); setAuthorityChanges(new Map()); }}
+                <Button onClick={() => { loadProcesses({ appType: selectedAppType }); setHasChanges(false); setAuthorityChanges(new Map()); }}
                   className="h-7 px-3 text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
                 >
-                  <RefreshCw className="w-3 h-3" /> 刷新
-                </button>
+                  <RefreshCw className="w-4 h-4" /> 刷新
+                </Button>
               </div>
             </div>
             {renderAuthorityMatrix()}
@@ -563,9 +571,9 @@ export default function AuthorityConfiguration() {
               onMouseDown={startDrag}
             >
               <h3 className="text-white font-semibold">{editingProcess ? '编辑工序' : '新增工序'}</h3>
-              <button onClick={() => setShowProcessModal(false)} className="text-white/70 hover:text-white">
+              <Button variant="ghost" size="icon" onClick={() => setShowProcessModal(false)} className="text-white/70 hover:text-white hover:bg-white/20">
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             {/* 表单 */}
             <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
@@ -594,14 +602,14 @@ export default function AuthorityConfiguration() {
             </div>
             {/* 按钮 */}
             <div className="flex justify-end gap-2 px-5 pb-4">
-              <button onClick={() => setShowProcessModal(false)}
+              <Button onClick={() => setShowProcessModal(false)}
                 className="h-8 px-4 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded">
                 取消
-              </button>
-              <button onClick={handleProcessSave}
-                className="h-8 px-4 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+              </Button>
+              <Button onClick={handleProcessSave}
+                className="h-8 px-4 text-sm bg-blue-500 text-white hover:bg-blue-600">
                 保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>
