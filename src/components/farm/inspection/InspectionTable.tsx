@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin } from 'lucide-react';
+import { CheckCircle, MapPin } from 'lucide-react';
 import { useUserStore } from '../../../stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -427,7 +427,7 @@ export function InspectionTable({
                           variant="default"
                           size="sm"
                         >
-                          验收
+                          <CheckCircle className="w-4 h-4" /> 验收
                         </Button>
                       );
                     }

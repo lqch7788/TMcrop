@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -143,7 +143,7 @@ export function InspectionSearch({
         {/* 按钮行 */}
         <div className="flex gap-2">
           <Button onClick={onReset} variant="default" size="default">
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button onClick={onSearch} variant="default" size="default">
             <Search className="w-4 h-4" />

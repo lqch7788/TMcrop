@@ -284,14 +284,14 @@ export function BatchImportModal({ isOpen, onClose, onImport }: BatchImportModal
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
           <Button variant="secondary" onClick={handleClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="default"
             onClick={handleConfirm}
             disabled={importData.length === 0}
           >
-            确认导入 {importData.length > 0 && `(${importData.length})`}
+            <Upload className="w-4 h-4" /> 确认导入 {importData.length > 0 && `(${importData.length})`}
           </Button>
         </div>
       </div>

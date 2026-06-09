@@ -2,6 +2,8 @@
  * 批量删除确认弹窗
  */
 import React from 'react';
+import { Trash2, X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
@@ -21,8 +23,8 @@ export function BatchDeleteModal({ isOpen, count, onClose, onConfirm }: BatchDel
           <p className="text-red-600 text-sm mt-2">此操作不可逆</p>
         </div>
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
-          <Button variant="destructive" size="sm" onClick={onConfirm}>确认删除</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button variant="destructive" size="sm" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
         </div>
       </div>
     </UnifiedModal>

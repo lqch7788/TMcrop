@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -145,7 +145,7 @@ export function InspectionSearch({
             size="sm"
             onClick={onReset}
           >
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button
             variant="default"

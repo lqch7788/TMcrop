@@ -89,13 +89,13 @@ export function TeamAssignModal({ team, unassignedWorkers, open, onClose, onAssi
       <span className="text-sm text-gray-500">已选择 {selectedWorkers.length} 人</span>
       <div className="flex gap-3">
         <Button variant="secondary" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           onClick={handleAssign}
           disabled={selectedWorkers.length === 0}
         >
-          确认分配
+          <Check className="w-4 h-4" /> 确认分配
         </Button>
       </div>
     </>

@@ -3,7 +3,7 @@
  * 区块(Zones) + 地块(Blocks) 两级管理
  */
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Loader2, MapPin, Layers } from 'lucide-react';
+import { Edit2, Layers, Loader2, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { useZoneStore } from '../../stores/useZoneStore';
@@ -332,8 +332,8 @@ export default function BlockTab() {
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => { setShowModal(false); setEditingItem(null); }}>取消</Button>
-              <Button size="sm" onClick={handleSave}>保存</Button>
+              <Button size="sm" variant="secondary" onClick={() => { setShowModal(false); setEditingItem(null); }}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" onClick={handleSave}><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>
@@ -346,8 +346,8 @@ export default function BlockTab() {
             <h3 className="text-base font-semibold mb-2">确认删除</h3>
             <p className="text-sm text-gray-600 mb-4">确定要删除「{showDeleteConfirm.name}」吗？</p>
             <div className="flex justify-end gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setShowDeleteConfirm(null)}>取消</Button>
-              <Button size="sm" variant="destructive" onClick={handleDeleteConfirm}>确认删除</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" variant="destructive" onClick={handleDeleteConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
             </div>
           </div>
         </div>

@@ -7,11 +7,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Sprout, Search, ChevronLeft, ChevronRight,
-  CheckCircle, XCircle, Clock, FileText,
-  Calendar, Warehouse, Eye, Package, RefreshCw, Square, CheckSquare as CheckSquareIcon, ShoppingCart, Download
-} from 'lucide-react';
+import { Calendar, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, ChevronRight, Clock, Download, Eye, FileText, Package, RefreshCw, Search, ShoppingCart, Sprout, Square, Warehouse, X, XCircle } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
@@ -532,7 +528,7 @@ export default function ProductionApproval() {
         showFooter={true}
         footer={
           <Button variant="default" onClick={closeDetailModal}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         }
       >
@@ -799,7 +795,7 @@ export default function ProductionApproval() {
         footer={
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={cancelApproval}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button
               variant={approvalModal.action === 'approve' ? 'default' : 'destructive'}

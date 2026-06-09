@@ -5,7 +5,7 @@
 // ============================================================
 
 import React from 'react';
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, X, XCircle } from 'lucide-react';
 import { UnifiedModal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Button } from '@/components/ui';
 import type { Approval } from '../../types/approval';
 
@@ -69,7 +69,7 @@ export function BatchResultModal({
             )}
           </div>
           <Button variant="secondary" onClick={onClose}>
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       }

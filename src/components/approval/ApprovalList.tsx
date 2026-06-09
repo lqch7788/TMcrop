@@ -5,7 +5,7 @@
 // ============================================================
 
 import React from 'react';
-import { CheckCircle, XCircle, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle, ChevronRight, Clock, XCircle } from 'lucide-react';
 import type { Approval, ApprovalStatus } from '../../types/approval';
 import { ApprovalLevelBadge } from './ApprovalLevelBadge';
 import { ApprovalLevel } from '../../config/approvalHierarchy';
@@ -143,17 +143,17 @@ export function ApprovalList({
             <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
               {onApprove && canApprove && (
                 <Button onClick={() => onApprove(approval.id)}>
-                  通过
+                  <Check className="w-4 h-4" /> 通过
                 </Button>
               )}
               {onPartialApprove && canApprove && (
                 <Button variant="secondary" onClick={() => onPartialApprove(approval)}>
-                  部分通过
+                  <Check className="w-4 h-4" /> 部分通过
                 </Button>
               )}
               {onReject && canReject && (
                 <Button variant="destructive" onClick={() => onReject(approval.id)}>
-                  拒绝
+                  <XCircle className="w-4 h-4" /> 拒绝
                 </Button>
               )}
             </div>

@@ -6,7 +6,7 @@ import { NumberInput } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { TempTask, TempTaskUrgency, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore, useGreenhouseStore } from '../../../stores';
-import { Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
+import { Camera, Clock, FileText, MapPin, Mic, Package, Send, Wand2 } from 'lucide-react';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
@@ -208,12 +208,12 @@ export function TempTaskFormModal({
         onClick={onSubmitDraft}
         variant="ghost"
       >
-        存为草稿
+        <FileText className="w-4 h-4" /> 存为草稿
       </Button>
       <Button
         onClick={onSubmit}
       >
-        发布
+        <Send className="w-4 h-4" /> 发布
       </Button>
     </div>
   );
@@ -247,7 +247,7 @@ export function TempTaskFormModal({
                 onClick={generateNewTaskCode}
                 size="sm"
               >
-                生成
+                <Wand2 className="w-4 h-4" /> 生成
               </Button>
             </div>
           </FormField>

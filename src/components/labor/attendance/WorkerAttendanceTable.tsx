@@ -2,7 +2,7 @@
  * 工人考勤 - 考勤记录表格组件
  */
 import { useRef } from 'react';
-import { Eye, Edit2, Trash2, Download, Plus, Upload } from 'lucide-react';
+import { Download, Edit2, Eye, Plus, Trash2, Upload, X } from 'lucide-react';
 import { AttendanceRecord } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -106,7 +106,7 @@ export function WorkerAttendanceTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -126,7 +126,7 @@ export function WorkerAttendanceTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -146,7 +146,7 @@ export function WorkerAttendanceTable({
                     variant="secondary"
                     onClick={onExportClick}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

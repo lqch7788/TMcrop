@@ -153,7 +153,7 @@ export default function TemplateSelectModal({ isOpen, onClose, onSelect }: Templ
 
         {/* 底部 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end flex-shrink-0">
-          <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
         </div>
       </div>
     </div>

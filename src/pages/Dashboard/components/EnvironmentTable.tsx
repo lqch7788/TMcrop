@@ -1,5 +1,5 @@
 // 种植区环境参数表组件
-import { MapPin } from 'lucide-react';
+import { Eye, MapPin } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { GreenhouseEnvData } from '../types/dashboard.types';
 
@@ -135,7 +135,7 @@ export function EnvironmentTable({
                     onClick={() => onDetailClick(gh.id)}
                     className="text-emerald-600 hover:text-emerald-700 font-medium text-sm"
                   >
-                    详情&gt;&gt;
+                    <Eye className="w-4 h-4" /> 详情&gt;&gt;
                   </Button>
                 </td>
               </tr>

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { FileText, Bell } from 'lucide-react';
+import { Bell, CheckCircle, FileText, Play, Send, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { STATUS_MAP, getTypeLabel, getTypeColor, formatWorkHours } from '../constants/taskDispatchConstants';
 import { OvertimeBadge } from './OvertimeBadge';
@@ -179,7 +179,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onAccept}
             >
-              验收
+              <CheckCircle className="w-4 h-4" /> 验收
             </Button>
           )}
 
@@ -190,7 +190,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onWithdraw}
             >
-              撤回
+              <Undo2 className="w-4 h-4" /> 撤回
             </Button>
           )}
 
@@ -201,7 +201,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onCancel}
             >
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           )}
 
@@ -223,7 +223,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onReassign}
             >
-              重新派发
+              <Send className="w-4 h-4" /> 重新派发
             </Button>
           )}
 
@@ -234,7 +234,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onReassign}
             >
-              选择执行人
+              <Play className="w-4 h-4" /> 选择执行人
             </Button>
           )}
 
@@ -245,7 +245,7 @@ export const TaskTableRow = React.memo<TaskTableRowProps>(({
               size="sm"
               onClick={onReassign}
             >
-              重新派发
+              <Send className="w-4 h-4" /> 重新派发
             </Button>
           )}
 

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Plus, Save, Trash2, X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -159,7 +161,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
               onClick={onAddToMaterialPool}
               disabled={selectedMaterialIndices.size === 0}
             >
-              添加到物料池 ({selectedMaterialIndices.size})
+              <Plus className="w-4 h-4" /> 添加到物料池 ({selectedMaterialIndices.size})
             </Button>
           </div>
           <Table className="w-full border border-gray-200 rounded-lg overflow-hidden mt-2">
@@ -264,7 +266,7 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
                         onClick={() => onRemoveFromMaterialPool(idx)}
                         className="text-red-600 hover:text-red-800"
                       >
-                        移除
+                        <Trash2 className="w-4 h-4" /> 移除
                       </Button>
                     </TableCell>
                     <TableCell className="px-3 py-2 text-sm text-blue-700 font-mono">{material.applicationCode}</TableCell>
@@ -297,13 +299,13 @@ export const ExecuteAddModal: React.FC<ExecuteAddModalProps> = ({
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" onClick={onCancel}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           onClick={onSave}
           disabled={materialPool.length === 0}
         >
-          保存
+          <Save className="w-4 h-4" /> 保存
         </Button>
       </div>
     </UnifiedModal>

@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { UnifiedModal, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TextArea, Label, Button } from '@/components/ui';
 import type { Approval } from '../../types/approval';
 import { getApprovalTypeName } from '../../types/approval';
@@ -56,14 +56,14 @@ export function BatchConfirmModal({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={handleCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={!isApprove && comment.trim() === ''}
             className={isApprove ? 'bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300' : 'bg-red-600 hover:bg-red-700 disabled:bg-gray-300'}
           >
-            确认批量{actionText}
+            <Check className="w-4 h-4" /> 确认批量{actionText}
           </Button>
         </div>
       }

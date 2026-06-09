@@ -3,6 +3,8 @@
  * 简化的药剂新增表单，用于病虫害防治记录时快速添加
  */
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -146,7 +148,7 @@ export function QuickAddPesticideModal({ isOpen, onClose, onSaved }: QuickAddPes
 
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" size="sm" onClick={handleClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="default" size="sm" onClick={handleSubmit} disabled={submitting}>
             {submitting ? '保存中...' : '保存'}

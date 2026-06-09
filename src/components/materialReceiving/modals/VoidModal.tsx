@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Check, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -42,10 +42,10 @@ export const VoidModal: React.FC<VoidModalProps> = ({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={handleCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="warning" onClick={handleSubmit}>
-            确认申请
+            <Check className="w-4 h-4" /> 确认申请
           </Button>
         </div>
       }

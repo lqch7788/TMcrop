@@ -4,7 +4,7 @@
  */
 
 import { useState, useReducer, useEffect, useCallback } from 'react';
-import { Plus, AlertTriangle, Edit2, Trash2, Download, FileText, Clock, User, Camera, MapPin, Mic } from 'lucide-react';
+import { AlertTriangle, Camera, Check, Clock, Download, Edit2, FileText, MapPin, Mic, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
@@ -134,10 +134,10 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
           </div>
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
             <Button variant="secondary" onClick={onClose}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button onClick={onConfirm}>
-              导出
+              <Download className="w-4 h-4" /> 导出
             </Button>
           </div>
         </div>
@@ -175,10 +175,10 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
           </div>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={onClose}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
             <Button variant="destructive" onClick={onConfirm}>
-              确认删除
+              <Trash2 className="w-4 h-4" /> 确认删除
             </Button>
           </div>
         </div>
@@ -452,10 +452,10 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
         <div className="p-4 border-t border-gray-200 flex justify-end flex-shrink-0">
           <div className="flex gap-3">
             <Button variant="blue" onClick={handleConfirmNext}>
-              确认（下一个）
+              <Check className="w-4 h-4" /> 确认（下一个）
             </Button>
             <Button onClick={handlePublish}>
-              发布
+              <Send className="w-4 h-4" /> 发布
             </Button>
           </div>
         </div>
@@ -546,14 +546,14 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
                   setReason('');
                   onClose();
                 }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!reason.trim()}
                 className={buttonClass}
               >
-                确认{title}
+                <Check className="w-4 h-4" /> 确认{title}
               </Button>
             </div>
           </div>
@@ -663,13 +663,13 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
             {/* 操作按钮 */}
             <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
               <Button variant="secondary" onClick={onClose}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button
                 onClick={handleSubmit}
                 disabled={!selectedAssignee}
               >
-                确认派发
+                <Send className="w-4 h-4" /> 确认派发
               </Button>
             </div>
           </div>
@@ -1464,7 +1464,7 @@ export const TempTaskTab: React.FC = () => {
                 确认导出
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchEditMode ? (
@@ -1479,7 +1479,7 @@ export const TempTaskTab: React.FC = () => {
                 批量编辑
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchDeleteMode ? (
@@ -1494,7 +1494,7 @@ export const TempTaskTab: React.FC = () => {
                 确认删除
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (

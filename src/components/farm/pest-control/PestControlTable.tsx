@@ -4,7 +4,7 @@
  * 列：勾选框、编号、防治日期、防治类型（彩色Badge）、作物、防治区域、操作人、操作（展开/编辑/删除）
  */
 import React from 'react';
-import { Eye, Edit2, Trash2, Plus, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { PestControlData, useDictionaryStore } from '@/stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -175,7 +175,7 @@ export function PestControlTable({
             <Button variant="destructive" size="sm" onClick={onBatchDeleteConfirm}>
               <Trash2 className="w-4 h-4" />确认删除
             </Button>
-            <Button variant="secondary" size="sm" onClick={onBatchDeleteMode}>取消</Button>
+            <Button variant="secondary" size="sm" onClick={onBatchDeleteMode}><X className="w-4 h-4" /> 取消</Button>
           </div>
         ) : (
           <div className="flex items-center gap-2">

@@ -3,6 +3,8 @@
  * 显示病虫害基本信息及关联的药剂列表
  */
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -194,7 +196,7 @@ export function PestDiseaseDetailModal({ isOpen, record, onClose }: PestDiseaseD
           size="sm"
           onClick={onClose}
         >
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </UnifiedModal>

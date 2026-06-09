@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronRight, Edit2, Hash, Loader2, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { useMaterialCodeRuleStore } from '../stores/useMaterialCodeRuleStore';
@@ -250,7 +250,7 @@ export default function CodeRule() {
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
           <p className="text-red-600 font-medium">加载失败</p>
           <p className="text-gray-500">{error}</p>
-          <Button variant="default" onClick={() => loadCategories()}>重试</Button>
+          <Button variant="default" onClick={() => loadCategories()}><RefreshCw className="w-4 h-4" /> 重试</Button>
         </div>
       </div>
     );
@@ -282,7 +282,7 @@ export default function CodeRule() {
             ) : (
               <>
                 <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex items-center gap-2">
-                  取消修改
+                  <Edit2 className="w-4 h-4" /> 取消修改
                 </Button>
                 <Button variant="default" onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2">
                   <Save className="w-4 h-4" />
@@ -326,8 +326,8 @@ export default function CodeRule() {
                     <div className="flex items-center gap-2">
                       <input type="text" value={newBigCode} onChange={e => setNewBigCode(e.target.value)} placeholder="代码(如:AB)" className="w-24 px-2 py-1 border border-gray-400 rounded text-sm" />
                       <input type="text" value={newBigName} onChange={e => setNewBigName(e.target.value)} placeholder="大类名称" className="w-40 px-2 py-1 border border-gray-400 rounded text-sm" />
-                      <Button variant="default" size="sm" onClick={handleAddBig}>添加</Button>
-                      <Button variant="secondary" size="sm" onClick={() => { setShowAddBig(false); setNewBigCode(''); setNewBigName(''); }}>取消</Button>
+                      <Button variant="default" size="sm" onClick={handleAddBig}><Plus className="w-4 h-4" /> 添加</Button>
+                      <Button variant="secondary" size="sm" onClick={() => { setShowAddBig(false); setNewBigCode(''); setNewBigName(''); }}><X className="w-4 h-4" /> 取消</Button>
                     </div>
                   ) : (
                     <Button variant="ghost" onClick={() => setShowAddBig(true)} className="flex items-center gap-1">
@@ -387,8 +387,8 @@ export default function CodeRule() {
                 <input type="text" value={newMidName} onChange={e => setNewMidName(e.target.value)} placeholder="中类名称" className="w-full px-3 py-2 border border-gray-200 rounded-lg" />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="secondary" onClick={() => { setShowAddMid(null); setNewMidCode(''); setNewMidName(''); }}>取消</Button>
-                <Button variant="default" onClick={() => handleAddMid(showAddMid)}>添加</Button>
+                <Button variant="secondary" onClick={() => { setShowAddMid(null); setNewMidCode(''); setNewMidName(''); }}><X className="w-4 h-4" /> 取消</Button>
+                <Button variant="default" onClick={() => handleAddMid(showAddMid)}><Plus className="w-4 h-4" /> 添加</Button>
               </div>
             </div>
           </div>
@@ -410,8 +410,8 @@ export default function CodeRule() {
                 <input type="text" value={newSubName} onChange={e => setNewSubName(e.target.value)} placeholder="小类名称" className="w-full px-3 py-2 border border-gray-200 rounded-lg" />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="secondary" onClick={() => { setShowAddSub(null); setNewSubCode(''); setNewSubName(''); }}>取消</Button>
-                <Button variant="default" onClick={() => handleAddSub(showAddSub.substring(0, 2), showAddSub.substring(2, 4))}>添加</Button>
+                <Button variant="secondary" onClick={() => { setShowAddSub(null); setNewSubCode(''); setNewSubName(''); }}><X className="w-4 h-4" /> 取消</Button>
+                <Button variant="default" onClick={() => handleAddSub(showAddSub.substring(0, 2), showAddSub.substring(2, 4))}><Plus className="w-4 h-4" /> 添加</Button>
               </div>
             </div>
           </div>
@@ -446,8 +446,8 @@ export default function CodeRule() {
               </ul>
             </div>
             <div className="flex gap-3 justify-end">
-              <Button variant="secondary" onClick={() => setShowSaveConfirm(false)}>取消</Button>
-              <Button variant="default" onClick={handleSaveConfirm}>确认退出编辑</Button>
+              <Button variant="secondary" onClick={() => setShowSaveConfirm(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="default" onClick={handleSaveConfirm}><Edit2 className="w-4 h-4" /> 确认退出编辑</Button>
             </div>
           </div>
         </div>

@@ -1,4 +1,6 @@
 import React from 'react';
+import { Check } from 'lucide-react';
+
 import type { OnboardingRecord, OnboardingStatus, ContractType } from './types';
 import { Button, UnifiedModal, Label } from '@/components/ui';
 import { useDepartmentStore } from '../../../stores';
@@ -199,8 +201,8 @@ export function OnboardingBatchEditModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <Button onClick={onConfirmNext}>确认（下一个）</Button>
-          <Button variant="blue" onClick={onConfirm}>确认保存</Button>
+          <Button onClick={onConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+          <Button variant="blue" onClick={onConfirm}><Check className="w-4 h-4" /> 确认保存</Button>
         </div>
       </div>
     </UnifiedModal>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Worker, SKILL_TAGS } from '../../../types';
 import { Button } from '@/components/ui';
@@ -426,12 +426,12 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
           variant="secondary"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           type="submit"
         >
-          保存
+          <Save className="w-4 h-4" /> 保存
         </Button>
       </div>
     </form>

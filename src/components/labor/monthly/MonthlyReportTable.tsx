@@ -87,7 +87,7 @@ export function MonthlyReportTable({
                 onClick={onBatchEditClick}
                 disabled={selectedRows.length === 0}
               >
-                批量编辑
+                <Edit2 className="w-4 h-4" /> 批量编辑
               </Button>
             )}
             {batchDeleteMode && (
@@ -97,7 +97,7 @@ export function MonthlyReportTable({
                 onClick={onBatchDeleteClick}
                 disabled={selectedRows.length === 0}
               >
-                批量删除
+                <Trash2 className="w-4 h-4" /> 批量删除
               </Button>
             )}
             {exportMode && (

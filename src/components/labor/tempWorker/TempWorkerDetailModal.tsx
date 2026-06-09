@@ -171,7 +171,7 @@ export function TempWorkerDetailModal({
 
   const footer = (
     <Button variant="outline" onClick={onClose}>
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

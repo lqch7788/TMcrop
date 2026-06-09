@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, NumberInput, TextArea, Label } from '@/components/ui';
 import type { Approval, BusinessLink } from '../../types/approval';
 
@@ -196,14 +196,14 @@ export function MaterialApprovalForm({
           size="default"
           onClick={onCancel}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="blue"
           size="default"
           onClick={onSubmit}
         >
-          确认部分通过
+          <Check className="w-4 h-4" /> 确认部分通过
         </Button>
       </div>
     </div>

@@ -343,7 +343,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
                 </div>
               </div>
               <Button variant="link" size="sm" type="button" onClick={() => setShowRecommendations(true)} className="text-purple-600 hover:text-purple-700 h-auto p-0">
-                重新推荐
+                <Sparkles className="w-4 h-4" /> 重新推荐
               </Button>
             </div>
           </div>
@@ -394,7 +394,7 @@ export const SmartTaskForm: React.FC<SmartTaskFormProps> = ({
         {/* 操作按钮 */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
           <Button variant="secondary" type="button" onClick={onCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="purple" type="submit">
             <Save className="w-4 h-4" />

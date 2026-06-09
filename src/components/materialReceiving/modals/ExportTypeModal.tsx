@@ -1,4 +1,6 @@
 import React from 'react';
+import { Download, X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
@@ -35,10 +37,10 @@ export const ExportTypeModal: React.FC<ExportTypeModalProps> = ({
       footer={
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={onConfirm}>
-            确认导出
+            <Download className="w-4 h-4" /> 确认导出
           </Button>
         </div>
       }

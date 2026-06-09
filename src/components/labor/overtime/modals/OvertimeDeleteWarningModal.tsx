@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
@@ -44,10 +44,10 @@ export function OvertimeDeleteWarningModal({
       </div>
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
         <Button variant="outline" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button variant="destructive" onClick={onConfirm}>
-          确认删除
+          <Trash2 className="w-4 h-4" /> 确认删除
         </Button>
       </div>
     </UnifiedModal>

@@ -2,6 +2,8 @@
  * 考勤补录页面 - 新增/编辑表单弹窗组件
  */
 import { useEffect } from 'react';
+import { Send, X } from 'lucide-react';
+
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
 import { Button } from '@/components/ui';
 import { DatePicker } from '../../../../../components/ui/DatePicker';
@@ -164,14 +166,14 @@ export function AttendanceRepairPageCreateModal({
           variant="secondary"
           size="default"
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           onClick={onSubmit}
           variant="default"
           size="default"
         >
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Plus, Trash2, UserPlus, Settings, Edit2, Eye, RotateCcw } from 'lucide-react';
+import { Edit2, Eye, Plus, RotateCcw, Save, Search, Settings, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useTeam } from './hooks/useTeam';
 import { TeamAssignModal } from './TeamAssignModal';
 import { TeamDetailModal } from './TeamDetailModal';
@@ -271,7 +271,7 @@ export function TeamTable({
               size="sm"
               onClick={() => {}}
             >
-              搜索
+              <Search className="w-4 h-4" /> 搜索
             </Button>
           </div>
         </div>
@@ -295,7 +295,7 @@ export function TeamTable({
                   确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={handleCancelBatch}>
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             ) : (
@@ -472,8 +472,8 @@ export function TeamTable({
         showFooter={true}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setIsFormOpen(false)}>取消</Button>
-            <Button onClick={handleSubmit}>保存</Button>
+            <Button variant="secondary" onClick={() => setIsFormOpen(false)}><X className="w-4 h-4" /> 取消</Button>
+            <Button onClick={handleSubmit}><Save className="w-4 h-4" /> 保存</Button>
           </div>
         }
       >

@@ -1,4 +1,6 @@
 import { UnifiedModal } from '@/components/ui';
+import { Check, Edit2, X } from 'lucide-react';
+
 import type { OvertimeRecord, OvertimeType } from '../types';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -56,9 +58,9 @@ export function OvertimeBatchEditModal({
 
   const footer = (
     <div className="flex gap-3">
-      <Button onClick={onConfirmNext}>确认（下一个）</Button>
-      <Button variant="ghost" onClick={onClose}>取消</Button>
-      <Button variant="blue" onClick={onConfirm}>保存修改</Button>
+      <Button onClick={onConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+      <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="blue" onClick={onConfirm}><Edit2 className="w-4 h-4" /> 保存修改</Button>
     </div>
   );
 

@@ -3,7 +3,7 @@
  * 左侧公司列表 + 右侧基地表格，支持 CRUD
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Edit2, Trash2, Loader2, Building2, MapPin } from 'lucide-react';
+import { Building2, Edit2, Loader2, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button, Input, TextArea, Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -385,8 +385,8 @@ function BaseFormModal({
 
         {/* 按钮栏 */}
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
-          <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-          <Button size="sm" onClick={onSave}>保存</Button>
+          <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" onClick={onSave}><Save className="w-4 h-4" /> 保存</Button>
         </div>
       </div>
     </div>
@@ -413,8 +413,8 @@ function DeleteConfirmModal({ name, onConfirm, onClose }: { name: string; onConf
         <h3 className="text-base font-semibold text-gray-900 mb-2">确认删除</h3>
         <p className="text-sm text-gray-600 mb-4">确定要删除基地「{name}」吗？此操作不可恢复。</p>
         <div className="flex justify-end gap-2">
-          <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-          <Button size="sm" variant="destructive" onClick={onConfirm}>确认删除</Button>
+          <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button size="sm" variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
         </div>
       </div>
     </div>

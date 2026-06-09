@@ -1,6 +1,6 @@
 // MaterialTable 组件 - 物料统计表格
 // 显示领料统计表的完整数据
-import { Download } from 'lucide-react';
+import { Download, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import type { MaterialStatItem } from '../types/statisticsTab.types';
@@ -61,7 +61,7 @@ export function MaterialTable({
                 确认导出
               </Button>
               <Button size="sm" variant="secondary" onClick={onCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (
@@ -149,7 +149,7 @@ export function MaterialTable({
                         size="sm"
                         onClick={() => onViewDetail(item)}
                       >
-                        查看明细
+                        <Eye className="w-4 h-4" /> 查看明细
                       </Button>
                     </td>
                   )}

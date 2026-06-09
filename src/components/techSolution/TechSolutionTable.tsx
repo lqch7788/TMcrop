@@ -2,7 +2,7 @@
  * 技术方案数据表格 + 工具栏
  * 受控展示：父组件传 techSolutions、state、handlers
  */
-import { Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
@@ -70,7 +70,7 @@ export function TechSolutionTable({
                     编辑
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handlers.onCancelBatchEdit}>
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -81,7 +81,7 @@ export function TechSolutionTable({
                     删除
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handlers.onCancelBatchDelete}>
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -92,7 +92,7 @@ export function TechSolutionTable({
                     确认导出
                   </Button>
                   <Button variant="secondary" size="sm" onClick={handlers.onCancelExport}>
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

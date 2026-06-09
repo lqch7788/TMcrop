@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Package } from 'lucide-react';
+import { Package, X } from 'lucide-react';
 import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -50,7 +50,7 @@ export const InboundDetailModal: React.FC<InboundDetailModalProps> = ({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>关闭</Button>
+          <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 关闭</Button>
         </div>
       }
     >

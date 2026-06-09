@@ -1,4 +1,6 @@
 import React from 'react';
+import { CheckCircle } from 'lucide-react';
+
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import type { ProblemFlowRecord } from '../../../../hooks/useProblemDispatch';
@@ -491,7 +493,7 @@ export function DetailInspectionModal({ isOpen, onClose, record, onAcceptProblem
                     onClick={() => onAcceptProblem(problem.id)}
                     className="w-full"
                   >
-                    问题验收
+                    <CheckCircle className="w-4 h-4" /> 问题验收
                   </Button>
                 </div>
               )}

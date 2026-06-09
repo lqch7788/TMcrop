@@ -3,7 +3,7 @@
  * 只读显示所有字段信息
  */
 import React, { useState } from 'react';
-import { Bug } from 'lucide-react';
+import { Bug, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { useDictionaryStore } from '@/stores';
@@ -299,7 +299,7 @@ export function PestControlDetailModal({ isOpen, record, onClose }: PestControlD
       {/* 底部按钮 */}
       <div className="mt-6 flex justify-end gap-3">
         <Button variant="secondary" size="sm" onClick={onClose}>
-          关闭
+          <X className="w-4 h-4" /> 关闭
         </Button>
       </div>
     </UnifiedModal>

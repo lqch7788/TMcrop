@@ -4,7 +4,7 @@
  *                  → POST /api/inventory-transactions → 路由内扣减库存 + 写 inventory_transaction 老表
  */
 import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { InventoryStock } from '../../types/inventory';
 import { useInventoryTransactionStore } from '../../stores/useInventoryTransactionStore';
 import { useInventoryStore } from '../../stores/useInventoryStore';
@@ -103,7 +103,7 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="destructive"

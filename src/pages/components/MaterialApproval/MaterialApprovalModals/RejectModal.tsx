@@ -1,6 +1,8 @@
 // RejectModal 组件
 // 拒绝原因弹窗
 import { Approval } from '@/types/approval';
+import { Check, X } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -39,13 +41,13 @@ export function RejectModal({
             variant="secondary"
             onClick={onCancel}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="destructive"
             onClick={onConfirm}
           >
-            确认拒绝
+            <Check className="w-4 h-4" /> 确认拒绝
           </Button>
         </div>
       }

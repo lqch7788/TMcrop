@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, X, Loader2 } from 'lucide-react';
+import { Camera, Check, Loader2, QrCode, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface QRScannerProps {
@@ -254,7 +254,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                 size="default"
                 onClick={handleManualSubmit}
               >
-                确认
+                <Check className="w-4 h-4" /> 确认
               </Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
@@ -269,7 +269,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
               size="sm"
               onClick={handleDemoScan}
             >
-              演示：模拟扫码
+              <QrCode className="w-4 h-4" /> 演示：模拟扫码
             </Button>
           </div>
         </div>

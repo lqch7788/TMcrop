@@ -138,7 +138,7 @@ export function ProductionChainTable({ type, data, onView }: ProductionChainTabl
                 size="sm"
                 onClick={() => navigate(`/tech-solution?planCode=${record.batchCode}`)}
               >
-                查看
+                <Eye className="w-4 h-4" /> 查看
               </Button>
             ) : (
               <span className="text-gray-400">-</span>

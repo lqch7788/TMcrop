@@ -104,7 +104,7 @@ export function OvertimeTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -124,7 +124,7 @@ export function OvertimeTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -143,7 +143,7 @@ export function OvertimeTable({
                     variant="secondary"
                     onClick={onCancelExport}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

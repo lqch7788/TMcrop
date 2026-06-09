@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Download, Plus, Edit, Trash2, Upload, Send, CheckCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, CheckCircle, ChevronDown, ChevronUp, Download, Edit, Edit2, Plus, RotateCcw, Send, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { TaskTableHeader } from './TaskTableHeader';
 import { TaskTableRow } from './TaskTableRow';
@@ -203,7 +203,7 @@ export function TaskTable({
                 size="sm"
                 onClick={onCancelExport}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchEditMode ? (
@@ -215,14 +215,14 @@ export function TaskTable({
                 disabled={selectedIds.length === 0}
               >
                 <Edit className="w-4 h-4" />
-                确认编辑
+                <Edit2 className="w-4 h-4" /> 确认编辑
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => { onCancelBatchEdit?.(); }}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchDeleteMode ? (
@@ -241,7 +241,7 @@ export function TaskTable({
                 size="sm"
                 onClick={() => { onCancelBatchDelete?.(); }}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchDispatchMode ? (
@@ -252,14 +252,14 @@ export function TaskTable({
                 disabled={selectedIds.length === 0}
                 className="bg-purple-600 text-white hover:bg-purple-700"
               >
-                确认派发
+                <Send className="w-4 h-4" /> 确认派发
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onCancelBatchDelete}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchVerifyMode ? (
@@ -270,14 +270,14 @@ export function TaskTable({
                 onClick={onConfirmBatchVerify}
                 disabled={selectedIds.length === 0}
               >
-                确认验收
+                <Check className="w-4 h-4" /> 确认验收
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onCancelBatchDelete}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : batchReassignMode ? (
@@ -288,14 +288,14 @@ export function TaskTable({
                 onClick={onConfirmBatchReassign}
                 disabled={selectedIds.length === 0}
               >
-                确认重派
+                <Check className="w-4 h-4" /> 确认重派
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => { onCancelBatchReassign?.(); }}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (
@@ -318,7 +318,7 @@ export function TaskTable({
                   onClick={onBatchEdit}
                 >
                   <Edit className="w-4 h-4" />
-                  编辑
+                  <Edit2 className="w-4 h-4" /> 编辑
                 </Button>
               )}
               {onBatchDelete && (

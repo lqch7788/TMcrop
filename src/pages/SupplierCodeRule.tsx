@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hash, Plus, X, Save, Edit2, Trash2, ChevronDown, ChevronRight, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, ChevronDown, ChevronRight, Edit2, Hash, Plus, Save, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AddMidModal } from '../components/codeRule/AddMidModal';
 import { Button } from '../components/ui/button';
@@ -168,7 +168,7 @@ export default function SupplierCodeRule() {
             ) : (
               <>
                 <Button variant="secondary" onClick={() => setIsEditing(false)} className="flex items-center gap-2">
-                  取消修改
+                  <Edit2 className="w-4 h-4" /> 取消修改
                 </Button>
                 <Button variant="default" onClick={() => setShowSaveConfirm(true)} className="flex items-center gap-2">
                   <Save className="w-4 h-4" />
@@ -223,8 +223,8 @@ export default function SupplierCodeRule() {
                         placeholder="大类名称"
                         className="w-40 px-2 py-1 border border-gray-400 rounded text-sm"
                       />
-                      <Button variant="default" size="sm" onClick={handleAddBigCategory}>添加</Button>
-                      <Button variant="secondary" size="sm" onClick={() => setShowAddBig(false)}>取消</Button>
+                      <Button variant="default" size="sm" onClick={handleAddBigCategory}><Plus className="w-4 h-4" /> 添加</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setShowAddBig(false)}><X className="w-4 h-4" /> 取消</Button>
                     </div>
                   ) : (
                     <Button variant="ghost" size="sm" onClick={() => setShowAddBig(true)}>
@@ -355,14 +355,14 @@ export default function SupplierCodeRule() {
             </div>
             <div className="flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setShowSaveConfirm(false)}>
-                取消保存
+                <X className="w-4 h-4" /> 取消保存
               </Button>
               <Button variant="destructive" onClick={() => {
                   setShowSaveConfirm(false);
                   setIsEditing(false);
                   // 数据已通过每次CRUD操作实时持久化到后端数据库，无需额外保存
                 }}>
-                确认保存
+                <Check className="w-4 h-4" /> 确认保存
               </Button>
             </div>
           </div>

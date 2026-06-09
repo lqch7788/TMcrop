@@ -3,7 +3,7 @@
  * 参照物料入库 BatchEditModal 设计
  */
 import { useState, useEffect, useMemo } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Save, X } from 'lucide-react';
 import { Supplier } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '../../components/ui/button';
@@ -450,7 +450,7 @@ export default function SupplierBatchEditModal({
         {/* 底部操作按钮 */}
         <div className="p-4 border-t border-gray-400 flex justify-between gap-3 flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <div className="flex items-center gap-3">
             <Button
@@ -458,10 +458,10 @@ export default function SupplierBatchEditModal({
               onClick={onNext}
               disabled={!currentSupplierId}
             >
-              确认 {currentBatchEditIndex + 1 < selectedSuppliers.length ? '(下一个)' : '(已最后一个)'}
+              <Check className="w-4 h-4" /> 确认 {currentBatchEditIndex + 1 < selectedSuppliers.length ? '(下一个)' : '(已最后一个)'}
             </Button>
             <Button onClick={onSaveAll}>
-              保存全部 ({editedCount} 个)
+              <Save className="w-4 h-4" /> 保存全部 ({editedCount} 个)
             </Button>
           </div>
         </div>

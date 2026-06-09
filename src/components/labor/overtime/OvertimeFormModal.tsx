@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Send, X } from 'lucide-react';
+
 import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -165,10 +167,10 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
   const footer = (
     <>
       <Button variant="outline" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={handleSubmit}>
-        提交申请
+        <Send className="w-4 h-4" /> 提交申请
       </Button>
     </>
   );

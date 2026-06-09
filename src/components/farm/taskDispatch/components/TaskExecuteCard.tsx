@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Play, Pause, CheckCircle, Clock, MapPin, Camera, Mic, FileText, Package } from 'lucide-react';
+import { Camera, CheckCircle, Clock, FileText, MapPin, Mic, Package, Pause, Play, X } from 'lucide-react';
 import { Task, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { Modal } from '@/components/ui';
 import FeedbackInput from '../../../common/FeedbackInput';
@@ -237,7 +237,7 @@ export function TaskExecuteCard({ task, isOpen, onClose, onSubmitProgress }: Tas
         {/* 操作按钮 */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant={progress === 100 ? 'default' : 'blue'}

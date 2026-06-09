@@ -3,7 +3,7 @@
  * 通过树形结构展示可用标记，勾选标签后分配标记
  */
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Tag, CheckSquare, Square } from 'lucide-react';
+import { Check, CheckSquare, Square, Tag, X } from 'lucide-react';
 import { Button, Tree, Checkbox } from '../../../ui';
 import type { TreeNode } from '../../../ui/Tree';
 import { showAlert } from '@/lib/dialogService';
@@ -262,10 +262,10 @@ export default function PlantingMarkModal({
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
           <Button variant="secondary" size="sm" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="default" size="sm" onClick={handleSubmit}>
-            确认标记
+            <Check className="w-4 h-4" /> 确认标记
           </Button>
         </div>
       </div>

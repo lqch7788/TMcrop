@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
+
 import { showAlert } from '@/lib/dialogService';
 import { useOvertime } from './hooks/useOvertime';
 import { OvertimeFilters } from './OvertimeFilters';
@@ -325,7 +327,7 @@ export function OvertimePage() {
             {batchDeleteMode && '（确认删除选中的记录）'}
           </div>
           <Button variant="outline" size="sm" onClick={handleCancelBatch}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
         </div>
       )}

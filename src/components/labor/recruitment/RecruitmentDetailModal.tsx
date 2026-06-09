@@ -1,4 +1,4 @@
-import { XCircle, CheckCircle, Clock, User, Calendar, Users, Briefcase } from 'lucide-react';
+import { Briefcase, Calendar, CheckCircle, Clock, User, Users, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
@@ -164,7 +164,7 @@ export function RecruitmentDetailModal({ recruitment, onClose }: RecruitmentDeta
       onClick={onClose}
       variant="outline"
     >
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

@@ -1,4 +1,4 @@
-import { Download, Plus, Edit2, Trash2, Users } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ActionToolbarProps {
@@ -123,7 +123,7 @@ export default function ActionToolbar({
               确认编辑{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
             </Button>
             <Button size="sm" variant="secondary" onClick={onCancelBatchEdit}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         )}
@@ -135,7 +135,7 @@ export default function ActionToolbar({
               确认删除{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
             </Button>
             <Button size="sm" variant="secondary" onClick={onCancelDelete}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           </>
         )}
@@ -147,7 +147,7 @@ export default function ActionToolbar({
               确认导出{selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}
             </Button>
             <Button size="sm" variant="secondary" onClick={onCancelExport}>
-              取消选择
+              <X className="w-4 h-4" /> 取消选择
             </Button>
           </>
         )}

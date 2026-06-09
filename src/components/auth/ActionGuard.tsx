@@ -4,11 +4,13 @@
  *
  * 用法:
  * <ActionGuard processRoute="/dashboard" actionCode="delete">
- *   <Button>删除</Button>
+ *   <Button><Trash2 className="w-4 h-4" /> 删除</Button>
  * </ActionGuard>
  */
 
 import React from 'react';
+import { Trash2 } from 'lucide-react';
+
 import { useAuthStore } from '@/stores';
 
 interface ActionGuardProps {

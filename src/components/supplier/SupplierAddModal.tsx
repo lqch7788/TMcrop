@@ -1,6 +1,6 @@
 // 供应商新增弹窗组件 - 参照物料入库 InboundAddModal 样式
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { Supplier, NewSupplierData } from './types';
 import { getSupplierTypeName } from './data';
 import { Button } from '@/components/ui';
@@ -488,10 +488,10 @@ export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={handleSubmit}>
-            提交
+            <Send className="w-4 h-4" /> 提交
           </Button>
         </div>
       </div>

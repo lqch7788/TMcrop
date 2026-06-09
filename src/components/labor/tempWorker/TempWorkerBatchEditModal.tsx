@@ -1,4 +1,6 @@
 import type { TempWorker, StaffStatus } from './types';
+import { Check } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -59,8 +61,8 @@ export function TempWorkerBatchEditModal({
 
   const footer = (
     <div className="flex gap-3">
-      <Button onClick={onConfirmNext}>确认（下一个）</Button>
-      <Button variant="blue" onClick={onConfirm}>确认保存</Button>
+      <Button onClick={onConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+      <Button variant="blue" onClick={onConfirm}><Check className="w-4 h-4" /> 确认保存</Button>
     </div>
   );
 

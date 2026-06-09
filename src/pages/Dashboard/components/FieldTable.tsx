@@ -1,5 +1,5 @@
 // 大田区域表格组件
-import { Sprout } from 'lucide-react';
+import { Eye, Sprout } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { FieldDetailData } from '../types/dashboard.types';
 
@@ -89,7 +89,7 @@ export function FieldTable({ expanded, onToggle, onDetailClick }: FieldTableProp
                       onClick={() => onDetailClick({ type: 'field', data: item })}
                       className="btn-detail"
                     >
-                      详情&gt;
+                      <Eye className="w-4 h-4" /> 详情&gt;
                     </Button>
                   </td>
                 </tr>

@@ -3,6 +3,8 @@
  */
 
 import { Modal, Button } from '@/components/ui';
+import { Check, X } from 'lucide-react';
+
 import { Label } from '@/components/ui';
 
 interface TaskRejectModalProps {
@@ -38,14 +40,14 @@ export function TaskRejectModal({
             variant="outline"
             onClick={onClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="destructive"
             onClick={onConfirm}
             disabled={!rejectReason.trim()}
           >
-            确认拒绝
+            <Check className="w-4 h-4" /> 确认拒绝
           </Button>
         </div>
       }

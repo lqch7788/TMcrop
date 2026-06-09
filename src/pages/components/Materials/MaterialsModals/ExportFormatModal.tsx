@@ -3,6 +3,8 @@
  */
 import { Button } from '../../../../components/ui/button';
 
+import { Download, X } from 'lucide-react';
+
 interface ExportFormatModalProps {
   isOpen: boolean;
   exportFormat: string;
@@ -59,8 +61,8 @@ export default function ExportFormatModal({
             </Button>
           </div>
           <div className="flex justify-center gap-3">
-            <Button variant="secondary" onClick={onClose}>取消</Button>
-            <Button variant="blue" onClick={onDoExport}>确认导出</Button>
+            <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+            <Button variant="blue" onClick={onDoExport}><Download className="w-4 h-4" /> 确认导出</Button>
           </div>
         </div>
       </div>

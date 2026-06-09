@@ -2,7 +2,7 @@
  * 采购计划操作栏组件
  */
 import React from 'react';
-import { Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
@@ -80,7 +80,7 @@ export function ActionBar({
                 编辑
               </Button>
               <Button size="sm" variant="secondary" onClick={onBatchEditCancel}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}
@@ -103,7 +103,7 @@ export function ActionBar({
                 删除
               </Button>
               <Button size="sm" variant="secondary" onClick={onBatchDeleteCancel}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}
@@ -115,7 +115,7 @@ export function ActionBar({
                 确认导出
               </Button>
               <Button size="sm" variant="secondary" onClick={onExportCancel}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}

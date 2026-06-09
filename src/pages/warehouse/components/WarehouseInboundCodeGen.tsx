@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, RotateCcw, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -152,7 +152,7 @@ export const WarehouseInboundCodeGen: React.FC<WarehouseInboundCodeGenProps> = (
               onClick={onGenerate}
               disabled={!codeGen.subCategory}
             >
-              生成
+              <Wand2 className="w-4 h-4" /> 生成
             </Button>
 
             {/* 复制按钮 */}
@@ -171,7 +171,7 @@ export const WarehouseInboundCodeGen: React.FC<WarehouseInboundCodeGenProps> = (
               variant="secondary"
               onClick={onReset}
             >
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           </div>
         </div>

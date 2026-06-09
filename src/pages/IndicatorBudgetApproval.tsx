@@ -6,10 +6,7 @@
 
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  BarChart3, Search, ChevronLeft,
-  CheckCircle, XCircle, Target, Coins, Eye, Square, CheckSquare as CheckSquareIcon, Clock, Download
-} from 'lucide-react';
+import { BarChart3, Check, CheckCircle, CheckSquare as CheckSquareIcon, ChevronLeft, Clock, Coins, Download, Eye, Search, Square, Target, XCircle } from 'lucide-react';
 import { useApproval } from '../hooks/useApproval';
 import useApprovalBusinessDetail from '../hooks/useApprovalBusinessDetail';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
@@ -350,10 +347,10 @@ export default function IndicatorBudgetApproval() {
                     {approval.status === ApprovalStatus.PENDING && (
                       <>
                         <Button variant="default" size="sm" onClick={() => approve(approval.id)}>
-                          通过
+                          <Check className="w-4 h-4" /> 通过
                         </Button>
                         <Button variant="destructive" size="sm" onClick={() => reject(approval.id, '审批拒绝')}>
-                          拒绝
+                          <XCircle className="w-4 h-4" /> 拒绝
                         </Button>
                       </>
                     )}

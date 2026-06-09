@@ -1,4 +1,4 @@
-import { Eye, CheckCircle, XCircle, Plus, Edit2, Trash2, Download } from 'lucide-react';
+import { CheckCircle, Download, Edit2, Eye, Plus, Trash2, X, XCircle } from 'lucide-react';
 import type { LeaveTableProps } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -90,7 +90,7 @@ export function LeaveTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -110,7 +110,7 @@ export function LeaveTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -130,7 +130,7 @@ export function LeaveTable({
                     variant="secondary"
                     onClick={onCancelExport}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

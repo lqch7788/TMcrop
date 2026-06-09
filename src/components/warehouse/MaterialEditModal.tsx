@@ -7,7 +7,7 @@ import { Input } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -244,10 +244,10 @@ export function MaterialDeleteConfirmModal({ material, isOpen, onClose, onConfir
       </p>
       <div className="flex gap-3">
         <Button variant="secondary" onClick={onClose} className="flex-1">
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button variant="destructive" onClick={onConfirm} className="flex-1">
-          确认删除
+          <Trash2 className="w-4 h-4" /> 确认删除
         </Button>
       </div>
     </UnifiedModal>

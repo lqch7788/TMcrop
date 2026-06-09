@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, User, MessageSquare, Send, Check, XCircle } from 'lucide-react';
+import { Calendar, Check, MessageSquare, Send, User, X, XCircle } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -178,7 +178,7 @@ export function SwapRequestModal({ staffList, onSubmit, onClose }: SwapRequestMo
         size="sm"
         onClick={onClose}
       >
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button
         variant="default"

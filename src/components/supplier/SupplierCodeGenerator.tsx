@@ -1,5 +1,7 @@
 // 供应商编码生成器组件 - 参照物料入库 WarehouseInboundCodeGen 样式
 import React from 'react';
+import { RotateCcw, Wand2 } from 'lucide-react';
+
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
@@ -116,7 +118,7 @@ export default function SupplierCodeGenerator({
               onClick={onGenerate}
               disabled={!codeGen.midCategory}
             >
-              生成
+              <Wand2 className="w-4 h-4" /> 生成
             </Button>
 
             {/* 复制按钮 */}
@@ -135,7 +137,7 @@ export default function SupplierCodeGenerator({
               variant="secondary"
               onClick={onReset}
             >
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           </div>
         </div>

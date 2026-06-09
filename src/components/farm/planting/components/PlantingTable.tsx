@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Edit2, Trash2, Printer, Image, CheckCircle, Download, Plus, XCircle, Tag, MoveRight, Bookmark, Sprout } from 'lucide-react';
+import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Sprout, Tag, Trash2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -628,7 +628,7 @@ export function PlantingTable({
                 size="sm"
                 onClick={onExportCancel}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : printMode ? (
@@ -658,7 +658,7 @@ export function PlantingTable({
                 size="sm"
                 onClick={cancelPrintMode}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : operationMode === 'edit' ? (
@@ -679,7 +679,7 @@ export function PlantingTable({
                 size="sm"
                 onClick={cancelOperation}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : operationMode === 'delete' ? (
@@ -700,7 +700,7 @@ export function PlantingTable({
                 size="sm"
                 onClick={cancelOperation}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (

@@ -4,7 +4,7 @@
  * 父组件传：selectedRows、techSolutions、selectedTechCode、setSelectedTechCode、editedTechCodes、editedTechs、setEditedTechs、onSave、onCancel
  */
 import { useState, useMemo } from 'react';
-import { Upload } from 'lucide-react';
+import { Save, Upload, X } from 'lucide-react';
 import { Modal, FormField, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -343,10 +343,10 @@ export function BatchEditModal({
         {/* Footer Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button size="sm" variant="secondary" onClick={onCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button size="sm" variant="default" onClick={onSave}>
-            保存
+            <Save className="w-4 h-4" /> 保存
           </Button>
         </div>
       </div>

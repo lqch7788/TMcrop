@@ -1,20 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ThermometerSun,
-  Settings,
-  Video,
-  Leaf,
-  BarChart3,
-  GraduationCap,
-  ChevronRight,
-  ChevronDown,
-  Sprout,
-  LogIn,
-  LogOut,
-  User,
-  Info
-} from 'lucide-react';
+import { BarChart3, Check, ChevronDown, ChevronRight, GraduationCap, Info, Leaf, LogIn, LogOut, Settings, Sprout, ThermometerSun, User, Video, X } from 'lucide-react';
 import { translations, Language } from '../i18n/translations';
 import { AboutModal } from '../components/home/AboutModal';
 import { Button } from '@/components/ui';
@@ -373,11 +359,11 @@ export default function HomePage() {
 
               <div className="flex gap-3">
                 <Button variant="outline" size="sm" onClick={() => setShowLogoutConfirm(false)} className="flex-1 h-10">
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
 
                 <Button variant="destructive" size="sm" onClick={handleLogout} className="flex-1 h-10">
-                  确认退出
+                  <Check className="w-4 h-4" /> 确认退出
                 </Button>
 
               </div>

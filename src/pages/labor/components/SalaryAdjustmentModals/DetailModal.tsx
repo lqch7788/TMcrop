@@ -2,6 +2,8 @@
  * 调薪申请详情弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Check, XCircle } from 'lucide-react';
+
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { SalaryAdjustmentRecord } from '../../types/salaryAdjustment.types';
 import { Label } from '@/components/ui';
@@ -113,13 +115,13 @@ export function DetailModal({
               variant="destructive"
               onClick={() => { onReject(record); onClose(); }}
             >
-              驳回
+              <XCircle className="w-4 h-4" /> 驳回
             </Button>
             <Button
               variant="default"
               onClick={() => { onApprove(record); onClose(); }}
             >
-              通过
+              <Check className="w-4 h-4" /> 通过
             </Button>
           </div>
         )}

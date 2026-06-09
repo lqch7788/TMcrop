@@ -108,7 +108,7 @@ export default function RecruitmentPage() {
                   </Button>
                 )}
                 <Button variant="outline" size="sm" onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}>
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             )}

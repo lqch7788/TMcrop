@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -211,10 +211,10 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
   const footer = (
     <div className="flex justify-end gap-2">
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button onClick={handleSubmit}>
-        保存
+        <Save className="w-4 h-4" /> 保存
       </Button>
     </div>
   );

@@ -2,6 +2,8 @@
  * 入职办理页面新建/编辑表单弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
+import { Send, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
@@ -188,10 +190,10 @@ export function OnboardingPageCreateModal({
       {/* 弹窗底部按钮 */}
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
         <Button onClick={onClose} variant="secondary" size="default">
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button onClick={onSubmit} variant="default" size="default">
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

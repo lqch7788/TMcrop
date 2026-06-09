@@ -2,6 +2,8 @@
  * 调薪申请创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Send, X } from 'lucide-react';
+
 import { SalaryAdjustmentFormData, ADJUSTMENT_TYPE_OPTIONS } from '../../types/salaryAdjustment.types';
 import { Label } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -207,14 +209,14 @@ export function CreateModal({
           variant="outline"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"
           onClick={onSubmit}
           disabled={!formData.employeeId || !formData.proposedSalary || formData.proposedSalary <= formData.currentSalary}
         >
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

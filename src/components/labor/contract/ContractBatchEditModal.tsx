@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { Contract, ContractStatus, ContractType } from './types';
 import { Button, UnifiedModal, NumberInput, DatePicker, Label } from '@/components/ui';
 
@@ -205,10 +205,10 @@ export function ContractBatchEditModal({
         {/* Footer */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
           <Button onClick={onConfirmNext}>
-            确认（下一个）
+            <Check className="w-4 h-4" /> 确认（下一个）
           </Button>
           <Button variant="blue" onClick={onConfirm}>
-            确认保存
+            <Check className="w-4 h-4" /> 确认保存
           </Button>
         </div>
       </div>

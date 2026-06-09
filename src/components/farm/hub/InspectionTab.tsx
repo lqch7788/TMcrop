@@ -21,7 +21,7 @@ import QRScanner, { QRData } from '../../common/QRScanner';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { MapPin, Camera, Package, Mic } from 'lucide-react';
+import { Camera, Download, MapPin, Mic, Package, X } from 'lucide-react';
 import { InspectionTable } from '../inspection/InspectionTable';
 
 // 巡查类型配置
@@ -1052,14 +1052,14 @@ export function InspectionTab({
                 size="sm"
                 onClick={() => setShowExportModal(false)}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button
                 variant="default"
                 size="sm"
                 onClick={handleDoExport}
               >
-                导出
+                <Download className="w-4 h-4" /> 导出
               </Button>
             </div>
           </div>

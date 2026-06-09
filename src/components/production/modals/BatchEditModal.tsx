@@ -3,7 +3,7 @@
  * 字段来源与新建弹窗保持一致
  */
 
-import { Upload, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check, Upload } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal } from '@/components/ui';
 import { CropBatch, Greenhouse, PlanType } from '../../../types';
@@ -231,7 +231,7 @@ export function BatchEditModal({
       footer={
         <div className="flex gap-3">
           <Button size="sm" onClick={onConfirmNext}>
-            确认（下一个）
+            <Check className="w-4 h-4" /> 确认（下一个）
           </Button>
           <Button size="sm" variant="warning" onClick={onVoidWarning}>
             <AlertTriangle className="w-4 h-4" />

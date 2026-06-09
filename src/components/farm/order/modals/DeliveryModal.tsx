@@ -2,6 +2,8 @@
  * 交付记录弹窗
  */
 import { useState, useEffect } from 'react';
+import { Check, X } from 'lucide-react';
+
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -38,8 +40,8 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
 
   const footer = (
     <div className="flex items-center justify-end gap-3">
-      <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" variant="default" onClick={handleSave}>确认交付</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button size="sm" variant="default" onClick={handleSave}><Check className="w-4 h-4" /> 确认交付</Button>
     </div>
   );
 

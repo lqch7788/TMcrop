@@ -238,7 +238,7 @@ export default function SeedlingLabelManageModal({
             共 {filteredLabels.length} 个标签
           </span>
           <Button onClick={onClose} variant="secondary" size="sm">
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { ChevronDown, Plus } from 'lucide-react';
+import { Check, ChevronDown, Plus, Save } from 'lucide-react';
 import { UserSelect } from '../common/settings/UserSelect';
 import { useUserStore, useDictionaryStore, usePlantingStore } from '../../stores';
 import { MaterialItemsTable } from './MaterialItemsTable';
@@ -243,10 +243,10 @@ export function BatchEditModal({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="default" size="sm" onClick={onNext}>
-            确认（下一个）
+            <Check className="w-4 h-4" /> 确认（下一个）
           </Button>
           <Button variant="default" size="sm" onClick={onSubmit}>
-            保存
+            <Save className="w-4 h-4" /> 保存
           </Button>
         </div>
       }

@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useNavigate } from 'react-router-dom';
-import { Database, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Database, RefreshCw } from 'lucide-react';
 
 interface MigrationItem {
   key: string;
@@ -1050,7 +1050,7 @@ export default function DataMigrationPage() {
               onClick={fetchDbStats}
               disabled={isScanning || isChecking || isMigrating}
             >
-              刷新统计
+              <RefreshCw className="w-4 h-4" /> 刷新统计
             </Button>
             <Button
               variant="outline"

@@ -1,4 +1,6 @@
 import { UnifiedModal } from '@/components/ui';
+import { Check, Edit2, X } from 'lucide-react';
+
 import type { LeaveRecord, LeaveType } from '../types';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -57,9 +59,9 @@ export function LeaveBatchEditModal({
 
   const footer = (
     <div className="flex gap-3">
-      <Button size="sm" variant="default" onClick={onConfirmNext}>确认（下一个）</Button>
-      <Button size="sm" variant="secondary" onClick={onClose}>取消</Button>
-      <Button size="sm" variant="blue" onClick={onConfirm}>保存修改</Button>
+      <Button size="sm" variant="default" onClick={onConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+      <Button size="sm" variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button size="sm" variant="blue" onClick={onConfirm}><Edit2 className="w-4 h-4" /> 保存修改</Button>
     </div>
   );
 

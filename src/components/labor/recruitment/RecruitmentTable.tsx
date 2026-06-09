@@ -1,4 +1,4 @@
-import { Eye, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Plus, Download } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Download, Edit2, Eye, Plus, Trash2, X, XCircle } from 'lucide-react';
 import { RecruitmentRequest, RecruitmentStatus } from './types';
 import { Button } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -106,7 +106,7 @@ export function RecruitmentTable({
                     variant="secondary"
                     onClick={onCancelBatchEdit}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -126,7 +126,7 @@ export function RecruitmentTable({
                     variant="secondary"
                     onClick={onCancelBatchDelete}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -145,7 +145,7 @@ export function RecruitmentTable({
                     variant="secondary"
                     onClick={onCancelExport}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

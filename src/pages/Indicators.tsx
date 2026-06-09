@@ -12,7 +12,7 @@
  * - components/Indicators/IndicatorsEvaluatePanel.tsx - 考核评价面板
  * - components/Indicators/IndicatorsModals/*.tsx - 弹窗组件
  */
-import { BarChart3, Download, Plus, Award, PieChart, Target } from 'lucide-react';
+import { Award, BarChart3, Download, PieChart, Plus, Target, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useIndicators } from './hooks/useIndicators';
@@ -117,7 +117,7 @@ export default function Indicators() {
                   size="sm"
                   onClick={handleCancelExport}
                 >
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
               </>
             )}

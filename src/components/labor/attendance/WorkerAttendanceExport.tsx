@@ -2,6 +2,8 @@
  * 工人考勤 - 导出功能组件
  */
 import { UnifiedModal } from '@/components/ui';
+import { Download, X } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { ExportFormat, EXPORT_FORMAT_OPTIONS } from './types';
 import { Label } from '@/components/ui';
@@ -64,11 +66,11 @@ export function WorkerAttendanceExport({
       {/* 底部按钮 */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
         <Button size="sm" variant="secondary" onClick={onCancel}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         {canExport && (
           <Button size="sm" variant="default" onClick={onConfirm}>
-            导出
+            <Download className="w-4 h-4" /> 导出
           </Button>
         )}
       </div>

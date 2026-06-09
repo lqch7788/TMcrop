@@ -127,7 +127,7 @@ export function PerformanceDetailModal({ record, open, onClose }: PerformanceDet
       variant="secondary"
       onClick={onClose}
     >
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

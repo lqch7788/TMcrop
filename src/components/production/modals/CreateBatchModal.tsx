@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui';
 import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
 import { RESPONSIBLE_PERSONS, planTypeOptions, getModesByPlanType } from '../constants';
 import { useState, useEffect, useRef } from 'react';
-import { Upload, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Send, Upload } from 'lucide-react';
 import { CropVariety } from '../../../types/cropVariety';
 import CropCodeSelector from '../../farm/common/CropCodeSelector';
 import { DictSelect } from '../../common/settings/DictSelect';
@@ -125,8 +125,8 @@ export function CreateBatchModal({
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
-          <Button size="sm" variant="secondary" onClick={onSaveDraft}>存为草稿</Button>
-          <Button size="sm" variant="default" onClick={onSubmitForApproval}>提交审批</Button>
+          <Button size="sm" variant="secondary" onClick={onSaveDraft}><FileText className="w-4 h-4" /> 存为草稿</Button>
+          <Button size="sm" variant="default" onClick={onSubmitForApproval}><Send className="w-4 h-4" /> 提交审批</Button>
         </div>
       }
     >

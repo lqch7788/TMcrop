@@ -1,4 +1,6 @@
 import type { Position } from '@/types';
+import { Check, Edit2, X } from 'lucide-react';
+
 import { Button, UnifiedModal, NumberInput, Label } from '@/components/ui';
 import { useDepartmentStore } from '../../../../stores';
 
@@ -183,9 +185,9 @@ export function PositionBatchEditModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-          <Button onClick={onConfirmNext}>确认（下一个）</Button>
-          <Button variant="ghost" onClick={onClose}>取消</Button>
-          <Button variant="blue" onClick={onConfirm}>保存修改</Button>
+          <Button onClick={onConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+          <Button variant="blue" onClick={onConfirm}><Edit2 className="w-4 h-4" /> 保存修改</Button>
         </div>
       </div>
     </UnifiedModal>

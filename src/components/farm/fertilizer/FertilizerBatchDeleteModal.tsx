@@ -3,7 +3,7 @@
  * 显示选中数量，若有IoT记录则警告不可删除
  */
 import React from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { FertilizerData } from '@/stores';
@@ -84,7 +84,7 @@ export function FertilizerBatchDeleteModal({
             size="sm"
             onClick={onClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           {manualItems.length > 0 && (
             <Button
@@ -103,7 +103,7 @@ export function FertilizerBatchDeleteModal({
               disabled
               className="opacity-50 cursor-not-allowed"
             >
-              无可删除记录
+              <Trash2 className="w-4 h-4" /> 无可删除记录
             </Button>
           )}
         </div>

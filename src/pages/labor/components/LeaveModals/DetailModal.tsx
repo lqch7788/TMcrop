@@ -2,6 +2,8 @@
  * 请假申请详情弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Check, Undo2, XCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { LaborStatusBadge } from '../../../../components/common/labor/LaborStatusBadge';
 import { Label } from '@/components/ui';
@@ -88,19 +90,19 @@ export function DetailModal({
               variant="warning"
               onClick={() => { onWithdraw(record); onClose(); }}
             >
-              撤回申请
+              <Undo2 className="w-4 h-4" /> 撤回申请
             </Button>
             <Button
               variant="destructive"
               onClick={() => { onReject(record); onClose(); }}
             >
-              驳回
+              <XCircle className="w-4 h-4" /> 驳回
             </Button>
             <Button
               variant="default"
               onClick={() => { onApprove(record); onClose(); }}
             >
-              通过
+              <Check className="w-4 h-4" /> 通过
             </Button>
           </div>
         )}

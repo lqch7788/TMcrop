@@ -1,6 +1,6 @@
 // ExecuteTabFilters 组件
 // 领料出库页面的筛选区域组件
-import { Search } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -131,7 +131,7 @@ export function ExecuteTabFilters({
 
         {/* 重置按钮 */}
         <Button variant="secondary" size="sm" onClick={onReset}>
-          重置
+          <RotateCcw className="w-4 h-4" /> 重置
         </Button>
       </div>
     </div>

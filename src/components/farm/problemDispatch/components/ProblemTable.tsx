@@ -3,6 +3,8 @@
  */
 
 import React from 'react';
+import { CheckCircle, Eye } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import { SourceCell } from './SourceCell';
 import { Input } from '@/components/ui';
@@ -216,7 +218,7 @@ export function ProblemTable({
                         size="sm"
                         onClick={() => onViewDetail(problem)}
                       >
-                        详情
+                        <Eye className="w-4 h-4" /> 详情
                       </Button>
                     )}
                     {getStatusCN(problem.status) === '待验收' && (
@@ -225,7 +227,7 @@ export function ProblemTable({
                         size="sm"
                         onClick={() => onViewDetail(problem)}
                       >
-                        验收
+                        <CheckCircle className="w-4 h-4" /> 验收
                       </Button>
                     )}
                   </td>

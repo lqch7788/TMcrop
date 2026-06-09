@@ -4,7 +4,7 @@
  * 3个TAB：通知规则 / 通知渠道 / 个人偏好（均已完整实现）
  */
 import { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Phone, AlertTriangle, Search, Plus, Edit2, Trash2, ChevronLeft, Loader2, Save, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Bell, ChevronLeft, Edit2, Loader2, Mail, MessageSquare, Phone, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/modal';
@@ -92,7 +92,7 @@ function ChannelModal({
           </Select>
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>{saving ? '保存中...' : '保存'}</Button>
         </div>
       </div>
@@ -190,7 +190,7 @@ function RuleModal({
           </Select>
         </div>
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button onClick={handleSubmit} disabled={saving}>{saving ? '保存中...' : '保存'}</Button>
         </div>
       </div>

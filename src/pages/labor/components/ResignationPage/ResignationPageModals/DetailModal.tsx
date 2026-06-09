@@ -2,6 +2,8 @@
  * 离职申请页面详情弹窗组件
  */
 import { UnifiedModal } from '../../../../../components/ui/UnifiedModal';
+import { Check, XCircle } from 'lucide-react';
+
 import { Label } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { LaborStatusBadge } from '../../../../../components/common/labor/LaborStatusBadge';
@@ -88,12 +90,12 @@ export function ResignationPageDetailModal({
               onClick={() => { onReject(record); onClose(); }}
               variant="destructive"
             >
-              驳回
+              <XCircle className="w-4 h-4" /> 驳回
             </Button>
             <Button
               onClick={() => { onApprove(record); onClose(); }}
             >
-              通过
+              <Check className="w-4 h-4" /> 通过
             </Button>
           </div>
         )}

@@ -3,7 +3,7 @@
  * 种植季记录 CRUD + 结束种植季 + 历史查询
  */
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Loader2, Leaf, CalendarCheck, History } from 'lucide-react';
+import { CalendarCheck, Check, Edit2, History, Leaf, Loader2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { usePlantingRecordStore } from '../../stores/usePlantingRecordStore';
@@ -313,8 +313,8 @@ export default function PlantingRecordTab() {
               <p className="text-xs text-gray-400">种植季编码将自动生成（格式：2026S001）</p>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSaveCreate}>创建种植季</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" onClick={handleSaveCreate}><Plus className="w-4 h-4" /> 创建种植季</Button>
             </div>
           </div>
         </div>
@@ -349,8 +349,8 @@ export default function PlantingRecordTab() {
               </label>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleSaveEdit}>保存</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowEditModal(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" onClick={handleSaveEdit}><Save className="w-4 h-4" /> 保存</Button>
             </div>
           </div>
         </div>
@@ -399,8 +399,8 @@ export default function PlantingRecordTab() {
               </label>
             </div>
             <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50">
-              <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}>取消</Button>
-              <Button size="sm" onClick={handleEndSeason}>确认结束</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowEndModal(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" onClick={handleEndSeason}><Check className="w-4 h-4" /> 确认结束</Button>
             </div>
           </div>
         </div>
@@ -413,8 +413,8 @@ export default function PlantingRecordTab() {
             <h3 className="text-base font-semibold mb-2">确认删除</h3>
             <p className="text-sm text-gray-600 mb-4">确定要删除种植季「{showDeleteConfirm.seasonCode}」吗？</p>
             <div className="flex justify-end gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setShowDeleteConfirm(null)}>取消</Button>
-              <Button size="sm" variant="destructive" onClick={handleDeleteConfirm}>确认删除</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowDeleteConfirm(null)}><X className="w-4 h-4" /> 取消</Button>
+              <Button size="sm" variant="destructive" onClick={handleDeleteConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
             </div>
           </div>
         </div>

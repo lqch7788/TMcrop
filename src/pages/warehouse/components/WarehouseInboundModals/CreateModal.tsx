@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { Plus, Send, Trash2, X } from 'lucide-react';
 import { InboundRecord, InboundMaterial } from '../../../types/warehouseInbound.types';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -648,10 +648,10 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3 flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button onClick={handleSubmit}>
-            提交
+            <Send className="w-4 h-4" /> 提交
           </Button>
         </div>
 

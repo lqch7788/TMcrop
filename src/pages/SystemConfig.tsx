@@ -638,10 +638,10 @@ export default function SystemConfig() {
             {/* 底部按钮 */}
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3 rounded-b-xl">
               <Button size="sm" variant="secondary" onClick={() => { setShowAddModal(false); setNewConfig({}); }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
               <Button size="sm" onClick={handleAddConfig}>
-                添加
+                <Plus className="w-4 h-4" /> 添加
               </Button>
             </div>
 

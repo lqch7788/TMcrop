@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui';
 import { Button, Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { UserPlus, AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, UserPlus, Users, X } from 'lucide-react';
 import { Task } from '../../../../types/task';
 import { useUserStore } from '../../../../stores';
 
@@ -155,7 +155,7 @@ export function ReassignTaskModal({
             size="sm"
             onClick={onClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="default"

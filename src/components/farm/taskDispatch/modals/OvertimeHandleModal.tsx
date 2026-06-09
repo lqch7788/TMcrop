@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { AlertTriangle, Clock, PlayCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, Clock, PlayCircle, X, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
 import { Input } from '@/components/ui';
@@ -242,7 +242,7 @@ export function OvertimeHandleModal({
             variant="secondary"
             size="sm"
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             onClick={handleSubmit}
@@ -255,7 +255,7 @@ export function OvertimeHandleModal({
             variant={handleType === 'abandon' ? "destructive" : "default"}
             size="sm"
           >
-            确认{handleType === 'continue' ? '继续执行' : '放弃执行'}
+            <Check className="w-4 h-4" /> 确认{handleType === 'continue' ? '继续执行' : '放弃执行'}
           </Button>
         </div>
       </div>

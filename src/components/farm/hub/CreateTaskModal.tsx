@@ -8,7 +8,7 @@ import { useTasks, Task } from '../../../hooks/useTasks';
 import { useUserStore, useGreenhouseStore, useProductionPlanStore, usePesticideLibraryStore, usePestDiseaseDictStore } from '../../../stores';
 import { FARM_OPERATION_TYPES } from '../../../types/farm/common';
 import type { User } from '../../../types';
-import { X } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -413,7 +413,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                         setPesticides([...pesticides, { name: '', type: '', dosage: 0, unit: '克', ratio: '' }]);
                       }}
                     >
-                      + 新增药剂
+                      <Plus className="w-4 h-4" /> + 新增药剂
                     </Button>
                   </div>
                   {pesticides.length === 0 ? (
@@ -500,7 +500,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                                 setPesticides(pesticides.filter((_, i) => i !== index));
                               }}
                             >
-                              删除
+                              <Trash2 className="w-4 h-4" /> 删除
                             </Button>
                           </div>
                         </div>
@@ -516,7 +516,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
         {/* 底部操作 */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button
             variant="default"

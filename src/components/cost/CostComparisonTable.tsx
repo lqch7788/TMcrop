@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface CategoryAgg {
@@ -122,7 +122,7 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
               onClick={() => onViewDetail('category', item.category)}
               className="text-emerald-600 hover:text-emerald-700 text-sm"
             >
-              查看明细
+              <Eye className="w-4 h-4" /> 查看明细
             </Button>
           </td>
         </tr>
@@ -142,7 +142,7 @@ export const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
               onClick={() => onViewDetail('department', item.department)}
               className="text-emerald-600 hover:text-emerald-700 text-sm"
             >
-              查看明细
+              <Eye className="w-4 h-4" /> 查看明细
             </Button>
           </td>
         </tr>

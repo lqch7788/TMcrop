@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 
@@ -21,7 +21,7 @@ export function DeleteWarningDialog({ isOpen, onClose, onConfirm }: DeleteWarnin
       footer={
         <div className="flex gap-3">
           <Button size="sm" variant="secondary" className="flex-1" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button size="sm" variant="destructive" className="flex-1" onClick={onConfirm}>
             已知晓

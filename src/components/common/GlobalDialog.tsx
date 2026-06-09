@@ -59,7 +59,7 @@ export default function GlobalDialog() {
         <div className="px-5 py-3 border-t bg-gray-50 flex justify-end gap-3 rounded-b-xl">
           {state.type === 'confirm' && (
             <Button size="sm" variant="secondary" onClick={handleCancel}>
-              取消
+              <X className="w-4 h-4" /> 取消
             </Button>
           )}
           <Button size="sm" onClick={handleConfirm}>

@@ -3,7 +3,7 @@
  * 管理植株在不同区域之间的移动
  */
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { AlertCircle, Send, X } from 'lucide-react';
 import { Label } from '@/components/ui';
 import {
   Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -191,10 +191,10 @@ export default function PlantingMoveModal({
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-200 flex justify-end gap-3">
           <Button variant="secondary" size="sm" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="default" size="sm" onClick={handleSubmit} disabled={isHarvested}>
-            提交
+            <Send className="w-4 h-4" /> 提交
           </Button>
         </div>
       </div>

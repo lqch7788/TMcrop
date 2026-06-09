@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -62,10 +62,10 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="blue" onClick={onSaveAll}>
-            保存全部
+            <Save className="w-4 h-4" /> 保存全部
           </Button>
         </div>
       }

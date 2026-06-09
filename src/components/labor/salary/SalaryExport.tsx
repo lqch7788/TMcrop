@@ -190,7 +190,7 @@ export function SalaryExport({ record, open, onClose }: SalaryExportProps) {
 
       <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
         <Button variant="secondary" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button onClick={handleExport} disabled={isExporting}>
           <Download className="w-4 h-4" />

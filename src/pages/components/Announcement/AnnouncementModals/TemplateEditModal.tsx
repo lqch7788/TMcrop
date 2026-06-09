@@ -5,7 +5,7 @@
  * - 实时预览面板
  */
 import { useState, useEffect } from 'react';
-import { Plus, Edit, FileText } from 'lucide-react';
+import { Edit, FileText, Plus, X } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { TextArea } from '../../../../components/ui/TextArea';
@@ -320,7 +320,7 @@ export default function TemplateEditModal({ isOpen, template, mode, onClose, onS
 
         {/* 底部按钮 */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 flex-shrink-0">
-          <Button variant="secondary" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
           <Button variant="default" size="sm" onClick={handleSubmit}>{mode === 'add' ? '创建模板' : '保存修改'}</Button>
         </div>
       </div>

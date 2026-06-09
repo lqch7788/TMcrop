@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { CheckCircle, XCircle, Clock, User, MessageSquare, Image, Mic, MapPin, Package } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, Image, MapPin, MessageSquare, Mic, Package, User, X, XCircle } from 'lucide-react';
 import { Task, TaskRecord, TASK_STATUS_CONFIG } from '../../../../types/task';
 import { TaskProgressTimeline } from '../components/TaskProgressTimeline';
 import { Label } from '@/components/ui';
@@ -169,7 +169,7 @@ export function VerifyTaskModal({
             variant="secondary"
             size="sm"
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
 
           {/* 驳回按钮 */}
@@ -201,7 +201,7 @@ export function VerifyTaskModal({
         {handleType && (
           <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
             <Button onClick={resetForm} variant="secondary" size="sm">
-              上一步
+              <ArrowLeft className="w-4 h-4" /> 上一步
             </Button>
             <Button
               onClick={handleSubmit}

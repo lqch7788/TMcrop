@@ -1,6 +1,6 @@
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 
 interface BatchEditWarningModalProps {
   isOpen: boolean;
@@ -84,7 +84,7 @@ export function BatchEditWarningModal({
       {/* 底部按钮 */}
       <div className="flex gap-3 mt-6">
         <Button size="default" variant="outline" className="flex-1" onClick={onClose}>
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button size="default" variant="warning" className="flex-1" onClick={onConfirm}>
           已知晓

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { RotateCcw, Wand2 } from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -701,7 +703,7 @@ export default function WarehouseMaterialsPage() {
                   onClick={handleCodeGen}
                   disabled={!codeGen.subCategory}
                 >
-                  生成
+                  <Wand2 className="w-4 h-4" /> 生成
                 </Button>
                 <Button
                   size="sm"
@@ -722,7 +724,7 @@ export default function WarehouseMaterialsPage() {
                   variant="secondary"
                   onClick={() => setCodeGen({ bigCategory: '', midCategory: '', subCategory: '', generatedCode: '' })}
                 >
-                  重置
+                  <RotateCcw className="w-4 h-4" /> 重置
                 </Button>
               </div>
             </div>

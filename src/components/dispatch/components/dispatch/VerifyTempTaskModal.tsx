@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui';
-import { AlertTriangle, Clock, User, Camera, MapPin, Mic, FileText } from 'lucide-react';
+import { AlertTriangle, Camera, Clock, FileText, MapPin, Mic, User, X } from 'lucide-react';
 
 // 操作类型配置
 const TEMP_TASK_ACTION_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
@@ -377,7 +377,7 @@ export function VerifyTempTaskModal({
               {/* 操作按钮 */}
               <div className="flex justify-end gap-3 pt-2">
                 <Button variant="secondary" onClick={handleClose}>
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
                 <Button
                   variant={mode === 'confirm' ? 'default' : 'destructive'}

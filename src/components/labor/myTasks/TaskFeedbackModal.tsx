@@ -3,6 +3,8 @@
  */
 
 import { Modal, Button } from '@/components/ui';
+import { X } from 'lucide-react';
+
 import { FeedbackInput } from '../../common/FeedbackInput';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { FeedbackFormData } from './types';
@@ -51,7 +53,7 @@ export function TaskFeedbackModal({
             variant="outline"
             onClick={onClose}
           >
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           {/* 新增：无法继续按钮 */}
           <Button

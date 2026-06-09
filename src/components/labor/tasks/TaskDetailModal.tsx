@@ -1,4 +1,4 @@
-import { XCircle } from 'lucide-react';
+import { Check, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Task } from '../../../types';
@@ -161,14 +161,14 @@ export function TaskDetailModal({ task, onClose, onConfirmComplete }: TaskDetail
         variant="outline"
         onClick={onClose}
       >
-        关闭
+        <X className="w-4 h-4" /> 关闭
       </Button>
       {task.status !== 'completed' && onConfirmComplete && (
         <Button
           variant="default"
           onClick={() => onConfirmComplete(task)}
         >
-          确认完成
+          <Check className="w-4 h-4" /> 确认完成
         </Button>
       )}
     </>

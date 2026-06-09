@@ -3,6 +3,8 @@
  */
 
 import { Modal, Button } from '@/components/ui';
+import { X } from 'lucide-react';
+
 import { getTypeColor, getTypeLabel } from './constants';
 
 interface TaskSopModalProps {
@@ -34,7 +36,7 @@ export function TaskSopModal({
             variant="outline"
             onClick={onClose}
           >
-            关闭
+            <X className="w-4 h-4" /> 关闭
           </Button>
         </div>
       }

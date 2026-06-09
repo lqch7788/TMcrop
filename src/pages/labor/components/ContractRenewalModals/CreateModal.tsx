@@ -2,6 +2,8 @@
  * 合同续签创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Send, X } from 'lucide-react';
+
 import { Button, DatePicker, NumberInput } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { ContractRenewalFormData, CONTRACT_PERIOD_OPTIONS } from '../../types/contractRenewal.types';
@@ -192,13 +194,13 @@ export function CreateModal({
           variant="outline"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           onClick={onSubmit}
           disabled={!isFormValid}
         >
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

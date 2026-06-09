@@ -1,4 +1,4 @@
-import { Search, Download, Eye, Edit, Trash2, ChevronDown, ChevronRight as ChevronRightIcon, Plus, AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight as ChevronRightIcon, Download, Edit, Edit2, Eye, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -276,7 +276,7 @@ export default function ExecuteTab({
             </Select>
           </div>
           <Button variant="secondary" onClick={onReset}>
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
         </div>
       </div>
@@ -292,7 +292,7 @@ export default function ExecuteTab({
                 确认导出
               </Button>
               <Button variant="secondary" onClick={onCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (
@@ -305,7 +305,7 @@ export default function ExecuteTab({
                   </Button>
                   <Button variant="blue" onClick={() => { setBatchEditMode(true); setShowEditWarning(true); }}>
                     <Edit className="w-4 h-4" />
-                    编辑
+                    <Edit2 className="w-4 h-4" /> 编辑
                   </Button>
                   <Button variant="destructive" onClick={() => { setBatchEditMode(true); setShowDeleteWarning(true); }}>
                     <Trash2 className="w-4 h-4" />
@@ -326,13 +326,13 @@ export default function ExecuteTab({
                         setShowBatchEditModal(true);
                       }
                     }}>
-                    确认编辑
+                    <Edit2 className="w-4 h-4" /> 确认编辑
                   </Button>
                   <Button variant="destructive" onClick={() => { setShowBatchDeleteConfirm(true); }}>
-                    确认删除
+                    <Trash2 className="w-4 h-4" /> 确认删除
                   </Button>
                   <Button variant="secondary" onClick={() => { setBatchEditMode(false); setSelectedRows([]); }}>
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

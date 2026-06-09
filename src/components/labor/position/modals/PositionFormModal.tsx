@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Save, X } from 'lucide-react';
+
 import { showAlert } from '@/lib/dialogService';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -169,10 +171,10 @@ export function PositionFormModal({ record, open, onClose, onSave }: PositionFor
   const footer = (
     <>
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button variant="default" onClick={handleSubmit}>
-        保存
+        <Save className="w-4 h-4" /> 保存
       </Button>
     </>
   );

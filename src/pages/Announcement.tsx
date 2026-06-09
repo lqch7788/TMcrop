@@ -4,7 +4,7 @@
  * 数据流：useAnnouncementDataStore / useAnnouncementTemplateStore → 组件
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Megaphone, Download, Plus, FileText, Trash2, Edit, Search } from 'lucide-react';
+import { Download, Edit, Edit2, FileText, Megaphone, Plus, Search, Trash2, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { useAnnouncementDataStore } from '../stores/useAnnouncementDataStore';
@@ -262,7 +262,7 @@ export default function Announcement() {
             {exportMode ? (
               <>
                 <Button size="sm" onClick={handleExportConfirm}><Download className="w-4 h-4" />确认导出{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}</Button>
-                <Button size="sm" variant="outline" onClick={() => { setExportMode(false); setSelectedIds([]); }}>取消</Button>
+                <Button size="sm" variant="outline" onClick={() => { setExportMode(false); setSelectedIds([]); }}><X className="w-4 h-4" /> 取消</Button>
               </>
             ) : (
               <>
@@ -341,7 +341,7 @@ export default function Announcement() {
                   </div>
                   <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                     <Button variant="outline" size="sm" className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleTemplateEdit(template)}>
-                      <Edit className="w-3.5 h-3.5" />编辑
+                      <Edit className="w-3.5 h-3.5" /><Edit2 className="w-4 h-4" /> 编辑
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleTemplateDelete(template)}>
                       <Trash2 className="w-3.5 h-3.5" />删除

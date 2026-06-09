@@ -3,6 +3,8 @@
  * 提供物料筛选和导出功能
  */
 import { Button } from '../../../components/ui/button';
+import { Download, RotateCcw, X } from 'lucide-react';
+
 import type { Material } from '../../types/materials.types';
 
 interface MaterialsFiltersProps {
@@ -92,9 +94,9 @@ export default function MaterialsFilters({
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={onCancelExport}>取消</Button>
+            <Button variant="secondary" onClick={onCancelExport}><X className="w-4 h-4" /> 取消</Button>
             <Button variant="blue" onClick={onConfirmExport} disabled={selectedRows.length === 0}>
-              确认导出
+              <Download className="w-4 h-4" /> 确认导出
             </Button>
           </div>
         </div>
@@ -154,9 +156,9 @@ export default function MaterialsFilters({
                 className="px-3 py-1.5 border border-gray-400 rounded-lg text-sm w-24"
               />
             </div>
-            <Button variant="secondary" onClick={onReset} size="sm">重置</Button>
+            <Button variant="secondary" onClick={onReset} size="sm"><RotateCcw className="w-4 h-4" /> 重置</Button>
             {canExport && (
-              <Button variant="blue" onClick={onExportClick} size="sm">导出</Button>
+              <Button variant="blue" onClick={onExportClick} size="sm"><Download className="w-4 h-4" /> 导出</Button>
             )}
           </div>
 

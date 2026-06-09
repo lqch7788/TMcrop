@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Package, TrendingDown, TrendingUp, Download, RefreshCw, ChevronDown, ChevronRight as ChevronRightIcon, Eye } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronRight as ChevronRightIcon, ClipboardList, Download, Eye, Package, RefreshCw, RotateCcw, TrendingDown, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
@@ -180,7 +180,7 @@ export default function StatisticsTab({
               variant={activeTab === 'area' ? 'default' : 'ghost'}
               onClick={() => { setActiveTab('area'); setCurrentPage(1); }}
             >
-              🏠 区域统计
+              <BarChart3 className="w-4 h-4" /> 🏠 区域统计
             </Button>
           </div>
         </div>
@@ -193,19 +193,19 @@ export default function StatisticsTab({
                 variant={activeAreaTab === 'greenhouse' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('greenhouse'); setCurrentPage(1); }}
               >
-                🏠 大棚统计
+                <BarChart3 className="w-4 h-4" /> 🏠 大棚统计
               </Button>
               <Button
                 variant={activeAreaTab === 'field' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('field'); setCurrentPage(1); }}
               >
-                🌾 大田统计
+                <BarChart3 className="w-4 h-4" /> 🌾 大田统计
               </Button>
               <Button
                 variant={activeAreaTab === 'batch' ? 'blue' : 'ghost'}
                 onClick={() => { setActiveAreaTab('batch'); setCurrentPage(1); }}
               >
-                🌱 种植批次统计
+                <BarChart3 className="w-4 h-4" /> 🌱 种植批次统计
               </Button>
             </div>
           </div>
@@ -628,7 +628,7 @@ export default function StatisticsTab({
                     setExpandedMonths(new Set());
                     setCurrentPage(1);
                   }}>
-                  重置
+                  <RotateCcw className="w-4 h-4" /> 重置
                 </Button>
               </div>
             </div>

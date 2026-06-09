@@ -1,7 +1,7 @@
 /**
  * 物料编码生成器组件
  */
-import { ChevronDown, ChevronUp, Copy, Check, AlertCircle } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, ChevronUp, Copy, Wand2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { CodeGenState } from '../../types/materials.types';
 
@@ -109,7 +109,7 @@ export default function MaterialsCodeGenerator({
           {/* 生成按钮和结果 */}
           <div className="flex items-center gap-4">
             <Button variant="blue" onClick={onGenerate}>
-              生成编码
+              <Wand2 className="w-4 h-4" /> 生成编码
             </Button>
             <div className="flex-1">
               <div className="flex items-center gap-2">

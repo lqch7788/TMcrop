@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Upload, Sparkles, List, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, List, RotateCcw, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { STATUS_OPTIONS, TIME_FILTER_OPTIONS } from '../constants/taskDispatchConstants';
 import { Input } from '@/components/ui';
@@ -156,7 +156,7 @@ export function FilterToolbar({
             size="sm"
             onClick={onResetFilters}
           >
-            重置
+            <RotateCcw className="w-4 h-4" /> 重置
           </Button>
           <Button
             variant="default"

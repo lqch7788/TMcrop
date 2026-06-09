@@ -3,6 +3,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
+
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -240,7 +242,7 @@ export function EditCropVarietyModal({
                   size="sm"
                   onClick={() => setFormData({ ...formData, image: '' })}
                 >
-                  删除
+                  <Trash2 className="w-4 h-4" /> 删除
                 </Button>
               )}
             </div>

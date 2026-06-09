@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { UnifiedOperationRecord } from '../../../hooks/useFarmHub';
 import { exportTaskRecords } from '../../../services/apiFarmTaskService';
-import { X, Download } from 'lucide-react';
+import { Download, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
@@ -263,7 +263,7 @@ export function OperationRecordPanel({ records, onClose }: OperationRecordPanelP
               size="sm"
               onClick={() => { setFilterType('all'); setFilterStartDate(''); setFilterEndDate(''); }}
             >
-              重置
+              <RotateCcw className="w-4 h-4" /> 重置
             </Button>
           )}
         </div>

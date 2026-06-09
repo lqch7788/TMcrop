@@ -2,7 +2,7 @@
  * 技术方案新增弹窗
  * 父组件传：form、setForm、scopeExpanded、selectedCrop、handleCropChange、generateCode、operatorOptions、onSubmitDraft/onSubmitApprove
  */
-import { Upload, Leaf, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Leaf, RefreshCw, Send, Upload } from 'lucide-react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
@@ -93,10 +93,10 @@ export function CreateModal({
       footer={
         <div className="flex justify-end gap-3">
           <Button type="button" size="sm" variant="secondary" onClick={onSubmitDraft}>
-            存为草稿
+            <FileText className="w-4 h-4" /> 存为草稿
           </Button>
           <Button type="button" size="sm" variant="default" onClick={onSubmitApprove}>
-            提交审批
+            <Send className="w-4 h-4" /> 提交审批
           </Button>
         </div>
       }

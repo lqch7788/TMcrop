@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { useCustomerStore } from '@/stores';
 import { Customer } from '@/types/customer.types';
 import { showAlert } from '@/lib/dialogService';
@@ -128,7 +128,7 @@ export function CustomerModal({ isOpen, customer, onClose, onSave }: CustomerMod
   const footer = (
     <div className="flex items-center justify-end gap-3">
       <Button variant="secondary" size="sm" onClick={onClose} disabled={loading}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button variant="default" size="sm" onClick={handleSubmit} disabled={loading}>
         {loading ? '保存中...' : '保存'}

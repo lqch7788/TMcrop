@@ -2,6 +2,8 @@
  * 招聘申请创建弹窗组件
  */
 import { UnifiedModal } from '../../../../components/ui/UnifiedModal';
+import { Send, X } from 'lucide-react';
+
 import { RecruitmentFormData, EMPLOYMENT_TYPE_OPTIONS, PRIORITY_OPTIONS } from '../../types/recruitment.types';
 import { Button } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
@@ -193,7 +195,7 @@ export function CreateModal({
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"
@@ -201,7 +203,7 @@ export function CreateModal({
           onClick={onSubmit}
           disabled={!formData.deptId || !formData.positionId || formData.headcount < 1 || !formData.reason || formData.salaryMin > formData.salaryMax}
         >
-          提交申请
+          <Send className="w-4 h-4" /> 提交申请
         </Button>
       </div>
     </UnifiedModal>

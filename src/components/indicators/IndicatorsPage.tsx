@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Target, Plus, Edit2, Eye, Sprout, DollarSign, Users, Clock, CheckCircle, X, Search, RotateCcw } from 'lucide-react';
+import { Check, CheckCircle, Clock, DollarSign, Edit2, Eye, Plus, RotateCcw, Search, Send, Sprout, Target, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -236,8 +236,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <Button variant="secondary" size="sm" onClick={() => setShowModal(false)}>取消</Button>
-              <Button variant="default" size="sm" onClick={handleSubmit}>确定</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowModal(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="default" size="sm" onClick={handleSubmit}><Check className="w-4 h-4" /> 确定</Button>
             </div>
           </div>
         </div>
@@ -293,8 +293,8 @@ export function IndicatorsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
-              <Button variant="secondary" size="sm" onClick={() => setShowEditModal(false)}>取消</Button>
-              <Button variant="blue" size="sm" onClick={handleEditSubmit}>提交审核</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowEditModal(false)}><X className="w-4 h-4" /> 取消</Button>
+              <Button variant="blue" size="sm" onClick={handleEditSubmit}><Send className="w-4 h-4" /> 提交审核</Button>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Plus, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -648,14 +648,14 @@ export const AddModal: React.FC<AddModalProps> = ({
           size="sm"
           onClick={onClose}
         >
-          取消
+          <X className="w-4 h-4" /> 取消
         </Button>
         <Button
           variant="default"
           size="sm"
           onClick={onSave}
         >
-          保存
+          <Save className="w-4 h-4" /> 保存
         </Button>
       </div>
     </UnifiedModal>

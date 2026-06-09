@@ -1,6 +1,6 @@
 // ExecuteTabDeleteConfirmModal 组件
 // 领料出库删除确认弹窗
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface ExecuteDeleteConfirmModalProps {
@@ -33,10 +33,10 @@ export function ExecuteDeleteConfirmModal({
         </div>
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
           <Button variant="secondary" onClick={onCancel}>
-            取消
+            <X className="w-4 h-4" /> 取消
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            确认删除
+            <Trash2 className="w-4 h-4" /> 确认删除
           </Button>
         </div>
       </div>

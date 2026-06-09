@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, AlertTriangle, Edit2, Trash2, Download, Clock, X, FileText, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle, Clock, Download, Edit2, FileText, Plus, Send, Trash2, X, XCircle } from 'lucide-react';
 import { TempTask, TEMP_TASK_TYPES } from '../../../types';
 import { useUserStore } from '../../../stores';
 import { TempTaskFilters } from './TempTaskFilters';
@@ -120,8 +120,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button onClick={onConfirm}>导出</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
     </>
   );
 
@@ -145,8 +145,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>取消</Button>
-      <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+      <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+      <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
     </>
   );
 
@@ -341,8 +341,8 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
 
   const footer = (
     <>
-      <Button variant="blue" onClick={handleConfirmNext}>确认（下一个）</Button>
-      <Button onClick={handlePublish}>发布</Button>
+      <Button variant="blue" onClick={handleConfirmNext}><Check className="w-4 h-4" /> 确认（下一个）</Button>
+      <Button onClick={handlePublish}><Send className="w-4 h-4" /> 发布</Button>
     </>
   );
 
@@ -426,14 +426,14 @@ function WithdrawCancelModal({ isOpen, task, type, onConfirm, onClose }: Withdra
           setReason('');
           onClose();
         }}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={!reason.trim()}
         variant={isWithdraw ? 'default' : 'destructive'}
       >
-        确认{title}
+        <Check className="w-4 h-4" /> 确认{title}
       </Button>
     </>
   );
@@ -537,13 +537,13 @@ function ReassignTaskModal({ isOpen, task, users, onConfirm, onClose }: Reassign
   const footer = (
     <>
       <Button variant="secondary" onClick={onClose}>
-        取消
+        <X className="w-4 h-4" /> 取消
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={!selectedAssignee}
       >
-        确认派发
+        <Send className="w-4 h-4" /> 确认派发
       </Button>
     </>
   );
@@ -1196,7 +1196,7 @@ export function TempTaskPage() {
                 确认导出
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelExport}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchEditMode ? (
@@ -1211,7 +1211,7 @@ export function TempTaskPage() {
                 批量编辑
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : batchDeleteMode ? (
@@ -1226,7 +1226,7 @@ export function TempTaskPage() {
                 确认删除
               </Button>
               <Button variant="secondary" size="sm" onClick={handleCancelBatch}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </div>
           ) : (
@@ -1588,10 +1588,10 @@ export function TempTaskPage() {
                 onClick={handleVerifyReject}
                 disabled={!verifyRejectReason.trim()}
               >
-                驳回
+                <XCircle className="w-4 h-4" /> 驳回
               </Button>
               <Button size="sm" onClick={handleVerifyAccept}>
-                验收通过
+                <Check className="w-4 h-4" /> 验收通过
               </Button>
             </div>
           }

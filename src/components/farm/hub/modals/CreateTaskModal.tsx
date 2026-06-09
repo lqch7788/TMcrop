@@ -9,7 +9,7 @@ import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { ChevronRight, AlertCircle, Clock, MapPin, Package, Camera, Mic } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Camera, ChevronRight, Clock, MapPin, Mic, Package, Save, Send, Upload, Wand2 } from 'lucide-react';
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
@@ -426,7 +426,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
               size="sm"
               onClick={() => setCreateStep(createStep - 1)}
             >
-              上一步
+              <ArrowLeft className="w-4 h-4" /> 上一步
             </Button>
           )}
           {createStep === 2 ? (
@@ -436,14 +436,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                 size="sm"
                 onClick={handleSaveDraft}
               >
-                保存草稿
+                <Save className="w-4 h-4" /> 保存草稿
               </Button>
               <Button
                 variant="default"
                 size="sm"
                 onClick={handleFinalCreate}
               >
-                发布任务
+                <Send className="w-4 h-4" /> 发布任务
               </Button>
             </div>
           ) : (
@@ -506,7 +506,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     size="sm"
                     onClick={() => setNewTask({ ...newTask, taskId: autoGenerateTaskCode(tasksHook.tasks) })}
                   >
-                    生成
+                    <Wand2 className="w-4 h-4" /> 生成
                   </Button>
                 </div>
               </div>
@@ -851,7 +851,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                     input.click();
                   }}
                 >
-                  导入文件
+                  <Upload className="w-4 h-4" /> 导入文件
                 </Button>
                 <span className="text-xs text-gray-500">支持 .txt, .doc, .docx, .pdf 格式</span>
               </div>

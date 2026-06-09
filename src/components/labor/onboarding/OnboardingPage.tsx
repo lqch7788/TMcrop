@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Search, Filter, Clock, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Edit2, Trash2, RotateCcw } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Download, Edit2, Eye, Filter, Play, RotateCcw, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useOnboarding } from './hooks/useOnboarding';
 import { OnboardingForm } from './OnboardingForm';
@@ -59,8 +59,8 @@ function ExportFormatModal({ isOpen, exportFormat, selectedCount, onFormatChange
         ))}
       </div>
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-        <Button variant="secondary" onClick={onClose}>取消</Button>
-        <Button onClick={onConfirm}>导出</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+        <Button onClick={onConfirm}><Download className="w-4 h-4" /> 导出</Button>
       </div>
     </UnifiedModal>
   );
@@ -93,8 +93,8 @@ function DeleteWarningModal({ isOpen, selectedCount, onClose, onConfirm }: Delet
         <p>此操作 <strong className="text-red-600">无法恢复</strong>，删除后数据将永久丢失。</p>
       </div>
       <div className="flex gap-3">
-        <Button variant="secondary" onClick={onClose}>取消</Button>
-        <Button variant="destructive" onClick={onConfirm}>确认删除</Button>
+        <Button variant="secondary" onClick={onClose}><X className="w-4 h-4" /> 取消</Button>
+        <Button variant="destructive" onClick={onConfirm}><Trash2 className="w-4 h-4" /> 确认删除</Button>
       </div>
     </UnifiedModal>
   );
@@ -434,7 +434,7 @@ export function OnboardingPage() {
                       size="sm"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -454,7 +454,7 @@ export function OnboardingPage() {
                       size="sm"
                       onClick={handleCancelBatch}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -465,14 +465,14 @@ export function OnboardingPage() {
                       onClick={handleConfirmExport}
                       disabled={selectedRows.length === 0}
                     >
-                      确认导出
+                      <Download className="w-4 h-4" /> 确认导出
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={handleCancelExport}
                     >
-                      取消
+                      <X className="w-4 h-4" /> 取消
                     </Button>
                   </>
                 )}
@@ -492,7 +492,7 @@ export function OnboardingPage() {
                   删除
                 </Button>
                 <Button size="sm" onClick={handleExportClick}>
-                  导出
+                  <Download className="w-4 h-4" /> 导出
                 </Button>
               </>
             )}
@@ -560,16 +560,16 @@ export function OnboardingPage() {
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <div className="flex gap-2">
                           <Button size="sm" variant="secondary" onClick={() => openDetailModal(record)}>
-                            详情
+                            <Eye className="w-4 h-4" /> 详情
                           </Button>
                           {record.status === '待入职' && (
                             <Button size="sm" variant="blue" onClick={() => handleProgress(record, '办理中')}>
-                              开始办理
+                              <Play className="w-4 h-4" /> 开始办理
                             </Button>
                           )}
                           {record.status === '办理中' && (
                             <Button size="sm" onClick={() => handleProgress(record, '已入职')}>
-                              完成入职
+                              <CheckCircle className="w-4 h-4" /> 完成入职
                             </Button>
                           )}
                         </div>

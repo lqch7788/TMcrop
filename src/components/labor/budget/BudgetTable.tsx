@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Edit2, Trash2, Download, Plus } from 'lucide-react';
+import { Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import type { MonthlyBudget } from './types';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -77,7 +77,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -97,7 +97,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}
@@ -117,7 +117,7 @@ export const BudgetTable: React.FC<BudgetTableProps> = ({
                     variant="secondary"
                     onClick={onCancelBatch}
                   >
-                    取消
+                    <X className="w-4 h-4" /> 取消
                   </Button>
                 </>
               )}

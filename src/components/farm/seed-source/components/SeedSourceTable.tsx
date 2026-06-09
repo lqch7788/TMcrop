@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Edit2, Trash2, Printer, Download, Plus, CheckCircle, XCircle, ClipboardList, GitBranch, HelpCircle } from 'lucide-react';
+import { CheckCircle, ClipboardList, Download, Edit2, GitBranch, HelpCircle, Plus, Printer, Trash2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import {
@@ -213,7 +213,7 @@ export function SeedSourceTable({
                 size="sm"
                 onClick={() => { onExportCancel(); onSelectionChange([]); }}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : operationMode === 'edit' ? (
@@ -234,7 +234,7 @@ export function SeedSourceTable({
                 size="sm"
                 onClick={cancelOperation}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : operationMode === 'delete' ? (
@@ -255,7 +255,7 @@ export function SeedSourceTable({
                 size="sm"
                 onClick={cancelOperation}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : printMode ? (
@@ -276,7 +276,7 @@ export function SeedSourceTable({
                 size="sm"
                 onClick={cancelPrintMode}
               >
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           ) : (

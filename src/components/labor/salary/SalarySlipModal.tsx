@@ -149,7 +149,7 @@ export function SalarySlipModal({ record, open, onClose }: SalarySlipModalProps)
       onClick={onClose}
       className="w-full"
     >
-      关闭
+      <X className="w-4 h-4" /> 关闭
     </Button>
   );
 

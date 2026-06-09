@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui';
-import { AlertTriangle, Clock, User, Camera, MapPin, Mic, FileText } from 'lucide-react';
+import { AlertTriangle, Camera, Clock, FileText, MapPin, Mic, User, X } from 'lucide-react';
 import { Task, TaskRecord, TASK_ACTION_CONFIG, TASK_STATUS_CONFIG } from '../../../../types/task';
 
 // 深度输入框样式
@@ -368,7 +368,7 @@ export function TaskAcceptanceModal({
               {/* 操作按钮 */}
               <div className="flex justify-end gap-3 pt-2">
                 <Button variant="secondary" onClick={handleClose}>
-                  取消
+                  <X className="w-4 h-4" /> 取消
                 </Button>
                 <Button
                   onClick={handleConfirm}

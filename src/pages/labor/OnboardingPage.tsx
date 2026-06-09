@@ -2,7 +2,7 @@
  * 入职办理页面 - 人工管理模块
  * 使用通用组件实现完整功能
  */
-import { UserPlus, Plus, Download } from 'lucide-react';
+import { Check, Download, Plus, UserPlus, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useOnboardingPage } from './hooks/useOnboardingPage';
 import { OnboardingPageFilters } from './components/OnboardingPage/OnboardingPageFilters';
@@ -70,10 +70,10 @@ export default function OnboardingPage() {
           {batchMode === 'none' && (
             <>
               <Button variant="blue" onClick={() => setBatchMode('approve')}>
-                批量通过
+                <Check className="w-4 h-4" /> 批量通过
               </Button>
               <Button variant="destructive" onClick={() => setBatchMode('reject')}>
-                批量驳回
+                <XCircle className="w-4 h-4" /> 批量驳回
               </Button>
               <Button onClick={() => setBatchMode('export')}>
                 <Download className="w-4 h-4" />
@@ -86,21 +86,21 @@ export default function OnboardingPage() {
             <>
               {batchMode === 'approve' && (
                 <Button variant="blue" onClick={handleBatchApprove} disabled={selectedRowKeys.length === 0}>
-                  确认通过 ({selectedRowKeys.length})
+                  <Check className="w-4 h-4" /> 确认通过 ({selectedRowKeys.length})
                 </Button>
               )}
               {batchMode === 'reject' && (
                 <Button variant="destructive" onClick={handleBatchReject} disabled={selectedRowKeys.length === 0}>
-                  确认驳回 ({selectedRowKeys.length})
+                  <Check className="w-4 h-4" /> 确认驳回 ({selectedRowKeys.length})
                 </Button>
               )}
               {batchMode === 'export' && (
                 <Button onClick={handleExport}>
-                  确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
+                  <Download className="w-4 h-4" /> 确认导出 {selectedRowKeys.length > 0 ? `(${selectedRowKeys.length}条)` : '(全部)'}
                 </Button>
               )}
               <Button variant="secondary" onClick={() => { setBatchMode('none'); setSelectedRowKeys([]); }}>
-                取消
+                <X className="w-4 h-4" /> 取消
               </Button>
             </>
           )}

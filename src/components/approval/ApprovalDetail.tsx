@@ -5,7 +5,7 @@
 // ============================================================
 
 import React from 'react';
-import { CheckCircle, XCircle, Clock, User, Calendar, FileText, MessageSquare } from 'lucide-react';
+import { Calendar, Check, CheckCircle, Clock, FileText, MessageSquare, User, XCircle } from 'lucide-react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import type { Approval, ApprovalStatus, ApprovalAction } from '../../types/approval';
 import { BusinessPreview } from './BusinessPreview';
@@ -251,7 +251,7 @@ export function ApprovalDetail({
               size="default"
               onClick={() => onReject(approval.id)}
             >
-              拒绝
+              <XCircle className="w-4 h-4" /> 拒绝
             </Button>
           )}
           {onApprove && canApprove && (
@@ -260,7 +260,7 @@ export function ApprovalDetail({
               size="default"
               onClick={() => onApprove(approval.id)}
             >
-              通过
+              <Check className="w-4 h-4" /> 通过
             </Button>
           )}
         </div>
