@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
 import { showConfirm } from '@/lib/dialogService';
 import { CropBatch, PlanType, PlanTypeColors, PlanTypeLabels } from '../../types';
-import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels } from './constants';
+import { batchStatusColors, batchStatusLabels, executionStatusColors, executionStatusLabels, getModesByPlanType, SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from './constants';
 
 interface ProductionTableProps {
   filteredBatches: CropBatch[];
@@ -52,6 +52,39 @@ export function ProductionTable({
   const displayedBatches = (filteredBatches as CropBatch[] & { __paginated?: boolean }).__paginated
     ? filteredBatches
     : filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // 2026-06-10: 列表补"生产模式"列（弹窗里有，列表里漏展示）
+  // plantingMode 是 "value1,value2" 字符串。
+  // 2026-06-10 修复：之前按 batch.planType 单独查 modes，planType 不在三个枚举里就 fallback 英文
+  // （旧数据 / 拼写不一致 / 未知 planType 都会命中这条路径）→ 全局 value→label 映射兜底
+  const ALL_MODE_LABELS: Record<string, string> = (() => {
+    const m: Record<string, string> = {};
+    [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES].forEach(opt => {
+      m[opt.value] = opt.label;
+    });
+    return m;
+  })();
+
+  const renderPlantingMode = (batch: CropBatch) => {
+    const raw = batch.plantingMode;
+    if (!raw) return '-';
+    const labels = raw.split(',')
+      .map(v => v.trim())
+      .filter(Boolean)
+      .map(v => ALL_MODE_LABELS[v] || v);
+    return labels.length > 0 ? labels.join('、') : '-';
+  };
+
+  // 2026-06-10: 列表长字段截断（默认最多 8 个汉字 + …）。
+  // 详情弹窗 / 编辑弹窗 / 导出等场景仍展示完整内容，不受此函数影响。
+  // 注：按"汉字 = 1 char"近似计算（实际汉字宽度 ≈ 2x 英文字符，8 字 ≈ 16 字符英文宽度），
+  //     用户口语"8 个汉字"是视觉宽度参考；用 char 长度够用 + 实现简单。
+  const truncateForTable = (text: string | null | undefined, maxChars = 8): string => {
+    if (text === null || text === undefined) return '-';
+    const s = String(text);
+    if (s.length <= maxChars) return s;
+    return s.slice(0, maxChars) + '…';
+  };
 
   // Check states for select all
   const allSelectedForExport = selectedRows.length === filteredBatches.length && filteredBatches.length > 0;
@@ -104,6 +137,7 @@ export function ProductionTable({
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物名称</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">作物品种</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">种植区域</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">生产模式</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">开始时间</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">预计结束</th>
               <th className="px-4 py-3 text-left text-sm font-semibold whitespace-nowrap">负责人</th>
@@ -162,10 +196,17 @@ export function ProductionTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{batch.cropName}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.variety}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                  {batch.greenhouseName || batch.supplierName || batch.seedlingSiteName || '-'}
+                <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap" title={batch.cropName || ''}>
+                  {truncateForTable(batch.cropName)}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={batch.variety || ''}>
+                  {truncateForTable(batch.variety)}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={batch.greenhouseName || batch.supplierName || batch.seedlingSiteName || ''}>
+                  {truncateForTable(batch.greenhouseName || batch.supplierName || batch.seedlingSiteName)}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={renderPlantingMode(batch)}>
+                  {truncateForTable(renderPlantingMode(batch))}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.startDate}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate || '-'}</td>
@@ -187,16 +228,20 @@ export function ProductionTable({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.orderCode || '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={batch.orderCode || ''}>
+                  {truncateForTable(batch.orderCode)}
+                </td>
                 <td
                   className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate"
                   title={batch.remarks || ''}
                 >
-                  {batch.remarks || '-'}
+                  {truncateForTable(batch.remarks)}
                 </td>
                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                   {batch.planDetailFileName ? (
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1" title="点击下载生产计划文件" onClick={() => {
+                    <span title={batch.planDetailFileName}>
+                      {truncateForTable(batch.planDetailFileName)}
+                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 ml-1" title="点击下载生产计划文件" onClick={() => {
                       // M-05: 一律下载为 .md 文件（planDetail 是 markdown 字符串）
                       // 之前后缀保留 .docx 但内容是 markdown，Word 打开报错
                       const fileName = batch.planDetailFileName!.replace(/\.docx$/i, '.md');
@@ -214,8 +259,8 @@ export function ProductionTable({
                       URL.revokeObjectURL(url);
                     }}>
                       <Download className="w-4 h-4" />
-                      {batch.planDetailFileName}
                     </Button>
+                    </span>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
