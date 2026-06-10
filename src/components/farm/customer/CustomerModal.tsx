@@ -144,9 +144,10 @@ export function CustomerModal({ isOpen, customer, onClose, onSave }: CustomerMod
       isOpen={isOpen}
       onClose={onClose}
       title={isEdit ? '编辑客户' : '新增客户'}
-      size="xxl"
-      width={1000}
-      height={800}
+      // 2026-06-10: 与订单管理 AddModal/EditModal 统一尺寸 900×650
+      size="xl"
+      width={900}
+      height={650}
       showFooter={true}
       footer={footer}
     >
