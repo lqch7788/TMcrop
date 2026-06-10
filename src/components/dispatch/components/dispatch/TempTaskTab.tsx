@@ -6,6 +6,7 @@
 import { useState, useReducer, useEffect, useCallback } from 'react';
 import { AlertTriangle, Camera, Check, Clock, Download, Edit2, FileText, MapPin, Mic, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import { TempTask, TEMP_TASK_TYPES } from '../../../../types';
 import { useUserStore } from '../../../../stores';
 import { TempTaskFilters } from '../../../labor/tempTask/TempTaskFilters';
@@ -839,7 +840,7 @@ export const TempTaskTab: React.FC = () => {
           greenhouseName: taskData.workLocation || '',
           operatorId: taskData.assigneeId || '',
           operatorName: taskData.assigneeName || '待分配',
-          operationDate: new Date().toISOString().split('T')[0],
+          operationDate: todayLocal(),
           sourceId: newTask?.id || '',
           sourceCode: newTask?.taskCode || newTask?.id || '',
           progress: 0,
@@ -924,7 +925,7 @@ export const TempTaskTab: React.FC = () => {
 
       operatorId: task.assigneeId,
       operatorName: task.assigneeName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: 0,
@@ -992,7 +993,7 @@ export const TempTaskTab: React.FC = () => {
         greenhouseName: task.location || task.greenhouseName || '',
         operatorId: task.assigneeId,
         operatorName: task.assigneeName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: task.id,
         sourceCode: task.taskCode,
         progress: 100,
@@ -1136,7 +1137,7 @@ export const TempTaskTab: React.FC = () => {
 
       operatorId: task.assignerId,
       operatorName: task.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: 0,
@@ -1159,7 +1160,7 @@ export const TempTaskTab: React.FC = () => {
 
       operatorId: task.assignerId,
       operatorName: task.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: task.progress || 0,
@@ -1196,7 +1197,7 @@ export const TempTaskTab: React.FC = () => {
 
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: withdrawCancelTask.id,
         sourceCode: withdrawCancelTask.taskCode,
         progress: 0,
@@ -1223,7 +1224,7 @@ export const TempTaskTab: React.FC = () => {
 
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: withdrawCancelTask.id,
         sourceCode: withdrawCancelTask.taskCode,
         progress: 0,
@@ -1285,7 +1286,7 @@ export const TempTaskTab: React.FC = () => {
 
         operatorId: reassignTask.assignerId,
         operatorName: reassignTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: reassignTask.id,
         sourceCode: reassignTask.taskCode,
         progress: 0,
@@ -1401,7 +1402,7 @@ export const TempTaskTab: React.FC = () => {
       extension = 'doc';
     }
 
-    const fileName = `临时任务_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `临时任务_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
