@@ -13,6 +13,7 @@ import { generateSeedlingCodeByDate } from '../../../../services/apiSeedlingServ
 import { decreaseAvailableCount, getSeedSourceById } from '../../../../services/apiSeedSourceService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import { CropVarietyOption } from '../../../../types/cropVariety';
+import { todayLocal } from '@/lib/dateUtils';
 import { getVarietyByCode } from '../../../../services/cropVarietyService';
 import { useDictionaryStore, getDictItems, useProductionPlanStore, useUserStore, useSeedlingStore } from '../../../../stores';
 import { useTasks } from '../../../../hooks/useTasks';
@@ -856,7 +857,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </Label>
               <DatePicker className="w-full"
                 selected={formData.startDate ? new Date(formData.startDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
+                onChange={(date) => setFormData({ ...formData, startDate: todayLocal(date) })}
               />
             </div>
 
@@ -865,7 +866,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               <Label className="text-gray-900">预计结束日期</Label>
               <DatePicker className="w-full"
                 selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
+                onChange={(date) => setFormData({ ...formData, expectedEndDate: todayLocal(date) })}
               />
             </div>
 

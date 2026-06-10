@@ -13,6 +13,7 @@ import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { PropagationRecordModal } from './modals/PropagationRecordModal';
 import { PropagationStageModal } from './modals/PropagationStageModal';
@@ -437,7 +438,7 @@ export default function SeedSourcePage() {
       '备注': record.remarks || ''
     }));
 
-    const fileName = `种源管理_${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
+    const fileName = `种源管理_${todayLocal()}.${exportFormat}`;
 
     try {
       if (exportFormat === 'xlsx') {
@@ -497,7 +498,7 @@ export default function SeedSourcePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `种源管理_${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `种源管理_${todayLocal()}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     }

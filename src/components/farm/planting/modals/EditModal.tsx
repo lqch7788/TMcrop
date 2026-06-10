@@ -13,6 +13,7 @@ import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -127,7 +128,7 @@ export function EditModal({
           <Label className="text-gray-900">种植日期</Label>
           <DatePicker className="w-full"
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => setFormData({ ...formData, plantingDate: todayLocal(date) })}
           />
         </div>
 

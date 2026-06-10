@@ -9,6 +9,7 @@ import { Button } from '@/components/ui';
 import { Label, DatePicker, TreeSelect, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { TreeSelectNode } from '@/components/ui/TreeSelect';
 import { Input } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface PlantingFilterProps {
   filters: PlantingFilters;
@@ -115,7 +116,7 @@ export function PlantingFilter({
           <Label className="text-gray-700">定植日期</Label>
           <DatePicker className="w-full"
             selected={filters.transplantDate ? new Date(filters.transplantDate) : undefined}
-            onChange={(date) => onChange({ ...filters, transplantDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onChange({ ...filters, transplantDate: todayLocal(date) })}
           />
         </div>
 

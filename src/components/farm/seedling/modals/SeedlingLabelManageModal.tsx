@@ -12,6 +12,7 @@ import { usePlantLabelStore } from '../../../../stores';
 import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLabelStore';
 import { Input } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 const PAGE_SIZE = 20;
 const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
@@ -99,7 +100,7 @@ export default function SeedlingLabelManageModal({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `育苗标签_${seedlingCode}_${new Date().toISOString().slice(0, 10)}.xls`;
+    a.download = `育苗标签_${seedlingCode}_${todayLocal()}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   }, [filteredLabels, seedlingCode]);

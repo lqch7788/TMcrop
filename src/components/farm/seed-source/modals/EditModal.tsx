@@ -13,6 +13,7 @@ import CropCodeSelector from '../../common/CropCodeSelector';
 import { CropVariety } from '../../../../types/cropVariety';
 import * as supplierService from '../../../../services/supplierService';
 import { Input } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -352,7 +353,7 @@ export function EditModal({
           </Label>
           <DatePicker className="w-full"
             selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => setFormData({ ...formData, purchaseDate: todayLocal(date) })}
           />
         </div>
 

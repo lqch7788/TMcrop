@@ -13,6 +13,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -165,7 +166,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `育苗标签_${record.cropName}_${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `育苗标签_${record.cropName}_${todayLocal()}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {

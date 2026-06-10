@@ -13,6 +13,7 @@ import { CropVarietyOption } from '../../../../types/cropVariety';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -346,7 +347,7 @@ export function EditModal({
           <Label className="text-gray-900">开始日期</Label>
           <DatePicker className="w-full"
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, startDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => setFormData({ ...formData, startDate: todayLocal(date) })}
           />
         </div>
 
@@ -355,7 +356,7 @@ export function EditModal({
           <Label className="text-gray-900">预计结束日期</Label>
           <DatePicker className="w-full"
             selected={formData.expectedEndDate ? new Date(formData.expectedEndDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, expectedEndDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => setFormData({ ...formData, expectedEndDate: todayLocal(date) })}
           />
         </div>
 

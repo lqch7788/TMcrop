@@ -8,6 +8,7 @@ import { SourceFilter } from './SourceFilter';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface ProblemFilterToolbarProps {
   // 筛选状态
@@ -112,13 +113,13 @@ export function ProblemFilterToolbar({
           <div className="flex items-center gap-2">
             <DatePicker
               selected={dateRange.start ? new Date(dateRange.start) : undefined}
-              onChange={date => onDateRangeChange({ ...dateRange, start: date.toISOString().split('T')[0] })}
+              onChange={date => onDateRangeChange({ ...dateRange, start: todayLocal(date) })}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-sm text-gray-400">至</span>
             <DatePicker
               selected={dateRange.end ? new Date(dateRange.end) : undefined}
-              onChange={date => onDateRangeChange({ ...dateRange, end: date.toISOString().split('T')[0] })}
+              onChange={date => onDateRangeChange({ ...dateRange, end: todayLocal(date) })}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>

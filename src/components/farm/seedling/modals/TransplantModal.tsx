@@ -13,6 +13,7 @@ import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface TransplantModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
     transplantCount: 0,
     areaId: '',
     areaName: '',
-    transplantDate: new Date().toISOString().split('T')[0],
+    transplantDate: todayLocal(),
     soilPH: 6.5,
     soilEC: 1.0,
     remarks: ''
@@ -208,7 +209,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
               <Label className="text-gray-700">定植日期</Label>
               <DatePicker className="w-full"
                 selected={formData.transplantDate ? new Date(formData.transplantDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, transplantDate: date.toISOString().split('T')[0] })}
+                onChange={(date) => setFormData({ ...formData, transplantDate: todayLocal(date) })}
               />
             </div>
             <div className="col-span-2">
