@@ -16,6 +16,10 @@ interface OrderStats {
   inProgress: number;
   completed: number;
   thisMonth: number;
+  /** P1 修复：补 planned/cancelled 字段（与 apiCropOrderService.ts:173 接口对齐） */
+  planned?: number;
+  cancelled?: number;
+  totalAmount?: number;
 }
 
 interface OrderDataState {
