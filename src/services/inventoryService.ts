@@ -9,6 +9,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { todayLocal } from '@/lib/dateUtils';
 import {
   InventoryStock,
   InventoryTransaction,
@@ -69,7 +70,7 @@ export async function inbound(
       unit: request.unit,
       warehouseId: request.extensions?.warehouseId || '',
       warehouseName: request.extensions?.warehouseName || '',
-      inboundDate: request.extensions?.inboundDate || new Date().toISOString().slice(0, 10),
+      inboundDate: request.extensions?.inboundDate || todayLocal(),
       sourceType: request.sourceType,
       sourceInstanceId: request.sourceInstanceId,
       productionPlanCode: request.productionPlanCode,

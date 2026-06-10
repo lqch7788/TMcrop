@@ -10,6 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { todayLocal } from '@/lib/dateUtils';
 
 /**
  * 工资预算记录类型
@@ -169,7 +170,7 @@ export async function createSalaryBudgetRecord(budget: CreateSalaryBudgetParams)
     budgetCode: response.data?.budget_code || `SB-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
     status: 'pending',
     statusLabel: '待审批',
-    applyDate: new Date().toISOString().slice(0, 10),
+    applyDate: todayLocal(),
     createTime: new Date().toISOString(),
   };
 }
