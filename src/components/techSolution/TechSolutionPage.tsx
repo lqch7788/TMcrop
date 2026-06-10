@@ -6,7 +6,7 @@ import { FileCode } from 'lucide-react';
 import { useApproval } from '../../hooks/useApproval';
 import { USE_API } from '../../services/apiClient';
 import { getDictionaries } from '../../services/dictionaryService';
-import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, useProductionPlanStore, getDictItemName } from '../../stores';
+import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, useProductionPlanStore, useCropVarietyStore, getDictItemName } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import { Pagination } from '@/components/ui';
@@ -293,11 +293,17 @@ export function TechSolutionPage() {
     }
   };
 
-  const handleEditClick = (tech: TechSolution) => {
+  const handleEditClick = async (tech: TechSolution) => {
     // 作废的方案不能编辑
     if (tech.isValid === '作废') {
       showAlert('该方案已作废，无法编辑');
       return;
+    }
+    // C6 修复 2: 显式 await loadItems()，避免"刚好内存里有"的隐式契约
+    // useCropVarietyStore 暴露的方法签名：loadItems(): Promise<void>
+    const varietyStore = useCropVarietyStore.getState();
+    if (!varietyStore.items || varietyStore.items.length === 0) {
+      await varietyStore.loadItems();
     }
     // 根据 cropCode 获取品种信息
     const varietyInfo = tech.cropCode ? getVarietyByCode(tech.cropCode) : null;
