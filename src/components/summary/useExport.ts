@@ -7,6 +7,7 @@ import { ExportFormat } from './types';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 附件数据类型
 export interface AttachmentItem {
@@ -198,7 +199,7 @@ export function useExport({ data, headers, filenamePrefix }: UseExportOptions) {
       extension = 'doc';
     }
 
-    const fileName = `${filenamePrefix}_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `${filenamePrefix}_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

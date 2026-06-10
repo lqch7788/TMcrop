@@ -1,5 +1,6 @@
 // 物料管理主页面组件
 import { useState, useMemo } from 'react';
+import { todayLocal } from '@/lib/dateUtils';
 import { Plus, Download, X, Search, RefreshCw } from 'lucide-react';
 import { Pagination } from '@/components/ui';
 import MaterialsHeader from './MaterialsHeader';
@@ -185,7 +186,7 @@ export default function MaterialsPage() {
       extension = 'doc';
     }
 
-    const fileName = `物料库存_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `物料库存_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

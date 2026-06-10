@@ -10,6 +10,7 @@ import { useSummaryDataStore } from '@/stores';
 import { BarChart, Bar, LineChart as RLineChart, Line, PieChart as RPieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { COMPARISON_PARAMS, getFlatParams } from './constants';
+import { todayLocal } from '@/lib/dateUtils';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -73,10 +74,10 @@ export default function ComparisonPanel() {
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`对比图表_${chartKey}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        pdf.save(`对比图表_${chartKey}_${todayLocal()}.pdf`);
       } else {
         const link = document.createElement('a');
-        link.download = `对比图表_${chartKey}_${new Date().toISOString().slice(0, 10)}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+        link.download = `对比图表_${chartKey}_${todayLocal()}.${format === 'jpeg' ? 'jpg' : 'png'}`;
         link.href = canvas.toDataURL(`image/${format === 'jpeg' ? 'jpeg' : 'png'}`, 0.9);
         link.click();
       }
@@ -101,7 +102,7 @@ export default function ComparisonPanel() {
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
           pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         }
-        pdf.save(`对比分析汇总_${new Date().toISOString().slice(0, 10)}.pdf`);
+        pdf.save(`对比分析汇总_${todayLocal()}.pdf`);
       } else {
         for (const key of keys) {
           const el = chartRefs.current.get(key);
@@ -109,7 +110,7 @@ export default function ComparisonPanel() {
           const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 2 });
           const link = document.createElement('a');
           const suffix = format === 'jpeg' ? 'jpg' : 'png';
-          link.download = `对比图表_${key}_${new Date().toISOString().slice(0, 10)}.${suffix}`;
+          link.download = `对比图表_${key}_${todayLocal()}.${suffix}`;
           link.href = canvas.toDataURL(`image/${format === 'jpeg' ? 'jpeg' : 'png'}`, 0.9);
           link.click();
         }

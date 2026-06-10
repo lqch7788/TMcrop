@@ -10,6 +10,7 @@ import { Cascader } from '@/components/ui';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,
@@ -29,7 +30,7 @@ interface SupplierAddModalProps {
 }
 
 export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode }: SupplierAddModalProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayLocal();
 
   // 从全局设置数据获取供应商属性字典
   const dictionaries = useDictionaryStore((state) => state.dictionaries);

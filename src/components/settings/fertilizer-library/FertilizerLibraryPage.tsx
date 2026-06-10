@@ -8,6 +8,7 @@ import { ArrowLeft, Download, Leaf, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { useFertilizerLibraryStore, FertilizerLibrary, useToastStore } from '@/stores';
 import { FertilizerLibraryFilter } from './FertilizerLibraryFilter';
 import { FertilizerLibraryTable } from './FertilizerLibraryTable';
@@ -136,7 +137,7 @@ export default function FertilizerLibraryPage() {
       record.supplierInfo || '',
     ]);
 
-    const fileName = `肥料知识库_${new Date().toISOString().slice(0, 10)}`;
+    const fileName = `肥料知识库_${todayLocal()}`;
 
     if (exportFormat === 'csv') {
       // CSV 格式

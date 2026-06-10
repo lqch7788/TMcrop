@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { MaterialItem, ReturnRecord, SearchForm, EditFormData, AddFormData } from '../types';
 import { useMaterialReturnStore } from '../../../stores';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 初始搜索表单
 const initialSearchForm: SearchForm = {
@@ -31,7 +32,7 @@ const initialEditForm: EditFormData = {
 // 初始新增表单
 const initialAddForm: AddFormData = {
   code: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayLocal(),
   type: '生产退料',
   applicant: '',
   department: '',
@@ -505,7 +506,7 @@ export function useMaterialReturn() {
       extension = 'doc';
     }
 
-    const fileName = `生产退料_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `生产退料_${todayLocal()}.${extension}`;
 
     try {
       const win = window as unknown as { showSaveFilePicker?: (options: { suggestedName: string; types: { description: string; accept: Record<string, string[]> }[] }) => Promise<{ createWritable: () => Promise<{ write: (data: string) => Promise<void>; close: () => Promise<void> }> }> };
