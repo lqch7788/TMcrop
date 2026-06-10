@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useMonthlyReportStore } from '@/stores';
 import { MonthlyReport, EXPORT_FORMATS } from '../types';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 export interface UseMonthlyReportReturn {
   // 数据
@@ -171,7 +172,7 @@ export function useMonthlyReport(): UseMonthlyReportReturn {
       extension = 'doc';
     }
 
-    const fileName = `月度报表_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `月度报表_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

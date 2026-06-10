@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSalaryAdjustmentStore } from '@/stores';
 import type { SalaryAdjustmentData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   SalaryAdjustmentFilters,
   SalaryAdjustmentFormData,
@@ -322,7 +323,7 @@ export function useSalaryAdjustment(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `调薪记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `调薪记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

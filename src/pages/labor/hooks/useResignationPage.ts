@@ -8,6 +8,7 @@ import { useWorkerStore } from '../../../stores/useWorkerStore';
 import { useResignationStore } from '@/stores';
 import type { ResignationData } from '@/stores';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   ResignationRecord,
   ResignationFilters,
@@ -300,7 +301,7 @@ export function useResignationPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `离职记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `离职记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

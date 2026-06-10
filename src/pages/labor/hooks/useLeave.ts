@@ -8,6 +8,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLeaveStore } from '@/stores/leaveStore';
 import type { LeaveRecord as StoreLeaveRecord, LeaveType as StoreLeaveType, LeaveStatus as StoreLeaveStatus, LeaveFilters as StoreLeaveFilters } from '@/stores/leaveStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type { LeaveType, LeaveStatus, LeaveFilters } from '../../../components/labor/leave/types';
 
 // ==================== 类型定义 ====================
@@ -441,7 +442,7 @@ export function useLeave(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `请假记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `请假记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

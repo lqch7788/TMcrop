@@ -9,6 +9,7 @@ import { useWorkerStore } from '@/stores';
 import { useOnboardingStore } from '@/stores/useOnboardingStore';
 import type { OnboardingData } from '@/stores/useOnboardingStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   OnboardingRecord,
   OnboardingFilters,
@@ -279,7 +280,7 @@ export function useOnboardingPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `入职记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `入职记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRecruitmentStore } from '@/stores';
 import type { RecruitmentData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -344,7 +345,7 @@ export function useRecruitment(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `招聘申请_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `招聘申请_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

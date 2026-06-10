@@ -5,6 +5,7 @@ import { MaterialReceivingRecord, ExecuteMaterialItem, MaterialExecuteRecord } f
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
 /**
@@ -73,7 +74,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
   // 新增表单状态
   const [executeAddForm, setExecuteAddForm] = useState<ExecuteAddFormState>({
     code: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocal(),
     applicant: '',
     warehouseLocation: '',
     reviewer: '',
@@ -229,7 +230,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
       extension = 'doc';
     }
 
-    const fileName = `领料出库_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `领料出库_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
@@ -285,7 +286,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     const newCode = executeStore.generateCode();
     setExecuteAddForm({
       code: newCode,
-      date: new Date().toISOString().split('T')[0],
+      date: todayLocal(),
       applicant: '',
       warehouseLocation: '仓库A区',
       reviewer: '',
@@ -430,7 +431,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
     setExecuteMaterialPool([]);
     setExecuteAddForm({
       code: '',
-      date: new Date().toISOString().split('T')[0],
+      date: todayLocal(),
       applicant: '',
       warehouseLocation: '仓库A区',
       reviewer: '',

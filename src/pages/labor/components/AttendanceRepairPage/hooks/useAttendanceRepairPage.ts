@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useWorkerStore } from '@/stores';
 import { useAttendanceRepairStore } from '@/stores/useAttendanceRepairStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   AttendanceRepairRecord,
   CreateAttendanceRepairParams,
@@ -74,7 +75,7 @@ const DEFAULT_FORM_DATA: AttendanceRepairFormData = {
   employeeId: '',
   employeeName: '',
   department: '',
-  repairDate: new Date().toISOString().slice(0, 10),
+  repairDate: todayLocal(),
   checkInTime: '09:00',
   checkOutTime: '18:00',
   reason: '忘记打卡',
@@ -315,7 +316,7 @@ export function useAttendanceRepairPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `考勤补录记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `考勤补录记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
