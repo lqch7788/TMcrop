@@ -9,7 +9,8 @@ import { TempWorkerFormModal } from './TempWorkerFormModal';
 import { TempWorkerBatchEditModal } from './TempWorkerBatchEditModal';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { Label } from '@/components/ui';
+import { Label } from '@/components/ui'
+import { todayLocal } from '@/lib/dateUtils';;
 import { showAlert } from '@/lib/dialogService';
 
 // 导出格式弹窗
@@ -251,7 +252,7 @@ export function TempWorkerPage() {
       extension = 'doc';
     }
 
-    const fileName = `临时工_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `临时工_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

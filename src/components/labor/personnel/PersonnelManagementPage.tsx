@@ -10,6 +10,7 @@ import { PositionBatchEditModal, PositionDeleteWarningModal, PositionExportForma
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Checkbox } from '@/components/ui';
 import {
   Select,
@@ -331,7 +332,7 @@ export function PersonnelManagementPage() {
       extension = 'doc';
     }
 
-    const fileName = `职务列表_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `职务列表_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

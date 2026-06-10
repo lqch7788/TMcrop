@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Modal, NumberInput, DatePicker, Label } from '@/components/ui';
 import { MonthlyReport } from './types';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -265,7 +266,7 @@ export function MonthlyReportFormModal({
             <Label className="block text-sm font-medium text-gray-700 mb-1">发布日期</Label>
             <DatePicker
               selected={formData.publishDate ? new Date(formData.publishDate) : undefined}
-              onChange={(date: Date) => setFormData({ ...formData, publishDate: date.toISOString().slice(0, 10) })}
+              onChange={(date: Date) => setFormData({ ...formData, publishDate: todayLocal(date) })}
               placeholder="选择日期"
             />
           </div>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -160,7 +161,7 @@ export function BatchEditModal({ isOpen, selectedRows, tasks, users, greenhouses
             <div className="text-xs text-gray-500 mb-1">计划结束日期</div>
             <DatePicker
               selected={(editedData.dueDate ?? currentTask.dueDate) ? new Date(editedData.dueDate ?? currentTask.dueDate) : undefined}
-              onChange={(date) => handleFieldChange('dueDate', date.toISOString().split('T')[0])}
+              onChange={(date) => handleFieldChange('dueDate', todayLocal(date))}
               className="w-full"
             />
           </div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface LeaveBatchEditModalProps {
   isOpen: boolean;
@@ -129,7 +130,7 @@ export function LeaveBatchEditModal({
               <div className="text-xs text-gray-500 mb-1">开始日期</div>
               <DatePicker
                 selected={(editedData.startDate ?? currentRecord.startDate) ? new Date(String(editedData.startDate ?? currentRecord.startDate)) : undefined}
-                onChange={(date) => handleFieldChange('startDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleFieldChange('startDate', todayLocal(date))}
                 className="w-full"
               />
             </div>
@@ -139,7 +140,7 @@ export function LeaveBatchEditModal({
               <div className="text-xs text-gray-500 mb-1">结束日期</div>
               <DatePicker
                 selected={(editedData.endDate ?? currentRecord.endDate) ? new Date(String(editedData.endDate ?? currentRecord.endDate)) : undefined}
-                onChange={(date) => handleFieldChange('endDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleFieldChange('endDate', todayLocal(date))}
                 className="w-full"
               />
             </div>

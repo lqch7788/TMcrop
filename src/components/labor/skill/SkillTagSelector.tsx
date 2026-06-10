@@ -4,6 +4,7 @@ import { SkillTag, SkillLevel, SKILL_TAGS, SKILL_LEVELS, SkillItem } from './typ
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface SkillTagSelectorProps {
   selectedSkills: SkillItem[];
@@ -95,7 +96,7 @@ export function SkillTagSelector({ selectedSkills, onChange, maxSkills = 10 }: S
                 </select>
                 <DatePicker
                   selected={skill.certifiedDate ? new Date(skill.certifiedDate) : undefined}
-                  onChange={(date) => handleDateChange(skill.tag, 'certifiedDate', date.toISOString().split('T')[0])}
+                  onChange={(date) => handleDateChange(skill.tag, 'certifiedDate', todayLocal(date))}
                   placeholder="颁证日期"
                   className="w-28 text-xs"
                 />

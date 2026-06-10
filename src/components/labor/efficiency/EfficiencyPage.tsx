@@ -10,6 +10,7 @@ import { EfficiencyFilters } from './EfficiencyFilters';
 import { EfficiencyFormModal } from './EfficiencyFormModal';
 import { EfficiencyBatchEditModal } from './EfficiencyBatchEditModal';
 import { ExportFormatModal } from './ExportFormatModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import { useEfficiency } from './hooks/useEfficiency';
 import { EfficiencyMetrics } from './types';
@@ -174,7 +175,7 @@ export const EfficiencyPage: React.FC = () => {
       extension = 'doc';
     }
 
-    const fileName = `人效分析_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `人效分析_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

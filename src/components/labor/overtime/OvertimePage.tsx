@@ -10,6 +10,7 @@ import { OvertimeFormModal } from './OvertimeFormModal';
 import { OvertimeBatchEditModal, OvertimeDeleteWarningModal, OvertimeExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
 import type { OvertimeRecord, OvertimeFormData } from './types';
+import { todayLocal } from '@/lib/dateUtils';
 
 /**
  * 加班管理页面主容器组件
@@ -196,7 +197,7 @@ export function OvertimePage() {
       extension = 'doc';
     }
 
-    const fileName = `加班记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `加班记录_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
