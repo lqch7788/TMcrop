@@ -1,11 +1,14 @@
 /**
  * 技术方案数据表格 + 工具栏
  * 受控展示：父组件传 techSolutions、state、handlers
+ * 2026-06-10: 种植模式列加 ALL_MODE_LABELS fallback（字典查不到时翻译 SEED_BREEDING/
+ *           SEEDLING/PLANTING 三类的 value → label）
  */
 import { Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { TechSolution } from '../../types/techSolution';
+import { SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../production/constants';
 
 export interface TechSolutionTableHandlers {
   onViewClick: (tech: TechSolution) => void;
@@ -55,6 +58,37 @@ export function TechSolutionTable({
   handlers,
 }: TechSolutionTableProps) {
   const inSelectionMode = exportMode || batchEditMode || batchDeleteMode;
+
+  // 2026-06-10: 种植模式中文翻译——字典优先（保留字典表里的自定义 label，如"露天种植"），
+  // 字典查不到 fallback ALL_MODE_LABELS（合并三类 modes 静态映射）
+  const ALL_MODE_LABELS: Record<string, string> = (() => {
+    const m: Record<string, string> = {};
+    [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES].forEach(opt => {
+      m[opt.value] = opt.label;
+    });
+    return m;
+  })();
+  const formatPlantingMode = (raw: string | undefined | null): string => {
+    if (!raw) return '-';
+    const tokens = raw.split(',').map(v => v.trim()).filter(Boolean);
+    return tokens.map(v => {
+      // 优先用 prop 的字典查（保留字典表里的自定义 label）
+      const dictName = getDictItemName('planting_mode', v);
+      // 字典返回了非原值（如"露天种植"）→ 用字典结果
+      if (dictName && dictName !== v) return dictName;
+      // 字典查不到（fallback 原 code）→ 走 ALL_MODE_LABELS 兜底翻译
+      return ALL_MODE_LABELS[v] || v;
+    }).join('、');
+  };
+
+  // 2026-06-10: 长字段 8 汉字截断（与生产计划 ProductionTable 模式一致，详情弹窗/编辑弹窗保持完整）
+  // null/undefined → '-'；长度 ≤ 8 → 原样；> 8 → 截断 + …
+  const truncateForTable = (text: string | null | undefined, maxChars = 8): string => {
+    if (text === null || text === undefined) return '-';
+    const s = String(text);
+    if (s.length <= maxChars) return s;
+    return s.slice(0, maxChars) + '…';
+  };
 
   return (
     <>
@@ -171,19 +205,23 @@ export function TechSolutionTable({
                     </Button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{tech.relatedBatchCode || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap">
+                  <td className="px-4 py-3 text-sm font-medium text-green-700 whitespace-nowrap" title={tech.title}>
                     <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-900" onClick={() => handlers.onTitleClick(tech)}>
-                      {tech.title}
+                      {truncateForTable(tech.title)}
                     </Button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.crop}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {getDictItemName('planting_mode', tech.plantingMode)}
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={tech.crop}>
+                    {truncateForTable(tech.crop)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {(tech.scopes && tech.scopes.length > 0)
-                      ? tech.scopes.join('、')
-                      : (tech.stage || '-')}
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={formatPlantingMode(tech.plantingMode)}>
+                    {truncateForTable(formatPlantingMode(tech.plantingMode))}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap" title={(tech.scopes && tech.scopes.length > 0) ? tech.scopes.join('、') : (tech.stage || '')}>
+                    {truncateForTable(
+                      (tech.scopes && tech.scopes.length > 0)
+                        ? tech.scopes.join('、')
+                        : (tech.stage || '')
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.version}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{tech.author}</td>
@@ -215,7 +253,7 @@ export function TechSolutionTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap max-w-xs truncate" title={tech.remarks}>
-                    {tech.remarks || '-'}
+                    {truncateForTable(tech.remarks)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1">
@@ -256,16 +294,18 @@ export function TechSolutionTable({
                   </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {tech.planDetailFileName ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
-                        title="点击下载方案详情"
-                        onClick={() => handlers.onDownloadDetail(tech)}
-                      >
-                        <Download className="w-4 h-4" />
-                        {tech.planDetailFileName}
-                      </Button>
+                      <span title={tech.planDetailFileName}>
+                        {truncateForTable(tech.planDetailFileName)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 ml-1"
+                          title="点击下载方案详情"
+                          onClick={() => handlers.onDownloadDetail(tech)}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </span>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
