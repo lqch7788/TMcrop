@@ -90,7 +90,10 @@ export function EditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="编辑方案"
-      size="lg"
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
+      size="xl"
+      width={900}
+      height={650}
       onSubmit={onSubmit}
       submitText="保存"
       cancelText="取消"
