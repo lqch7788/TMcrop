@@ -85,6 +85,10 @@ export function TechSolutionFilters({
               <SelectItem value="已发布">已发布</SelectItem>
               <SelectItem value="草稿">草稿</SelectItem>
               <SelectItem value="审核中">审核中</SelectItem>
+              {/* P1 修复：补全 status 过滤下拉（TechSolutionTable 实际 5 状态：已发布/待审批/已拒绝/已作废/草稿） */}
+              <SelectItem value="待审批">待审批</SelectItem>
+              <SelectItem value="已拒绝">已拒绝</SelectItem>
+              <SelectItem value="已作废">已作废</SelectItem>
             </SelectContent>
           </Select>
         </div>
