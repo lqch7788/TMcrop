@@ -10,6 +10,7 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { CropOrderFilters } from '@/types/crop';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface OrderFilterProps {
   filters: CropOrderFilters;
@@ -110,7 +111,7 @@ export function OrderFilter({
           </Label>
           <DatePicker
             selected={filters.orderDate ? new Date(filters.orderDate) : undefined}
-            onChange={(date) => onChange({ ...filters, orderDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onChange({ ...filters, orderDate: todayLocal(date) })}
             className="border-gray-300"
           />
         </div>

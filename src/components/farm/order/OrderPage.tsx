@@ -22,6 +22,8 @@ import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { useToastStore } from '@/stores/useToastStore';
 import * as cropInstanceService from '@/services/apiCropInstanceService';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
+import { logger } from '@/lib/logger';
 
 export default function OrderPage() {
   const navigate = useNavigate();
@@ -179,7 +181,7 @@ export default function OrderPage() {
       await fetchStats();
     } catch (error) {
       // [M-5] 2026-06-06 修复：catch 之前只弹通用文案，丢 error.message；现把 error.message 拼到 alert
-      console.error('[OrderPage] 删除订单失败:', error);
+      logger.error('[OrderPage] 删除订单失败', { error });
       const msg = error instanceof Error ? error.message : String(error);
       showAlert(`删除失败：${msg || '请稍后重试'}`);
     }
@@ -296,7 +298,7 @@ export default function OrderPage() {
       extension = 'xls';
     }
 
-    const fileName = `订单管理_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `订单管理_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

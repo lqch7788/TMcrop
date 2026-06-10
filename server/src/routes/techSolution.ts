@@ -511,6 +511,21 @@ router.post('/batch-delete', (req: Request, res: Response) => {
 });
 
 /**
+ * 生成技术方案编码（必须在 /:id 路由前注册，否则会被 :id 匹配走 404）
+ * GET /api/tech-solutions/generate-code
+ * C2 新增：暴露 generateSolutionCode() 供前端调（修复 Math.random 兜底违规）
+ */
+router.get('/generate-code', (_req: Request, res: Response) => {
+  try {
+    const code = generateSolutionCode();
+    res.json({ success: true, code });
+  } catch (error) {
+    console.error('生成技术方案编码失败:', error);
+    res.status(500).json({ success: false, error: '生成技术方案编码失败' });
+  }
+});
+
+/**
  * 获取技术方案统计
  * GET /api/tech-solutions/stats
  */

@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { todayLocal } from '@/lib/dateUtils'
 
 // 日期范围类型
 export interface DateRange {
@@ -74,7 +75,7 @@ export function LaborFilters({ config, onReset, className }: LaborFiltersProps) 
   // 格式化日期
   const formatDate = (date: Date | null): string => {
     if (!date) return ''
-    return date.toISOString().split('T')[0]
+    return todayLocal(date)
   }
 
   // 是否有筛选条件

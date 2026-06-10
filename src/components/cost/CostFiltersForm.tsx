@@ -3,6 +3,7 @@ import { Calendar, ChevronDown, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { useDepartmentOptions } from '../../hooks/useDepartmentOptions';
+import { todayLocal } from '@/lib/dateUtils';
 
 export interface CostFilters {
   dateRange: {
@@ -120,23 +121,23 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
       case 'week': {
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - now.getDay());
-        start = weekStart.toISOString().split('T')[0];
-        end = now.toISOString().split('T')[0];
+        start = todayLocal(weekStart);
+        end = todayLocal(now);
         break;
       }
       case 'month':
         start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-        end = now.toISOString().split('T')[0];
+        end = todayLocal(now);
         break;
       case 'quarter': {
         const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
         start = `${now.getFullYear()}-${String(quarterMonth + 1).padStart(2, '0')}-01`;
-        end = now.toISOString().split('T')[0];
+        end = todayLocal(now);
         break;
       }
       case 'year':
         start = `${now.getFullYear()}-01-01`;
-        end = now.toISOString().split('T')[0];
+        end = todayLocal(now);
         break;
     }
 
@@ -165,7 +166,7 @@ export const CostFiltersForm: React.FC<CostFiltersFormProps> = ({ filters, onCha
   const handleReset = () => {
     const now = new Date();
     const start = `${now.getFullYear()}-01-01`;
-    const end = now.toISOString().split('T')[0];
+    const end = todayLocal(now);
     onChange({
       quickPeriod: 'year',
       dateRange: { start, end },

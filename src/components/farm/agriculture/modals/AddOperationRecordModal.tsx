@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { useOperationRecords } from '../../../../hooks/useOperationRecords';
@@ -82,7 +83,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
     cropName: '',
     variety: '',
     operatorId: '',
-    operationDate: new Date().toISOString().split('T')[0],
+    operationDate: todayLocal(),
     startTime: '',
     endTime: '',
     workload: '',
@@ -104,7 +105,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
       cropName: '',
       variety: '',
       operatorId: '',
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       startTime: '',
       endTime: '',
       workload: '',
@@ -273,7 +274,7 @@ export function AddOperationRecordModal({ isOpen, onClose }: AddOperationRecordM
             </Label>
             <DatePicker
               selected={formData.operationDate ? new Date(formData.operationDate) : undefined}
-              onChange={(date) => setFormData({ ...formData, operationDate: date.toISOString().split('T')[0] })}
+              onChange={(date) => setFormData({ ...formData, operationDate: todayLocal(date) })}
               className="w-full"
             />
           </div>

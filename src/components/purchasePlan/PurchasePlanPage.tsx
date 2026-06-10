@@ -12,6 +12,7 @@ import type { PurchasePlan, PurchasePlanItem } from '../../types/purchase';
 import { calculateOverdueAlert } from '../../types/purchase';
 import { useUserStore, usePurchasePlanStore, useApprovalStore } from '../../stores';
 import { showAlert, showToast } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import * as XLSX from 'xlsx';
 import { getNextPurchaseApplicationCode } from '../../services/apiPurchasePlanService';
 import { useShallow } from 'zustand/react/shallow';
@@ -358,7 +359,7 @@ export function PurchasePlanPage() {
           });
         } catch (approvalError) {
           // 审批提交抛错：仅 log + 提示用户手动处理，保留采购单
-          console.error('[PurchasePlanPage] 审批提交异常:', approvalError);
+          logger.error('[PurchasePlanPage] 审批提交异常', { error: approvalError });
           await showAlert(
             '采购计划已创建（单号 ' + (result.purchaseApplicationCode || result.id) +
             '），但审批提交失败，请到审批中心手动提交'

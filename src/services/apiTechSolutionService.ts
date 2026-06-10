@@ -171,6 +171,15 @@ export async function resetTechSolutions(): Promise<void> {
   await enhancedApiClient.post('/tech-solutions/reset');
 }
 
+/**
+ * C2 新增：调用后端生成技术方案编码（避免前端 Math.random 兜底违规）
+ * 后端按 TS+YYYYMMDD+3位流水号 规则生成
+ */
+export async function generateTechSolutionCode(): Promise<string> {
+  const data = await enhancedApiClient.get<{ code: string }>('/tech-solutions/generate-code');
+  return (data && (data as { code?: string }).code) || '';
+}
+
 // ============================================================
 // 审批记录相关
 // ============================================================

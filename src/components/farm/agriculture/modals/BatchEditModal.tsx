@@ -1,5 +1,6 @@
 import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface OperationRecord {
   id: number;
@@ -169,7 +170,7 @@ export function BatchEditModal({
             <FormField label="操作日期">
               <DatePicker
                 selected={(editedData.date ?? currentRecord.date) ? new Date(editedData.date ?? currentRecord.date) : undefined}
-                onChange={(date) => handleFieldChange('date', date.toISOString().split('T')[0])}
+                onChange={(date) => handleFieldChange('date', todayLocal(date))}
               />
             </FormField>
 

@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Button, DatePicker, Label } from '@/components/ui';
 import type { ApprovalFilters, ApprovalType, ApprovalStatus } from '../../types/approval';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface ApprovalFiltersProps {
   filters: ApprovalFilters;
@@ -207,7 +208,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
               <Label className="text-gray-700 mb-1">开始日期</Label>
               <DatePicker
                 selected={filters.startDate ? new Date(filters.startDate) : undefined}
-                onChange={(date) => onChange({ startDate: date.toISOString().slice(0, 10) })}
+                onChange={(date) => onChange({ startDate: todayLocal(date) })}
                 className="w-full"
               />
             </div>
@@ -215,7 +216,7 @@ export function ApprovalFilters({ filters, onChange, onReset }: ApprovalFiltersP
               <Label className="text-gray-700 mb-1">结束日期</Label>
               <DatePicker
                 selected={filters.endDate ? new Date(filters.endDate) : undefined}
-                onChange={(date) => onChange({ endDate: date.toISOString().slice(0, 10) })}
+                onChange={(date) => onChange({ endDate: todayLocal(date) })}
                 className="w-full"
               />
             </div>

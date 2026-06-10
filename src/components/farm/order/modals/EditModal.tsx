@@ -98,12 +98,12 @@ export function EditModal({
           ? 'cancelled'
           : 'in_progress',
         // 客户相关字段
-        customerId: (record as any).customerId || '',
-        customerPhone: (record as any).customerPhone || '',
-        deliveryAddress: (record as any).deliveryAddress || '',
+        customerId: record.customerId || '',
+        customerPhone: record.customerPhone || '',
+        deliveryAddress: record.deliveryAddress || '',
       });
       // 2026-06-10: 与 AddModal 一致，用 cropCode 替代旧的 searchKeyword
-      setCropCode((record as any).cropCode || '');
+      setCropCode(record.cropCode || '');
       fetchCustomers();
     }
   }, [record, isOpen]);
@@ -118,7 +118,7 @@ export function EditModal({
       return;
     }
     const cropName = record.cropVariety || '';
-    const cropCodeValue = (record as any).cropCode || '';
+    const cropCodeValue = record.cropCode || '';
 
     if (cropCodeValue) {
       const byCode = getVarietyByCode(cropCodeValue);
@@ -268,7 +268,7 @@ export function EditModal({
       // 客户相关字段（P0-5：补全 customerName / customerPhone / deliveryAddress，
       // 字段名对照后端 PUT fieldMap：customer_name / customer_phone / delivery_address）
       customerId: formData.customerId || undefined,
-      customerName: formData.customerName || (record as any).customerName || '',
+      customerName: formData.customerName || record.customerName || '',
       customerPhone: formData.customerPhone || '',
       deliveryAddress: formData.deliveryAddress || '',
     };
@@ -327,7 +327,7 @@ export function EditModal({
         </Label>
         <Select
           value={formData.orderType}
-          onValueChange={(v) => setFormData({ ...formData, orderType: v as any })}
+          onValueChange={(v) => setFormData({ ...formData, orderType: v as 'breeding' | 'seedling' | 'production' | 'research' | 'other' })}
         >
           <SelectTrigger className="border-gray-300">
             <SelectValue />
