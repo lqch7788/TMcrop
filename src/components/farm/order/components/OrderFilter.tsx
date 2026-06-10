@@ -104,14 +104,24 @@ export function OrderFilter({
           </Select>
         </div>
 
-        {/* 订单日期 */}
+        {/* P1 修复：单日期 orderDate 改为 startDate/endDate 区间（与 OrderPage filter 逻辑对齐） */}
         <div className="flex-1 min-w-[150px]">
           <Label className="text-gray-700">
-            订单日期
+            开始日期
           </Label>
           <DatePicker
-            selected={filters.orderDate ? new Date(filters.orderDate) : undefined}
-            onChange={(date) => onChange({ ...filters, orderDate: todayLocal(date) })}
+            selected={filters.startDate ? new Date(filters.startDate) : undefined}
+            onChange={(date) => onChange({ ...filters, startDate: todayLocal(date) })}
+            className="border-gray-300"
+          />
+        </div>
+        <div className="flex-1 min-w-[150px]">
+          <Label className="text-gray-700">
+            结束日期
+          </Label>
+          <DatePicker
+            selected={filters.endDate ? new Date(filters.endDate) : undefined}
+            onChange={(date) => onChange({ ...filters, endDate: todayLocal(date) })}
             className="border-gray-300"
           />
         </div>
