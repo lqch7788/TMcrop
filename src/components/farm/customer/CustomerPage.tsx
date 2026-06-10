@@ -27,6 +27,7 @@ import { CustomerModal } from './CustomerModal';
 import { ExportFormatModal } from '@/components/common/ExportFormatModal';
 import { showConfirm, showAlert } from '@/lib/dialogService';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
+import { todayLocal } from '@/lib/dateUtils';
 
 export function CustomerPage() {
   const navigate = useNavigate();
@@ -208,7 +209,7 @@ export function CustomerPage() {
       '创建时间': c.createTime || '',
     }));
 
-    const fileNameBase = `客户管理_${new Date().toISOString().slice(0, 10)}`;
+    const fileNameBase = `客户管理_${todayLocal()}`;
 
     // RFC4180 CSV 转义
     const csvEscape = (v: unknown): string => {

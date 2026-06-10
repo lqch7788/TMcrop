@@ -12,7 +12,8 @@ import { Plus, Trash2, X } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { TextArea } from '@/components/ui';
+import { TextArea } from '@/components/ui'
+import { todayLocal } from '@/lib/dateUtils';;
 import { showAlert } from '@/lib/dialogService';
 import { SearchableSelect } from '@/components/common/SearchableSelect';
 import { DictSelect } from '@/components/common/settings/DictSelect';
@@ -263,7 +264,7 @@ export function CreateTaskModal({ onClose, onCreated, prefillData }: CreateTaskM
                   <Label className="text-gray-600 mb-1">计划日期</Label>
                   <DatePicker
                     selected={plannedDate ? new Date(plannedDate) : undefined}
-                    onChange={(date) => setPlannedDate(date.toISOString().split('T')[0])}
+                    onChange={(date) => setPlannedDate(todayLocal(date))}
                     placeholder="选择计划日期"
                   />
                 </div>

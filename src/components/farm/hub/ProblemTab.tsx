@@ -12,7 +12,8 @@ import { useTasks } from '../../../hooks/useTasks';
 import { useUserStore } from '../../../stores';
 import { ProblemFilterToolbar, ProblemTable } from '../problemDispatch/components';
 import { CreateProblemModal, DeleteWarningModal } from '../problemDispatch/modals';
-import { ExportFormatModal } from '../problemDispatch/modals';
+import { ExportFormatModal } from '../problemDispatch/modals'
+import { todayLocal } from '@/lib/dateUtils';;
 import { Modal } from '@/components/ui';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
@@ -163,7 +164,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     cropName: '',
     inspectorId: defaultInspector.id,
     inspectorName: defaultInspector.name,
-    checkDate: new Date().toISOString().slice(0, 10),
+    checkDate: todayLocal(),
     checkTime: new Date().toTimeString().slice(0, 5),
     issueText: '',
     issueSeverity: '中等' as '轻微' | '中等' | '严重',
@@ -309,28 +310,28 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
     const today = new Date();
     switch (expectedCompletion) {
       case 'today':
-        return today.toISOString().slice(0, 10);
+        return todayLocal(today);
       case 'tomorrow': {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().slice(0, 10);
+        return todayLocal(tomorrow);
       }
       case '3days': {
         const threeDays = new Date(today);
         threeDays.setDate(threeDays.getDate() + 3);
-        return threeDays.toISOString().slice(0, 10);
+        return todayLocal(threeDays);
       }
       case 'week': {
         const week = new Date(today);
         week.setDate(week.getDate() + 7);
-        return week.toISOString().slice(0, 10);
+        return todayLocal(week);
       }
       case 'custom':
         return customDueDate;
       default: {
         const defaultDate = new Date(today);
         defaultDate.setDate(defaultDate.getDate() + 3);
-        return defaultDate.toISOString().slice(0, 10);
+        return todayLocal(defaultDate);
       }
     }
   };
@@ -482,7 +483,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       cropName: '',
       inspectorId: defaultInspector?.id || 'U001',
       inspectorName: defaultInspector?.name || '系统管理员',
-      checkDate: new Date().toISOString().slice(0, 10),
+      checkDate: todayLocal(),
       checkTime: new Date().toTimeString().slice(0, 5),
       issueText: '',
       issueSeverity: '中等',
@@ -500,7 +501,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       cropName: '',
       inspectorId: defaultInspector?.id || 'U001',
       inspectorName: defaultInspector?.name || '系统管理员',
-      checkDate: new Date().toISOString().slice(0, 10),
+      checkDate: todayLocal(),
       checkTime: new Date().toTimeString().slice(0, 5),
       issueText: '',
       issueSeverity: '中等',
@@ -566,7 +567,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
       extension = 'doc';
     }
 
-    const fileName = `问题分派_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `问题分派_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
@@ -871,7 +872,7 @@ export function ProblemTab({ onProblemDispatched, externalTasks, stats }: Proble
             {expectedCompletion === 'custom' && (
               <DatePicker
                 selected={customDueDate ? new Date(customDueDate) : undefined}
-                onChange={(date) => setCustomDueDate(date.toISOString().split('T')[0])}
+                onChange={(date) => setCustomDueDate(todayLocal(date))}
                 className="px-4 py-2 border-2 border-violet-200 rounded-lg text-base focus:outline-none focus:border-violet-500"
               />
             )}

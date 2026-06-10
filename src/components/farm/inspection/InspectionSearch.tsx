@@ -4,6 +4,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 搜索过滤器类型
 export interface InspectionSearchFilters {
@@ -86,7 +87,7 @@ export function InspectionSearch({
           <Label className="text-gray-700">巡查日期(起)</Label>
           <DatePicker
             selected={filters.startDate ? new Date(filters.startDate) : undefined}
-            onChange={(date) => onFiltersChange({ ...filters, startDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onFiltersChange({ ...filters, startDate: todayLocal(date) })}
             className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -96,7 +97,7 @@ export function InspectionSearch({
           <Label className="text-gray-700">巡查日期(止)</Label>
           <DatePicker
             selected={filters.endDate ? new Date(filters.endDate) : undefined}
-            onChange={(date) => onFiltersChange({ ...filters, endDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onFiltersChange({ ...filters, endDate: todayLocal(date) })}
             className="w-full h-10 px-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
           />
         </div>

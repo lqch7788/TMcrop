@@ -12,6 +12,7 @@ import { TextArea } from '@/components/ui';
 import { Package, AlertCircle } from 'lucide-react';
 import { useWarehouseStore, getActiveWarehouses } from '../../../stores';
 import { useInventoryStore } from '../../../stores';
+import { todayLocal } from '@/lib/dateUtils';
 // 一次性动作（"非持久化数据"）：按修订后铁律直接调 service，
 // 写后显式调 useInventoryStore.notifyChange() 触发跨页刷新（保留原功能）
 import { inbound } from '../../../services/inventoryService';
@@ -88,7 +89,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
   const [unit, setUnit] = useState('公斤');
   const [warehouseId, setWarehouseId] = useState('');
   const [supplierOrGiver, setSupplierOrGiver] = useState(''); // 供应商/赠送人/调出方
-  const [inboundDate, setInboundDate] = useState(new Date().toISOString().slice(0, 10));
+  const [inboundDate, setInboundDate] = useState(todayLocal());
   const [grade, setGrade] = useState('good');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -113,7 +114,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
       setUnit('公斤');
       setWarehouseId('');
       setSupplierOrGiver('');
-      setInboundDate(new Date().toISOString().slice(0, 10));
+      setInboundDate(todayLocal());
       setGrade('good');
       setRemarks('');
     }

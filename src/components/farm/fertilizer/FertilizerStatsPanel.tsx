@@ -13,6 +13,7 @@ import { getDictItemName } from '@/stores/useDictionaryStore';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 
 interface FertilizerStatsPanelProps {
@@ -109,14 +110,14 @@ export function FertilizerStatsPanel({ filters }: FertilizerStatsPanelProps) {
             <Label className="text-xs text-gray-500 mr-2">开始日期</Label>
             <DatePicker
               selected={timeRange.start ? new Date(timeRange.start) : undefined}
-              onChange={(date) => setTimeRange((p) => ({ ...p, start: date.toISOString().split('T')[0] }))}
+              onChange={(date) => setTimeRange((p) => ({ ...p, start: todayLocal(date) }))}
             />
           </div>
           <div>
             <Label className="text-xs text-gray-500 mr-2">结束日期</Label>
             <DatePicker
               selected={timeRange.end ? new Date(timeRange.end) : undefined}
-              onChange={(date) => setTimeRange((p) => ({ ...p, end: date.toISOString().split('T')[0] }))}
+              onChange={(date) => setTimeRange((p) => ({ ...p, end: todayLocal(date) }))}
             />
           </div>
           <div>

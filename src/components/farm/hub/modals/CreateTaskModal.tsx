@@ -13,6 +13,7 @@ import { AlertCircle, ArrowLeft, Camera, ChevronRight, Clock, MapPin, Mic, Packa
 import { TaskTypeConfigPanel } from '../components/TaskTypeConfigPanel';
 import { FARM_OPERATION_TYPES, PRIORITY_OPTIONS } from '../../../../types/farm/common';
 import { TaskConfigValues } from '../../../../types/farm/taskTypeConfig';
+import { todayLocal } from '@/lib/dateUtils';
 import { useUserStore, useProductionPlanStore, useTeamManageStore, useGreenhouseStore } from '../../../../stores';
 import { useTasks, Task } from '../../../../hooks/useTasks';
 import type { UseTasksReturn } from '../../../../hooks/useTasks';
@@ -1072,7 +1073,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreated, tasksHook }: Creat
                   selected={newTask.planStart ? new Date(newTask.planStart.split(' ')[0]) : undefined}
                   onChange={(date) => {
                     const timePart = newTask.planStart?.split(' ')[1] || '08:00';
-                    setNewTask({ ...newTask, planStart: date.toISOString().split('T')[0] + ' ' + timePart });
+                    setNewTask({ ...newTask, planStart: todayLocal(date) + ' ' + timePart });
                   }}
                   placeholder="选择开始日期"
                 />

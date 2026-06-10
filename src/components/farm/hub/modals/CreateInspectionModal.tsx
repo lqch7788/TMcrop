@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TextArea } from '@/components/ui';
 import { Camera, ChevronDown, ChevronUp, Scan, Wand2, X } from 'lucide-react';
 import { WEATHER_OPTIONS, CROP_STATUS_OPTIONS, ISSUE_CATEGORIES, ISSUE_PRESETS, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -349,7 +350,7 @@ export function CreateInspectionModal({
           <FormField label="巡查日期" required error={errors.checkDate}>
             <DatePicker
               selected={newRecord.checkDate ? new Date(newRecord.checkDate) : undefined}
-              onChange={(date) => updateField('checkDate', date.toISOString().split('T')[0])}
+              onChange={(date) => updateField('checkDate', todayLocal(date))}
               placeholder="选择日期"
             />
           </FormField>

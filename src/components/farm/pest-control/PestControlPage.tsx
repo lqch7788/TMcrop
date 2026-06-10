@@ -13,6 +13,7 @@ import { PestControlStatsCards } from './PestControlStatsCards';
 import { AddPestControlModal } from './modals/AddPestControlModal';
 import { EditPestControlModal } from './modals/EditPestControlModal';
 import { PestControlDetailModal } from './modals/PestControlDetailModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { PestControlExportModal } from './modals/PestControlExportModal';
 
 type OperationMode = 'normal' | 'delete' | 'export';
@@ -140,7 +141,7 @@ export default function PestControlPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `病虫害防治记录_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `病虫害防治记录_${todayLocal()}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     } else if (format === 'xlsx' || format === 'word') {
@@ -153,7 +154,7 @@ export default function PestControlPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `病虫害防治记录_${new Date().toISOString().slice(0, 10)}${ext}`;
+      link.download = `病虫害防治记录_${todayLocal()}${ext}`;
       link.click();
       URL.revokeObjectURL(url);
     }

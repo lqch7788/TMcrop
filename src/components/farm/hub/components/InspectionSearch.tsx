@@ -2,6 +2,7 @@ import { RotateCcw, Search } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 搜索过滤器类型
 export interface InspectionSearchFilters {
@@ -84,7 +85,7 @@ export function InspectionSearch({
           <Label className="text-gray-700 mb-1">巡查日期(起)</Label>
           <DatePicker
             selected={filters.startDate ? new Date(filters.startDate) : undefined}
-            onChange={(date) => onFiltersChange({ ...filters, startDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onFiltersChange({ ...filters, startDate: todayLocal(date) })}
             placeholder="选择日期"
           />
         </div>
@@ -94,7 +95,7 @@ export function InspectionSearch({
           <Label className="text-gray-700 mb-1">巡查日期(止)</Label>
           <DatePicker
             selected={filters.endDate ? new Date(filters.endDate) : undefined}
-            onChange={(date) => onFiltersChange({ ...filters, endDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => onFiltersChange({ ...filters, endDate: todayLocal(date) })}
             placeholder="选择日期"
           />
         </div>

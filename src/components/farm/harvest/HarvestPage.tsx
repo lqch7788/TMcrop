@@ -13,6 +13,7 @@ import {
 // 一次性动作（生成编码/扣减数量/打印标签/追溯）按修订后铁律直接调 service，
 // 持久化数据（列表/详情/统计）走 Store。service 函数完整保留。
 import { generateHarvestCode as genHarvestCode } from '../../../services/apiHarvestService';
+import { todayLocal } from '@/lib/dateUtils';
 import * as cropInstanceService from '../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../services/cropVarietyService';
 import { inbound as inventoryInbound } from '../../../services/inventoryService';
@@ -382,7 +383,7 @@ export default function HarvestPage() {
       }
 
       // 文件名
-      const fileName = `采收入库_${new Date().toISOString().slice(0, 10)}.${extension}`;
+      const fileName = `采收入库_${todayLocal()}.${extension}`;
 
       // 使用 Blob 下载（兼容所有浏览器）
       const blob = new Blob([content], { type: mimeType });

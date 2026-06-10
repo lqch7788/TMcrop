@@ -11,6 +11,7 @@ import { TextArea } from '@/components/ui';
 import { AlertTriangle, Check, Clock, PlayCircle, X, XCircle } from 'lucide-react';
 import { Task, TaskTimeout } from '../../../../types/task';
 import { DEADLINE_CONFIG } from '../../../../config/taskConfig';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -192,7 +193,7 @@ export function OvertimeHandleModal({
               </Label>
               <DatePicker
                 selected={newDeadline ? new Date(newDeadline) : undefined}
-                onChange={(date) => setNewDeadline(date.toISOString().split('T')[0])}
+                onChange={(date) => setNewDeadline(todayLocal(date))}
                 minDate={new Date()}
                 placeholder="选择新截止日期"
               />

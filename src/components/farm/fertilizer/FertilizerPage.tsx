@@ -12,6 +12,7 @@ import { FertilizerTable } from './FertilizerTable';
 import { FertilizerAddModal } from './FertilizerAddModal';
 import { FertilizerEditModal } from './FertilizerEditModal';
 import { FertilizerDetailModal } from './FertilizerDetailModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { FertilizerStatsPanel } from './FertilizerStatsPanel';
 import FertilizerExportModal from './FertilizerExportModal';
 import type { IotDeviceStatus } from './IotDataIndicator';
@@ -201,7 +202,7 @@ export default function FertilizerPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `施肥记录_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.download = `施肥记录_${todayLocal()}.csv`;
       link.click();
       URL.revokeObjectURL(url);
     } else if (format === 'xlsx' || format === 'word') {
@@ -215,7 +216,7 @@ export default function FertilizerPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `施肥记录_${new Date().toISOString().slice(0, 10)}${ext}`;
+      link.download = `施肥记录_${todayLocal()}${ext}`;
       link.click();
       URL.revokeObjectURL(url);
     }

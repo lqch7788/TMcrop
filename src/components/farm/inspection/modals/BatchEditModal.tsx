@@ -2,6 +2,7 @@ import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { ISSUE_CATEGORIES, COMPLETION_TIME_OPTIONS } from '../../../../types/farm/common';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface InspectionRecord {
   id: string;
@@ -169,7 +170,7 @@ export function BatchEditModal({
             <FormField label="巡查日期">
               <DatePicker
                 selected={(editedData.checkDate ?? currentRecord.checkDate) ? new Date(editedData.checkDate ?? currentRecord.checkDate) : undefined}
-                onChange={(date) => handleFieldChange('checkDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleFieldChange('checkDate', todayLocal(date))}
               />
             </FormField>
 
