@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { WorkLogFormModalProps, WorkLog } from './types';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -36,7 +37,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
         // 新建时设置默认值
         setFormData({
           code: `WL${Date.now()}`,
-          date: new Date().toISOString().split('T')[0],
+          date: todayLocal(),
           worker: '',
           weather: '晴',
           temperature: '',
@@ -83,7 +84,7 @@ export function WorkLogFormModal({ log, open, onClose, onSave }: WorkLogFormModa
           <Label className="block text-sm font-medium text-gray-700 mb-1">日期</Label>
           <DatePicker
             selected={formData.date ? new Date(formData.date) : undefined}
-            onChange={(date) => handleChange('date', date.toISOString().split('T')[0])}
+            onChange={(date) => handleChange('date', todayLocal(date))}
             className="w-full"
           />
         </div>

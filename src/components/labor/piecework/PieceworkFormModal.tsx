@@ -9,6 +9,7 @@ import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 单位选项（共享常量）
 const unitOptions = ['斤', '箱', '个', 'kg', '筐'];
@@ -32,7 +33,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
     unit: '斤',
     quantity: 0,
     unitPrice: 0,
-    workDate: new Date().toISOString().split('T')[0],
+    workDate: todayLocal(),
     remarks: '',
   });
 
@@ -54,7 +55,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
         unit: '斤',
         quantity: 0,
         unitPrice: 0,
-        workDate: new Date().toISOString().split('T')[0],
+        workDate: todayLocal(),
         remarks: '',
       });
     }
@@ -183,7 +184,7 @@ export const PieceworkFormModal: React.FC<PieceworkFormModalProps> = ({
         </Label>
         <DatePicker
           selected={formData.workDate ? new Date(formData.workDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, workDate: date.toISOString().split('T')[0] })}
+          onChange={(date) => setFormData({ ...formData, workDate: todayLocal(date) })}
           className="w-full"
         />
       </div>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface PersonnelFormModalProps {
   worker?: Worker | null;
@@ -121,7 +122,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               <Label className="block text-xs text-gray-500 mb-1">出生日期</Label>
               <DatePicker
                 selected={formData.birthDate ? new Date(formData.birthDate) : undefined}
-                onChange={(date) => handleChange('birthDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleChange('birthDate', todayLocal(date))}
                 className="w-full"
               />
             </div>
@@ -302,7 +303,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               <Label className="block text-xs text-gray-500 mb-1">入职日期</Label>
               <DatePicker
                 selected={formData.hireDate ? new Date(formData.hireDate) : undefined}
-                onChange={(date) => handleChange('hireDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleChange('hireDate', todayLocal(date))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -367,7 +368,7 @@ export function PersonnelFormModal({ worker, onSave, onClose }: PersonnelFormMod
               <Label className="block text-xs text-gray-500 mb-1">合同到期日期</Label>
               <DatePicker
                 selected={formData.contractExpireDate ? new Date(formData.contractExpireDate) : undefined}
-                onChange={(date) => handleChange('contractExpireDate', date.toISOString().split('T')[0])}
+                onChange={(date) => handleChange('contractExpireDate', todayLocal(date))}
                 className="w-full"
               />
             </div>
