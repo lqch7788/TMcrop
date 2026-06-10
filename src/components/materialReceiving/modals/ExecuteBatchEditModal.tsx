@@ -8,6 +8,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import type { MaterialExecuteRecord, ExecuteMaterialItem } from '../../../types/materialReceiving';
 
 // 深度输入框样式
@@ -114,7 +115,7 @@ export const ExecuteBatchEditModal: React.FC<ExecuteBatchEditModalProps> = ({
             <DatePicker
               selected={currentEditedData.date ? new Date(currentEditedData.date) : undefined}
               onChange={(date) => {
-                const dateStr = date.toISOString().slice(0, 10);
+                const dateStr = todayLocal(date);
                 onFieldChange(currentRecordId, 'date', dateStr);
               }}
               placeholder="选择日期"

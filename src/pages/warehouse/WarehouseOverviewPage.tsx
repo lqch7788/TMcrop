@@ -18,6 +18,7 @@ import { MaterialCreateModal } from '../../components/warehouse/MaterialCreateMo
 import PageHeader from '../../components/warehouse/PageHeader';
 import ActionToolbar from '../../components/warehouse/ActionToolbar';
 import { useWarehouseMaterialStore } from '../../stores';
+import { todayLocal } from '@/lib/dateUtils';
 import { categoryConfig } from '../../types/warehouseInbound.types';
 
 export default function WarehouseOverviewPage() {
@@ -120,7 +121,7 @@ export default function WarehouseOverviewPage() {
     rows.forEach(row => { content += `<tr>${row.map(cell => `<td>${cell ?? ''}</td>`).join('')}</tr>`; });
     content += '</table></body></html>';
     const mimeType = 'application/vnd.ms-excel;charset=utf-8';
-    const fileName = `物料汇总表_${new Date().toISOString().slice(0, 10)}.xls`;
+    const fileName = `物料汇总表_${todayLocal()}.xls`;
     try {
       if (window.showSaveFilePicker) {
         const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ accept: { [mimeType]: ['.xls'] } }] });

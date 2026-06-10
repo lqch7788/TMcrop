@@ -10,6 +10,7 @@ import { InboundRecord } from '../../../types/warehouseInbound.types';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import * as XLSX from 'xlsx';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface InboundExportModalProps {
   records: InboundRecord[];
@@ -27,7 +28,7 @@ export const InboundExportModal: React.FC<InboundExportModalProps> = ({
   if (!isOpen) return null;
 
   const generateFileName = (format: string) => {
-    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const timestamp = todayLocal().replace(/-/g, '');
     return `物料入库记录_${timestamp}_${records.length}条.${format}`;
   };
 

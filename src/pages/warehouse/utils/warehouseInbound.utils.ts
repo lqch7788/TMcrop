@@ -4,6 +4,7 @@
  */
 
 import { InboundRecord, InboundSearchFilters, CodeGenState, categoryConfig } from '../../../types/warehouseInbound.types';
+import { todayLocal } from '../../../lib/dateUtils';
 
 /**
  * 生成下一个物料编码（纯函数）
@@ -100,7 +101,7 @@ export const resetCodeGen = (
  * 生成顺序入库单号
  */
 export const generateSequentialOrderCode = (inboundRecords: InboundRecord[]): string => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayLocal();
   const todayPrefix = `RK${today.replace(/-/g, '')}-`;
   const todayRecords = inboundRecords.filter(r => r.code.startsWith(todayPrefix));
 

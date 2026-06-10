@@ -8,6 +8,7 @@ import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -210,7 +211,7 @@ export function MaterialBatchEditModal({
             <Label className="block text-xs font-medium text-gray-700 mb-1">生产日期</Label>
             <DatePicker
               selected={currentEditedData.productionDate ? new Date(currentEditedData.productionDate as string) : undefined}
-              onChange={(date) => onFieldChange(currentMaterialId, 'productionDate', date.toISOString().slice(0, 10))}
+              onChange={(date) => onFieldChange(currentMaterialId, 'productionDate', todayLocal(date))}
               placeholder="选择生产日期"
             />
           </div>
@@ -218,7 +219,7 @@ export function MaterialBatchEditModal({
             <Label className="block text-xs font-medium text-gray-700 mb-1">有效期至</Label>
             <DatePicker
               selected={currentEditedData.expiryDate ? new Date(currentEditedData.expiryDate as string) : undefined}
-              onChange={(date) => onFieldChange(currentMaterialId, 'expiryDate', date.toISOString().slice(0, 10))}
+              onChange={(date) => onFieldChange(currentMaterialId, 'expiryDate', todayLocal(date))}
               placeholder="选择有效期"
             />
           </div>

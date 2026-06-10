@@ -18,6 +18,7 @@ import { BatchDeleteConfirmDialog } from './BatchDeleteConfirmDialog';
 import { MaterialExportModal } from './MaterialExportModal';
 import PageHeader from './PageHeader';
 import TabSwitch from './TabSwitch';
+import { todayLocal } from '@/lib/dateUtils';
 import ActionToolbar from './ActionToolbar';
 import { useAuthPermission } from '../../hooks/usePermission';
 import { apiClient, USE_API } from '../../services/apiClient';
@@ -490,7 +491,7 @@ export default function WarehouseMaterialsPage() {
   };
 
   const generateSequentialOrderCode = (): string => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocal();
     const todayPrefix = `RK${today.replace(/-/g, '')}-`;
     const todayRecords = inboundRecords.filter(r => r.code.startsWith(todayPrefix));
     

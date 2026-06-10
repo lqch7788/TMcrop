@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface InboundDetailModalProps {
   record: InboundRecord | null;
@@ -853,7 +854,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     {currentRecord.status === 'pending' ? (
                       <DatePicker
                         selected={m.productionDate ? new Date(m.productionDate) : undefined}
-                        onChange={(date) => handleMaterialChange(m.id, 'productionDate', date.toISOString().slice(0, 10))}
+                        onChange={(date) => handleMaterialChange(m.id, 'productionDate', todayLocal(date))}
                         placeholder="选择日期"
                       />
                     ) : (
@@ -864,7 +865,7 @@ export function InboundBatchEditModal({ records, isOpen, onClose, onSave }: Inbo
                     {currentRecord.status === 'pending' ? (
                       <DatePicker
                         selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
-                        onChange={(date) => handleMaterialChange(m.id, 'expiryDate', date.toISOString().slice(0, 10))}
+                        onChange={(date) => handleMaterialChange(m.id, 'expiryDate', todayLocal(date))}
                         placeholder="选择日期"
                       />
                     ) : (
@@ -995,7 +996,7 @@ export function InboundExportModal({ records, isOpen, onClose }: InboundExportMo
 
   // 生成导出文件名
   const generateFileName = (format: string) => {
-    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const timestamp = todayLocal().replace(/-/g, '');
     const recordCount = records.length;
     return `物料入库记录_${timestamp}_${recordCount}条.${format}`;
   };
@@ -1289,7 +1290,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
   const storeUsers = useUserStore(state => state.users);
   const currentUserName = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
   // 获取当天日期字符串
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayLocal();
   const [formData, setFormData] = useState({
     code: '',
     inboundDate: today,
@@ -1307,7 +1308,7 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
 
     // 查重：如果生成的编号已存在，则递增直到找到可用编号
     while (existingCodes.includes(newCode) && attempts < maxAttempts) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayLocal();
       const todayPrefix = `RK${today.replace(/-/g, '')}-`;
       const seq = parseInt(newCode.replace(todayPrefix, ''), 10);
       const nextSeq = seq + 1;
@@ -1594,14 +1595,14 @@ export function InboundAddModal({ isOpen, onClose, onSave, onGenerateCode, exist
                     <TableCell className="px-1 py-1.5 whitespace-nowrap">
                       <DatePicker
                         selected={m.productionDate ? new Date(m.productionDate) : undefined}
-                        onChange={(date) => handleMaterialChange(m.id, 'productionDate', date.toISOString().slice(0, 10))}
+                        onChange={(date) => handleMaterialChange(m.id, 'productionDate', todayLocal(date))}
                         placeholder="选择日期"
                       />
                     </TableCell>
                     <TableCell className="px-1 py-1.5 whitespace-nowrap">
                       <DatePicker
                         selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
-                        onChange={(date) => handleMaterialChange(m.id, 'expiryDate', date.toISOString().slice(0, 10))}
+                        onChange={(date) => handleMaterialChange(m.id, 'expiryDate', todayLocal(date))}
                         placeholder="选择日期"
                       />
                     </TableCell>
