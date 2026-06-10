@@ -12,7 +12,7 @@ import { CostPieChart } from '../../cost/CostPieChart';
 import { CostTrendChart } from '../../cost/CostTrendChart';
 import { CostComparisonTable } from '../../cost/CostComparisonTable';
 import { CostDetailModal } from '../../cost/CostDetailModal';
-import { todayLocal } from '../../lib/dateUtils';
+import { todayLocal } from '../../../lib/dateUtils';
 import {
   filterCostRecords,
   calcCostTotal,
