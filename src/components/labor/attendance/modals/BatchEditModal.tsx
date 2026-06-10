@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { AttendanceRecord } from '../types';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface BatchEditModalProps {
   isOpen: boolean;
@@ -130,7 +131,7 @@ export function BatchEditModal({
             <FormField label="日期">
               <DatePicker
                 selected={(editedData.date ?? currentRecord.date) ? new Date((editedData.date ?? currentRecord.date) as string) : undefined}
-                onChange={(date: Date) => handleFieldChange('date', date.toISOString().slice(0, 10))}
+                onChange={(date: Date) => handleFieldChange('date', todayLocal(date))}
                 placeholder="选择日期"
               />
             </FormField>

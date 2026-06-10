@@ -10,6 +10,7 @@ import { SwapRequestModal, SwapRequestList } from './SwapRequestModal';
 import { ScheduleAddModal, ScheduleBatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { ScheduleRecord, ShiftType } from './types';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 规范化排班记录（兼容snake_case和camelCase）
 function normalizeRecord(record: any): ScheduleRecord {
@@ -266,7 +267,7 @@ export function SchedulePage() {
       extension = 'doc';
     }
 
-    const fileName = `排班记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `排班记录_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
@@ -384,7 +385,7 @@ export function SchedulePage() {
             <div>
               <p className="text-xs text-gray-500">今日排班</p>
               <p className="text-lg font-bold text-gray-800">
-                {scheduleList.filter(s => s.date === new Date().toISOString().split('T')[0]).length}
+                {scheduleList.filter(s => s.date === todayLocal()).length}
               </p>
             </div>
           </div>

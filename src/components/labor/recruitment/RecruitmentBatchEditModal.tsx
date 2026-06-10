@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 
 import { useDepartmentStore } from '../../../stores';
 import type { RecruitmentRequest, RecruitmentStatus, RecruitmentSource } from './types';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface RecruitmentBatchEditModalProps {
   isOpen: boolean;
@@ -166,7 +167,7 @@ export function RecruitmentBatchEditModal({
                 <div className="text-xs text-gray-500 mb-1">期望到岗日期</div>
                 <DatePicker
                   selected={(editedData.expectedDate ?? currentRecord.expectedDate) ? new Date(String(editedData.expectedDate ?? currentRecord.expectedDate)) : undefined}
-                  onChange={(date) => handleFieldChange('expectedDate', date.toISOString().split('T')[0])}
+                  onChange={(date) => handleFieldChange('expectedDate', todayLocal(date))}
                   className="w-full"
                 />
               </div>

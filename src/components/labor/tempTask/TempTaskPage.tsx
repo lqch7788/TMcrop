@@ -10,6 +10,7 @@ import { useTempTaskForm } from './hooks/useTempTaskForm';
 import { SearchableSelect } from '../../materialReturn/modals/SearchableSelect';
 import { Modal } from '@/components/ui';
 import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTypeConfigDisplay';
+import { todayLocal } from '@/lib/dateUtils';
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
@@ -281,7 +282,7 @@ function BatchEditModal({ isOpen, selectedRows, tasks, users, onClose, onConfirm
             <div className="text-xs text-gray-500 mb-1">截止日期</div>
             <DatePicker
               selected={(editedData.dueDate ?? currentTask.dueDate) ? new Date(editedData.dueDate ?? currentTask.dueDate) : undefined}
-              onChange={(date) => handleFieldChange('dueDate', date.toISOString().split('T')[0])}
+              onChange={(date) => handleFieldChange('dueDate', todayLocal(date))}
               className="w-full h-7"
             />
           </div>
@@ -1105,7 +1106,7 @@ export function TempTaskPage() {
       extension = 'doc';
     }
 
-    const fileName = `临时任务_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `临时任务_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

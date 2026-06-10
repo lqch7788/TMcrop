@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { WorkLogFiltersProps } from './types';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 /**
  * 工作日志筛选栏组件
@@ -16,7 +17,7 @@ export function WorkLogFilters({ filters, onFiltersChange, onSearch }: WorkLogFi
           <Label className="block text-sm font-medium text-gray-700 mb-1">日期</Label>
           <DatePicker
             selected={filters.date ? new Date(filters.date) : undefined}
-            onChange={(date) => onFiltersChange({ ...filters, date: date.toISOString().split('T')[0] })}
+            onChange={(date) => onFiltersChange({ ...filters, date: todayLocal(date) })}
             className="w-full"
           />
         </div>

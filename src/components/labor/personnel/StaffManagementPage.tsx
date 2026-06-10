@@ -10,6 +10,7 @@ import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
 import { PersonnelFilters, PersonnelTable, useWorkerPersonnel } from './index';
 import { PersonnelDetailModal } from './PersonnelDetailModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { PersonnelFormModal } from './PersonnelFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import { Button } from '@/components/ui';
@@ -206,7 +207,7 @@ export function StaffManagementPage() {
       extension = 'doc';
     }
 
-    const fileName = `员工信息_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `员工信息_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

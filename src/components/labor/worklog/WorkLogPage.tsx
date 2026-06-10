@@ -10,6 +10,7 @@ import { WorkLogBatchEditModal } from './WorkLogBatchEditModal';
 import type { WorkLog, WorkLogFilters as WorkLogFiltersType, PaginationInfo } from './types';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Label } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
@@ -290,7 +291,7 @@ export function WorkLogPage() {
       extension = 'doc';
     }
 
-    const fileName = `工作日志_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `工作日志_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

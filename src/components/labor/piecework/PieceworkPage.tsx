@@ -10,6 +10,7 @@ import { useTempWorkerStore } from '@/stores/useTempWorkerStore';
 import { taskOptions } from './hooks/usePiecework';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
@@ -282,7 +283,7 @@ export const PieceworkPage: React.FC = () => {
       extension = 'doc';
     }
 
-    const fileName = `计件工资_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `计件工资_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -364,7 +365,7 @@ export const PieceworkPage: React.FC = () => {
             <label className="text-xs text-gray-500">开始日期</label>
             <DatePicker
               selected={filters.startDate ? new Date(filters.startDate) : undefined}
-              onChange={(date) => updateFilters({ startDate: date.toISOString().split('T')[0] })}
+              onChange={(date) => updateFilters({ startDate: todayLocal(date) })}
               className="w-full"
             />
           </div>
@@ -372,7 +373,7 @@ export const PieceworkPage: React.FC = () => {
             <label className="text-xs text-gray-500">结束日期</label>
             <DatePicker
               selected={filters.endDate ? new Date(filters.endDate) : undefined}
-              onChange={(date) => updateFilters({ endDate: date.toISOString().split('T')[0] })}
+              onChange={(date) => updateFilters({ endDate: todayLocal(date) })}
               className="w-full"
             />
           </div>
