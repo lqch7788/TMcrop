@@ -141,25 +141,33 @@ function generateId(prefix: string): string {
 
 /**
  * 生成审批单编码
- * 格式: AP + YYYYMMDD + - + 3位流水号 (如 AP20260607-001), 共 14 字符
+ * 格式: {prefix} + YYYYMMDD + - + 3位流水号 (如 AP20260607-001), 共 14 字符
  * 流水号按当日自增（查询当日 MAX+1，禁止随机数）
+ * C2 阶段 2: 增加 prefix 参数支持不同业务类型（默认 AP）
  */
-function generateApprovalCode(_type: string): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const dateStr = `${year}${month}${day}`;
+function generateApprovalCode(prefix: string = 'AP', dateStr: string = ''): string {
+  const effectivePrefix = prefix || 'AP';
+  let effectiveDate = dateStr;
+  if (!effectiveDate) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    effectiveDate = `${year}${month}${day}`;
+  }
 
-  // 查询当日最大序号: AP + 8位日期 + - + 3位序号 = 14 字符
+  // 查询当日最大序号: {prefix} + 8位日期 + - + 3位序号 = (2+8+1+3)=14 字符 (AP 前缀)
+  // SP-RE 前缀 (5 字符) + 8位日期 + 3位序号 = 16 字符
   const db = getDatabase();
-  const pattern = `AP${dateStr}-___`;
+  const pattern = `${effectivePrefix}${effectiveDate}-___`;
   const stmt = db.prepare(`
     SELECT code FROM approvals
-    WHERE code LIKE ? AND LENGTH(code) = 14
+    WHERE code LIKE ? AND LENGTH(code) = ?
     ORDER BY code DESC LIMIT 1
   `);
-  stmt.bind([pattern]);
+  // 计算精确长度 (SP-RE-YYYYMMDD-XXX = 16 字符, AP-YYYYMMDD-XXX = 14 字符)
+  const expectedLength = effectivePrefix.length + 8 + 1 + 3;
+  stmt.bind([pattern, expectedLength]);
   let maxSerial = 0;
   if (stmt.step()) {
     const row = stmt.getAsObject() as { code: string };
@@ -168,7 +176,7 @@ function generateApprovalCode(_type: string): string {
   stmt.free();
 
   const seq = String(maxSerial + 1).padStart(3, '0');
-  return `AP${dateStr}-${seq}`;
+  return `${effectivePrefix}${effectiveDate}-${seq}`;
 }
 
 /**
@@ -452,7 +460,10 @@ router.post('/', (req, res) => {
     }
 
     const now = new Date().toISOString();
-    const approvalCode = code || generateApprovalCode(type);
+    // C2 阶段 2: code 优先沿用调用方传入（兼容 SP-RE 等自定义前缀），否则按 type 派生
+    // 默认 AP 前缀保留旧行为；type 包含 RE 时使用 SP-RE 前缀（招聘业务约定）
+    const effectivePrefix = (type && type.toUpperCase().includes('RECRUIT')) ? 'SP-RE' : 'AP';
+    const approvalCode = code || generateApprovalCode(effectivePrefix);
 
     db.run(
       `INSERT INTO approvals (

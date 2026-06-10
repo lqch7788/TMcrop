@@ -295,9 +295,9 @@ export function RecruitmentPage() {
       const approvalLevelResult = generateApprovers(ApprovalType.RECRUITMENT, 0);
 
       // 创建审批记录
+      // C2 阶段 2: 删 code 字段（让后端 generateApprovalCode 派生 SP-RE 前缀，替代 Math.random 违规）
       const approval: Approval = {
         id: `APR-RE-${Date.now()}`,
-        code: `SP-RE-${todayLocal().replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
         type: ApprovalType.RECRUITMENT,
         typeName: '招聘申请',
         category: 'hr',
