@@ -5,6 +5,7 @@ import type { OnboardingFormData, ContractType } from './types';
 import { Label } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface OnboardingFormProps {
   formData: OnboardingFormData;
@@ -86,7 +87,7 @@ export function OnboardingForm({
           </Label>
           <DatePicker
             selected={formData.joinDate ? new Date(formData.joinDate) : undefined}
-            onChange={(date) => onChange('joinDate', date.toISOString().slice(0, 10))}
+            onChange={(date) => onChange('joinDate', todayLocal(date))}
             className="w-full"
           />
           {errors.joinDate && <p className="mt-1 text-sm text-red-500">{errors.joinDate}</p>}

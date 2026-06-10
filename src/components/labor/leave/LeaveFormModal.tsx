@@ -7,6 +7,7 @@ import { DatePicker } from '@/components/ui';
 import type { LeaveFormModalProps, LeaveRecord, LeaveType } from './types';
 import { getWorkerSelectList } from '../../../services/apiWorkerService';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -146,7 +147,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         </Label>
         <DatePicker
           selected={formData.startDate ? new Date(formData.startDate) : undefined}
-          onChange={(date: Date) => handleDateChange('startDate', date.toISOString().slice(0, 10))}
+          onChange={(date: Date) => handleDateChange('startDate', todayLocal(date))}
           placeholder="选择开始日期"
         />
       </div>
@@ -158,7 +159,7 @@ export function LeaveFormModal({ record, open, onClose, onSave }: LeaveFormModal
         </Label>
         <DatePicker
           selected={formData.endDate ? new Date(formData.endDate) : undefined}
-          onChange={(date: Date) => handleDateChange('endDate', date.toISOString().slice(0, 10))}
+          onChange={(date: Date) => handleDateChange('endDate', todayLocal(date))}
           placeholder="选择结束日期"
         />
       </div>

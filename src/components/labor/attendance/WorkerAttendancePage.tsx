@@ -12,6 +12,7 @@ import { WorkerAttendanceExport } from './WorkerAttendanceExport';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal, DetailModal } from './modals';
 import { AttendanceRecord } from './types';
 import { useDepartmentStore, useAttendanceStore, useScheduleStore } from '../../../stores';
+import { todayLocal } from '../../../lib/dateUtils';
 
 // 编辑记录的类型
 type EditedRecordsMap = Record<string, Partial<AttendanceRecord>>;
@@ -82,7 +83,7 @@ export function WorkerAttendancePage() {
 
   // ========== 排班对比数据（从农事管理模块读取排班，只读对比） ==========
   const scheduleStore = useScheduleStore();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayLocal();
 
   useEffect(() => {
     if (scheduleStore.schedules.length === 0) {

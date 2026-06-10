@@ -8,6 +8,7 @@ import type { Contract, ContractFormData, ContractStatus } from './types';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import { Pagination } from '@/components/ui';
 
 // 导出格式弹窗 - 使用 UnifiedModal 包装
@@ -330,7 +331,7 @@ export function ContractTable() {
       extension = 'doc';
     }
 
-    const fileName = `合同记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `合同记录_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
