@@ -10,6 +10,7 @@ import { ExportFormatModal } from './ExportFormatModal';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import type { BudgetWarning, MonthlyBudget } from './types';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 export const BudgetPage: React.FC = () => {
   const {
@@ -159,7 +160,7 @@ export const BudgetPage: React.FC = () => {
       extension = 'doc';
     }
 
-    const fileName = `月度预算_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `月度预算_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

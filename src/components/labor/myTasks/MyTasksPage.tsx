@@ -11,6 +11,7 @@ import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { useFarmTaskStore, type Task as FarmTask } from '../../../stores/farmTaskStore';
 
 import { useUserStore } from '@/stores/useUserStore';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 导入统一任务管理 Hook（数据闭环核心）
 import { useTasks } from '../../../hooks/useTasks';
@@ -372,7 +373,7 @@ export function MyTasksPage() {
         cropName: task.crop || '',
         operatorId: 'U013',
         operatorName: currentUserName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: unifiedTask.id,
         sourceCode: unifiedTask.taskCode,
         progress: 0,
@@ -409,7 +410,7 @@ export function MyTasksPage() {
         cropName: task.crop || '',
         operatorId: 'U013',
         operatorName: currentUserName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: unifiedTask.id,
         sourceCode: unifiedTask.taskCode,
         progress: task.progress || 0,
@@ -518,7 +519,7 @@ export function MyTasksPage() {
             cropName: task.crop || '',
             operatorId: 'U013',
             operatorName: currentUserName,
-            operationDate: new Date().toISOString().split('T')[0],
+            operationDate: todayLocal(),
             sourceId: unifiedTask.id,
             sourceCode: unifiedTask.taskCode,
             progress: task.progress || 0,
@@ -607,7 +608,7 @@ export function MyTasksPage() {
           cropName: task.crop || '',
           operatorId: 'U013',
           operatorName: currentUserName,
-          operationDate: new Date().toISOString().split('T')[0],
+          operationDate: todayLocal(),
           sourceId: unifiedTask.id,
           sourceCode: unifiedTask.taskCode,
           progress: feedbackForm.progress,
@@ -742,7 +743,7 @@ export function MyTasksPage() {
         cropName: task.crop || '',
         operatorId: 'U013',
         operatorName: currentUserName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: unifiedTask.id,
         sourceCode: unifiedTask.taskCode,
         progress: task.progress || 0,

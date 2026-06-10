@@ -13,6 +13,7 @@ import { TaskTypeConfigDisplay } from '../../farm/taskDispatch/components/TaskTy
 import { TaskFlowTimeline } from '../../common/TaskFlowTimeline';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
+import { todayLocal } from '../../../lib/dateUtils';
 import { DatePicker } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
 
@@ -707,7 +708,7 @@ export function TempTaskPage() {
           greenhouseName: taskData.workLocation || '',
           operatorId: taskData.assigneeId || '',
           operatorName: taskData.assigneeName || '待分配',
-          operationDate: new Date().toISOString().split('T')[0],
+          operationDate: todayLocal(),
           sourceId: newTask?.id || '',
           sourceCode: newTask?.taskCode || newTask?.id || '',
           progress: 0,
@@ -751,7 +752,7 @@ export function TempTaskPage() {
       
       operatorId: task.assigneeId,
       operatorName: task.assigneeName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: 0,
@@ -776,7 +777,7 @@ export function TempTaskPage() {
       
       operatorId: task.assigneeId,
       operatorName: task.assigneeName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: 100,
@@ -808,7 +809,7 @@ export function TempTaskPage() {
 
       operatorId: verifyTask.assignerId,
       operatorName: verifyTask.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: verifyTask.id,
       sourceCode: verifyTask.taskCode,
       progress: 100,
@@ -834,7 +835,7 @@ export function TempTaskPage() {
 
       operatorId: verifyTask.assignerId,
       operatorName: verifyTask.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: verifyTask.id,
       sourceCode: verifyTask.taskCode,
       progress: verifyTask.progress || 0,
@@ -865,7 +866,7 @@ export function TempTaskPage() {
 
       operatorId: task.assignerId,
       operatorName: task.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: 0,
@@ -888,7 +889,7 @@ export function TempTaskPage() {
       
       operatorId: task.assignerId,
       operatorName: task.assignerName,
-      operationDate: new Date().toISOString().split('T')[0],
+      operationDate: todayLocal(),
       sourceId: task.id,
       sourceCode: task.taskCode,
       progress: task.progress || 0,
@@ -925,7 +926,7 @@ export function TempTaskPage() {
         
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: withdrawCancelTask.id,
         sourceCode: withdrawCancelTask.taskCode,
         progress: 0,
@@ -952,7 +953,7 @@ export function TempTaskPage() {
         
         operatorId: withdrawCancelTask.assignerId,
         operatorName: withdrawCancelTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: withdrawCancelTask.id,
         sourceCode: withdrawCancelTask.taskCode,
         progress: 0,
@@ -988,7 +989,7 @@ export function TempTaskPage() {
         
         operatorId: reassignTask.assignerId,
         operatorName: reassignTask.assignerName,
-        operationDate: new Date().toISOString().split('T')[0],
+        operationDate: todayLocal(),
         sourceId: reassignTask.id,
         sourceCode: reassignTask.taskCode,
         progress: 0,

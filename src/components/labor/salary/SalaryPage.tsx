@@ -11,6 +11,7 @@ import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals'
 import { useSalary } from './hooks/useSalary';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import type { SalaryRecord, SalaryCalculateData } from './types';
+import { todayLocal } from '../../../lib/dateUtils';
 
 /**
  * 工资管理页面容器
@@ -169,7 +170,7 @@ export function SalaryPage() {
       extension = 'doc';
     }
 
-    const fileName = `工资记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `工资记录_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

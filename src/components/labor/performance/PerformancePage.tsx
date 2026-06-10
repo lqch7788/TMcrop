@@ -13,6 +13,7 @@ import { PerformanceFilters } from './PerformanceFilters';
 import { PerformanceFormModal } from './PerformanceFormModal';
 import { BatchEditModal, DeleteWarningModal, ExportFormatModal } from './modals';
 import type { PerformanceRecord } from './types';
+import { todayLocal } from '@/lib/dateUtils';
 
 export function PerformancePage() {
   const {
@@ -139,7 +140,7 @@ export function PerformancePage() {
       extension = 'doc';
     }
 
-    const fileName = `绩效考核_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `绩效考核_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -13,6 +13,7 @@ import { RiskAlertDetailModal } from './RiskAlertDetailModal';
 import { RiskFormModal } from './RiskFormModal';
 import { RiskBatchEditModal } from './RiskBatchEditModal';
 import { ExportFormatModal } from './ExportFormatModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningModal } from './DeleteWarningModal';
 import type { RiskAlert } from './types';
 import { showAlert, showConfirm } from '@/lib/dialogService';
@@ -172,7 +173,7 @@ export function RiskPage() {
       extension = 'doc';
     }
 
-    const fileName = `劳动风险预警_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `劳动风险预警_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
