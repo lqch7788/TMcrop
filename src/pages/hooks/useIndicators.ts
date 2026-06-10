@@ -18,6 +18,7 @@ import type {
   ModalType,
   ActiveTab
 } from '../types/indicators.types';
+import { todayLocal } from '@/lib/dateUtils';
 
 // ========== 静态配置 ==========
 
@@ -256,7 +257,7 @@ export function useIndicators() {
 
     const mimeType = 'application/vnd.ms-excel;charset=utf-8';
     const extension = exportFormat === 'csv' ? 'csv' : exportFormat === 'word' ? 'doc' : 'xls';
-    const fileName = `指标数据汇总_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `指标数据汇总_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

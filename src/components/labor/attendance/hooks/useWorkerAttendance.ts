@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { useAttendanceStore } from '../../../../stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // File System Access API 类型声明
 declare global {
@@ -209,7 +210,7 @@ export function useWorkerAttendance(): UseWorkerAttendanceReturn {
       extension = 'doc';
     }
 
-    const fileName = `工人考勤_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `工人考勤_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

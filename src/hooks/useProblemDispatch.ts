@@ -10,6 +10,7 @@ import { useLocalStorage, STORAGE_KEYS } from './useLocalStorage';
 import { useTasks } from './useTasks';
 import type { Task } from '../types';
 import { useWorkerStore } from '../stores/useWorkerStore';
+import { todayLocal } from '@/lib/dateUtils';
 
 // ========== 状态映射（中文 ↔ 英文） ==========
 
@@ -322,7 +323,7 @@ export function useProblemDispatch() {
   ) => {
     updateProblemInStore(problemId, {
       status: STATUS_EN.COMPLETED,
-      handleDate: new Date().toISOString().slice(0, 10),
+      handleDate: todayLocal(),
       handleResult,
     });
   }, [updateProblemInStore]);
@@ -421,7 +422,7 @@ export function useProblemDispatch() {
     updateProblemInStore(problemId, {
       status: STATUS_EN.WAITING_ACCEPTANCE,
       handleResult: feedback.resultText,
-      handleDate: new Date().toISOString().slice(0, 10),
+      handleDate: todayLocal(),
       flowRecords: [...getFlowRecords(problem), flowRecord] as any,
     });
   }, [storeProblems, updateProblemInStore]);

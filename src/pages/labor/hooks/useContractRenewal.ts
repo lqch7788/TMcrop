@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useContractRenewalStore } from '@/stores';
 import type { ContractRenewalData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   ContractRenewalFilters,
   ContractRenewalFormData,
@@ -198,7 +199,7 @@ export function useContractRenewal(
       const startDate = new Date(formData.newContractStart);
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + period);
-      const endDateStr = endDate.toISOString().slice(0, 10);
+      const endDateStr = todayLocal(endDate);
       setFormData(prev => ({
         ...prev,
         renewalPeriod: period,
@@ -214,7 +215,7 @@ export function useContractRenewal(
       const startDate = new Date(date);
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + formData.renewalPeriod);
-      const endDateStr = endDate.toISOString().slice(0, 10);
+      const endDateStr = todayLocal(endDate);
       setFormData(prev => ({
         ...prev,
         newContractStart: date,
@@ -336,7 +337,7 @@ export function useContractRenewal(
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `合同续签记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `合同续签记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

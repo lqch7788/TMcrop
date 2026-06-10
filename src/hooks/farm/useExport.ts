@@ -6,6 +6,7 @@
 
 import { useCallback } from 'react';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 导出格式类型
 export type ExportFormat = 'csv' | 'xlsx' | 'word';
@@ -68,7 +69,7 @@ export function useExport() {
       extension = exportFormat === 'xlsx' ? 'xls' : 'doc';
     }
 
-    const fileName = `${fileNamePrefix}_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `${fileNamePrefix}_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

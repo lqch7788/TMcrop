@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSalaryBudgetStore } from '@/stores';
 import type { SalaryBudgetData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   SalaryBudgetFilters,
   SalaryBudgetFormData,
@@ -278,7 +279,7 @@ export function useSalaryBudget(_departments: { id: string; name: string }[]): U
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `工资预算_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `工资预算_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 

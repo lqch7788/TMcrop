@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { useAuthPermission } from '../../hooks/usePermission';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   Material,
   InboundRecord,
@@ -379,7 +380,7 @@ export function useMaterials() {
       extension = 'doc';
     }
 
-    const fileName = `物料库存_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `物料库存_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

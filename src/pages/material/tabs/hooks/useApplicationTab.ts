@@ -10,11 +10,12 @@ import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
 import { useMaterialRequestDataStore, useUserStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 默认新增表单初始状态
 const getDefaultAddForm = () => ({
   code: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayLocal(),
   applicant: '',
   department: '',
   warehouseLocation: '',
@@ -311,7 +312,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
       extension = 'doc';
     }
 
-    const fileName = `生产领料_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `生产领料_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

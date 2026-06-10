@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useOvertimeStore } from '@/stores/overtimeStore';
 import type { OvertimeRecord as StoreOvertimeRecord } from '@/stores/overtimeStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import type {
   OvertimeRecord,
   OvertimeFilters,
@@ -365,7 +366,7 @@ export function useOvertimePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `加班记录_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `加班记录_${todayLocal()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
