@@ -11,6 +11,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 // 导出格式弹窗
@@ -308,7 +309,7 @@ export function OnboardingPage() {
       extension = 'doc';
     }
 
-    const fileName = `入职记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `入职记录_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

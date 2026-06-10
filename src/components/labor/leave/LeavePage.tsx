@@ -9,6 +9,7 @@ import { LeaveBatchEditModal, LeaveDeleteWarningModal, LeaveExportFormatModal } 
 import { Button } from '@/components/ui';
 import { useLeaveStore } from '@/stores/leaveStore';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 /**
  * 请假管理页面主容器组件
@@ -196,7 +197,7 @@ export function LeavePage() {
       extension = 'doc';
     }
 
-    const fileName = `请假记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `请假记录_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

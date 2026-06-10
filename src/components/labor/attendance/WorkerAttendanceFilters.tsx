@@ -6,6 +6,7 @@ import { AttendanceFilters, DEPT_OPTIONS } from './types';
 import { Button } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface WorkerAttendanceFiltersProps {
   filters: AttendanceFilters;
@@ -35,12 +36,12 @@ export function WorkerAttendanceFilters({
           <div className="grid grid-cols-2 gap-1 items-center">
             <DatePicker
               selected={filters.startDate ? new Date(filters.startDate) : undefined}
-              onChange={(date: Date) => onFiltersChange({ startDate: date.toISOString().slice(0, 10) })}
+              onChange={(date: Date) => onFiltersChange({ startDate: todayLocal(date) })}
               placeholder="开始"
             />
             <DatePicker
               selected={filters.endDate ? new Date(filters.endDate) : undefined}
-              onChange={(date: Date) => onFiltersChange({ endDate: date.toISOString().slice(0, 10) })}
+              onChange={(date: Date) => onFiltersChange({ endDate: todayLocal(date) })}
               placeholder="结束"
             />
           </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, X } from 'lucide-react';
 import type { Contract, ContractStatus, ContractType } from './types';
 import { Button, UnifiedModal, NumberInput, DatePicker, Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface ContractBatchEditModalProps {
   isOpen: boolean;
@@ -184,7 +185,7 @@ export function ContractBatchEditModal({
                 selected={(editedData.signingDate ?? currentRecord.signingDate)
                   ? new Date(editedData.signingDate ?? currentRecord.signingDate ?? '')
                   : undefined}
-                onChange={(date: Date) => handleFieldChange('signingDate', date.toISOString().slice(0, 10))}
+                onChange={(date: Date) => handleFieldChange('signingDate', todayLocal(date))}
                 placeholder="选择日期"
               />
             </div>

@@ -13,6 +13,7 @@ import { Approval, ApprovalType, ApprovalStatus } from '../../../types/approval'
 import { useApprovalLevel } from '../../../hooks/useApprovalLevel';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Label } from '@/components/ui';
 
 // 导出格式弹窗
@@ -296,7 +297,7 @@ export function RecruitmentPage() {
       // 创建审批记录
       const approval: Approval = {
         id: `APR-RE-${Date.now()}`,
-        code: `SP-RE-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
+        code: `SP-RE-${todayLocal().replace(/-/g, '')}-${Math.random().toString(36).substr(2, 3).toUpperCase()}`,
         type: ApprovalType.RECRUITMENT,
         typeName: '招聘申请',
         category: 'hr',
@@ -305,7 +306,7 @@ export function RecruitmentPage() {
         applicantId: currentUser.id,
         applicantName: currentUser.name,
         applicantDepartment: formData.department,
-        applyDate: new Date().toISOString().slice(0, 10),
+        applyDate: todayLocal(),
         applyTime: new Date().toISOString().slice(11, 19),
         priority: priorityMap[formData.priority] || 'normal',
         status: ApprovalStatus.PENDING,
@@ -470,7 +471,7 @@ export function RecruitmentPage() {
       extension = 'doc';
     }
 
-    const fileName = `招聘申请_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `招聘申请_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button, DatePicker, NumberInput, Label } from '@/components/ui';
 import type { ContractFormData, ContractType } from './types';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -89,7 +90,7 @@ export function ContractFormModal({
           <Label className="block text-sm font-medium text-gray-700 mb-1">签订日期</Label>
           <DatePicker
             selected={formData.signingDate ? new Date(formData.signingDate) : undefined}
-            onChange={(date: Date) => onChange('signingDate', date.toISOString().slice(0, 10))}
+            onChange={(date: Date) => onChange('signingDate', todayLocal(date))}
             placeholder="选择日期"
           />
         </div>
@@ -101,7 +102,7 @@ export function ContractFormModal({
           </Label>
           <DatePicker
             selected={formData.startDate ? new Date(formData.startDate) : undefined}
-            onChange={(date: Date) => onChange('startDate', date.toISOString().slice(0, 10))}
+            onChange={(date: Date) => onChange('startDate', todayLocal(date))}
             placeholder="选择日期"
           />
           {errors.startDate && <p className="mt-1 text-sm text-red-500">{errors.startDate}</p>}
@@ -114,7 +115,7 @@ export function ContractFormModal({
           </Label>
           <DatePicker
             selected={formData.endDate ? new Date(formData.endDate) : undefined}
-            onChange={(date: Date) => onChange('endDate', date.toISOString().slice(0, 10))}
+            onChange={(date: Date) => onChange('endDate', todayLocal(date))}
             placeholder="选择日期"
           />
           {errors.endDate && <p className="mt-1 text-sm text-red-500">{errors.endDate}</p>}
