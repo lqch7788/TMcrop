@@ -2,11 +2,11 @@
  * 编辑订单弹窗
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Edit2, Search, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit2, Leaf, X } from 'lucide-react';
 import { CropOrder, CropOrderStatus } from '@/types/crop';
-import { CropVarietyOption } from '@/types/cropVariety';
-import * as cropVarietyService from '@/services/cropVarietyService';
+import { CropVariety } from '@/types/cropVariety';
+import { getVarietyByCode, searchVarieties } from '@/services/cropVarietyService';
 import { useOrderDataStore } from '@/stores/useOrderDataStore';
 import { useCustomerStore } from '@/stores';
 import { Modal } from '@/components/ui';
@@ -16,6 +16,7 @@ import { TextArea } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
 interface EditModalProps {
@@ -59,8 +60,9 @@ export function EditModal({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
+  // 作物选择：与 AddModal 保持一致（cropCode + selectedCrop 双 state）
+  const [cropCode, setCropCode] = useState('');
+  const [selectedCrop, setSelectedCrop] = useState<CropVariety | null>(null);
 
   // 输入框深度样式
   const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -99,45 +101,79 @@ export function EditModal({
         customerPhone: (record as any).customerPhone || '',
         deliveryAddress: (record as any).deliveryAddress || '',
       });
-      setSearchKeyword(record.cropVariety || '');
+      // 2026-06-10: 与 AddModal 一致，用 cropCode 替代旧的 searchKeyword
+      setCropCode((record as any).cropCode || '');
       fetchCustomers();
     }
   }, [record, isOpen]);
 
-  // 所有品种选项（[M-2] 2026-06-06 移除 useMemo 空依赖包装，直接每次渲染计算，避免与 filteredVarieties 形成双层缓存）
-  const varietyOptions = cropVarietyService.getVarietyOptions();
-
-  // 过滤品种选项
-  const filteredVarieties = useMemo(() => {
-    if (!searchKeyword.trim()) {
-      return varietyOptions.slice(0, 20);
+  // 2026-06-10: 打开弹窗时反向查表初始化 selectedCrop（与 BatchEditModal 3 重兜底一致）
+  // 兜底 1：按 cropCode 精准匹配
+  // 兜底 2：用 cropVariety 模糊搜索 crop_varieties 表
+  // 兜底 3：完全脱离 crop_varieties 表直接用 record 自身字段拼路径
+  useEffect(() => {
+    if (!isOpen || !record) {
+      setSelectedCrop(null);
+      return;
     }
-    const keyword = searchKeyword.toLowerCase();
-    return varietyOptions.filter(opt =>
-      opt.label.toLowerCase().includes(keyword) ||
-      opt.fullPath.toLowerCase().includes(keyword) ||
-      opt.varietyCode.toLowerCase().includes(keyword)
-    ).slice(0, 20);
-  }, [varietyOptions, searchKeyword]);
+    const cropName = record.cropVariety || '';
+    const cropCodeValue = (record as any).cropCode || '';
 
-  // 选择品种
-  const handleSelectVariety = (variety: CropVarietyOption) => {
-    setFormData(prev => ({
-      ...prev,
-      cropVariety: variety.label,
-      cropCategory: variety.fullPath,
-    }));
-    setSearchKeyword(variety.label);
-    setShowDropdown(false);
-    setErrors(prev => ({ ...prev, cropVariety: '' }));
-  };
+    if (cropCodeValue) {
+      const byCode = getVarietyByCode(cropCodeValue);
+      if (byCode) { setSelectedCrop(byCode); return; }
+    }
+    if (cropName) {
+      const results = searchVarieties(cropName);
+      if (results.length > 0) {
+        const hit = results[0];
+        setSelectedCrop({
+          id: '',
+          cropCode: hit.value,
+          categoryName: '',
+          typeName: '',
+          varietyName: hit.label,
+          subVariety1Name: '',
+          fullPath: hit.fullPath,
+        });
+        return;
+      }
+    }
+    if (cropName) {
+      setSelectedCrop({
+        id: '',
+        cropCode: cropCodeValue,
+        categoryName: '',
+        typeName: '',
+        varietyName: cropName,
+        subVariety1Name: '',
+        fullPath: record.cropCategory || cropName,
+      });
+      return;
+    }
+    setSelectedCrop(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record, isOpen]);
 
-  // 搜索输入变化
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchKeyword(value);
-    setShowDropdown(true);
-    if (!value.trim()) {
+  // 2026-06-10: 作物选择回调（与 AddModal 完全一致）
+  const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
+    setCropCode(code);
+    setSelectedCrop(varietyInfo);
+    if (varietyInfo) {
+      const fullPath = [
+        varietyInfo.categoryName,
+        varietyInfo.typeName,
+        varietyInfo.varietyName,
+        varietyInfo.subVariety1Name,
+      ].filter(Boolean).join(' > ');
+      const cropName = varietyInfo.subVariety1Name || varietyInfo.varietyName;
+      setFormData(prev => ({
+        ...prev,
+        cropVariety: cropName,
+        cropCategory: fullPath,
+      }));
+      setErrors(prev => ({ ...prev, cropVariety: '' }));
+    } else {
       setFormData(prev => ({
         ...prev,
         cropVariety: '',
@@ -145,15 +181,6 @@ export function EditModal({
       }));
     }
   };
-
-  // 点击外部关闭下拉
-  useEffect(() => {
-    const handleClickOutside = () => setShowDropdown(false);
-    if (showDropdown) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showDropdown]);
 
   const handleSubmit = async () => {
     // 如果订单已完成或已取消，禁止编辑
@@ -322,73 +349,36 @@ export function EditModal({
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
           onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
-          className={deepInputClass}
+          className="border-gray-400"
         />
       </div>
 
-      {/* 作物品种 - 搜索框 */}
+      {/* 作物信息 - 使用统一的 CropCodeSelector（与 AddModal 完全一致） */}
       <div className="col-span-2">
         <Label className="text-gray-700">
-          作物品种 <span className="text-red-500">*</span>
+          <span className="text-red-500">*</span> 作物信息
         </Label>
-        <div className="relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              type="text"
-              value={searchKeyword}
-              onChange={handleSearchChange}
-              onFocus={() => setShowDropdown(true)}
-              placeholder="搜索作物品种..."
-              className={`pl-10 ${errors.cropVariety ? 'border-red-500' : deepInputClass}`}
-            />
-            {searchKeyword && (
-              <Button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSearchKeyword('');
-                  setFormData(prev => ({ ...prev, cropVariety: '', cropCategory: '' }));
-                }}
-                variant="ghost"
-                size="icon"
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent hover:bg-gray-100"
-              >
-                <X className="w-4 h-4 text-gray-400" />
-              </Button>
-            )}
-          </div>
-          {/* 下拉选择列表 */}
-          {showDropdown && filteredVarieties.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {filteredVarieties.map((variety, index) => (
-                <div
-                  key={`${variety.value}-${index}`}
-                  onClick={() => handleSelectVariety(variety)}
-                  className="px-3 py-2 hover:bg-emerald-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                >
-                  <div className="text-sm font-medium text-gray-900">{variety.label}</div>
-                  <div className="text-xs text-gray-500 truncate">{variety.fullPath}</div>
-                </div>
-              ))}
+        <CropCodeSelector
+          value={cropCode}
+          onChange={handleCropChange}
+          placeholder="搜索或选择作物品种..."
+          size="md"
+          showFullPath={true}
+        />
+        {/* 显示选中作物的详细信息（与新增弹窗一致） */}
+        {selectedCrop && (
+          <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+            <div className="text-emerald-700 flex items-center gap-1">
+              <Leaf className="w-3 h-3 flex-shrink-0" />
+              {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+              {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
             </div>
-          )}
-        </div>
+            <div className="text-emerald-600 mt-0.5">
+              编码：{selectedCrop.cropCode}
+            </div>
+          </div>
+        )}
         {errors.cropVariety && <p className="text-xs text-red-500 mt-1">{errors.cropVariety}</p>}
-      </div>
-
-      {/* 品种路径（自动填充） */}
-      <div className="col-span-2">
-        <Label className="text-gray-700">
-          品种路径
-        </Label>
-        <Input
-          type="text"
-          value={formData.cropCategory}
-          readOnly
-          placeholder="选择作物品种后自动填充"
-          className="border-gray-300 bg-gray-50 text-gray-600"
-        />
       </div>
 
       {/* 单位 */}
@@ -508,7 +498,7 @@ export function EditModal({
         <DatePicker
           selected={formData.expectedCompletionDate ? new Date(formData.expectedCompletionDate) : undefined}
           onChange={(date) => setFormData({ ...formData, expectedCompletionDate: date.toISOString().split('T')[0] })}
-          className={deepInputClass}
+          className="border-gray-400"
         />
       </div>
 
