@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { ExportFormatModal } from './ExportFormatModal';
 import { useTasks } from '../../../../hooks/useTasks';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface ExportFormatAdapterProps {
   taskIds: string[];
@@ -76,7 +77,7 @@ export function ExportFormatAdapter({ taskIds, onClose }: ExportFormatAdapterPro
       extension = 'doc';
     }
 
-    const fileName = `农事任务_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `农事任务_${todayLocal()}.${extension}`;
 
     // 创建下载
     const blob = new Blob(['﻿' + content], { type: mimeType });

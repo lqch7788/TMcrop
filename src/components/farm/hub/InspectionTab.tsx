@@ -13,6 +13,7 @@ import { CreateInspectionModal } from './modals/CreateInspectionModal';
 import { DetailInspectionModal } from './modals/DetailInspectionModal';
 import { InspectionAcceptanceModal } from './modals/InspectionAcceptanceModal';
 import { BatchEditModal } from './modals/BatchEditModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningModal } from './modals/DeleteWarningModal';
 import { InspectionRecord } from '../../../types';
 import { useIotStore, getDevicesByGreenhouse, useEquipmentStore, useInfrastructureStore } from '../../../stores';
@@ -262,7 +263,7 @@ export function InspectionTab({
     inspectorId: '',
     batchId: '',
     batchCode: '',
-    checkDate: new Date().toISOString().split('T')[0],
+    checkDate: todayLocal(),
     checkTime: new Date().toTimeString().slice(0, 5),
     duration: 0,
     weather: '晴',
@@ -443,7 +444,7 @@ export function InspectionTab({
     setNewRecord(prev => ({
       ...prev,
       recordCode: prev.recordCode || generateRecordCode(),
-      checkDate: prev.checkDate || new Date().toISOString().split('T')[0],
+      checkDate: prev.checkDate || todayLocal(),
       checkTime: prev.checkTime || new Date().toTimeString().slice(0, 5),
       inspectorId: prev.inspectorId || defaultInspector.id, // 默认巡查人员
     }));
@@ -465,7 +466,7 @@ export function InspectionTab({
       inspectorId: '',
       batchId: '',
       batchCode: '',
-      checkDate: new Date().toISOString().split('T')[0],
+      checkDate: todayLocal(),
       checkTime: new Date().toTimeString().slice(0, 5),
       duration: 0,
       weather: '晴',
@@ -746,7 +747,7 @@ export function InspectionTab({
       extension = 'doc';
     }
 
-    const fileName = `巡查巡检_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `巡查巡检_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

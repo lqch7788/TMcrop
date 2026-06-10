@@ -11,6 +11,7 @@ import type { User } from '../../../types';
 import { X } from 'lucide-react';
 import { Button, Label, DatePicker } from '@/components/ui';
 import { Input } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface ProblemDispatchModalProps {
   problemId: number;
@@ -61,7 +62,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
       setProblem(found);
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      setExpectedDate(tomorrow.toISOString().split('T')[0]);
+      setExpectedDate(todayLocal(tomorrow));
     }
   }, [problemId, storeProblems]);
 
@@ -224,7 +225,7 @@ export function ProblemDispatchModal({ problemId, onClose, onDispatched }: Probl
                 <Label className="text-gray-600 mb-2">期望完成日期:</Label>
                 <DatePicker
                   selected={expectedDate ? new Date(expectedDate) : undefined}
-                  onChange={(date) => setExpectedDate(date.toISOString().split('T')[0])}
+                  onChange={(date) => setExpectedDate(todayLocal(date))}
                   placeholder="选择日期"
                 />
               </div>

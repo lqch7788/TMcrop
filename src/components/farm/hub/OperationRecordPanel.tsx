@@ -9,6 +9,7 @@ import { exportTaskRecords } from '../../../services/apiFarmTaskService';
 import { Download, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface OperationRecordPanelProps {
   records: UnifiedOperationRecord[];
@@ -110,7 +111,7 @@ async function handleExportTaskRecords(format: 'xlsx' | 'csv' | 'xls') {
       extension = 'xls';
     }
 
-    const fileName = `任务操作记录_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `任务操作记录_${todayLocal()}.${extension}`;
     const blob = new Blob(['﻿' + content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

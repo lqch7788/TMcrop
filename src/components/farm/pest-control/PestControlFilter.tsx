@@ -10,6 +10,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface PestControlFilterProps {
   filters: Record<string, string>;
@@ -99,7 +100,7 @@ export function PestControlFilter({
           <Label className="text-gray-700">开始日期</Label>
           <DatePicker
             selected={filters.startDate ? new Date(filters.startDate) : undefined}
-            onChange={(date) => updateFilter('startDate', date.toISOString().split('T')[0])}
+            onChange={(date) => updateFilter('startDate', todayLocal(date))}
             className="w-full"
           />
         </div>
@@ -109,7 +110,7 @@ export function PestControlFilter({
           <Label className="text-gray-700">结束日期</Label>
           <DatePicker
             selected={filters.endDate ? new Date(filters.endDate) : undefined}
-            onChange={(date) => updateFilter('endDate', date.toISOString().split('T')[0])}
+            onChange={(date) => updateFilter('endDate', todayLocal(date))}
             className="w-full"
           />
         </div>
