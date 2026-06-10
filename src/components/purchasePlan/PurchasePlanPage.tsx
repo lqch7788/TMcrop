@@ -425,12 +425,12 @@ export function PurchasePlanPage() {
     }
   };
 
-  // 选择行
-  const handleSelectRow = (id: string) => {
-    if (selectedCodes.includes(id)) {
-      setSelectedCodes(selectedCodes.filter(rowId => rowId !== id));
+  // 选择行（C3 修复 1: 参数名 code 而非 id——PurchasePlanTable line 338 已传 purchaseApplicationCode）
+  const handleSelectRow = (code: string) => {
+    if (selectedCodes.includes(code)) {
+      setSelectedCodes(selectedCodes.filter(c => c !== code));
     } else {
-      setSelectedCodes([...selectedCodes, id]);
+      setSelectedCodes([...selectedCodes, code]);
     }
   };
 
@@ -554,14 +554,14 @@ export function PurchasePlanPage() {
   };
 
   // 删除确认（开发测试阶段：可删除所有状态）
+  // C3 修复 3: selectedCodes 已统一存 purchaseApplicationCode（与全选/单条编辑/单条删除/批量编辑一致）
+  // deletePlans 入参是 id（C3 未改 store 签名），用 code→id 单行翻译替代原防御性映射
   const handleDeleteConfirm = async () => {
     try {
-      // selectedCodes 存的是 plan.id（统一后端主键）
-      // 防御：万一历史值是 purchaseApplicationCode，做一次映射
-      const codeSet = new Set(purchasePlansData.map(p => p.purchaseApplicationCode));
-      const selectedIds = selectedCodes.map(v => (codeSet.has(v)
-        ? (purchasePlansData.find(p => p.purchaseApplicationCode === v)?.id ?? v)
-        : v));
+      const codeToId = new Map(purchasePlansData.map(p => [p.purchaseApplicationCode, p.id]));
+      const selectedIds = selectedCodes
+        .map(code => codeToId.get(code))
+        .filter((id): id is string => Boolean(id));
 
       const result = await deletePlans(selectedIds);
 
@@ -677,8 +677,9 @@ export function PurchasePlanPage() {
   };
 
   // 单行 + 批量共用 DeleteWarningModal，与生产计划页面 UI 一致
+  // C3 修复 2: 改存 plan.purchaseApplicationCode（与全选/单条编辑一致）
   const handleSingleDelete = (plan: PurchasePlan) => {
-    setSelectedCodes([plan.id]);
+    setSelectedCodes([plan.purchaseApplicationCode]);
     setShowDeleteModal(true);
   };
 
