@@ -484,9 +484,10 @@ export function AddModal({
       isOpen={isOpen}
       onClose={onClose}
       title="新增订单"
-      size="lg"
-      width={700}
-      height={600}
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
+      size="xl"
+      width={900}
+      height={650}
       showFooter={true}
       footer={footer}
       showMaximize={true}

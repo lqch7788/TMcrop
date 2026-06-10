@@ -226,7 +226,10 @@ export function BatchEditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="批量编辑生产计划"
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
       size="xl"
+      width={900}
+      height={650}
       showFooter={true}
       footer={
         <div className="flex gap-3">

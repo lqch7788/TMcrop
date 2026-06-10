@@ -305,7 +305,10 @@ export function CreatePlanModal({
       isOpen={isOpen}
       onClose={onClose}
       title="新增采购申请单"
-      size="xxl"
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
+      size="xl"
+      width={900}
+      height={650}
       onSubmit={onSubmit}
       submitText="提交"
       cancelText="取消"

@@ -88,7 +88,10 @@ export function CreateModal({
       isOpen={isOpen}
       onClose={onClose}
       title="新增方案"
-      size="xxxl"
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
+      size="xl"
+      width={900}
+      height={650}
       showFooter={true}
       footer={
         <div className="flex justify-end gap-3">
