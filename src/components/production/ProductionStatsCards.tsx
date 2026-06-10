@@ -23,9 +23,15 @@ export function ProductionStatsCards({ batches }: ProductionStatsCardsProps) {
       icon: PlayCircle,
     },
     {
-      // P0-06: 新增"已审批"卡，单独归类 published 状态
+      // P1 修复：聚合"已提交审批"的所有状态（之前只统计 published，但 handleSubmitForApproval
+      // 实际写 pending/pending_complete/approved，published 永远为 0）
       label: '已审批',
-      value: batches.filter(b => b.batchStatus === 'published').length,
+      value: batches.filter(b =>
+        b.batchStatus === 'pending' ||
+        b.batchStatus === 'pending_complete' ||
+        b.batchStatus === 'published' ||
+        b.batchStatus === 'approved'
+      ).length,
       color: 'bg-cyan-500',
       icon: CheckCheck,
     },
