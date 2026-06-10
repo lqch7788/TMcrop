@@ -13,6 +13,7 @@ import { useTasks } from '../../../hooks/useTasks';
 import { usePersistentProblems } from '../../../hooks/usePersistentProblems';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
+import { todayLocal } from '../../../lib/dateUtils';
 import { Label } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 
@@ -274,7 +275,7 @@ export function TasksPage() {
     if ((task as any).sourceProblemId) {
       updateProblem((task as any).sourceProblemId, {
         status: '已处理',
-        handleDate: new Date().toISOString().slice(0, 10),
+        handleDate: todayLocal(),
         handleResult: `任务已完成：${task.title}`,
       });
     }
@@ -379,7 +380,7 @@ export function TasksPage() {
       extension = 'doc';
     }
 
-    const fileName = `任务工单_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `任务工单_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

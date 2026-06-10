@@ -11,6 +11,7 @@ import { SkillBatchEditModal } from './SkillBatchEditModal';
 import { SkillFormData, StaffSkill } from './types';
 import { Label } from '@/components/ui';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 导出格式弹窗
 interface ExportFormatModalProps {
@@ -261,7 +262,7 @@ export function SkillPage() {
       extension = 'doc';
     }
 
-    const fileName = `技能档案_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `技能档案_${todayLocal()}.${extension}`;
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
