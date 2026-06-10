@@ -192,10 +192,21 @@ export function PurchasePlanPage() {
 
   // 监听物料明细变化，标记批次号为已编辑
   // 性能优化：用 ref 跟踪上次 items 引用，避免 JSON.stringify 全量比较
+  // 2026-06-10 修复：select 触发的 onBatchEditItemsChange(plan.items) 不能算"已编辑"，
+  // 用 lastPlanCodeRef 区分"切换 plan 的初始化"和"同 plan 内的用户编辑"
   const lastItemsRef = useRef<typeof batchEditItems | null>(null);
+  const lastPlanCodeRef = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedPlanCode) {
       lastItemsRef.current = null;
+      lastPlanCodeRef.current = null;
+      return;
+    }
+    // 切换到新 plan（含首次 select、handleBatchEditNext 切下一个）：
+    // 只记录新 items 引用，不写入 editedPlans，避免下拉项误显"已编辑"
+    if (lastPlanCodeRef.current !== selectedPlanCode) {
+      lastItemsRef.current = batchEditItems;
+      lastPlanCodeRef.current = selectedPlanCode;
       return;
     }
     if (lastItemsRef.current === batchEditItems) return; // 引用未变，跳过
@@ -402,12 +413,15 @@ export function PurchasePlanPage() {
     setSelectedCodes([]);
   };
 
-  // 全选
+  // 全选：selectedRows 统一存 purchaseApplicationCode（与行 checkbox onCheckedChange、
+  // BatchEditModal 下拉过滤、handleDoExport 过滤、handleBatchEditConfirm 过滤完全一致）
+  // 2026-06-10 修复：之前用 p.id 导致全选写进去的 id 与行渲染时查的 code 不匹配，
+  // 表现为"全选点了行不勾选"（表头数量对得上所以自身显勾选态，造成假象）
   const handleSelectAll = () => {
     if (selectedCodes.length === filteredAndSortedData.length) {
       setSelectedCodes([]);
     } else {
-      setSelectedCodes(filteredAndSortedData.map(p => p.id));
+      setSelectedCodes(filteredAndSortedData.map(p => p.purchaseApplicationCode));
     }
   };
 
