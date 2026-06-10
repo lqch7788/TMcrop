@@ -208,16 +208,19 @@ export function EditModal({
 
     if (!record) return;
 
-    // 计算最终状态：
-    // - 手动选择了 completed/cancelled → 使用该状态（终态）
-    // - 否则根据完成数量计算：0 → PLANNED，>0 → IN_PROGRESS
+    // 计算最终状态（按用户在下拉里的选择直映射，不再用 completedQuantity 反推）：
+    // - 选了 completed → COMPLETED
+    // - 选了 cancelled → CANCELLED
+    // - 选了 in_progress → IN_PROGRESS（按用户意图）
+    // 2026-06-10 修复：原逻辑在非终态分支用 completedQuantity > 0 判定状态，
+    // 导致用户显式选"进行中"但完成数量=0 时被强制降级为 PLANNED，
+    // 保存后表格看不出状态变化。订单状态和完成数量是两个独立维度：
+    // 状态由用户操作决定，数量由交付进度决定，不应耦合。
     const finalStatus = formData.orderStatus === 'completed'
       ? CropOrderStatus.COMPLETED
       : formData.orderStatus === 'cancelled'
       ? CropOrderStatus.CANCELLED
-      : formData.completedQuantity > 0
-        ? CropOrderStatus.IN_PROGRESS
-        : CropOrderStatus.PLANNED;
+      : CropOrderStatus.IN_PROGRESS;
 
     // 更新订单
     const updates: Partial<CropOrder> & Record<string, unknown> = {
@@ -565,9 +568,10 @@ export function EditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="编辑订单"
-      size="lg"
-      width={700}
-      height={600}
+      // 2026-06-10: 统一 4 页面 × 新增/编辑弹窗尺寸 = 900×650
+      size="xl"
+      width={900}
+      height={650}
       showFooter={true}
       footer={footer}
       showMaximize={true}

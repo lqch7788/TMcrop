@@ -51,19 +51,21 @@ export function OrderTable({
   canDelete = true,
   canExport = true,
 }: OrderTableProps) {
-  // 根据完成数量计算显示状态：COMPLETED/CANCELLED 是终态，否则按数量判断
+  // 状态徽章：完全依据 record.status 字段渲染（status 是后端权威，completedQuantity 仅用于"完成进度"列）
+  // 2026-06-10 修复：原逻辑在非终态分支用 completedQuantity > 0 判定"进行中/已计划"，
+  // 导致后端 status 已是 IN_PROGRESS 但完成数量还是 0 时仍显示"已计划"
   const getStatusBadge = (record: CropOrder) => {
-    if (record.status === CropOrderStatus.COMPLETED) {
-      return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已完成</span>;
+    switch (record.status) {
+      case CropOrderStatus.COMPLETED:
+        return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">已完成</span>;
+      case CropOrderStatus.CANCELLED:
+        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已取消</span>;
+      case CropOrderStatus.IN_PROGRESS:
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">进行中</span>;
+      case CropOrderStatus.PLANNED:
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已计划</span>;
     }
-    if (record.status === CropOrderStatus.CANCELLED) {
-      return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">已取消</span>;
-    }
-    // 非终态：根据完成数量判断
-    if ((record.completedQuantity || 0) > 0) {
-      return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">进行中</span>;
-    }
-    return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">已计划</span>;
   };
 
   const getOrderTypeBadge = (type: string) => {
@@ -137,7 +139,7 @@ export function OrderTable({
               </tr>
             ) : (
               paginatedData.map((record) => (
-                <tr key={record.id} className="hover:bg-emerald-50 transition-colors">
+                <tr key={record.id} className="hover:bg-blue-100 transition-colors">
                   {(exportMode || batchEditMode || deleteMode) && (
                     <td className="px-4 py-3">
                       <Checkbox
@@ -149,8 +151,9 @@ export function OrderTable({
                   )}
                   <td className="px-4 py-3 text-sm">
                     <Button
-                      variant="link"
+                      variant="ghost"
                       size="sm"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
                       onClick={() => onDetail(record)}
                       title="点击查看详情"
                     >
