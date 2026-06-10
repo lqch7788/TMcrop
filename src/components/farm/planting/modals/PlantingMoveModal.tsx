@@ -10,6 +10,7 @@ import {
   DatePicker, TextArea, Input
 } from '../../../ui';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // ========== 表单数据接口 ==========
 export interface MoveFormData {
@@ -46,7 +47,7 @@ const defaultForm: MoveFormData = {
   operationType: 'move_in',
   labelNumber: '',
   targetArea: '',
-  operationDate: new Date().toISOString().split('T')[0],
+  operationDate: todayLocal(),
   remarks: ''
 };
 

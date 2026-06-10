@@ -11,6 +11,7 @@ import { X, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors 
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
+import { todayLocal } from '@/lib/dateUtils';
 import { generateSeedCode } from '../../../../services/apiSeedSourceService';
 // 2026-06-04: status 改为实时计算，AddModal 不再调用 computeStockStatus
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
@@ -687,7 +688,7 @@ export function AddModal({
                 <Label className="text-gray-900">预计采收日期</Label>
                 <DatePicker className="w-full"
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
-                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
+                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: todayLocal(date) })}
                 />
               </div>
             </>
@@ -718,7 +719,7 @@ export function AddModal({
                 <Label className="text-gray-900">预计采收日期</Label>
                 <DatePicker className="w-full"
                   selected={formData.expectedHarvestDate ? new Date(formData.expectedHarvestDate) : undefined}
-                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: date.toISOString().split('T')[0] })}
+                  onChange={(date) => setFormData({ ...formData, expectedHarvestDate: todayLocal(date) })}
                 />
               </div>
             </>
@@ -914,7 +915,7 @@ export function AddModal({
             </Label>
             <DatePicker className="w-full"
               selected={formData.purchaseDate ? new Date(formData.purchaseDate) : undefined}
-              onChange={(date) => setFormData({ ...formData, purchaseDate: date.toISOString().split('T')[0] })}
+              onChange={(date) => setFormData({ ...formData, purchaseDate: todayLocal(date) })}
             />
           </div>
 

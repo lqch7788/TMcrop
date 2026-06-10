@@ -13,6 +13,7 @@ import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
 import * as cropInstanceService from '../../../../services/apiCropInstanceService';
 import * as cropVarietyService from '../../../../services/cropVarietyService';
+import { todayLocal } from '@/lib/dateUtils';
 import { useProductionPlanStore, usePlantingStore } from '../../../../stores';
 import { PlanType } from '../../../../types';
 import { DictSelect } from '../../../common/settings/DictSelect';
@@ -373,7 +374,7 @@ export function AddModal({
           <Label className="text-gray-900">种植日期</Label>
           <DatePicker className="w-full"
             selected={formData.plantingDate ? new Date(formData.plantingDate) : undefined}
-            onChange={(date) => setFormData({ ...formData, plantingDate: date.toISOString().split('T')[0] })}
+            onChange={(date) => setFormData({ ...formData, plantingDate: todayLocal(date) })}
           />
         </div>
 

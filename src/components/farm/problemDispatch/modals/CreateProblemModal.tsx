@@ -3,6 +3,7 @@ import { Modal, FormField, Input, Select } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { useGreenhouseStore, useDictionaryStore, getDictItems } from '../../../../stores';
 import { TextArea } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -96,7 +97,7 @@ export function CreateProblemModal({
           <FormField label="巡检日期" required error={errors.checkDate}>
             <DatePicker
               selected={formData.checkDate ? new Date(formData.checkDate) : undefined}
-              onChange={(date) => onFormChange('checkDate', date.toISOString().split('T')[0])}
+              onChange={(date) => onFormChange('checkDate', todayLocal(date))}
             />
           </FormField>
 

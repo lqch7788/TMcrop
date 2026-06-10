@@ -13,6 +13,7 @@ import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { HarvestModal } from './modals/HarvestModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore, useToastStore } from '../../../stores';
@@ -484,7 +485,7 @@ export default function PlantingPage() {
       extension = 'xls';
     }
 
-    const fileName = `种植管理_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `种植管理_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

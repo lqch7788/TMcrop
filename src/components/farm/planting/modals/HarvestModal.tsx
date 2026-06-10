@@ -13,6 +13,7 @@ import { validateDateNotFuture } from '../../../../lib/validators';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { showAlert } from '@/lib/dialogService';
 
 interface HarvestModalProps {
@@ -28,7 +29,7 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModalProps) {
   const [isHarvest, setIsHarvest] = useState<'yes' | 'no'>('yes');
   const [formData, setFormData] = useState({
-    harvestDate: new Date().toISOString().split('T')[0],
+    harvestDate: todayLocal(),
     harvestYield: record.plantingCount,
     remarks: ''
   });
@@ -38,7 +39,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
     setIsHarvest(value);
     if (value === 'yes') {
       if (!formData.harvestDate) {
-        setFormData(prev => ({ ...prev, harvestDate: new Date().toISOString().split('T')[0] }));
+        setFormData(prev => ({ ...prev, harvestDate: todayLocal() }));
       }
     } else {
       setFormData(prev => ({ ...prev, harvestDate: '' }));
@@ -144,7 +145,7 @@ export function HarvestModal({ isOpen, onClose, onSuccess, record }: HarvestModa
               <Label className="text-gray-700">采收日期</Label>
               <DatePicker className="w-full"
                 selected={formData.harvestDate ? new Date(formData.harvestDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, harvestDate: date.toISOString().split('T')[0] })}
+                onChange={(date) => setFormData({ ...formData, harvestDate: todayLocal(date) })}
                 disabled={isHarvest === 'no'}
               />
               {isHarvest === 'no' && (

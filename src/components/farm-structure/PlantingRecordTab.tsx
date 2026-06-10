@@ -11,6 +11,7 @@ import { useGreenhouseStore } from '../../stores/useGreenhouseStore';
 import { useDictionaryStore, getDictItems } from '../../stores/useDictionaryStore';
 import type { PlantingRecord } from '../../services/apiPlantingRecordService';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 const PAGE_SIZE = 10;
 
@@ -59,7 +60,7 @@ export default function PlantingRecordTab() {
   /** 打开创建弹窗 */
   const handleOpenCreate = () => {
     setCurrentRecord(null);
-    setFormData({ status: 'planting', start_date: new Date().toISOString().slice(0, 10) });
+    setFormData({ status: 'planting', start_date: todayLocal() });
     setShowCreateModal(true);
   };
 
@@ -112,7 +113,7 @@ export default function PlantingRecordTab() {
   const handleOpenEnd = (r: PlantingRecord) => {
     setCurrentRecord(r);
     setFormData({
-      end_date: new Date().toISOString().slice(0, 10),
+      end_date: todayLocal(),
       yield_amount: '',
       yield_unit: 'kg',
       quality_grade: '',

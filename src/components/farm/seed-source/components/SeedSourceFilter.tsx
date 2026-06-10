@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { SeedSourceFilters, SourceType } from '../../../../types/crop';
 import { Input } from '@/components/ui';
 import { Label, DateRangePicker, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -121,8 +122,8 @@ export function SeedSourceFilter({
             onChange={(start, end) => {
               onChange({
                 ...filters,
-                startDate: start ? start.toISOString().split('T')[0] : '',
-                endDate: end ? end.toISOString().split('T')[0] : ''
+                startDate: start ? todayLocal(start) : '',
+                endDate: end ? todayLocal(end) : ''
               });
             }}
             className="w-full !min-w-[160px]"

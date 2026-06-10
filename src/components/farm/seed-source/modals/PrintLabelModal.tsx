@@ -13,6 +13,7 @@ import { printLabel } from '../../../../services/apiSeedSourceService';
 import { useUserStore, useAuthStore } from '../../../../stores';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
@@ -174,7 +175,7 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `种源标签_${record.cropName}_${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `种源标签_${record.cropName}_${todayLocal()}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {

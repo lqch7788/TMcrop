@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Button } from '@/components/ui';
 import { Edit2, Trash2, Download, X, Check } from 'lucide-react';
@@ -75,7 +76,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   }, [dictionaries]);
 
   const [formData, setFormData] = useState({
-    recordDate: new Date().toISOString().split('T')[0],
+    recordDate: todayLocal(),
     temperature: undefined as number | undefined,
     humidity: undefined as number | undefined,
     watering: false,
@@ -126,7 +127,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       }
       // 重置表单
       setFormData({
-        recordDate: new Date().toISOString().split('T')[0],
+        recordDate: todayLocal(),
         temperature: undefined,
         humidity: undefined,
         watering: false,
@@ -310,7 +311,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               <Label className="text-gray-700">记录日期</Label>
               <DatePicker className="w-full"
                 selected={formData.recordDate ? new Date(formData.recordDate) : undefined}
-                onChange={(date) => setFormData({ ...formData, recordDate: date.toISOString().split('T')[0] })}
+                onChange={(date) => setFormData({ ...formData, recordDate: todayLocal(date) })}
               />
             </div>
             {/* 第一行：温度 */}

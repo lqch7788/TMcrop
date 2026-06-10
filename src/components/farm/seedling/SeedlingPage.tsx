@@ -13,6 +13,7 @@ import { DetailModal } from './modals/DetailModal';
 import { DailyRecordModal } from './modals/DailyRecordModal';
 import { TransplantModal } from './modals/TransplantModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
+import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import SeedlingLabelManageModal from './modals/SeedlingLabelManageModal';
@@ -495,7 +496,7 @@ export default function SeedlingPage() {
       extension = 'xls';
     }
 
-    const fileName = `育苗管理_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `育苗管理_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
