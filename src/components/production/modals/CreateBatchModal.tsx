@@ -4,7 +4,7 @@
 
 import { Modal, FormField, Input, Select, Textarea } from '@/components/ui/Modal';
 import { Button } from '@/components/ui';
-import { RefreshCw, ChevronDown, ChevronUp, FileText, Send, Upload } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronUp, FileText, Send, Upload, Leaf } from 'lucide-react';
 // M-07: 移除未使用的 RadixSelect import（之前定义了但实际未使用）
 import { Checkbox } from '@/components/ui';
 import { CropBatch, Greenhouse, CropOrder, PlanType, PlanTypeLabels, PlanTypeColors } from '../../../types';
@@ -67,6 +67,9 @@ export function CreateBatchModal({
   const [orderExpanded, setOrderExpanded] = useState(false);
   const inputClass = "w-full px-3 py-2 border border-gray-500 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
 
+  // 跟踪最近选中的订单 ID；多订单 cropCode 不一致时，以用户最后勾选/取消的订单为准
+  const lastSelectedOrderIdRef = useRef<string | null>(null);
+
   // L-06: 受控 input ref 复用 + cleanup（之前每次点击都 new 一个 input 未清理）
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
@@ -77,6 +80,13 @@ export function CreateBatchModal({
       }
     };
   }, []);
+
+  // 弹窗关闭时重置最近选中订单 ref（避免下次开弹窗残留）
+  useEffect(() => {
+    if (!isOpen) {
+      lastSelectedOrderIdRef.current = null;
+    }
+  }, [isOpen]);
 
   const handleCropChange = (code: string, varietyInfo: CropVariety | null) => {
     if (varietyInfo) {
@@ -89,6 +99,55 @@ export function CreateBatchModal({
       onFormChange('cropCode', '');
       onFormChange('variety', '');
       onFormChange('cropName', '');
+    }
+  };
+
+  // 从订单自动填充作物品种：直接用订单自身字段，
+  // 不依赖前端品种库（前端 cropVarietyService 用 localStorage，与后端 SQLite 不同源，查不到数据）
+  // 注意：订单 AddModal 已废弃 cropName 字段（始终为空），真正的品种名是 cropVariety
+  const autoFillCropFromOrder = (order: CropOrder) => {
+    setSelectedCrop(null);
+    onFormChange('cropCode', order.cropCode || '');
+    onFormChange('variety', order.cropVariety || '');
+    // 兼容下游 batch.cropName 写入：把 cropVariety 同步给 cropName
+    onFormChange('cropName', order.cropVariety || '');
+  };
+
+  const clearCropFields = () => {
+    setSelectedCrop(null);
+    onFormChange('cropCode', '');
+    onFormChange('variety', '');
+    onFormChange('cropName', '');
+  };
+
+  // 订单勾选/取消：勾选 → 自动关联品种；取消最后一个 → 清空品种字段
+  const handleOrderToggle = (order: CropOrder, checked: boolean) => {
+    if (checked) {
+      const newOrderIds = [...formData.orderId, order.id];
+      const newOrderCodes = [...formData.orderCode, order.orderCode];
+      onFormChange('orderId', newOrderIds);
+      onFormChange('orderCode', newOrderCodes);
+      lastSelectedOrderIdRef.current = order.id;
+      autoFillCropFromOrder(order);
+    } else {
+      const newOrderIds = formData.orderId.filter(id => id !== order.id);
+      const newOrderCodes = formData.orderCode.filter(code => code !== order.orderCode);
+      onFormChange('orderId', newOrderIds);
+      onFormChange('orderCode', newOrderCodes);
+
+      if (newOrderIds.length === 0) {
+        // 全部取消 → 清空品种
+        lastSelectedOrderIdRef.current = null;
+        clearCropFields();
+      } else if (lastSelectedOrderIdRef.current === order.id) {
+        // 取消的是当前"最近"订单 → 切到剩余的最后一个，并刷新品种
+        const newLastId = newOrderIds[newOrderIds.length - 1];
+        lastSelectedOrderIdRef.current = newLastId;
+        const newLastOrder = orders.find(o => o.id === newLastId);
+        if (newLastOrder) {
+          autoFillCropFromOrder(newLastOrder);
+        }
+      }
     }
   };
 
@@ -206,15 +265,7 @@ export function CreateBatchModal({
                       <Checkbox
                         id={`order-${order.id}`}
                         checked={formData.orderId.includes(order.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            onFormChange('orderId', [...formData.orderId, order.id]);
-                            onFormChange('orderCode', [...formData.orderCode, order.orderCode]);
-                          } else {
-                            onFormChange('orderId', formData.orderId.filter(id => id !== order.id));
-                            onFormChange('orderCode', formData.orderCode.filter(code => code !== order.orderCode));
-                          }
-                        }}
+                        onCheckedChange={(checked) => handleOrderToggle(order, checked === true)}
                       />
                       <label htmlFor={`order-${order.id}`} className="text-sm cursor-pointer">
                         {order.orderCode} - {order.orderName} ({order.cropVariety})
@@ -230,20 +281,39 @@ export function CreateBatchModal({
           </div>
           <div>
             <FormField label="作物品种" required error={errors.variety}>
-              <CropCodeSelector
-                value={formData.cropCode || ''}
-                onChange={handleCropChange}
-                placeholder="搜索或选择作物品种..."
-                size="sm"
-                showFullPath={true}
-              />
-              {selectedCrop && (
-                <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
-                  <span className="text-emerald-700">
-                    {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
-                    {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+              {/* 选了关联订单 → 渲染只读展示框（直接读订单的 cropName + cropVariety，不查前端品种库）；
+                  未选 → 渲染可手动选的 CropCodeSelector */}
+              {formData.orderId.length > 0 ? (
+                <div className="w-full h-8 px-3 border border-gray-400 rounded-lg shadow-inner bg-gray-100 cursor-not-allowed flex items-center text-sm gap-2">
+                  <Leaf className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span className="truncate text-gray-900">
+                    {/* 订单的品种名就是 cropVariety（订单 AddModal 已废弃 cropName 字段） */}
+                    {formData.variety || '(订单未填作物品种)'}
                   </span>
+                  {formData.cropCode && (
+                    <span className="text-xs text-gray-400 font-mono flex-shrink-0">
+                      {formData.cropCode}
+                    </span>
+                  )}
                 </div>
+              ) : (
+                <>
+                  <CropCodeSelector
+                    value={formData.cropCode || ''}
+                    onChange={handleCropChange}
+                    placeholder="搜索或选择作物品种..."
+                    size="sm"
+                    showFullPath={true}
+                  />
+                  {selectedCrop && (
+                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
+                      <span className="text-emerald-700">
+                        {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                        {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </FormField>
           </div>
