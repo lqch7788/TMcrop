@@ -703,12 +703,26 @@ export function useProductionPage(): UseProductionPageReturn {
         );
 
         // 收集成功 / 失败
+        // 2026-06-10 修复：把每个失败的 r.reason 同步带出到 UI alert
+        // （之前只 console.error，用户弹窗里只看到"失败 N 项（批次号）"，
+        // 不知道是 400 字段错 / 500 后端 SQL / 网络超时 / 权限哪种，无法自助排查）
+        const failedReasons: string[] = [];
         results.forEach((r, idx) => {
           if (r.status === 'fulfilled') {
             submittedBatchIds.push(r.value);
           } else {
-            console.error(`[handlePublish] 批次 ${submitTasks[idx].batch.batchCode} 提交失败:`, r.reason);
-            failedBatchCodes.push(submitTasks[idx].batch.batchCode);
+            const task = submitTasks[idx];
+            const reason = r.reason;
+            const reasonMsg = reason instanceof Error
+              ? reason.message
+              : typeof reason === 'string'
+                ? reason
+                : (() => {
+                    try { return JSON.stringify(reason); } catch { return String(reason); }
+                  })();
+            console.error(`[handlePublish] 批次 ${task.batch.batchCode} 提交失败:`, reason);
+            failedBatchCodes.push(task.batch.batchCode);
+            failedReasons.push(reasonMsg);
           }
         });
 
@@ -738,10 +752,21 @@ export function useProductionPage(): UseProductionPageReturn {
       setEditedBatchCodes(remainingEditedBatchCodes);
 
       // P0-03: 最终 toast 显示成功 / 失败数
+      // 2026-06-10 修复：失败 alert 同时附上每个失败的具体原因（截断避免弹窗过长）
       const successCount = submittedBatchIds.length;
       const failedCount = failedBatchCodes.length;
       if (failedCount > 0) {
-        await showAlert(`提交完成：成功 ${successCount} 项，失败 ${failedCount} 项（${failedBatchCodes.slice(0, 3).join('、')}${failedCount > 3 ? ' 等' : ''}）`);
+        const detailLines = failedBatchCodes
+          .map((code, i) => {
+            const msg = failedReasons[i] || '未知错误';
+            // 单行 120 字符截断（alert 弹窗宽度有限 + 避免长堆栈污染）
+            const short = msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
+            return `• ${code}: ${short}`;
+          })
+          .join('\n');
+        await showAlert(
+          `提交完成：成功 ${successCount} 项，失败 ${failedCount} 项（${failedBatchCodes.slice(0, 3).join('、')}${failedCount > 3 ? ' 等' : ''}）\n\n失败详情：\n${detailLines}`
+        );
       }
 
       if (successCount === selectedRows.length && failedCount === 0) {
