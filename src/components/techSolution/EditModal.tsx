@@ -14,6 +14,7 @@ import { CropVariety } from '../../types/cropVariety';
 import { TechSolution } from '../../types/techSolution';
 import type { CropBatch } from '../../types';
 import { TECH_SOLUTION_SCOPES } from './constants';
+import { RELATED_BATCH_OPTIONS } from './constants/relatedBatchOptions';
 // 2026-06-10: 翻译 plantingMode 用的全局 value→label 映射（与 CreateModal 同源）
 import { SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../production/constants';
 
@@ -68,17 +69,15 @@ export function EditModal({
   onCropChange,
 }: EditModalProps) {
   // 2026-06-10: 与 CreateModal 一致——关联生产批次号下拉从生产计划列表动态生成
+  // C6 修复 1: 动态为空时 fallback 到 RELATED_BATCH_OPTIONS 静态兜底（与 BatchEditModal 一致）
   const relatedBatchOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [{ value: '', label: '不关联' }];
-    (batches ?? []).forEach(b => {
-      if (b.batchCode) {
-        opts.push({
-          value: b.batchCode,
-          label: `${b.batchCode} - ${b.cropName || b.variety || ''}`,
-        });
-      }
-    });
-    return opts;
+    const dynamic = (batches ?? []).filter(b => b.batchCode).map(b => ({
+      value: b.batchCode!,
+      label: `${b.batchCode} - ${b.cropName || b.variety || ''}`,
+    }));
+    return dynamic.length > 0
+      ? [{ value: '', label: '不关联' }, ...dynamic]
+      : RELATED_BATCH_OPTIONS;
   }, [batches]);
 
   // 2026-06-10: 反查选中的 batch 用于详情框显示
