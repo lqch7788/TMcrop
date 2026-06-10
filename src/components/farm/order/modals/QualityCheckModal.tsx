@@ -9,6 +9,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface QualityCheckModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ interface QualityCheckModalProps {
 }
 
 export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, onSave }: QualityCheckModalProps) {
-  const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
+  const [checkDate, setCheckDate] = useState(todayLocal());
   const [checkResult, setCheckResult] = useState<'qualified' | 'unqualified' | 'pending'>('pending');
   const [checkPerson, setCheckPerson] = useState('');
   const [checkItems, setCheckItems] = useState([
@@ -48,7 +49,7 @@ export default function QualityCheckModal({ isOpen, deliveryRecordId, onClose, o
             <Label className="text-gray-700">质检日期</Label>
             <DatePicker
               selected={new Date(checkDate)}
-              onChange={(date) => setCheckDate(date.toISOString().split('T')[0])}
+              onChange={(date) => setCheckDate(todayLocal(date))}
               className={deepInputClass}
             />
           </div>

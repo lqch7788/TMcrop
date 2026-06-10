@@ -12,6 +12,7 @@ import * as apiProductionPlanService from '../../../services/apiProductionPlanSe
 import { batchStatusLabels } from '../constants';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { todayLocal } from '../../../lib/dateUtils';
 
 // 表单数据类型
 export interface ProductionFormData {
@@ -374,7 +375,7 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSaveDraft = useCallback(async () => {
     if (!validateForm()) return;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const greenhouseIds = formData.greenhouseId.join(',');
     // 调试：检查温室ID匹配
     const greenhouseNames = greenhouses
@@ -442,7 +443,7 @@ export function useProductionPage(): UseProductionPageReturn {
   const handleSubmitForApproval = useCallback(async () => {
     if (!validateForm()) return;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     const greenhouseIds = formData.greenhouseId.join(',');
     // 调试：检查温室ID匹配
     const greenhouseNames = greenhouses
@@ -621,7 +622,7 @@ export function useProductionPage(): UseProductionPageReturn {
           })
           .filter((t): t is { batch: CropBatch; edited: EditedBatch } => t !== null);
 
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
 
         // 并行执行所有提交任务；任一失败不影响其他
         const results = await Promise.allSettled(
@@ -860,7 +861,7 @@ export function useProductionPage(): UseProductionPageReturn {
   // ==================== 申请作废 ====================
   const handleVoidConfirm = useCallback(async () => {
     // 复用 hook 顶部定义的 currentUserId/currentUsername/currentDepartment
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
 
     const currentBatch = batches.find(b => b.batchCode === selectedBatchCode);
     if (!currentBatch) {
@@ -1042,19 +1043,19 @@ export function useProductionPage(): UseProductionPageReturn {
         XLSX.utils.book_append_sheet(wb, ws, '生产计划');
         const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
         const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        saveAs(blob, `生产计划_${todayLocal()}.xlsx`);
       } else if (exportFormat === 'csv') {
         const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
         const csv = XLSX.utils.sheet_to_csv(ws);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.csv`);
+        saveAs(blob, `生产计划_${todayLocal()}.csv`);
       } else if (exportFormat === 'word') {
         // word 仍用 html 包裹（无 docx 库时是常见方案）
         const escapeHtml = (s: unknown) =>
           String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const content = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1">${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml(row[h as keyof typeof row])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
         const blob = new Blob([content], { type: 'application/msword' });
-        saveAs(blob, `生产计划_${new Date().toISOString().slice(0, 10)}.doc`);
+        saveAs(blob, `生产计划_${todayLocal()}.doc`);
       }
 
       setShowExportModal(false);

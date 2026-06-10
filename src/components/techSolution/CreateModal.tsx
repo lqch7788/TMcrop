@@ -15,6 +15,7 @@ import { TECH_SOLUTION_SCOPES } from './constants';
 // 2026-06-10: 翻译 plantingMode 用的全局 value→label 映射（与生产计划 ProductionTable 同源）
 // 注：这些 modes 在 production/constants.ts 导出，不在 techSolution/constants.ts
 import { SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../production/constants';
+import { todayLocal } from '@/lib/dateUtils';
 
 export interface NewPlanForm {
   code: string;
@@ -337,7 +338,7 @@ export function CreateModal({
             />
           </FormField>
           <FormField label="创建日期">
-            <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
+            <Input value={todayLocal()} disabled className="bg-gray-50" />
           </FormField>
         </div>
 

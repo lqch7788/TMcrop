@@ -15,6 +15,7 @@ import { getVarietyByCode } from '../../services/cropVarietyService';
 // 使用 import type 确保类型导入在编译时被擦除
 import type { TechSolution } from '../../types/techSolution';
 import { TechSolutionHeader } from './Header';
+import { todayLocal } from '@/lib/dateUtils';
 import { TechSolutionFilters } from './TechSolutionFilters';
 import { TechSolutionTable } from './TechSolutionTable';
 import { ExportFormatModal } from './ExportFormatModal';
@@ -358,7 +359,7 @@ export function TechSolutionPage() {
   };
 
   const handleCreateSubmit = async (submitMode: 'draft' | 'submit') => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocal();
 
     // 构造技术方案数据
     const techSolutionData = {
@@ -514,7 +515,7 @@ export function TechSolutionPage() {
       extension = 'doc';
     }
 
-    const fileName = `技术方案_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `技术方案_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {

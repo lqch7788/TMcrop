@@ -10,6 +10,7 @@ import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import type { CropOrder } from '@/types/crop';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface DeliveryModalProps {
   isOpen: boolean;
@@ -21,14 +22,14 @@ interface DeliveryModalProps {
 export default function DeliveryModal({ isOpen, order, onClose, onSave }: DeliveryModalProps) {
   const [deliveryBatch, setDeliveryBatch] = useState(1);
   const [deliveryQuantity, setDeliveryQuantity] = useState(0);
-  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deliveryDate, setDeliveryDate] = useState(todayLocal());
 
   useEffect(() => {
     if (isOpen && order) {
       // TODO: 从后端获取已交付批次数量来计算下一批次号
       setDeliveryBatch(1);
       setDeliveryQuantity(0);
-      setDeliveryDate(new Date().toISOString().split('T')[0]);
+      setDeliveryDate(todayLocal());
     }
   }, [isOpen, order]);
 
@@ -74,7 +75,7 @@ export default function DeliveryModal({ isOpen, order, onClose, onSave }: Delive
           <Label className="text-gray-700">交付日期</Label>
           <DatePicker
             selected={new Date(deliveryDate)}
-            onChange={(date) => setDeliveryDate(date.toISOString().split('T')[0])}
+            onChange={(date) => setDeliveryDate(todayLocal(date))}
             className={deepInputClass}
           />
         </div>

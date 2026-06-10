@@ -18,6 +18,7 @@ import { DatePicker } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface EditModalProps {
   isOpen: boolean;
@@ -348,7 +349,7 @@ export function EditModal({
         </Label>
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
+          onChange={(date) => setFormData({ ...formData, orderDate: todayLocal(date) })}
           className="border-gray-400"
         />
       </div>
@@ -497,7 +498,7 @@ export function EditModal({
         </Label>
         <DatePicker
           selected={formData.expectedCompletionDate ? new Date(formData.expectedCompletionDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, expectedCompletionDate: date.toISOString().split('T')[0] })}
+          onChange={(date) => setFormData({ ...formData, expectedCompletionDate: todayLocal(date) })}
           className="border-gray-400"
         />
       </div>
