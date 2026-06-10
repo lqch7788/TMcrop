@@ -4,6 +4,7 @@ import { Label } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { todayLocal } from '../../lib/dateUtils';
 import type { MonthlyStatistics, MaterialStatistics, DepartmentStatistics, GreenhouseStatistics, FieldStatistics, BatchStatistics, MonthSummaryRow, MonthDetailRow, CategorySummary, CategoryTrend, TrendChartData, DepartmentPieData, CategoryPieData } from '../../types/materialReceiving';
 import { monthlyStatisticsData, materialStatisticsData, departmentStatisticsData, greenhouseStatisticsData, fieldStatisticsData, batchStatisticsData, categorySummaryData, categoryTrendData, trendChartData, departmentPieData, categoryPieData, getMonthSummaries, getMonthDetails, getYearTotalQuantity, getYearTotalAmount, getMonthCategoryData, getSingleMonthTableData, getSingleMonthTotal, CATEGORY_COLORS } from '../../data/materialReceivingData';
 
@@ -664,13 +665,13 @@ export default function StatisticsTab({
                   <Label className="text-sm font-medium text-gray-700 mb-0">时间:</Label>
                   <DatePicker
                     selected={dateRange.start ? new Date(dateRange.start) : undefined}
-                    onChange={(date) => setDateRange({ ...dateRange, start: date.toISOString().slice(0, 10) })}
+                    onChange={(date) => setDateRange({ ...dateRange, start: todayLocal(date) })}
                     placeholder="开始日期"
                   />
                   <span className="text-gray-400">至</span>
                   <DatePicker
                     selected={dateRange.end ? new Date(dateRange.end) : undefined}
-                    onChange={(date) => setDateRange({ ...dateRange, end: date.toISOString().slice(0, 10) })}
+                    onChange={(date) => setDateRange({ ...dateRange, end: todayLocal(date) })}
                     placeholder="结束日期"
                   />
                 </div>

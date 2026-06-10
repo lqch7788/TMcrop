@@ -4,6 +4,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface StatFiltersFormProps {
   dateRange: { start: string; end: string };
@@ -28,13 +29,13 @@ export const StatFiltersForm: React.FC<StatFiltersFormProps> = ({
           <Label className="text-sm font-medium text-gray-700">时间:</Label>
           <DatePicker
             selected={dateRange.start ? new Date(dateRange.start) : undefined}
-            onChange={(d) => onDateRangeChange({ ...dateRange, start: d.toISOString().slice(0, 10) })}
+            onChange={(d) => onDateRangeChange({ ...dateRange, start: todayLocal(d) })}
             placeholder="开始日期"
           />
           <span className="text-gray-400">至</span>
           <DatePicker
             selected={dateRange.end ? new Date(dateRange.end) : undefined}
-            onChange={(d) => onDateRangeChange({ ...dateRange, end: d.toISOString().slice(0, 10) })}
+            onChange={(d) => onDateRangeChange({ ...dateRange, end: todayLocal(d) })}
             placeholder="结束日期"
           />
         </div>

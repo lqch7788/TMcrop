@@ -7,6 +7,7 @@ import StatisticsTab from './StatisticsTab';
 import { CostTabSwitcher } from '../cost/CostTabSwitcher';
 import { materialReceivingDetails, materialExecuteDetails } from '../../data/materialReceivingData';
 import type { MaterialReceivingRecord, ExecuteMaterialItem } from '../../types/materialReceiving';
+import { todayLocal } from '../../lib/dateUtils';
 
 export const MaterialReceivingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('application');
@@ -188,7 +189,7 @@ const ExecuteTabWrapper: React.FC<ExecuteTabWrapperProps> = ({ activeTab }) => {
 
   const [addForm, setAddForm] = useState({
     code: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocal(),
     applicant: '',
     warehouseLocation: '仓库A区',
     reviewer: '王志刚',

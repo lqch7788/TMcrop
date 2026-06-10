@@ -16,6 +16,7 @@ import { DatePicker } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface InboundBatchEditModalProps {
   records: InboundRecord[];
@@ -440,7 +441,7 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                       {currentRecord.status === 'pending' ? (
                         <DatePicker
                           selected={m.productionDate ? new Date(m.productionDate) : undefined}
-                          onChange={(date) => handleMaterialChange(m.id, 'productionDate', date.toISOString().slice(0, 10))}
+                          onChange={(date) => handleMaterialChange(m.id, 'productionDate', todayLocal(date))}
                           placeholder="生产日期"
                         />
                       ) : (
@@ -451,7 +452,7 @@ export const InboundBatchEditModal: React.FC<InboundBatchEditModalProps> = ({
                       {currentRecord.status === 'pending' ? (
                         <DatePicker
                           selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
-                          onChange={(date) => handleMaterialChange(m.id, 'expiryDate', date.toISOString().slice(0, 10))}
+                          onChange={(date) => handleMaterialChange(m.id, 'expiryDate', todayLocal(date))}
                           placeholder="有效期至"
                         />
                       ) : (

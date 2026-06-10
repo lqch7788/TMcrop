@@ -17,6 +17,7 @@ import { useUserStore } from '@/stores/useUserStore';
 import { useSupplierStore } from '@/stores/useSupplierStore';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import type { Material } from '@/services/apiWarehouseMaterialService';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface InboundAddModalProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
   const storeUsers = useUserStore(state => state.users);
   const currentUserName = storeUsers[0]?.name || localStorage.getItem('username') || '当前用户';
   // 获取当天日期字符串
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayLocal();
 
   // 供应商列表（从 Zustand Store 获取）
   const suppliers = useSupplierStore((s) => s.items);
@@ -273,7 +274,7 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
     const maxAttempts = 999;
 
     while (existingCodes.includes(newCode) && attempts < maxAttempts) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = todayLocal();
       const todayPrefix = `RK${todayStr.replace(/-/g, '')}-`;
       const seq = parseInt(newCode.replace(todayPrefix, ''), 10);
       const nextSeq = seq + 1;
@@ -617,14 +618,14 @@ export const InboundAddModal: React.FC<InboundAddModalProps> = ({
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <DatePicker
                           selected={m.productionDate ? new Date(m.productionDate) : undefined}
-                          onChange={(date) => handleMaterialChange(m.id, 'productionDate', date.toISOString().slice(0, 10))}
+                          onChange={(date) => handleMaterialChange(m.id, 'productionDate', todayLocal(date))}
                           placeholder="生产日期"
                         />
                       </TableCell>
                       <TableCell className="px-1 py-1.5 whitespace-nowrap">
                         <DatePicker
                           selected={m.expiryDate ? new Date(m.expiryDate) : undefined}
-                          onChange={(date) => handleMaterialChange(m.id, 'expiryDate', date.toISOString().slice(0, 10))}
+                          onChange={(date) => handleMaterialChange(m.id, 'expiryDate', todayLocal(date))}
                           placeholder="有效期至"
                         />
                       </TableCell>

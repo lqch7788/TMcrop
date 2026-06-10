@@ -6,6 +6,7 @@ import { Label } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 
 // 深度输入框样式
@@ -132,7 +133,7 @@ export const BatchEditModal: React.FC<BatchEditModalProps> = ({
           <Label className="block text-xs font-medium text-gray-900 mb-1">日期</Label>
           <DatePicker
             selected={currentEditedData.date ? new Date(currentEditedData.date) : undefined}
-            onChange={(date) => onFieldChange(currentRecordId, 'date', date.toISOString().slice(0, 10))}
+            onChange={(date) => onFieldChange(currentRecordId, 'date', todayLocal(date))}
             placeholder="选择日期"
           />
         </div>

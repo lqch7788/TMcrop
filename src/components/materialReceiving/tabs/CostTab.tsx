@@ -12,6 +12,7 @@ import { CostPieChart } from '../../cost/CostPieChart';
 import { CostTrendChart } from '../../cost/CostTrendChart';
 import { CostComparisonTable } from '../../cost/CostComparisonTable';
 import { CostDetailModal } from '../../cost/CostDetailModal';
+import { todayLocal } from '../../lib/dateUtils';
 import {
   filterCostRecords,
   calcCostTotal,
@@ -37,7 +38,7 @@ const getInitialCostFilters = (): CostFilters => {
     quickPeriod: 'year',
     dateRange: {
       start: `${now.getFullYear()}-01-01`,
-      end: now.toISOString().split('T')[0],
+      end: todayLocal(now),
     },
     departments: [],
     categories: [],
