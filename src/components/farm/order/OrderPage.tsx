@@ -138,12 +138,15 @@ export default function OrderPage() {
     const total = orders.length;
     const inProgress = orders.filter(o => o.status === CropOrderStatus.IN_PROGRESS).length;
     const completed = orders.filter(o => o.status === CropOrderStatus.COMPLETED).length;
+    // P1 修复：补 planned/cancelled 本地计算（与 apiCropOrderService OrderStats 对齐）
+    const planned = orders.filter(o => o.status === CropOrderStatus.PLANNED).length;
+    const cancelled = orders.filter(o => o.status === CropOrderStatus.CANCELLED).length;
     const thisMonth = orders.filter(o => {
       const date = new Date(o.createTime);
       const now = new Date();
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length;
-    return { total, inProgress, completed, thisMonth };
+    return { total, inProgress, completed, thisMonth, planned, cancelled };
   }, [orders, apiStats]);
 
   // 处理操作

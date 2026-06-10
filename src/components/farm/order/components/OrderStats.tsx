@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Package, TrendingUp, CheckCircle, Calendar } from 'lucide-react';
+import { Package, TrendingUp, CheckCircle, Calendar, FileCheck, XCircle } from 'lucide-react';
 
 interface OrderStatsProps {
   data: {
@@ -12,6 +12,9 @@ interface OrderStatsProps {
     inProgress: number;
     completed: number;
     thisMonth: number;
+    /** P1 修复：补 planned/cancelled 字段（与 useOrderDataStore.OrderStats 对齐） */
+    planned?: number;
+    cancelled?: number;
   };
 }
 
@@ -22,6 +25,12 @@ export function OrderStats({ data }: OrderStatsProps) {
       value: data.total,
       color: 'bg-blue-500',
       icon: Package,
+    },
+    {
+      label: '已计划',
+      value: data.planned ?? 0,
+      color: 'bg-indigo-500',
+      icon: FileCheck,
     },
     {
       label: '进行中',
@@ -36,6 +45,12 @@ export function OrderStats({ data }: OrderStatsProps) {
       icon: CheckCircle,
     },
     {
+      label: '已取消',
+      value: data.cancelled ?? 0,
+      color: 'bg-rose-500',
+      icon: XCircle,
+    },
+    {
       label: '本月新增',
       value: data.thisMonth,
       color: 'bg-purple-500',
@@ -44,7 +59,7 @@ export function OrderStats({ data }: OrderStatsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       {stats.map((stat, index) => {
         const IconComponent = stat.icon;
         return (
