@@ -9,6 +9,7 @@ import { Cascader } from '@/components/ui';
 import type { CascaderOption, CascaderValueNode } from '../ui/Cascader';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { useDictionaryStore, useSupplierCodeRuleStore, useRegionStore } from '../../stores';
 import {
   validateMobilePhone,
@@ -138,7 +139,7 @@ export default function SupplierEditModal({ isOpen, supplier, onClose, onSave }:
         createDate: supplier.createDate,
         remarks: supplier.remarks || '',
         lastEditBy: '',
-        lastEditTime: new Date().toISOString().split('T')[0]
+        lastEditTime: todayLocal()
       });
     }
   }, [supplier]);

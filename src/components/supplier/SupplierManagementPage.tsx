@@ -10,6 +10,7 @@ import SupplierAddModal from './SupplierAddModal';
 import SupplierBatchEditModal from './SupplierBatchEditModal';
 import SupplierExportModal from './SupplierExportModal';
 import SupplierCodeGenerator from './SupplierCodeGenerator';
+import { todayLocal } from '@/lib/dateUtils';
 import { DeleteWarningDialog, BatchDeleteConfirmDialog } from './DeleteDialogs';
 import { Supplier, SupplierFiltersState } from './types';
 import { getSupplierTypeName } from './data';
@@ -334,7 +335,7 @@ export default function SupplierManagementPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `供应商数据_${new Date().toISOString().split('T')[0]}.${extension}`;
+    link.download = `供应商数据_${todayLocal()}.${extension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

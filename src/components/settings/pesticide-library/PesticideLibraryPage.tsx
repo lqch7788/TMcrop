@@ -8,6 +8,7 @@ import { ArrowLeft, Bug, Download, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 import { usePesticideLibraryStore, PesticideLibrary } from '@/stores';
 import { PesticideLibraryFilter } from './PesticideLibraryFilter';
 import { PesticideLibraryTable } from './PesticideLibraryTable';
@@ -113,7 +114,7 @@ export default function PesticideLibraryPage() {
       record.targetPests || '',
     ]);
 
-    const fileName = `药剂知识库_${new Date().toISOString().slice(0, 10)}`;
+    const fileName = `药剂知识库_${todayLocal()}`;
 
     if (exportFormat === 'csv') {
       // CSV 格式
