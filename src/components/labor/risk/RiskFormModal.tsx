@@ -9,6 +9,7 @@ import { Label } from '@/components/ui';
 import { RiskAlert, AlertType, AlertLevel } from './types';
 import { AlertTypeNames, AlertLevelNames } from './types';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -173,7 +174,7 @@ export function RiskFormModal({
             <Label className="block text-sm font-medium text-gray-700 mb-1">处理时间</Label>
             <DatePicker
               selected={formData.handleTime ? new Date(formData.handleTime) : undefined}
-              onChange={(date) => setFormData({ ...formData, handleTime: date.toISOString().slice(0, 10) })}
+              onChange={(date) => setFormData({ ...formData, handleTime: todayLocal(date) })}
               className="w-full h-10"
             />
           </div>

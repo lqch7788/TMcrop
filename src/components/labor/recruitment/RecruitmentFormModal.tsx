@@ -5,6 +5,7 @@ import { usePositionStore, getPositionsByDepartment } from '@/stores/usePosition
 import { useDepartmentStore } from '@/stores/useDepartmentStore';
 import { NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface RecruitmentFormModalProps {
   isOpen: boolean;
@@ -222,7 +223,7 @@ export function RecruitmentFormModal({
           <FormField label="期望到岗日期" required error={errors.expectedDate}>
             <DatePicker
               selected={formData.expectedDate ? new Date(formData.expectedDate) : undefined}
-              onChange={(date) => onFormChange('expectedDate', date.toISOString().split('T')[0])}
+              onChange={(date) => onFormChange('expectedDate', todayLocal(date))}
               className="w-full"
             />
           </FormField>

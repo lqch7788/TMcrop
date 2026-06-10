@@ -2,6 +2,7 @@ import { Modal, FormField } from '@/components/ui';
 import { Task, Greenhouse, CropBatch, User } from '../../../types';
 import { DatePicker } from '@/components/ui';
 import { NumberInput } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 interface TaskFormModalProps {
   isOpen: boolean;
@@ -162,7 +163,7 @@ export function TaskFormModal({
           <FormField label="截止时间" required error={errors.dueDate}>
             <DatePicker
               selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
-              onChange={(date) => onFormChange('dueDate', date.toISOString().split('T')[0])}
+              onChange={(date) => onFormChange('dueDate', todayLocal(date))}
               className="w-full"
             />
           </FormField>

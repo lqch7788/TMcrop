@@ -9,6 +9,7 @@ import { DatePicker } from '@/components/ui';
 import type { OvertimeFormModalProps, OvertimeType, OvertimeFormData } from './types';
 import { getWorkerSelectList } from '../../../services/apiWorkerService';
 import { Label } from '@/components/ui';
+import { todayLocal } from '@/lib/dateUtils';
 
 // 员工选择列表状态
 interface StaffOption {
@@ -109,7 +110,7 @@ export function OvertimeFormModal({ record, open, onClose, onSave }: OvertimeFor
         </Label>
         <DatePicker
           selected={formData.date ? new Date(formData.date) : undefined}
-          onChange={(date: Date) => setFormData({ ...formData, date: date.toISOString().slice(0, 10) })}
+          onChange={(date: Date) => setFormData({ ...formData, date: todayLocal(date) })}
           placeholder="选择加班日期"
         />
       </div>

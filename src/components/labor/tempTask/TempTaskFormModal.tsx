@@ -11,6 +11,7 @@ import { AIRecommendationPanel } from '../../dispatch/AIRecommendationPanel';
 import { useComprehensiveDispatch, type UnifiedDispatchTask } from '../../../hooks/useComprehensiveDispatch';
 import type { WorkerRecommendation } from '../../../hooks/useComprehensiveDispatch';
 import { Label } from '@/components/ui';
+import { todayLocal } from '../../../lib/dateUtils';
 
 // 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
@@ -389,7 +390,7 @@ export function TempTaskFormModal({
           <FormField label="计划开始时间">
             <DatePicker
               selected={formData.planStart ? new Date(formData.planStart) : undefined}
-              onChange={(date) => onChange('planStart', date.toISOString().split('T')[0])}
+              onChange={(date) => onChange('planStart', todayLocal(date))}
               className="w-full"
             />
           </FormField>
@@ -397,7 +398,7 @@ export function TempTaskFormModal({
           <FormField label="截止时间" required error={errors.dueDate}>
             <DatePicker
               selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
-              onChange={(date) => onChange('dueDate', date.toISOString().split('T')[0])}
+              onChange={(date) => onChange('dueDate', todayLocal(date))}
               className="w-full"
             />
           </FormField>
