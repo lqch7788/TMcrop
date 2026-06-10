@@ -3,15 +3,18 @@
  * 父组件传：form、setForm、scopeExpanded、selectedCrop、handleCropChange、generateCode、operatorOptions、onSubmitDraft/onSubmitApprove
  */
 import { ChevronDown, ChevronUp, FileText, Leaf, RefreshCw, Send, Upload } from 'lucide-react';
+import { useMemo } from 'react';
 import { Modal, FormField, Input, Select, Textarea } from '../ui/Modal';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { DictSelect } from '../common/settings/DictSelect';
 import CropCodeSelector from '../farm/common/CropCodeSelector';
 import { CropVariety } from '../../types/cropVariety';
+import type { CropBatch } from '../../types';
 import { TECH_SOLUTION_SCOPES } from './constants';
-// M-2 抽取：关联生产批次号下拉选项共享
-import { RELATED_BATCH_OPTIONS } from './constants/relatedBatchOptions';
+// 2026-06-10: 翻译 plantingMode 用的全局 value→label 映射（与生产计划 ProductionTable 同源）
+// 注：这些 modes 在 production/constants.ts 导出，不在 techSolution/constants.ts
+import { SEED_BREEDING_MODES, SEEDLING_MODES, PLANTING_MODES } from '../production/constants';
 
 export interface NewPlanForm {
   code: string;
@@ -37,6 +40,8 @@ export interface CreateModalProps {
   form: NewPlanForm;
   scopeExpanded: boolean;
   selectedCrop: CropVariety | null;
+  // 2026-06-10: 关联生产批次号下拉项从生产计划列表动态生成 + 联动自动填作物信息
+  batches?: CropBatch[];
   operatorOptions: { value: string; label: string }[];
   onClose: () => void;
   onFormChange: (form: NewPlanForm) => void;
@@ -52,6 +57,7 @@ export function CreateModal({
   form,
   scopeExpanded,
   selectedCrop,
+  batches,
   operatorOptions,
   onClose,
   onFormChange,
@@ -61,6 +67,79 @@ export function CreateModal({
   onSubmitDraft,
   onSubmitApprove,
 }: CreateModalProps) {
+  // 2026-06-10: 关联生产批次号下拉项从生产计划列表动态生成（替代旧硬编码 RELATED_BATCH_OPTIONS）
+  const relatedBatchOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: '', label: '不关联' }];
+    (batches ?? []).forEach(b => {
+      if (b.batchCode) {
+        opts.push({
+          value: b.batchCode,
+          label: `${b.batchCode} - ${b.cropName || b.variety || ''}`,
+        });
+      }
+    });
+    return opts;
+  }, [batches]);
+
+  // 2026-06-10: 根据当前选中的 relatedBatchCode 反查选中的 batch（用于详情框显示）
+  const selectedBatch = useMemo(
+    () => form.relatedBatchCode
+      ? (batches ?? []).find(b => b.batchCode === form.relatedBatchCode) || null
+      : null,
+    [form.relatedBatchCode, batches]
+  );
+
+  // 2026-06-10: 关联生产批次号 onChange 联动——选了具体批次就自动填作物信息+禁用作物品种/种植模式
+  // 选 "不关联"（空 value）则清空自动填的字段，让用户手工选
+  const handleRelatedBatchChange = (value: string) => {
+    if (!value) {
+      onFormChange({
+        ...form,
+        relatedBatchCode: '',
+        cropCode: '',
+        crop: '',
+        plantingMode: '',
+      });
+      return;
+    }
+    const batch = (batches ?? []).find(b => b.batchCode === value);
+    if (!batch) {
+      // 找不到对应批次时只设 relatedBatchCode，作物字段留空让用户手动选
+      onFormChange({ ...form, relatedBatchCode: value });
+      return;
+    }
+    onFormChange({
+      ...form,
+      relatedBatchCode: value,
+      cropCode: batch.cropCode || '',
+      crop: batch.cropName || '',
+      plantingMode: batch.plantingMode || '',
+    });
+  };
+
+  // 2026-06-10: 关联批次后锁定作物品种 + 种植模式字段（disabled）
+  const isLockedByBatch = !!form.relatedBatchCode;
+
+  // 2026-06-10: 翻译 plantingMode 用的 value→label 全局映射（与 ProductionTable 同样的 3 重兜底）
+  const ALL_MODE_LABELS: Record<string, string> = (() => {
+    const m: Record<string, string> = {};
+    [...SEED_BREEDING_MODES, ...SEEDLING_MODES, ...PLANTING_MODES].forEach(opt => {
+      m[opt.value] = opt.label;
+    });
+    return m;
+  })();
+
+  // 把 "open_field,supplier_direct" 翻译成 "露天栽培、供应商直供"
+  const translatePlantingMode = (raw: string | undefined | null): string => {
+    if (!raw) return '';
+    return raw.split(',')
+      .map(v => v.trim())
+      .filter(Boolean)
+      .map(v => ALL_MODE_LABELS[v] || v)
+      .filter(Boolean)
+      .join('、');
+  };
+  const plantingModeDisplay = translatePlantingMode(form.plantingMode);
   const handleFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -136,8 +215,121 @@ export function CreateModal({
           </FormField>
         </div>
 
-        {/* 第二行：版本 + 创建日期 */}
+        {/* 第二行：关联生产批次号（创建日期已移至第五行，与版本同一排） */}
+        <FormField label="关联生产批次号">
+          <Select
+            value={form.relatedBatchCode}
+            onChange={(e) => handleRelatedBatchChange(e.target.value)}
+            options={relatedBatchOptions}
+          />
+        </FormField>
+
+        {/* 第三行：作物品种 + 种植模式 */}
         <div className="grid grid-cols-2 gap-4">
+          <FormField label="作物品种" required>
+            <CropCodeSelector
+              value={form.cropCode || ''}
+              onChange={onCropChange}
+              placeholder={isLockedByBatch ? '已从关联批次自动填充' : '搜索或选择作物品种...'}
+              size="md"
+              showFullPath={true}
+              disabled={isLockedByBatch}
+            />
+            {(selectedCrop || selectedBatch) && (
+              <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                {selectedCrop ? (
+                  <>
+                    <div className="text-emerald-700 flex items-center gap-1">
+                      <Leaf className="w-3 h-3 flex-shrink-0" />
+                      {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
+                      {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
+                    </div>
+                    <div className="text-emerald-600 mt-0.5">编码：{selectedCrop.cropCode}</div>
+                  </>
+                ) : selectedBatch ? (
+                  <>
+                    <div className="text-emerald-700 flex items-center gap-1">
+                      <Leaf className="w-3 h-3 flex-shrink-0" />
+                      作物：{selectedBatch.cropName || '-'}
+                      {selectedBatch.variety && ` · ${selectedBatch.variety}`}
+                    </div>
+                    {selectedBatch.plantingMode && (
+                      <div className="text-emerald-600 mt-0.5">
+                        种植模式：{translatePlantingMode(selectedBatch.plantingMode) || selectedBatch.plantingMode}
+                      </div>
+                    )}
+                    {selectedBatch.cropCode && (
+                      <div className="text-emerald-600 mt-0.5">编码：{selectedBatch.cropCode}</div>
+                    )}
+                  </>
+                ) : null}
+              </div>
+            )}
+          </FormField>
+          <FormField label="种植模式">
+            {isLockedByBatch ? (
+              // 2026-06-10: 关联批次锁定时用 div 显示中文标签（DictSelect 即使 disabled 仍按 value 渲染，不翻译）
+              <div className="h-10 px-3 border border-gray-400 bg-gray-50 rounded-lg text-sm text-gray-900 flex items-center">
+                {plantingModeDisplay || '（未设置）'}
+              </div>
+            ) : (
+              <DictSelect
+                category="planting_mode"
+                value={form.plantingMode}
+                onChange={(value) => onFormChange({ ...form, plantingMode: value })}
+                placeholder="选择种植模式"
+              />
+            )}
+          </FormField>
+        </div>
+
+        {/* 第四行：适用范围（多选Checkbox）单独占满整行（关联生产批次号已移至第二行） */}
+        <FormField label="适用范围（可多选）">
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onScopeToggle}
+              className="flex items-center gap-1 text-gray-600"
+            >
+              {scopeExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <span>{scopeExpanded ? '收起' : '展开'}</span>
+            </Button>
+            {scopeExpanded && (
+              <div className="flex flex-wrap gap-2">
+                {TECH_SOLUTION_SCOPES.map((option) => (
+                  <label key={option} className="flex items-center gap-1 cursor-pointer">
+                    <Checkbox
+                      checked={form.scopes.includes(option)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onFormChange({ ...form, scopes: [...form.scopes, option] });
+                        } else {
+                          onFormChange({
+                            ...form,
+                            scopes: form.scopes.filter((s) => s !== option),
+                          });
+                        }
+                      }}
+                    />
+                    <span className="text-sm">{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </FormField>
+
+        {/* 第五行：编制人 + 版本 + 创建日期（三个字段同一排，创建日期移到版本后面） */}
+        <div className="grid grid-cols-3 gap-4">
+          <FormField label="编制人">
+            <Select
+              value={form.author}
+              onChange={(e) => onFormChange({ ...form, author: e.target.value })}
+              options={operatorOptions}
+            />
+          </FormField>
           <FormField label="版本">
             <Input
               value={form.version}
@@ -146,96 +338,6 @@ export function CreateModal({
           </FormField>
           <FormField label="创建日期">
             <Input value={new Date().toISOString().split('T')[0]} disabled className="bg-gray-50" />
-          </FormField>
-        </div>
-
-        {/* 第三行：作物品种 + 种植模式 */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="作物品种" required>
-            <CropCodeSelector
-              value={form.cropCode || ''}
-              onChange={onCropChange}
-              placeholder="搜索或选择作物品种..."
-              size="md"
-              showFullPath={true}
-            />
-            {selectedCrop && (
-              <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
-                <div className="text-emerald-700 flex items-center gap-1">
-                  <Leaf className="w-3 h-3 flex-shrink-0" />
-                  {selectedCrop.categoryName} &gt; {selectedCrop.typeName} &gt; {selectedCrop.varietyName}
-                  {selectedCrop.subVariety1Name && ` > ${selectedCrop.subVariety1Name}`}
-                </div>
-                <div className="text-emerald-600 mt-0.5">编码：{selectedCrop.cropCode}</div>
-              </div>
-            )}
-          </FormField>
-          <FormField label="种植模式">
-            <DictSelect
-              category="planting_mode"
-              value={form.plantingMode}
-              onChange={(value) => onFormChange({ ...form, plantingMode: value })}
-              placeholder="选择种植模式"
-            />
-          </FormField>
-        </div>
-
-        {/* 第四行：适用范围（多选Checkbox）+ 关联生产批次号 */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="适用范围（可多选）">
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onScopeToggle}
-                className="flex items-center gap-1 text-gray-600"
-              >
-                {scopeExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                <span>{scopeExpanded ? '收起' : '展开'}</span>
-              </Button>
-              {scopeExpanded && (
-                <div className="flex flex-wrap gap-2">
-                  {TECH_SOLUTION_SCOPES.map((option) => (
-                    <label key={option} className="flex items-center gap-1 cursor-pointer">
-                      <Checkbox
-                        checked={form.scopes.includes(option)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            onFormChange({ ...form, scopes: [...form.scopes, option] });
-                          } else {
-                            onFormChange({
-                              ...form,
-                              scopes: form.scopes.filter((s) => s !== option),
-                            });
-                          }
-                        }}
-                      />
-                      <span className="text-sm">{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </FormField>
-          <FormField label="关联生产批次号">
-            <Select
-              value={form.relatedBatchCode}
-              onChange={(e) => onFormChange({ ...form, relatedBatchCode: e.target.value })}
-              // M-2 抽取：共享 RELATED_BATCH_OPTIONS（与 EditModal/BatchEditModal 一致）
-              options={RELATED_BATCH_OPTIONS}
-            />
-          </FormField>
-        </div>
-
-        {/* 第五行：编制人 */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField label="编制人">
-            <Select
-              value={form.author}
-              onChange={(e) => onFormChange({ ...form, author: e.target.value })}
-              options={operatorOptions}
-            />
           </FormField>
         </div>
 

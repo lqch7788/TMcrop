@@ -6,7 +6,7 @@ import { FileCode } from 'lucide-react';
 import { useApproval } from '../../hooks/useApproval';
 import { USE_API } from '../../services/apiClient';
 import { getDictionaries } from '../../services/dictionaryService';
-import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, getDictItemName } from '../../stores';
+import { useTechSolutionStore, useDictionaryStore, useAuthStore, useApprovalStore, useProductionPlanStore, getDictItemName } from '../../stores';
 import { showAlert } from '@/lib/dialogService';
 import { CropVariety } from '../../types/cropVariety';
 import { Pagination } from '@/components/ui';
@@ -60,6 +60,9 @@ export function TechSolutionPage() {
     deleteSolutions,
   } = useTechSolutionStore();
 
+  // 2026-06-10: 加载生产计划列表（用于 CreateModal "关联生产批次号"联动自动填作物信息）
+  const { batches: productionBatches, fetchPlans } = useProductionPlanStore();
+
   // 从 useAuthStore 获取当前登录用户（避免直接读 localStorage）
   const currentUser = useAuthStore((s) => s.currentUser);
   const currentUsername = currentUser?.username || '陆启闯';
@@ -107,6 +110,8 @@ export function TechSolutionPage() {
   // 组件挂载时加载数据
   useEffect(() => {
     fetchSolutions();
+    // 2026-06-10: 同时加载生产计划列表（CreateModal 联动需要）
+    fetchPlans();
     // 确保字典数据已加载
     const loadDict = async () => {
       const state = useDictionaryStore.getState();
@@ -116,7 +121,7 @@ export function TechSolutionPage() {
       // L-2 清理：删除 setDictReady 调用
     };
     loadDict();
-  }, [fetchSolutions]);
+  }, [fetchSolutions, fetchPlans]);
 
   // 页面可见性变化时自动刷新数据
   useEffect(() => {
@@ -760,6 +765,7 @@ export function TechSolutionPage() {
         form={newPlanForm}
         scopeExpanded={scopeExpanded}
         selectedCrop={selectedCrop}
+        batches={productionBatches}
         operatorOptions={operatorOptions}
         onClose={() => setCreateModalOpen(false)}
         onFormChange={setNewPlanForm}
