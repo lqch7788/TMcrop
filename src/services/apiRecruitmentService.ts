@@ -10,6 +10,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { todayLocal } from '@/lib/dateUtils';
 
 /**
  * 招聘记录类型
@@ -190,7 +191,7 @@ export async function createRecruitmentRecord(recruitment: CreateRecruitmentPara
     remarks: recruitment.remarks,
     applicant_id: recruitment.applicantId,
     applicant_name: recruitment.applicantName,
-    apply_date: new Date().toISOString().slice(0, 10),
+    apply_date: todayLocal(),
   };
 
   const response = await enhancedApiClient.post<any>('/recruitment', snakeData);
@@ -204,7 +205,7 @@ export async function createRecruitmentRecord(recruitment: CreateRecruitmentPara
                    recruitment.priority === 'low' ? '低' : '普通',
     status: 'pending',
     statusLabel: '待审批',
-    applyDate: new Date().toISOString().slice(0, 10),
+    applyDate: todayLocal(),
   };
 }
 
