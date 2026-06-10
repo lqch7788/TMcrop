@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import type { CropOrder, CropOrderFilters, CropOrderStatus } from '../types/crop';
 import * as orderService from '../services/apiCropOrderService';
+import { todayLocal } from '../lib/dateUtils';
 
 interface OrderStats {
   total: number;
@@ -83,7 +84,7 @@ export const useOrderDataStore = create<OrderDataState>()(
         const result = await orderService.updateOrder(id, updates);
         if (result) {
           set((state) => ({
-            orders: state.orders.map((o) => (o.id === id ? { ...o, ...updates, updateTime: new Date().toISOString() } : o)),
+            orders: state.orders.map((o) => (o.id === id ? { ...o, ...updates, updateTime: todayLocal() } : o)),
           }));
         }
         return result;

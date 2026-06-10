@@ -18,6 +18,7 @@ import { useAuthStore, useCustomerStore } from '@/stores';
 import { Modal } from '@/components/ui';
 import CropCodeSelector from '@/components/farm/common/CropCodeSelector';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 import { useToastStore } from '@/stores/useToastStore';
 
 interface AddModalProps {
@@ -57,7 +58,7 @@ export function AddModal({
     plannedQuantity: 0,
     completedQuantity: 0,
     unit: '株',
-    orderDate: new Date().toISOString().split('T')[0],
+    orderDate: todayLocal(),
     expectedCompletionDate: '',
     remarks: '',
     // 客户相关字段
@@ -186,7 +187,7 @@ export function AddModal({
       plannedQuantity: 0,
       completedQuantity: 0,
       unit: '株',
-      orderDate: new Date().toISOString().split('T')[0],
+      orderDate: todayLocal(),
       expectedCompletionDate: '',
       remarks: '',
       customerId: '',
@@ -276,7 +277,7 @@ export function AddModal({
         </Label>
         <DatePicker
           selected={formData.orderDate ? new Date(formData.orderDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, orderDate: date.toISOString().split('T')[0] })}
+          onChange={(date) => setFormData({ ...formData, orderDate: todayLocal(date) })}
           className="border-gray-400"
         />
       </div>
@@ -438,7 +439,7 @@ export function AddModal({
         </Label>
         <DatePicker
           selected={formData.expectedCompletionDate ? new Date(formData.expectedCompletionDate) : undefined}
-          onChange={(date) => setFormData({ ...formData, expectedCompletionDate: date.toISOString().split('T')[0] })}
+          onChange={(date) => setFormData({ ...formData, expectedCompletionDate: todayLocal(date) })}
           className="border-gray-400"
         />
       </div>
