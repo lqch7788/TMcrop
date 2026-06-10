@@ -20,10 +20,12 @@ import {
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui';
 import { Pagination } from '@/components/ui';
+import { DeleteConfirmModal as DeleteWarningModal } from '@/components/ui';
 import { useCustomerStore } from '@/stores';
 import { Customer } from '@/types/customer.types';
 import { CustomerModal } from './CustomerModal';
-import { showConfirm } from '@/lib/dialogService';
+import { ExportFormatModal } from '@/components/common/ExportFormatModal';
+import { showConfirm, showAlert } from '@/lib/dialogService';
 import ActionToolbar from '@/components/warehouse/ActionToolbar';
 
 export function CustomerPage() {
@@ -39,6 +41,11 @@ export function CustomerPage() {
   // 导出/删除模式状态
   const [exportMode, setExportMode] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
+  // 2026-06-10: 与订单管理一致——删除/导出用独立弹窗（替代原 showConfirm 直接弹 + 无格式选择）
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState('xlsx');
 
   useEffect(() => {
     fetchCustomers();
@@ -116,6 +123,29 @@ export function CustomerPage() {
     }
   };
 
+  // 2026-06-10: 删除确认弹窗（与订单管理 DeleteWarningModal 流程一致）
+  const handleAskDelete = (ids: string[]) => {
+    setPendingDeleteIds(ids);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const ids = pendingDeleteIds;
+    setShowDeleteModal(false);
+    setPendingDeleteIds([]);
+    setDeleteMode(false);
+    try {
+      for (const id of ids) {
+        await deleteCustomer(id);
+      }
+      setSelectedRows([]);
+      await showAlert(`已删除 ${ids.length} 条客户记录`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await showAlert(`删除失败：${msg || '请稍后重试'}`);
+    }
+  };
+
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditCustomer(null);
@@ -156,11 +186,16 @@ export function CustomerPage() {
     setSelectedRows([]);
   };
 
-  const handleConfirmExport = async () => {
+  const handleConfirmExport = () => {
     if (selectedRows.length === 0) {
       return;
     }
-    // 导出逻辑
+    // 2026-06-10: 与订单管理一致——先打开 ExportFormatModal 让用户选格式
+    setShowExportModal(true);
+  };
+
+  // 2026-06-10: 实际导出（根据 exportFormat 生成 xlsx/csv/word）
+  const handleDoExport = async () => {
     const selectedData = filteredCustomers.filter(c => selectedRows.includes(c.id));
     const headers = ['客户编码', '客户名称', '联系人', '联系电话', '收货地址', '备注', '创建时间'];
     const exportData = selectedData.map(c => ({
@@ -173,20 +208,53 @@ export function CustomerPage() {
       '创建时间': c.createTime || '',
     }));
 
-    let content = headers.join(',') + '\n' + exportData.map(row =>
-      headers.map(h => `"${row[h] || ''}"`).join(',')
-    ).join('\n');
+    const fileNameBase = `客户管理_${new Date().toISOString().slice(0, 10)}`;
 
-    const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `客户管理_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // RFC4180 CSV 转义
+    const csvEscape = (v: unknown): string => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
 
-    setExportMode(false);
-    setSelectedRows([]);
+    try {
+      if (exportFormat === 'csv') {
+        const lines = [
+          headers.join(','),
+          ...exportData.map(row => headers.map(h => csvEscape(row[h as keyof typeof row])).join(',')),
+        ];
+        const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${fileNameBase}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } else if (exportFormat === 'word') {
+        const escapeHtml = (s: unknown): string => String(s ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${escapeHtml((row as any)[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-word;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${fileNameBase}.doc`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } else {
+        // excel：HTML table 写入 .xls（与订单管理一致）
+        const html = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${exportData.map(row => `<tr>${headers.map(h => `<td>${(row as any)[h] || ''}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${fileNameBase}.xls`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      setExportMode(false);
+      setSelectedRows([]);
+      setShowExportModal(false);
+    } catch (err) {
+      await showAlert('导出失败：' + (err instanceof Error ? err.message : '未知错误'));
+    }
   };
 
   return (
@@ -303,17 +371,15 @@ export function CustomerPage() {
         onConfirmBatchEdit={() => {}}
         onCancelBatchEdit={() => {}}
         onConfirmDelete={async () => {
-          if (await showConfirm(`确定要删除选中的 ${selectedRows.length} 条记录吗？`)) {
-            await handleDelete(selectedRows);
-            setDeleteMode(false);
-          }
+          // 2026-06-10: 改为打开 DeleteWarningModal 弹窗（与订单管理一致）
+          if (selectedRows.length > 0) handleAskDelete(selectedRows);
         }}
         onCancelDelete={handleCancelDelete}
         onConfirmExport={handleConfirmExport}
         onCancelExport={handleExportCancel}
         onAdd={handleAdd}
         canCreate={true}
-        canEdit={true}
+        canEdit={false}
         canDelete={true}
         canExport={true}
         showLowStockButton={false}
@@ -353,7 +419,7 @@ export function CustomerPage() {
                 </tr>
               ) : (
                 paginatedData.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-emerald-50 transition-colors">
+                  <tr key={customer.id} className="hover:bg-blue-100 transition-colors">
                     {(exportMode || deleteMode) && (
                       <td className="px-4 py-3">
                         <Checkbox
@@ -382,12 +448,7 @@ export function CustomerPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={async () => {
-                            if (await showConfirm(`确定要删除客户 ${customer.customerName} 吗？`)) {
-                              await deleteCustomer(customer.id);
-                              setSelectedRows([]);
-                            }
-                          }}
+                          onClick={() => handleAskDelete([customer.id])}
                           title="删除"
                           className="text-red-600 hover:text-red-700"
                         >
@@ -428,6 +489,27 @@ export function CustomerPage() {
           handleCloseModal();
           fetchCustomers();
         }}
+      />
+
+      {/* 删除警告弹窗 - 与订单管理一致 */}
+      <DeleteWarningModal
+        isOpen={showDeleteModal}
+        selectedCount={pendingDeleteIds.length}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPendingDeleteIds([]);
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* 导出格式选择弹窗 - 与订单管理一致 */}
+      <ExportFormatModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        exportFormat={exportFormat}
+        onFormatChange={setExportFormat}
+        onConfirm={handleDoExport}
+        selectedCount={selectedRows.length}
       />
     </div>
   );
