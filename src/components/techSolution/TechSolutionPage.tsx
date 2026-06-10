@@ -751,6 +751,7 @@ export function TechSolutionPage() {
         form={editForm}
         scopeExpanded={scopeExpandedEdit}
         selectedCrop={selectedCropEdit}
+        batches={productionBatches}
         operatorOptions={operatorOptions}
         onClose={() => setEditModalOpen(false)}
         onSubmit={handleEditSubmit}
