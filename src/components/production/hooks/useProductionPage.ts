@@ -3,7 +3,7 @@
  * 将 ProductionPage 的所有状态和逻辑提取为独立 hook，便于维护和测试
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore, useAuthStore } from '../../../stores';
+import { useGreenhouseStore, useProductionPlanStore, useOrderDataStore, useAuthStore, useApprovalStore } from '../../../stores';
 import { CropBatch, PlanType } from '../../../types';
 import { useApproval } from '../../../hooks/useApproval';
 import { apiClient, USE_API } from '../../../services/apiClient';
@@ -518,7 +518,8 @@ export function useProductionPage(): UseProductionPageReturn {
             plantingMode: formData.plantingMode.join(','),
           },
         };
-        await apiClient.post('/approvals', approvalData);
+        // C5 修复：审批单走 useApprovalStore.addApproval（已包含 POST + 乐观更新 + 错误处理）
+        await useApprovalStore.getState().addApproval(approvalData);
         await refreshApprovals();
       }
 
@@ -696,7 +697,8 @@ export function useProductionPage(): UseProductionPageReturn {
             };
 
             if (USE_API) {
-              await apiClient.post('/approvals', approvalData);
+              // C5 修复：审批单走 useApprovalStore.addApproval
+              await useApprovalStore.getState().addApproval(approvalData);
             }
 
             return batch.id;
@@ -918,10 +920,12 @@ export function useProductionPage(): UseProductionPageReturn {
         // P0-05: 移除 updatePlan('pending') 步骤，直接提交审批单
         // 状态切换由审批通过后回调 / 手动审批流处理（数据库 batch_status 保持当前值）
         try {
-          await apiClient.post('/approvals', approvalData);
-        } catch (e: any) {
+          // C5 修复：审批单走 useApprovalStore.addApproval
+          await useApprovalStore.getState().addApproval(approvalData);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
           console.error('[作废] /approvals POST 失败:', e);
-          await showAlert(`作废失败[提交审批单]：${e?.message || String(e)}`);
+          await showAlert(`作废失败[提交审批单]：${msg}`);
           return;
         }
       }
