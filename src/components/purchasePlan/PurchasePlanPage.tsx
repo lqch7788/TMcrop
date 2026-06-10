@@ -15,7 +15,6 @@ import { showAlert, showToast } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import * as XLSX from 'xlsx';
 import { getNextPurchaseApplicationCode } from '../../services/apiPurchasePlanService';
-import { useShallow } from 'zustand/react/shallow';
 import { todayLocal } from '@/lib/dateUtils';
 
 // 导入子组件
@@ -75,22 +74,16 @@ export function PurchasePlanPage() {
   }, []);
 
   // 监听审批状态变化，自动重拉采购计划（确保审批通过/拒绝后采购列表状态即时更新）
-  // M-1: 强类型 selector；H-4: 用 useShallow 避免闭包陷阱（status count 引用稳定）
-  const approvalVersion = useApprovalStore((s) => s.approvals?.length ?? 0);
-  const lastApprovalStatusSum = useApprovalStore(
-    useShallow((s) => {
-      const arr = s.approvals || [];
-      return arr.reduce<number>(
-        (sum, a) => sum + (a.status === 'approved' ? 1 : 0) + (a.status === 'rejected' ? 1 : 0),
-        0
-      );
-    })
+  // P1 修复：合并双依赖 (approvalVersion + lastApprovalStatusSum) 为单一字符串签名
+  //   原实现 useShallow 包裹 number selector 是误用（useShallow 对 primitive 无意义）
+  const approvalSig = useApprovalStore(
+    (s) => (s.approvals || []).map(a => `${a.id}:${a.status}`).join('|')
   );
   useEffect(() => {
-    // 跳过首次挂载（已有 useEffect 加载）
-    if (approvalVersion === 0) return;
+    // P1 修复：依赖 approvalSig（合并版签名）替代原双依赖
+    if (!approvalSig) return; // 首次挂载（approvals 空数组）跳过
     fetchPlans();
-  }, [approvalVersion, lastApprovalStatusSum]);
+  }, [approvalSig]);
 
   // 进入采购计划页面时主动加载审批列表（用于详情弹窗显示审批记录）
   // M-1: 强类型 selector（直接读 function reference，无需 any）
