@@ -630,6 +630,7 @@ export interface CropOrder {
   customerName?: string;
   customerPhone?: string;
   deliveryAddress?: string;
+  cropCode?: string;               // 作物编号（用于反向查 CropVariety，P0-4 新增）
 
   // 时间
   orderDate: string;               // 订单日期

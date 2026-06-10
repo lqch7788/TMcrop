@@ -10,7 +10,6 @@
 import { create } from 'zustand';
 import type { CropOrder, CropOrderFilters, CropOrderStatus } from '../types/crop';
 import * as orderService from '../services/apiCropOrderService';
-import { todayLocal } from '../lib/dateUtils';
 
 interface OrderStats {
   total: number;
@@ -83,8 +82,9 @@ export const useOrderDataStore = create<OrderDataState>()(
       updateOrder: async (id, updates) => {
         const result = await orderService.updateOrder(id, updates);
         if (result) {
+          // 用服务端返回的完整记录覆盖本地（让后端 updateTime / cropCode 等字段生效）
           set((state) => ({
-            orders: state.orders.map((o) => (o.id === id ? { ...o, ...updates, updateTime: todayLocal() } : o)),
+            orders: state.orders.map((o) => (o.id === id ? { ...o, ...result } : o)),
           }));
         }
         return result;

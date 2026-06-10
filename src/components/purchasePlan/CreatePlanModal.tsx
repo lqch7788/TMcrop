@@ -10,6 +10,7 @@ import { Button } from '@/components/ui';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
 import { usePlantingStore, useDictionaryStore } from '../../stores';
+import { logger } from '../../lib/logger';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import * as XLSX from 'xlsx';
 import { showAlert } from '@/lib/dialogService';
@@ -248,7 +249,7 @@ export function CreatePlanModal({
         const all = await getDictionaries('amount_threshold');
         setAmountThresholdsRaw(all);
       } catch (err) {
-        console.error('读取金额阈值字典失败:', err);
+        logger.error('读取金额阈值字典失败', { error: err });
         if (loadDictionaries) await loadDictionaries();
       } finally {
         setThresholdsLoading(false);

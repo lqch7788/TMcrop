@@ -1,4 +1,8 @@
 /**
+ * @deprecated 死代码组件（C7 标注）—— 2026-06-10 Grep 验证 0 引用方
+ * 引用方：none（Grep 验证时间：2026-06-10）
+ * 等待用户授权后删除
+ *
  * 质检记录弹窗
  */
 import { useState } from 'react';

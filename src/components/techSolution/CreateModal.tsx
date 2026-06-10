@@ -49,7 +49,7 @@ export interface CreateModalProps {
   onFormChange: (form: NewPlanForm) => void;
   onScopeToggle: () => void;
   onCropChange: (code: string, varietyInfo: CropVariety | null) => void;
-  onGenerateCode: () => string;
+  onGenerateCode: () => Promise<string>;
   onSubmitDraft: () => void;
   onSubmitApprove: () => void;
 }
@@ -199,7 +199,16 @@ export function CreateModal({
                 variant="default"
                 size="sm"
                 type="button"
-                onClick={() => onFormChange({ ...form, code: onGenerateCode() })}
+                onClick={async () => {
+                  try {
+                    const code = await onGenerateCode();
+                    onFormChange({ ...form, code });
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    // C2 修复：编码服务失败抛错提示（保留原 UI 行为，不阻塞弹窗）
+                    alert(`生成方案编号失败：${msg}`);
+                  }
+                }}
               >
                 <RefreshCw className="w-4 h-4" />
                 生成

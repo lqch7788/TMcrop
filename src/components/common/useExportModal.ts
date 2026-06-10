@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { showAlert } from '@/lib/dialogService';
+import { todayLocal } from '@/lib/dateUtils';
 
 export type ExportFormat = 'excel' | 'csv' | 'word';
 
@@ -66,7 +67,7 @@ export function useExportModal({ defaultFormat = 'excel', fileNamePrefix }: UseE
       extension = exportFormat === 'excel' ? 'xls' : 'doc';
     }
 
-    const fileName = `${prefix}_${new Date().toISOString().slice(0, 10)}.${extension}`;
+    const fileName = `${prefix}_${todayLocal()}.${extension}`;
 
     try {
       if (window.showSaveFilePicker) {
