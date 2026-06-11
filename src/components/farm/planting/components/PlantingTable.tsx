@@ -558,11 +558,8 @@ export function PlantingTable({
         }
         break;
       case 'delete':
-        if (onDelete) await onDelete(selectedRows);
-        // 删除操作需要等待完成后再重置模式，避免API调用期间用户界面异常
-        if (onOperationModeChange) onOperationModeChange('normal');
-        onSelectionChange([]);
-        return;  // 删除操作已自行处理重置，这里直接返回
+        if (onDelete) onDelete(selectedRows);
+        return; // 删除走弹窗确认流程, 不在此处重置 UI
     }
     // 操作完成后重置模式
     if (onOperationModeChange) onOperationModeChange('normal');

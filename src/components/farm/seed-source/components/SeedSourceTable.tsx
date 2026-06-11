@@ -161,7 +161,7 @@ export function SeedSourceTable({
         break;
       case 'delete':
         onDelete(selectedRows);
-        break;
+        return; // 删除走弹窗确认流程, 不在 executeOperation 内重置 UI
     }
     // 操作完成后重置模式
     onOperationModeChange('normal');
