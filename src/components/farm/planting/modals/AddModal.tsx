@@ -132,6 +132,7 @@ export function AddModal({
       await usePlantingStore.getState().addItem({
         plantCode,
         sourceType: formData.sourceType as SourceType,
+        originPath: formData.originPath,  // V2 改造 (任务 15): 传递 originPath 字段
         sourceId: formData.sourceId,
         sourceCode: formData.sourceCode,
         cropName: formData.cropName,
