@@ -3,16 +3,21 @@
  * 用途：作物库存页"新建"按钮的真正实现
  * 支持来源：自产（兜底）/ 外购 / 赠送 / 委托生产 / 调拨 / 手动盘点
  * 业务单据：自建库存无上游单据，businessId 用 UUID
+ *
+ * 2026-06-11 改造：补全供应商选择器 + 单价 + 总金额 + 采购日期 + 缺失字段
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Modal, FormField } from '@/components/ui';
 import { Input, Select } from '@/components/ui';
 import { TextArea } from '@/components/ui';
-import { Package, AlertCircle } from 'lucide-react';
+import { DatePicker } from '@/components/ui';
+import { Package, AlertCircle, Search, X } from 'lucide-react';
 import { useWarehouseStore, getActiveWarehouses } from '../../../stores';
 import { useInventoryStore } from '../../../stores';
+import { useSupplierStore } from '../../../stores';
 import { todayLocal } from '@/lib/dateUtils';
+import type { Supplier } from '../../../types/supplier';
 // 一次性动作（"非持久化数据"）：按修订后铁律直接调 service，
 // 写后显式调 useInventoryStore.notifyChange() 触发跨页刷新（保留原功能）
 import { inbound } from '../../../services/inventoryService';
@@ -75,10 +80,21 @@ function genBusinessId(): string {
   });
 }
 
+const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
 export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const warehouses = useWarehouseStore((s) => s.warehouses);
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
   const notifyChange = useInventoryStore((s) => s.notifyChange);
+
+  // 供应商搜索
+  const supplierItems = useSupplierStore((s) => s.items);
+  const loadSuppliers = useSupplierStore((s) => s.loadItems);
+  const searchSuppliersInStore = useSupplierStore((s) => s.search);
+  const [supplierSearchKeyword, setSupplierSearchKeyword] = useState('');
+  const [supplierSearchResults, setSupplierSearchResults] = useState<Supplier[]>([]);
+  const [showSupplierSearch, setShowSupplierSearch] = useState(false);
+  const supplierSearchRef = useRef<HTMLDivElement>(null);
 
   // 表单状态
   const [sourceType, setSourceType] = useState<SourceType>(SourceType.EXTERNAL_PURCHASED);
@@ -88,19 +104,45 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
   const [quantity, setQuantity] = useState<string>('');
   const [unit, setUnit] = useState('公斤');
   const [warehouseId, setWarehouseId] = useState('');
-  const [supplierOrGiver, setSupplierOrGiver] = useState(''); // 供应商/赠送人/调出方
   const [inboundDate, setInboundDate] = useState(todayLocal());
   const [grade, setGrade] = useState('good');
   const [remarks, setRemarks] = useState('');
+  // 采购信息（所有入库来源共用）
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierName, setSupplierName] = useState('');
+  const [unitPrice, setUnitPrice] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState<string>('');
+  const [purchaseDate, setPurchaseDate] = useState(todayLocal());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 加载仓库列表
+  // 加载供应商 + 仓库
   useEffect(() => {
-    if (isOpen && warehouses.length === 0) {
-      loadWarehouses();
+    if (isOpen) {
+      if (warehouses.length === 0) loadWarehouses();
+      void loadSuppliers();
     }
-  }, [isOpen, warehouses.length, loadWarehouses]);
+  }, [isOpen]);
+
+  // 供应商搜索
+  useEffect(() => {
+    if (supplierSearchKeyword.trim()) {
+      setSupplierSearchResults(searchSuppliersInStore(supplierSearchKeyword));
+    } else {
+      setSupplierSearchResults(supplierItems);
+    }
+  }, [supplierSearchKeyword, supplierItems, searchSuppliersInStore]);
+
+  // 供应商搜索结果关闭
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (supplierSearchRef.current && !supplierSearchRef.current.contains(e.target as Node)) {
+        setShowSupplierSearch(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 弹窗打开时重置
   useEffect(() => {
@@ -113,21 +155,37 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
       setQuantity('');
       setUnit('公斤');
       setWarehouseId('');
-      setSupplierOrGiver('');
       setInboundDate(todayLocal());
       setGrade('good');
       setRemarks('');
+      setSupplierId('');
+      setSupplierName('');
+      setUnitPrice('');
+      setTotalAmount('');
+      setPurchaseDate(todayLocal());
+      setSupplierSearchKeyword('');
+      setShowSupplierSearch(false);
     }
   }, [isOpen]);
 
   const activeWarehouses = getActiveWarehouses();
+
+  // 实时计算总金额
+  const computedTotal = Number(quantity || 0) * Number(unitPrice || 0);
+
+  const handleSelectSupplier = (supplier: Supplier) => {
+    setSupplierId(String(supplier.id));
+    setSupplierName(supplier.name);
+    setShowSupplierSearch(false);
+    setSupplierSearchKeyword('');
+  };
 
   // 校验
   const validate = (): string | null => {
     if (!cropName.trim()) return '请输入作物名称';
     const qty = Number(quantity);
     if (!quantity || isNaN(qty) || qty <= 0) return '请输入有效数量（>0）';
-    if (!unit.trim()) return '请输入单位';
+    if (!unit.trim()) return '请选择单位';
     if (!warehouseId) return '请选择入库仓库';
     if (!inboundDate) return '请选择入库日期';
     return null;
@@ -160,7 +218,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           quantity: qty,
           unit: unit.trim(),
           sourceType,
-          supplierName: supplierOrGiver.trim() || undefined,
+          supplierId: supplierId || undefined,
+          supplierName: supplierName.trim() || undefined,
           remarks: remarks.trim() || undefined,
           extensions: {
             warehouseId,
@@ -171,8 +230,12 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           },
           // V3 扩展字段（让库存页展示完整元数据）
           grade,
-          auditor: supplierOrGiver.trim() || undefined,
+          auditor: supplierName.trim() || undefined,
           greenhouseName: undefined,
+          // 采购信息
+          unitPrice: unitPrice ? Number(unitPrice) : undefined,
+          totalAmount: computedTotal || undefined,
+          purchaseDate: purchaseDate || undefined,
         },
         'system',
         '系统管理员'
@@ -322,7 +385,39 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           </FormField>
         </div>
 
-        {/* 来源方 */}
+        {/* 采购日期 + 单价 */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="采购日期">
+            <DatePicker
+              selected={purchaseDate ? new Date(purchaseDate) : undefined}
+              onChange={(date) => setPurchaseDate(todayLocal(date))}
+              className="w-full"
+            />
+          </FormField>
+          <FormField label="单价（元）">
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(e.target.value)}
+              className={deepInputClass}
+              placeholder="例如：15.80"
+            />
+          </FormField>
+        </div>
+
+        {/* 总金额（只读计算） */}
+        <FormField label="总金额（元）">
+          <Input
+            type="text"
+            value={`¥ ${computedTotal.toFixed(2)}`}
+            readOnly
+            className={`${deepInputClass} bg-gray-100 font-mono text-emerald-700`}
+          />
+        </FormField>
+
+        {/* 供应商搜索选择器（替换原自由文本） */}
         <FormField label={
           sourceType === SourceType.EXTERNAL_PURCHASED ? '供应商' :
           sourceType === SourceType.GIFT ? '赠送人/单位' :
@@ -330,17 +425,60 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           sourceType === SourceType.TRANSFER ? '调出方' :
           '来源说明'
         }>
-          <Input
-            value={supplierOrGiver}
-            onChange={(e) => setSupplierOrGiver(e.target.value)}
-            placeholder={
-              sourceType === SourceType.EXTERNAL_PURCHASED ? '例如：寿光种子公司' :
-              sourceType === SourceType.GIFT ? '例如：合作单位赠送' :
-              sourceType === SourceType.COMMISSIONED ? '例如：代加工方' :
-              sourceType === SourceType.TRANSFER ? '例如：A 基地' :
-              '可选'
-            }
-          />
+          <div ref={supplierSearchRef} className="relative">
+            {supplierName ? (
+              // 已选中供应商
+              <div className={`${deepInputClass} flex items-center justify-between bg-gray-50`}>
+                <span className="text-sm text-gray-900">{supplierName}</span>
+                <button
+                  type="button"
+                  onClick={() => { setSupplierId(''); setSupplierName(''); }}
+                  className="text-gray-400 hover:text-red-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              // 搜索输入
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={supplierSearchKeyword}
+                  onChange={(e) => {
+                    setSupplierSearchKeyword(e.target.value);
+                    setShowSupplierSearch(true);
+                  }}
+                  onFocus={() => setShowSupplierSearch(true)}
+                  className={`${deepInputClass} w-full pl-10`}
+                  placeholder={
+                    sourceType === SourceType.EXTERNAL_PURCHASED ? '搜索供应商名称/编码...' :
+                    '输入来源方名称...'
+                  }
+                />
+              </div>
+            )}
+            {/* 搜索结果下拉 */}
+            {showSupplierSearch && !supplierName && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {supplierSearchResults.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-400">无匹配供应商</div>
+                ) : (
+                  supplierSearchResults.slice(0, 20).map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleSelectSupplier(s)}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-emerald-50 border-b border-gray-100 last:border-b-0"
+                    >
+                      <span className="font-medium text-gray-900">{s.name}</span>
+                      {s.contactPerson && <span className="ml-2 text-gray-400">({s.contactPerson})</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </FormField>
 
         {/* 备注 */}

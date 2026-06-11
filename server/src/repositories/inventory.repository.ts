@@ -53,6 +53,12 @@ export interface InventoryStock {
   auditor?: string;
   remarks?: string;
   greenhouse_name?: string;
+  // 采购信息（外购入库财务字段）
+  supplier_id?: string;
+  supplier_name?: string;
+  unit_price?: number;
+  total_amount?: number;
+  purchase_date?: string;
 
   // camelCase 别名（find/findBy 返回的格式，queryToObjects 自动转换）
   instanceId?: string;
@@ -145,8 +151,9 @@ export class InventoryStockRepository {
         warehouse_id, warehouse_name, inbound_date, source_type,
         production_plan_code, source_instance_id, status, version,
         crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
+        supplier_id, supplier_name, unit_price, total_amount, purchase_date,
         create_time, update_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       newId,
       instanceId,
@@ -178,6 +185,12 @@ export class InventoryStockRepository {
       data.auditor || null,
       data.remarks || null,
       data.greenhouse_name || null,
+      // 采购信息（外购入库财务字段）
+      data.supplier_id || null,
+      data.supplier_name || null,
+      data.unit_price || 0,
+      data.total_amount || 0,
+      data.purchase_date || null,
       now,
       now
     ]);

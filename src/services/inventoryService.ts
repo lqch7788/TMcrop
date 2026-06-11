@@ -84,6 +84,12 @@ export async function inbound(
       grade: request.grade,
       auditor: request.auditor,
       greenhouseName: request.greenhouseName,
+      // 采购信息（外购入库财务字段）
+      supplierId: request.supplierId,
+      supplierName: request.supplierName,
+      unitPrice: request.unitPrice,
+      totalAmount: request.totalAmount,
+      purchaseDate: request.purchaseDate,
     });
     return {
       success: true,
@@ -424,6 +430,10 @@ function toCamelStock(row: any): InventoryStock {
     auditor: row.auditor ?? row.auditor,
     remarks: row.remarks ?? row.remarks,
     greenhouseName: row.greenhouse_name ?? row.greenhouseName,
+    // 采购信息（外购入库财务字段）
+    unitPrice: Number(row.unit_price ?? row.unitPrice ?? 0),
+    totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0),
+    purchaseDate: row.purchase_date ?? row.purchaseDate ?? '',
   } as unknown as InventoryStock;
 }
 

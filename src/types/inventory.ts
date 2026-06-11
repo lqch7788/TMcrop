@@ -178,6 +178,10 @@ export interface InventoryStock {
   remarks?: string;
   /** 采收区域（多个时用、分隔） */
   greenhouseName?: string;
+  // 采购信息（外购入库财务字段）
+  unitPrice?: number;
+  totalAmount?: number;
+  purchaseDate?: string;
 }
 
 /**
@@ -437,6 +441,10 @@ export interface InboundRequest {
   grade?: string;
   auditor?: string;
   greenhouseName?: string;
+  // 采购信息（外购入库财务字段）
+  unitPrice?: number;
+  totalAmount?: number;
+  purchaseDate?: string;
 }
 
 /** 出库请求 */
