@@ -99,10 +99,11 @@ export function EndPlantingModal({ isOpen, onClose, onSuccess, record }: EndPlan
 
   return (
     <UnifiedModal
-      open={isOpen}
+      isOpen={isOpen}
       onClose={onClose}
       title="种植结束"
-      width="md"
+      size="md"
+      showFooter={true}
       onSubmit={handleSubmit}
       submitText={submitting ? '处理中...' : '确定'}
       cancelText="取消"
