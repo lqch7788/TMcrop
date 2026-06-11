@@ -162,3 +162,46 @@ export class PlantingService {
 }
 
 export const plantingService = new PlantingService();
+
+// ============================================================
+// V2 改造: Zod 校验 schema + 工具函数
+// 任务 6: origin_path 互斥校验 (direct_from_seed 必须填 source_id)
+// V1.1 现状约束: plantings 表无 seedling_batch_id 字段, via_seedling 路径暂不强校验
+// ============================================================
+import { z } from 'zod';
+
+/**
+ * 种植创建请求 Zod schema
+ * - origin_path: 来源路径 (新增字段, 与 db origin_path 列对应)
+ * - source_id: 种源 ID, 当 origin_path=direct_from_seed 时必填
+ * - via_seedling 路径暂不强校验 (V1.1 现状: 无 seedling_batch_id 字段)
+ */
+export const CreatePlantingSchema = z.object({
+  origin_path: z.enum(['direct_from_seed', 'via_seedling'], {
+    errorMap: () => ({ message: '来源路径必填 (direct_from_seed 或 via_seedling)' }),
+  }),
+  source_id: z.string().optional(), // 强校验由 .refine 决定
+  planting_code: z.string().optional(),
+  source_type: z.string().optional(),
+  source_name: z.string().optional(),
+  crop_name: z.string().optional(),
+  crop_variety: z.string().optional(),
+  greenhouse_id: z.string().optional(),
+  greenhouse_name: z.string().optional(),
+  planting_date: z.string().optional(),
+  planting_quantity: z.number().int().nonnegative().optional(),
+}).refine(
+  (data) => data.origin_path === 'direct_from_seed' ? !!data.source_id : true,
+  {
+    message: 'direct_from_seed 必须填 source_id (种源)',
+    path: ['source_id'],
+  },
+);
+
+/**
+ * 校验并解析种植创建请求
+ * @throws ZodError 校验失败
+ */
+export function validateCreatePlanting(input: unknown) {
+  return CreatePlantingSchema.parse(input);
+}
