@@ -24,12 +24,20 @@ export function runAddOriginPathMigration(db: Database, options: MigrationOption
   const { dryRun = false } = options
 
   // 步骤 1: ALTER TABLE 加列 (无 DEFAULT, 历史数据保留 NULL)
-  // 由 fixMissingSchema.ts 包裹 try-catch 处理 duplicate column
-  db.run(`
-    ALTER TABLE plantings ADD COLUMN origin_path TEXT
-      CHECK(origin_path IN ('direct_from_seed','via_seedling'))
-  `)
-  seedLog.info('✓ plantings.origin_path 列已添加')
+  // 内置幂等: duplicate column 静默跳过
+  try {
+    db.run(`
+      ALTER TABLE plantings ADD COLUMN origin_path TEXT
+        CHECK(origin_path IN ('direct_from_seed','via_seedling'))
+    `)
+    seedLog.info('✓ plantings.origin_path 列已添加')
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.skip('• plantings.origin_path 列已存在, 跳过')
+    } else {
+      throw e
+    }
+  }
 
   if (dryRun) {
     seedLog.skip('• [dry-run] 跳过 UPDATE 历史回填')
