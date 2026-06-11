@@ -173,11 +173,12 @@ function executeQuantityToInventory(input: CirculationInput, circId: string): Ci
 
   // 同步写 inventory_stock (残株入库, stock_type='residue', business_type='circulation')
   const stockId = generateId('STK')
+  const instanceId = generateId('INST')
   db.run(`
     INSERT INTO inventory_stock
-    (id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
-    VALUES (?, 'residue', ?, 'circulation', ?, ?, ?, ?, 'active', datetime('now','localtime'))
-  `, [stockId, circId, quantity, input.unit, input.warehouseId])
+    (id, instance_id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
+    VALUES (?, ?, 'residue', ?, 'circulation', ?, ?, ?, ?, 'active', datetime('now','localtime'))
+  `, [stockId, instanceId, circId, quantity, quantity, input.unit, input.warehouseId])
 
   saveDatabase()
   return { circulationId: circId, stockId }

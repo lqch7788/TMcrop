@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Sprout, Tag, Trash2, X, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Sprout, Tag, Trash2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -34,6 +34,8 @@ interface PlantingTableProps {
   onImageClick: (images: string[]) => void;
   // 结束相关回调
   onEnd: (record: Planting, endType: 'normal' | 'abnormal') => void;
+  // V2 改造 (任务 16): 触发 EndPlantingModal 弹窗
+  onEndV2?: (record: Planting) => void;
   // 模式状态
   operationMode?: PlantingOperationMode;
   onOperationModeChange?: (mode: PlantingOperationMode) => void;
@@ -445,6 +447,16 @@ export function PlantingTable({
                 >
                   <CheckCircle className="w-4 h-4" />
                 </Button>
+                {onEndV2 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEndV2(record)}
+                    title="种植结束 (V2: 采收/回流/废弃)"
+                  >
+                    <Recycle className="w-4 h-4 text-emerald-600" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

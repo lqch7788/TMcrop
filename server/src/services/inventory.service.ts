@@ -557,11 +557,12 @@ export function inboundFromSource(rawInput: unknown): { stockId: string } {
   const input = InboundFromSourceInputSchema.parse(rawInput)
   const db = getDatabase()
   const stockId = generateId8('STK')
+  const instanceId = generateId8('INST')
   db.run(`
     INSERT INTO inventory_stock
-    (id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now','localtime'))
-  `, [stockId, input.stockType, input.businessId, input.businessType, input.quantity, input.quantity, input.unit, input.warehouseId])
+    (id, instance_id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now','localtime'))
+  `, [stockId, instanceId, input.stockType, input.businessId, input.businessType, input.quantity, input.quantity, input.unit, input.warehouseId])
   saveDatabase()
   return { stockId }
 }

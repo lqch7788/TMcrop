@@ -51,9 +51,9 @@ describe('inboundFromSource 4 种 businessType 路由', () => {
     expect(result.stockId).toBeDefined()
     const insertCalls = mockDb.run.mock.calls.filter((c: any) => c[0].includes('INSERT INTO inventory_stock'))
     expect(insertCalls.length).toBe(1)
-    // params = [stockId, stockType, businessId, businessType, quantity, unit, warehouseId]
-    expect(insertCalls[0][1][1]).toBe('product') // stockType
-    expect(insertCalls[0][1][3]).toBe('harvest') // businessType
+    // params = [stockId, instanceId, stockType, businessId, businessType, quantity, quantity, unit, warehouseId]
+    expect(insertCalls[0][1][2]).toBe('product') // stockType
+    expect(insertCalls[0][1][4]).toBe('harvest') // businessType
   })
 
   it('circulation (回流后入库存) 应写入 stockType=residue', () => {
