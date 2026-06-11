@@ -3,7 +3,6 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Download, Edit2, Trash2, Printer, Eye, Image, X, Check, TreePine, Tag, MoveRight, Bookmark } from 'lucide-react';
 import { PlantingStats } from './components/PlantingStats';
 import { PlantingFilter } from './components/PlantingFilter';
@@ -11,7 +10,6 @@ import { PlantingTable } from './components/PlantingTable';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
-import { HarvestModal } from './modals/HarvestModal';
 import { EndPlantingModal } from './modals/EndPlantingModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
@@ -30,7 +28,6 @@ import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
 
 export default function PlantingPage() {
-  const navigate = useNavigate();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -130,7 +127,6 @@ export default function PlantingPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [harvestModalOpen, setHarvestModalOpen] = useState(false);
   // V2 改造 (任务 16): 种植结束弹窗状态 (5 种结束方式 + 4 层嵌套)
   const [endV2ModalOpen, setEndV2ModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
@@ -200,11 +196,6 @@ export default function PlantingPage() {
   const handleDetail = (record: Planting) => {
     setCurrentRecord(record);
     setDetailModalOpen(true);
-  };
-
-  const handleHarvest = (record: Planting) => {
-    setCurrentRecord(record);
-    setHarvestModalOpen(true);
   };
 
   const handlePrint = (record: Planting) => {
@@ -280,17 +271,6 @@ export default function PlantingPage() {
     await loadLabels(record.id);
     await loadMarks();
     setMarkModalOpen(true);
-  };
-
-  // 留种操作 - 跳转到种源管理页面，自动打开留种弹窗
-  const handleSeedSaving = (record: Planting) => {
-    const params = new URLSearchParams({
-      action: 'seed-saving',
-      plantingId: record.id,
-      plantingCode: record.plantingCode || '',
-      cropName: record.cropName || '',
-    });
-    navigate(`/farm/seed-source?${params.toString()}`);
   };
 
   const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; labelNumber: string; targetArea: string; operationDate: string; remarks: string }) => {
@@ -523,7 +503,6 @@ export default function PlantingPage() {
         onSelectionChange={setSelectedRows}
         onEdit={handleEdit}
         onDetail={handleDetail}
-        onHarvest={handleHarvest}
         onPrint={handlePrint}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
@@ -531,7 +510,6 @@ export default function PlantingPage() {
         onLabelDetail={handleLabelDetail}
         onMove={handleMove}
         onMark={handleMark}
-        onSeedSaving={handleSeedSaving}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
@@ -573,15 +551,6 @@ export default function PlantingPage() {
         <DetailModal
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
-          record={currentRecord}
-        />
-      )}
-
-      {currentRecord && (
-        <HarvestModal
-          isOpen={harvestModalOpen}
-          onClose={() => setHarvestModalOpen(false)}
-          onSuccess={loadItems}
           record={currentRecord}
         />
       )}
