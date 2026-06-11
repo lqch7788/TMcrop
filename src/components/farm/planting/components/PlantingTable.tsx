@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Sprout, Tag, Trash2, X, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Sprout, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -32,9 +32,7 @@ interface PlantingTableProps {
   onPrint: (record: Planting) => void;
   onDelete: (ids: string[]) => void;
   onImageClick: (images: string[]) => void;
-  // 结束相关回调
-  onEnd: (record: Planting, endType: 'normal' | 'abnormal') => void;
-  // V2 改造 (任务 16): 触发 EndPlantingModal 弹窗
+  // V2 改造 (任务 16): 种植结束弹窗
   onEndV2?: (record: Planting) => void;
   // 模式状态
   operationMode?: PlantingOperationMode;
@@ -75,7 +73,6 @@ export function PlantingTable({
   onPrint,
   onDelete,
   onImageClick,
-  onEnd,
   operationMode = 'normal',
   onOperationModeChange,
   exportMode = false,
@@ -438,35 +435,15 @@ export function PlantingTable({
                 <Image className="w-4 h-4" />
               </Button>
             )}
-            {!record.endTime && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEnd(record, 'normal')}
-                  title="正常结束"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                </Button>
-                {onEndV2 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEndV2(record)}
-                    title="种植结束 (V2: 采收/回流/废弃)"
-                  >
-                    <Recycle className="w-4 h-4 text-emerald-600" />
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEnd(record, 'abnormal')}
-                  title="异常结束"
-                >
-                  <XCircle className="w-4 h-4" />
-                </Button>
-              </>
+            {!record.endTime && onEndV2 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onEndV2(record)}
+                title="种植结束 (V2: 采收/回流/废弃)"
+              >
+                <Recycle className="w-4 h-4 text-emerald-600" />
+              </Button>
             )}
             {onLabelDetail && (
               <Button
@@ -947,22 +924,6 @@ export function PlantingTable({
                               <Recycle className="w-4 h-4 text-emerald-600" />
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'normal')}
-                            title="正常结束"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEnd(record, 'abnormal')}
-                            title="异常结束"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
                         </>
                       )}
                       {onLabelDetail && (
