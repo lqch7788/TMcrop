@@ -44,6 +44,7 @@ export function AddModal({
 }: AddModalProps) {
   const [formData, setFormData] = useState({
     sourceType: SourceType.SEEDLING,
+    originPath: 'direct_from_seed' as 'direct_from_seed' | 'via_seedling',  // V2 改造 (任务 15): 来源路径二选一
     sourceId: '',
     sourceCode: '',
     cropName: '',
