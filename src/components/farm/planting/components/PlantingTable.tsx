@@ -91,6 +91,7 @@ export function PlantingTable({
   canDelete = true,
   canExport = true,
   canPrint = true,
+  onEndV2,
   onLabelDetail,
   onMove,
   onMark,
@@ -939,6 +940,16 @@ export function PlantingTable({
                       )}
                       {!record.endTime && (
                         <>
+                          {onEndV2 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onEndV2(record)}
+                              title="种植结束 (V2: 采收/回流/废弃)"
+                            >
+                              <Recycle className="w-4 h-4 text-emerald-600" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

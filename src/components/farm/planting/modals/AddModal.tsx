@@ -261,6 +261,57 @@ export function AddModal({
           />
         </div>
 
+        {/* V2 改造 (任务 15): 来源路径二选一 — 直接播种 vs 经育苗移栽 */}
+        <div className="col-span-2">
+          <Label className="text-gray-900">来源路径</Label>
+          <div className="flex gap-6 mt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="originPath"
+                value="direct_from_seed"
+                checked={formData.originPath === 'direct_from_seed'}
+                onChange={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    originPath: 'direct_from_seed',
+                    sourceType: SourceType.SEED,
+                    sourceId: '',
+                    sourceCode: '',
+                    cropName: '',
+                    cropVariety: ''
+                  }));
+                }}
+                className="w-4 h-4 text-emerald-600 accent-emerald-600"
+              />
+              <span className="text-sm text-gray-700">直接播种</span>
+              <span className="text-xs text-gray-400">（从种源库选择）</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="originPath"
+                value="via_seedling"
+                checked={formData.originPath === 'via_seedling'}
+                onChange={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    originPath: 'via_seedling',
+                    sourceType: SourceType.SEEDLING,
+                    sourceId: '',
+                    sourceCode: '',
+                    cropName: '',
+                    cropVariety: ''
+                  }));
+                }}
+                className="w-4 h-4 text-emerald-600 accent-emerald-600"
+              />
+              <span className="text-sm text-gray-700">经育苗移栽</span>
+              <span className="text-xs text-gray-400">（从育苗批次选择）</span>
+            </label>
+          </div>
+        </div>
+
         {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
         <div className="col-span-2">
           <Label className="text-gray-900">关联生产计划</Label>

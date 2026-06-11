@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, ClipboardList, Download, Edit2, GitBranch, HelpCircle, Plus, Printer, Trash2, X, XCircle } from 'lucide-react';
+import { CheckCircle, ClipboardList, Download, Edit2, GitBranch, HelpCircle, Plus, Printer, Recycle, Trash2, X, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { SeedSource, StockStatus, SourceType, PropagationType, PropagationStatus } from '../../../../types/crop';
 import {
@@ -54,6 +54,8 @@ interface SeedSourceTableProps {
   // 繁殖途径回调
   onPropagationRecord: (record: SeedSource) => void;
   onPropagationStage: (record: SeedSource) => void;
+  // 回流记录回调 (Phase 4: 前端 UI 接入)
+  onCirculation?: (record: SeedSource) => void;
   // 模式状态
   operationMode: SeedSourceOperationMode;
   onOperationModeChange: (mode: SeedSourceOperationMode) => void;
@@ -90,6 +92,7 @@ export function SeedSourceTable({
   onEnd,
   onPropagationRecord,
   onPropagationStage,
+  onCirculation,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -546,6 +549,18 @@ export function SeedSourceTable({
                           title="外购种源无繁殖过程。如需追踪繁殖阶段，请编辑种源把『来源途径』改为：育种 / 留种 / 无性繁殖"
                         >
                           <HelpCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* Phase 4: 回流记录按钮 — 展示该种源的回流历史 */}
+                      {onCirculation && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onCirculation(record)}
+                          className="text-gray-500 hover:text-cyan-600 hover:bg-cyan-50"
+                          title="回流记录"
+                        >
+                          <Recycle className="w-4 h-4" />
                         </Button>
                       )}
                       {/* 2026-06-05: 去掉 productionPlanCode 守卫 — 新建未关联生产计划的种源也要能结束（强结） */}
