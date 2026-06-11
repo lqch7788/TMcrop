@@ -8,10 +8,10 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 
 /** 库存记录查询参数 */
 export interface InventoryStockQuery {
-  stock_type?: string;
-  warehouse_id?: string;
-  crop_name?: string;
-  business_id?: string;
+  stockType?: string;
+  warehouseId?: string;
+  cropName?: string;
+  businessId?: string;
   page?: number;
   limit?: number;
 }
@@ -236,24 +236,24 @@ export class InventoryStockRepository {
    */
   async findAll(query: InventoryStockQuery): Promise<{ data: InventoryStock[]; total: number }> {
     const db = getDatabase();
-    const { stock_type, warehouse_id, crop_name, page = 1, limit = 50 } = query;
+    const { stockType, warehouseId, cropName, page = 1, limit = 50 } = query;
 
     let sql = `SELECT * FROM inventory_stock WHERE 1=1`;
     const params: any[] = [];
 
-    if (stock_type) {
+    if (stockType) {
       sql += ` AND stock_type = ?`;
-      params.push(stock_type);
+      params.push(stockType);
     }
 
-    if (warehouse_id) {
+    if (warehouseId) {
       sql += ` AND warehouse_id = ?`;
-      params.push(warehouse_id);
+      params.push(warehouseId);
     }
 
-    if (crop_name) {
+    if (cropName) {
       sql += ` AND crop_name LIKE ?`;
-      params.push(`%${crop_name}%`);
+      params.push(`%${cropName}%`);
     }
 
     // 获取总数
