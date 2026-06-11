@@ -46,10 +46,10 @@ const cropSubItems = [
   { icon: Flower2, label: '育苗管理', path: '/crop/seedling' },
   { icon: Trees, label: '种植管理', path: '/crop/planting' },
   { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
-  { icon: Sprout, label: '施肥管理', path: '/crop/fertilizer' },
-  { icon: Bug, label: '病虫害管理', path: '/pest-control' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
+  { icon: Sprout, label: '施肥管理', path: '/crop/fertilizer' },
+  { icon: Bug, label: '病虫害管理', path: '/pest-control' },
 ];
 
 // 人工管理4大模块（离职申请、招聘申请、工资预算已整合到人事管理）
