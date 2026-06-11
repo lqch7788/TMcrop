@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, CheckCircle, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Sprout, Tag, Trash2, X } from 'lucide-react';
+import { Bookmark, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -28,7 +28,6 @@ interface PlantingTableProps {
   onAdd?: () => void;  // 新增回调
   onEdit: (record: Planting) => void;
   onDetail: (record: Planting) => void;
-  onHarvest: (record: Planting) => void;
   onPrint: (record: Planting) => void;
   onDelete: (ids: string[]) => void;
   onImageClick: (images: string[]) => void;
@@ -51,7 +50,6 @@ interface PlantingTableProps {
   onLabelDetail?: (record: Planting) => void;
   onMove?: (record: Planting) => void;
   onMark?: (record: Planting) => void;
-  onSeedSaving?: (record: Planting) => void;  // 留种操作
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -69,7 +67,6 @@ export function PlantingTable({
   onAdd,
   onEdit,
   onDetail,
-  onHarvest,
   onPrint,
   onDelete,
   onImageClick,
@@ -92,7 +89,6 @@ export function PlantingTable({
   onLabelDetail,
   onMove,
   onMark,
-  onSeedSaving,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
@@ -415,16 +411,6 @@ export function PlantingTable({
         width: 250,
         render: (_: unknown, record: Planting) => (
           <div className="flex gap-1">
-            {!record.isHarvest && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onHarvest(record)}
-                title="采收登记"
-              >
-                <CheckCircle className="w-4 h-4" />
-              </Button>
-            )}
             {record.pictures && record.pictures.length > 0 && (
               <Button
                 variant="ghost"
@@ -473,16 +459,6 @@ export function PlantingTable({
                 title="标记管理"
               >
                 <Bookmark className="w-4 h-4" />
-              </Button>
-            )}
-            {onSeedSaving && record.status === 'harvested' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onSeedSaving(record)}
-                title="留种"
-              >
-                <Sprout className="w-4 h-4" />
               </Button>
             )}
           </div>
@@ -892,16 +868,6 @@ export function PlantingTable({
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex gap-1">
-                      {!record.isHarvest && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onHarvest(record)}
-                          title="采收登记"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                      )}
                       {record.pictures && record.pictures.length > 0 && (
                         <Button
                           variant="ghost"
@@ -912,19 +878,15 @@ export function PlantingTable({
                           <Image className="w-4 h-4" />
                         </Button>
                       )}
-                      {!record.endTime && (
-                        <>
-                          {onEndV2 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onEndV2(record)}
-                              title="种植结束 (V2: 采收/回流/废弃)"
-                            >
-                              <Recycle className="w-4 h-4 text-emerald-600" />
-                            </Button>
-                          )}
-                        </>
+                      {!record.endTime && onEndV2 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEndV2(record)}
+                          title="种植结束 (V2: 采收/回流/废弃)"
+                        >
+                          <Recycle className="w-4 h-4 text-emerald-600" />
+                        </Button>
                       )}
                       {onLabelDetail && (
                         <Button
@@ -954,16 +916,6 @@ export function PlantingTable({
                           title="标记管理"
                         >
                           <Bookmark className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {onSeedSaving && record.status === 'harvested' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onSeedSaving(record)}
-                          title="留种"
-                        >
-                          <Sprout className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
