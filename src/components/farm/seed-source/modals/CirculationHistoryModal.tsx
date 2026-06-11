@@ -69,14 +69,13 @@ export function CirculationHistoryModal({ isOpen, onClose, seedSourceId, seedCod
 
   return (
     <UnifiedModal
-      open={isOpen}
+      isOpen={isOpen}
       onClose={onClose}
       title={`回流记录 — ${seedCode}`}
-      width="lg"
+      size="lg"
       showFooter={true}
       submitText="关闭"
       onSubmit={onClose}
-      cancelText=""
     >
       <div className="space-y-3">
         {loading ? (
