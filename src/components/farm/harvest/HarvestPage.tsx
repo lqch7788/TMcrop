@@ -22,6 +22,7 @@ import { getCurrentUsername } from '../../../hooks/farm';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { validateUnitPrice, validateDateNotFuture } from '../../../lib/validators';
 import { showAlert } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 
 // ========== 引入组件（组件化重构） ==========
 import {
@@ -870,7 +871,7 @@ export default function HarvestPage() {
         try {
           await deleteItem(String(createdRecord.id));
         } catch (rollbackErr) {
-          console.error('[HarvestPage] 回滚采收记录失败:', rollbackErr);
+          logger.error('[HarvestPage] 回滚采收记录失败', rollbackErr);
         }
 
         showAlert(

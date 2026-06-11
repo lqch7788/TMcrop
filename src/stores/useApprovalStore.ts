@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
 import { useAuthStore } from './useAuthStore';
+import { logger } from '../lib/logger';
 import {
   Approval,
   ApprovalType,
@@ -328,7 +329,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           // 重新加载以获取最新数据
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[DEBUG] approve 失败:', error);
+          logger.error('[DEBUG] approve 失败', error);
         }
       },
 
@@ -348,7 +349,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           });
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[ApprovalStore] 拒绝操作失败:', error);
+          logger.error('[ApprovalStore] 拒绝操作失败', error);
         }
       },
 
@@ -368,7 +369,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           });
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[ApprovalStore] 撤回失败:', error);
+          logger.error('[ApprovalStore] 撤回失败', error);
         }
       },
 
@@ -389,7 +390,7 @@ export const useApprovalStore = create<ApprovalStore>()(
           });
           await get().fetchApprovals();
         } catch (error) {
-          console.error('[ApprovalStore] 部分审批失败:', error);
+          logger.error('[ApprovalStore] 部分审批失败', error);
         }
       },
 

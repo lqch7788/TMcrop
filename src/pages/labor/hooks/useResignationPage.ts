@@ -9,6 +9,7 @@ import { useResignationStore } from '@/stores';
 import type { ResignationData } from '@/stores';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { logger } from '@/lib/logger';
 import type {
   ResignationRecord,
   ResignationFilters,
@@ -229,7 +230,7 @@ export function useResignationPage() {
         await showAlert('提交失败，请重试');
       }
     } catch (error) {
-      console.error('提交离职申请失败:', error);
+      logger.error('提交离职申请失败', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, createItem]);
@@ -239,7 +240,7 @@ export function useResignationPage() {
     try {
       await updateItem(record.id, { status: 'approved' });
     } catch (error) {
-      console.error('审批通过失败:', error);
+      logger.error('审批通过失败', error);
       await showAlert('审批失败，请重试');
     }
   }, [updateItem]);
@@ -249,7 +250,7 @@ export function useResignationPage() {
     try {
       await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      logger.error('审批驳回失败', error);
       await showAlert('操作失败，请重试');
     }
   }, [updateItem]);

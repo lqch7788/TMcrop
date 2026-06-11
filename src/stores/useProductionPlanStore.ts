@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import type { CropBatch } from '../types';
 import * as apiService from '../services/apiProductionPlanService';
+import { logger } from '../lib/logger';
 
 interface ProductionPlanFilters {
   status?: string;
@@ -57,7 +58,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useProductionPlanStore] addPlan 失败:', error);
+        logger.error('[useProductionPlanStore] addPlan 失败', error);
         set({ error: (error as Error).message });
         throw error;
       }
@@ -73,7 +74,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useProductionPlanStore] updatePlan 失败:', error);
+        logger.error('[useProductionPlanStore] updatePlan 失败', error);
         set({ error: (error as Error).message });
         throw error;
       }
@@ -87,7 +88,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useProductionPlanStore] deletePlan 失败:', error);
+        logger.error('[useProductionPlanStore] deletePlan 失败', error);
         set({ error: (error as Error).message });
         throw error;
       }
@@ -101,7 +102,7 @@ export const useProductionPlanStore = create<ProductionPlanState>()(
         }
         return result;
       } catch (error) {
-        console.error('[useProductionPlanStore] deletePlans 失败:', error);
+        logger.error('[useProductionPlanStore] deletePlans 失败', error);
         set({ error: (error as Error).message });
         throw error;
       }
