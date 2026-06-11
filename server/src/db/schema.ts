@@ -530,7 +530,9 @@ export function initializeDatabase() {
       traceability_code TEXT,
       pictures TEXT,
       production_plan_id TEXT,
-      production_plan_code TEXT
+      production_plan_code TEXT,
+      origin_path TEXT
+        CHECK(origin_path IN ('direct_from_seed','via_seedling'))
     )
   `);
 
