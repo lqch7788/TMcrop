@@ -5,7 +5,6 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { logger } from '../lib/logger';
 
 // ============================================
 // 类型定义
@@ -350,178 +349,48 @@ interface SaveResult<T> {
 }
 
 // ============================================
-// 数据字典 localStorage 配置
-// ============================================
-
-const DICTIONARY_STORAGE_KEY = 'yuanxingtu_dictionaries';
-const DICTIONARY_CATEGORIES_STORAGE_KEY = 'yuanxingtu_dictionary_categories';
-
-// 默认数据字典（API不可用时的回退）
-const DEFAULT_DICTIONARIES: Dictionary[] = [];
-
-// ============================================
 // 数据字典 API
 // ============================================
 
 /**
  * 获取字典列表
- * 优先从后端API获取，失败时降级到 localStorage
- * 后端返回字段: category_code, dict_code, dict_label, dict_value, sort_order, status, created_at, updated_at
- * 前端期望字段: category, code, name, sortNumber, status, createdAt, updatedAt
+ * 字段映射: 后端 snake_case (category_code, dict_code) → 前端 camelCase (category, code)
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
-  // 后端直接返回数组格式，不用 apiClient
-  let url = '/api/dictionary/dictionaries';
-  if (category) {
-    url += `?category=${encodeURIComponent(category)}`;
-  }
+  const url = category
+    ? `/dictionary/dictionaries?category=${encodeURIComponent(category)}`
+    : '/dictionary/dictionaries';
 
-  // 获取认证 token
-  const token = localStorage.getItem('token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  const data = await enhancedApiClient.get<Record<string, unknown>[]>(url);
+  if (!data) return [];
 
-  try {
-    const response = await fetch(url, { headers });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const rawData = await response.json();
-
-    // 处理多种可能的响应格式
-    let data: Record<string, unknown>[] = [];
-
-    if (Array.isArray(rawData)) {
-      // 格式1: 直接返回数组
-      data = rawData;
-    } else if (rawData && typeof rawData === 'object') {
-      // 格式2: 包装格式 {success: true, data: [...]} 或 {data: [...]}
-      if (Array.isArray((rawData as any).data)) {
-        data = (rawData as any).data;
-      } else if (Array.isArray((rawData as any).result)) {
-        data = (rawData as any).result;
-      }
-    }
-
-    if (data.length === 0) {
-      throw new Error('API 返回空数据');
-    }
-
-    // 字段映射：将后端字段转换为前端字段
-    const mappedData: Dictionary[] = data.map((item: Record<string, unknown>) => ({
-      id: item.id as string,
-      category: item.category_code as string,
-      code: item.dict_code as string,
-      name: item.dict_label as string,
-      displayName: (item.display_name as string) || (item.dict_label as string),
-      sortNumber: item.sort_order as number,
-      status: item.status as string,
-      createdAt: item.created_at as string,
-      updatedAt: item.updated_at as string,
-    }));
-
-    // API成功时同步到 localStorage
-    localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(mappedData));
-    console.log('[DictionaryService] 从API获取并缓存字典数据:', mappedData.length, '条');
-
-    return mappedData;
-  } catch (error) {
-    console.warn('[DictionaryService] API获取失败，降级到localStorage:', error);
-
-    // API失败时尝试从 localStorage 读取
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Dictionary[];
-        // 如果有分类过滤
-        if (category) {
-          return parsed.filter(d => d.category === category);
-        }
-        console.log('[DictionaryService] 从localStorage恢复字典数据:', parsed.length, '条');
-        return parsed;
-      } catch {
-        return DEFAULT_DICTIONARIES;
-      }
-    }
-    return DEFAULT_DICTIONARIES;
-  }
+  return data.map((item) => ({
+    id: item.id as string,
+    category: item.category_code as string,
+    code: item.dict_code as string,
+    name: item.dict_label as string,
+    displayName: (item.display_name as string) || (item.dict_label as string),
+    sortNumber: item.sort_order as number,
+    status: item.status as string,
+    createdAt: item.created_at as string,
+    updatedAt: item.updated_at as string,
+  }));
 }
 
 /**
  * 获取字典分类列表
- * 优先从后端API获取，失败时降级到 localStorage
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function getDictionaryCategories(): Promise<string[]> {
-  try {
-    // 后端直接返回数组格式，不用 apiClient
-    // 获取认证 token
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch('/api/dictionary/dictionaries/categories', { headers });
-
-    // 检查响应状态
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const rawData = await response.json();
-
-    // 处理多种可能的响应格式
-    let data: string[] = [];
-
-    if (Array.isArray(rawData)) {
-      // 格式1: 直接返回数组
-      data = rawData;
-    } else if (rawData && typeof rawData === 'object') {
-      // 格式2: 包装格式
-      if (Array.isArray((rawData as any).data)) {
-        data = (rawData as any).data;
-      } else if (Array.isArray((rawData as any).result)) {
-        data = (rawData as any).result;
-      }
-    }
-
-    if (data.length > 0) {
-      console.log('[DictionaryService] 从API获取到分类:', data.length);
-      // API成功时同步到 localStorage
-      localStorage.setItem(DICTIONARY_CATEGORIES_STORAGE_KEY, JSON.stringify(data));
-      return data;
-    }
-    throw new Error('Invalid response format');
-  } catch (error) {
-    console.warn('[DictionaryService] 获取分类失败，降级到localStorage:', error);
-
-    // API失败时尝试从 localStorage 读取
-    const stored = localStorage.getItem(DICTIONARY_CATEGORIES_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as string[];
-        console.log('[DictionaryService] 从localStorage恢复分类数据:', parsed.length, '条');
-        return parsed;
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  }
+  const data = await enhancedApiClient.get<string[]>('/dictionary/dictionaries/categories');
+  return data || [];
 }
 
 /**
  * 保存字典（新增或更新）
- * 使用 fetch 直接调用，绕过 apiClient 的响应格式验证
- * 前端字段: category, code, name, sortNumber -> 后端字段: category_code, dict_code, dict_label, sort_order
+ * 字段转换: 前端 (category, code, name, sortNumber) → 后端 (category_code, dict_code, dict_label, sort_order)
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function saveDictionaries(data: {
   inserted: Dictionary[];
@@ -545,69 +414,7 @@ export async function saveDictionaries(data: {
     deleted: data.deleted,
   };
 
-  // 获取认证 token
-  const token = localStorage.getItem('token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch('/api/dictionary/dictionaries', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(backendData)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = response.json();
-
-    // 保存成功后，同步更新 localStorage
-    // 从 localStorage 读取当前数据
-    const stored = localStorage.getItem(DICTIONARY_STORAGE_KEY);
-    if (stored) {
-      try {
-        let currentData = JSON.parse(stored) as Dictionary[];
-
-        // 处理新增
-        if (data.inserted.length > 0) {
-          const insertedWithIds = data.inserted.map(dict => ({
-            ...dict,
-            id: dict.id || `DICT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          }));
-          currentData = [...currentData, ...insertedWithIds];
-        }
-
-        // 处理更新
-        if (data.updated.length > 0) {
-          currentData = currentData.map(dict => {
-            const updated = data.updated.find(u => u.id === dict.id);
-            return updated ? { ...dict, ...updated } : dict;
-          });
-        }
-
-        // 处理删除
-        if (data.deleted.length > 0) {
-          currentData = currentData.filter(dict => !data.deleted.includes(dict.id || ''));
-        }
-
-        localStorage.setItem(DICTIONARY_STORAGE_KEY, JSON.stringify(currentData));
-        console.log('[DictionaryService] 保存后同步localStorage，当前共', currentData.length, '条');
-      } catch (e) {
-        console.warn('[DictionaryService] 同步localStorage失败:', e);
-      }
-    }
-
-    return result;
-  } catch (error) {
-    logger.error('[DictionaryService] 保存字典失败', error);
-    throw error;
-  }
+  return enhancedApiClient.post<SaveResult<Dictionary>>('/dictionary/dictionaries', backendData);
 }
 
 // ============================================
@@ -616,43 +423,14 @@ export async function saveDictionaries(data: {
 
 /**
  * 获取系统配置列表
- * 优先从API获取，失败时使用本地存储
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function getSystemConfigs(configKey?: string): Promise<SystemConfig[]> {
-  // 本地存储的回退数据
-  const LOCAL_STORAGE_KEY = 'yuanxingtu_system_configs';
-  const DEFAULT_CONFIGS: SystemConfig[] = [
-    { id: '1', configKey: 'system_name', configValue: '智慧种植生产管理系统', configType: 'string', description: '系统显示名称' },
-    { id: '2', configKey: 'system_version', configValue: 'V3.0.0', configType: 'string', description: '当前系统版本' },
-    { id: '3', configKey: 'demo_mode', configValue: 'true', configType: 'boolean', description: '是否启用演示模式' },
-    { id: '4', configKey: 'theme_color', configValue: 'emerald', configType: 'string', description: '系统主题色' },
-    { id: '5', configKey: 'page_size', configValue: '10', configType: 'number', description: '列表默认分页大小' },
-    { id: '6', configKey: 'enable_notifications', configValue: 'true', configType: 'boolean', description: '是否启用系统通知' },
-    { id: '7', configKey: DEFAULT_USERNAME_KEY, configValue: DEFAULT_USERNAME_VALUE, configType: 'string', description: '系统默认用户名' },
-  ];
-
-  let url = '/dictionary/system-configs';
-  if (configKey) {
-    url += `?configKey=${encodeURIComponent(configKey)}`;
-  }
-
-  try {
-    const data = await apiClient.get<SystemConfig[]>(url);
-    // API成功时保存到本地存储
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-    return data;
-  } catch (error) {
-    // API失败时尝试从本地存储读取
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return DEFAULT_CONFIGS;
-      }
-    }
-    return DEFAULT_CONFIGS;
-  }
+  const url = configKey
+    ? `/dictionary/system-configs?configKey=${encodeURIComponent(configKey)}`
+    : '/dictionary/system-configs';
+  const data = await enhancedApiClient.get<SystemConfig[]>(url);
+  return data || [];
 }
 
 /**
@@ -663,41 +441,23 @@ export async function saveSystemConfigs(data: {
   updated: SystemConfig[];
   deleted: string[];
 }): Promise<SaveResult<SystemConfig>> {
-  return apiClient.post<SaveResult<SystemConfig>>('/dictionary/system-configs', data);
+  return enhancedApiClient.post<SaveResult<SystemConfig>>('/dictionary/system-configs', data);
 }
 
 // ============================================
 // 仓库 API
 // ============================================
 
-const WAREHOUSE_STORAGE_KEY = 'yuanxingtu_warehouses';
-const DEFAULT_WAREHOUSES: Warehouse[] = [
-  { id: '1', warehouseCode: 'WH001', warehouseName: '主仓库', warehouseType: 'main', location: '园区A区', capacity: 1000 },
-  { id: '2', warehouseCode: 'WH002', warehouseName: '冷藏仓库', warehouseType: 'cold', location: '园区B区', capacity: 500 },
-];
-
+/**
+ * 获取仓库列表
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
+ */
 export async function getWarehouses(status?: string): Promise<Warehouse[]> {
-  let url = '/dictionary/warehouses';
-  if (status) {
-    url += `?status=${encodeURIComponent(status)}`;
-  }
-
-  try {
-    const data = await apiClient.get<Warehouse[]>(url);
-    localStorage.setItem(WAREHOUSE_STORAGE_KEY, JSON.stringify(data));
-    return data;
-  } catch (error) {
-    const stored = localStorage.getItem(WAREHOUSE_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return status ? parsed.filter((w: Warehouse) => w.status === status) : parsed;
-      } catch {
-        return DEFAULT_WAREHOUSES;
-      }
-    }
-    return DEFAULT_WAREHOUSES;
-  }
+  const url = status
+    ? `/dictionary/warehouses?status=${encodeURIComponent(status)}`
+    : '/dictionary/warehouses';
+  const data = await enhancedApiClient.get<Warehouse[]>(url);
+  return data || [];
 }
 
 /**
@@ -708,47 +468,24 @@ export async function saveWarehouses(data: {
   updated: Warehouse[];
   deleted: string[];
 }): Promise<SaveResult<Warehouse>> {
-  return apiClient.post<SaveResult<Warehouse>>('/dictionary/warehouses', data);
+  return enhancedApiClient.post<SaveResult<Warehouse>>('/dictionary/warehouses', data);
 }
 
 // ============================================
 // 基地 API
 // ============================================
 
-const BASE_STORAGE_KEY = 'yuanxingtu_bases';
-const DEFAULT_BASES: Base[] = [
-  { id: '1', baseCode: 'BASE001', baseName: '宁波基地', location: '宁波市', area: 100 },
-  { id: '2', baseCode: 'BASE002', baseName: '杭州基地', location: '杭州市', area: 80 },
-];
-
 /**
  * 获取基地列表
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function getBases(status?: string, orgOid?: string): Promise<Base[]> {
   const queryParts: string[] = [];
-  if (status) {
-    queryParts.push(`status=${encodeURIComponent(status)}`);
-  }
-  if (orgOid) {
-    queryParts.push(`orgOid=${encodeURIComponent(orgOid)}`);
-  }
+  if (status) queryParts.push(`status=${encodeURIComponent(status)}`);
+  if (orgOid) queryParts.push(`orgOid=${encodeURIComponent(orgOid)}`);
   const url = '/dictionary/bases' + (queryParts.length > 0 ? `?${queryParts.join('&')}` : '');
-
-  try {
-    const data = await apiClient.get<Base[]>(url);
-    localStorage.setItem(BASE_STORAGE_KEY, JSON.stringify(data));
-    return data;
-  } catch (error) {
-    const stored = localStorage.getItem(BASE_STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return DEFAULT_BASES;
-      }
-    }
-    return DEFAULT_BASES;
-  }
+  const data = await enhancedApiClient.get<Base[]>(url);
+  return data || [];
 }
 
 /**
@@ -759,44 +496,24 @@ export async function saveBases(data: {
   updated: Base[];
   deleted: string[];
 }): Promise<SaveResult<Base>> {
-  return apiClient.post<SaveResult<Base>>('/dictionary/bases', data);
+  return enhancedApiClient.post<SaveResult<Base>>('/dictionary/bases', data);
 }
 
 // ============================================
 // 温室 API
 // ============================================
 
-const GREENHOUSE_STORAGE_KEY = 'yuanxingtu_greenhouses';
-const DEFAULT_GREENHOUSES: Greenhouse[] = [
-  { id: '1', greenhouseCode: 'GH001', greenhouseName: '1号温室', baseOid: '1', greenhouseType: 'standard', area: 500 },
-  { id: '2', greenhouseCode: 'GH002', greenhouseName: '2号温室', baseOid: '1', greenhouseType: 'standard', area: 500 },
-];
-
+/**
+ * 获取温室列表
+ * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
+ */
 export async function getGreenhouses(status?: string, baseOid?: string): Promise<Greenhouse[]> {
   const queryParts: string[] = [];
-  if (status) {
-    queryParts.push(`status=${encodeURIComponent(status)}`);
-  }
-  if (baseOid) {
-    queryParts.push(`baseOid=${encodeURIComponent(baseOid)}`);
-  }
+  if (status) queryParts.push(`status=${encodeURIComponent(status)}`);
+  if (baseOid) queryParts.push(`baseOid=${encodeURIComponent(baseOid)}`);
   const url = '/dictionary/greenhouses' + (queryParts.length > 0 ? `?${queryParts.join('&')}` : '');
-
-  try {
-    const data = await apiClient.get<Greenhouse[]>(url);
-    localStorage.setItem(GREENHOUSE_STORAGE_KEY, JSON.stringify(data));
-    return data;
-  } catch (error) {
-    const stored = localStorage.getItem(GREENHOUSE_STORAGE_KEY);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return DEFAULT_GREENHOUSES;
-      }
-    }
-    return DEFAULT_GREENHOUSES;
-  }
+  const data = await enhancedApiClient.get<Greenhouse[]>(url);
+  return data || [];
 }
 
 /**
@@ -807,5 +524,5 @@ export async function saveGreenhouses(data: {
   updated: Greenhouse[];
   deleted: string[];
 }): Promise<SaveResult<Greenhouse>> {
-  return apiClient.post<SaveResult<Greenhouse>>('/dictionary/greenhouses', data);
+  return enhancedApiClient.post<SaveResult<Greenhouse>>('/dictionary/greenhouses', data);
 }
