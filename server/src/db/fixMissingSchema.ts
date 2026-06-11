@@ -1905,6 +1905,28 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // ============================================================
+  // V2 改造 (回流闭环 + 出库多来源) 增量迁移
+  // 任务 3: 在 fixMissingSchema 末尾追加 2 个迁移函数调用
+  // 顺序: 先建 crop_circulation_records 新表, 后改 plantings 加列
+  // ============================================================
+
+  // ① crop_circulation_records 新表 + 3 索引 (任务 1)
+  try {
+    const { runCreateCropCirculationRecordsMigration } = await import('./migrations/cropCirculationRecords');
+    runCreateCropCirculationRecordsMigration(db);
+  } catch (e: any) {
+    seedLog.skip('• crop_circulation_records 迁移:', e.message);
+  }
+
+  // ② plantings.origin_path 两步迁移 (任务 2)
+  try {
+    const { runAddOriginPathMigration } = await import('./migrations/originPath');
+    runAddOriginPathMigration(db, { dryRun: false });
+  } catch (e: any) {
+    seedLog.skip('• plantings.origin_path 迁移:', e.message);
+  }
+
   saveDatabase();
 }
 
