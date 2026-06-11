@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui';
 import type { PurchasePlanItem, PurchasePlan } from '../../types/purchase';
 import { PURCHASE_TYPE_TEXT } from '../../types/purchase';
-import { usePlantingStore, useDictionaryStore } from '../../stores';
+import { useDictionaryStore, useProductionPlanStore } from '../../stores';
 import { logger } from '../../lib/logger';
 import { MaterialAutocomplete } from '@/components/common/MaterialAutocomplete';
 import * as XLSX from 'xlsx';
@@ -86,22 +86,24 @@ export function CreatePlanModal({
   const [showApprovalRules, setShowApprovalRules] = useState(false);
 
   // 字典：从 store 动态加载（字段名以实际 store 定义为准）
-  const plantingItems = safeArray(usePlantingStore((s: any) => s.items));
-  const loadPlantings = usePlantingStore((s: any) => s.loadItems);
+  // 修复：采购计划的"关联生成批次号"必须是生产计划批次号（CropBatch.batchCode）
+  //      之前错误用了 usePlantingStore.items.plantCode（种植记录编码），不是生产计划批次号
+  const productionBatches = safeArray(useProductionPlanStore((s: any) => s.batches));
+  const fetchProductionPlans = useProductionPlanStore((s: any) => s.fetchPlans);
 
   React.useEffect(() => {
-    if (plantingItems.length === 0 && loadPlantings) loadPlantings();
-  }, [plantingItems.length, loadPlantings]);
+    if (productionBatches.length === 0 && fetchProductionPlans) fetchProductionPlans();
+  }, [productionBatches.length, fetchProductionPlans]);
 
-  // 关联批次选项：usePlantingStore.items 字段为 plantCode / cropName
+  // 关联批次选项：useProductionPlanStore.batches 字段为 batchCode / cropName
   const batchOptions = React.useMemo(() => {
-    const opts = plantingItems.map((b: any) => ({
-      value: String(b.plantCode || b.id),
-      label: `${b.plantCode || b.id} - ${b.cropName || ''}`,
+    const opts = productionBatches.map((b: any) => ({
+      value: String(b.batchCode || b.id),
+      label: `${b.batchCode || b.id} - ${b.cropName || ''}`,
     }));
     opts.push({ value: 'other', label: '其他' });
     return opts;
-  }, [plantingItems]);
+  }, [productionBatches]);
 
   // 部门选项：硬编码（字典表无 department 分类，现有数据使用"生产部/后勤部/办公室/技术部"）
   const departmentOptions = [
