@@ -5,10 +5,12 @@
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { SeedSourceFilters, SourceType } from '../../../../types/crop';
+import { SeedSourceFilters, SourceType, SourceOrigin } from '../../../../types/crop';
 import { Input } from '@/components/ui';
 import { Label, DateRangePicker, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { todayLocal } from '@/lib/dateUtils';
+// V2 改造 (任务 13): source_origin 来源 9 枚举字典
+import { SOURCE_ORIGINS, SOURCE_TYPES } from '../../../../constants/seedSourceDict';
 
 interface SeedSourceFilterProps {
   filters: SeedSourceFilters;
@@ -57,9 +59,28 @@ export function SeedSourceFilter({
           />
         </div>
 
-        {/* 种源类型 */}
+        {/* V2 改造 (任务 13): 来源 (source_origin 9 枚举) */}
         <div className="min-w-[100px] flex-shrink-0">
-          <Label className="text-gray-700">种源类型</Label>
+          <Label className="text-gray-700">来源</Label>
+          <Select
+            value={(filters as any).sourceOrigin || '__all__'}
+            onValueChange={(val) => onChange({ ...filters, sourceOrigin: val === '__all__' ? '' : val } as any)}
+          >
+            <SelectTrigger className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+              <SelectValue placeholder="全部" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">全部</SelectItem>
+              {SOURCE_ORIGINS.map(o => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 种源类型 (形态, V2 双下拉) */}
+        <div className="min-w-[100px] flex-shrink-0">
+          <Label className="text-gray-700">形态</Label>
           <Select
             value={filters.sourceType}
             onValueChange={(val) => onChange({ ...filters, sourceType: val })}
@@ -69,8 +90,9 @@ export function SeedSourceFilter({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">全部</SelectItem>
-              <SelectItem value={SourceType.SEED}>种子</SelectItem>
-              <SelectItem value={SourceType.SEEDLING}>种苗</SelectItem>
+              {SOURCE_TYPES.map(t => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
