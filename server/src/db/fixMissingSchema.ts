@@ -1875,6 +1875,12 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'auditor', sql: "ALTER TABLE inventory_stock ADD COLUMN auditor TEXT" },              // 审核人
     { name: 'remarks', sql: "ALTER TABLE inventory_stock ADD COLUMN remarks TEXT" },              // 备注
     { name: 'greenhouse_name', sql: "ALTER TABLE inventory_stock ADD COLUMN greenhouse_name TEXT" }, // 采收区域
+    // 供应商+价格+采购日期（外购入库财务字段, 对齐种源管理）
+    { name: 'supplier_id', sql: "ALTER TABLE inventory_stock ADD COLUMN supplier_id TEXT" },
+    { name: 'supplier_name', sql: "ALTER TABLE inventory_stock ADD COLUMN supplier_name TEXT" },
+    { name: 'unit_price', sql: "ALTER TABLE inventory_stock ADD COLUMN unit_price REAL DEFAULT 0" },
+    { name: 'total_amount', sql: "ALTER TABLE inventory_stock ADD COLUMN total_amount REAL DEFAULT 0" },
+    { name: 'purchase_date', sql: "ALTER TABLE inventory_stock ADD COLUMN purchase_date TEXT" },
   ];
   for (const col of inventoryStockExtColumns) {
     try {

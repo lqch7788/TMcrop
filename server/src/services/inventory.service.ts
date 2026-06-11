@@ -86,6 +86,12 @@ export interface InboundDTO {
   grade?: string;               // 品质等级 A/B/C
   auditor?: string;              // 审核人
   greenhouseName?: string;      // 采收区域
+  // 采购信息（外购入库财务字段, 对齐种源管理）
+  supplierId?: string;
+  supplierName?: string;
+  unitPrice?: number;
+  totalAmount?: number;
+  purchaseDate?: string;
 }
 
 /**
@@ -287,6 +293,12 @@ export class InventoryService {
         auditor: request.auditor,
         remarks: request.remarks,
         greenhouse_name: request.greenhouseName,
+        // 采购信息（外购入库财务字段）
+        supplier_id: request.supplierId,
+        supplier_name: request.supplierName,
+        unit_price: request.unitPrice,
+        total_amount: request.totalAmount,
+        purchase_date: request.purchaseDate,
       });
 
       // 5. 创建入库流水（V2.1：4 位自增，替代 Math.random）
