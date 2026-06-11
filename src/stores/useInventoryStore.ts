@@ -46,9 +46,9 @@ interface InventoryState {
 
   // 方法
   setFilters: (filters: InventoryFilters) => void;
-  loadItems: () => Promise<void>;
+  loadItems: (filters?: InventoryFilters) => Promise<void>;
   loadStats: () => Promise<void>;
-  loadAll: () => Promise<void>;
+  loadAll: (filters?: InventoryFilters) => Promise<void>;
   searchByCrop: (cropName: string) => Promise<void>;
   /** 通知一次变更（写操作成功后调用） */
   notifyChange: () => void;
@@ -71,15 +71,15 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
 
   setFilters: (filters) => set({ filters }),
 
-  loadItems: async () => {
+  loadItems: async (filters) => {
     set({ loading: true, error: null });
     try {
-      const { filters } = get();
+      const activeFilter = filters || get().filters;
       const data = await getInventoryList({
-        stockType: filters.stockType || undefined,
-        status: filters.status || undefined,
-        sourceType: filters.sourceType || undefined,
-        cropName: filters.cropName || undefined,
+        stockType: activeFilter.stockType || undefined,
+        status: activeFilter.status || undefined,
+        sourceType: activeFilter.sourceType || undefined,
+        cropName: activeFilter.cropName || undefined,
       });
       set({ items: data, loading: false });
     } catch (error) {
@@ -96,16 +96,16 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
     }
   },
 
-  loadAll: async () => {
+  loadAll: async (filters) => {
     set({ loading: true, error: null });
     try {
-      const { filters } = get();
+      const activeFilter = filters || get().filters;
       const [items, stats] = await Promise.all([
         getInventoryList({
-          stockType: filters.stockType || undefined,
-          status: filters.status || undefined,
-          sourceType: filters.sourceType || undefined,
-          cropName: filters.cropName || undefined,
+          stockType: activeFilter.stockType || undefined,
+          status: activeFilter.status || undefined,
+          sourceType: activeFilter.sourceType || undefined,
+          cropName: activeFilter.cropName || undefined,
         }),
         getInventoryStats(),
       ]);
