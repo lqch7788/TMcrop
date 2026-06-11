@@ -4,6 +4,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 // 仓库数据结构
 export interface Warehouse {
@@ -30,7 +31,7 @@ function getStoredWarehouses(): Warehouse[] {
     try {
       return JSON.parse(stored);
     } catch (error) {
-      console.error('仓库数据解析失败:', error);
+      logger.error('仓库数据解析失败', error);
       return [];
     }
   }
@@ -61,7 +62,7 @@ export async function getWarehouses(): Promise<Warehouse[]> {
     saveWarehousesToStorage(data);
     return data;
   } catch (error) {
-    console.error('API获取仓库数据失败，使用本地数据:', error);
+    logger.error('API获取仓库数据失败，使用本地数据', error);
     return getStoredWarehouses();
   }
 }

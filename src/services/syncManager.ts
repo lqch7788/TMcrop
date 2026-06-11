@@ -7,6 +7,7 @@
 
 import { DATA_SOURCE_CONFIG, DataMode } from '../config/dataSourceConfig';
 import { dataRouter } from './dataRouter';
+import { logger } from '../lib/logger';
 
 class SyncManager {
   private apiAvailable = false;
@@ -143,7 +144,7 @@ class SyncManager {
       dataRouter.markSynced(changeIds);
       console.log(`[SyncManager] 同步成功`);
     } catch (error) {
-      console.error('[SyncManager] 同步失败:', error);
+      logger.error('[SyncManager] 同步失败', error);
     } finally {
       this.syncing = false;
     }

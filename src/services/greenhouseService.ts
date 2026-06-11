@@ -4,6 +4,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 // 温室大棚数据结构
 export interface Greenhouse {
@@ -29,7 +30,7 @@ function getStoredGreenhouses(): Greenhouse[] {
     try {
       return JSON.parse(stored);
     } catch (error) {
-      console.error('温室数据解析失败:', error);
+      logger.error('温室数据解析失败', error);
       return [];
     }
   }
@@ -60,7 +61,7 @@ export async function getGreenhouses(): Promise<Greenhouse[]> {
     saveGreenhousesToStorage(data);
     return data;
   } catch (error) {
-    console.error('API获取温室数据失败，使用本地数据:', error);
+    logger.error('API获取温室数据失败，使用本地数据', error);
     return getStoredGreenhouses();
   }
 }

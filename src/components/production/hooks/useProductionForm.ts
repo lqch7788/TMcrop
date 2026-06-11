@@ -7,6 +7,7 @@
 import { useCallback } from 'react';
 import * as apiProductionPlanService from '../../../services/apiProductionPlanService';
 import { showAlert } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import { getInitialFormData } from './initialFormData';
 import type { ProductionFormData } from './types';
 
@@ -53,7 +54,7 @@ export function useProductionForm({
         setFormData((prev) => ({ ...prev, batchCode: code }));
       }
     } catch (error) {
-      console.error('[ProductionPlan] 生成批次编号失败:', error);
+      logger.error('[ProductionPlan] 生成批次编号失败', error);
       await showAlert('生成批次编号失败，请重试');
     }
   }, [formData.planType, setFormData]);

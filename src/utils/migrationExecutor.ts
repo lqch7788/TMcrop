@@ -9,6 +9,7 @@
  */
 
 import { migrationValidator } from './migrationValidator';
+import { logger } from '../lib/logger';
 
 // API基础URL
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -80,7 +81,7 @@ class MigrationExecutor {
       this.migrationLog.push({ batch: batch.name, result });
 
       if (!result.success) {
-        console.error(`\n❌ ${batch.name} 失败: ${result.message}`);
+        logger.error(`❌ ${batch.name} 失败: ${result.message}`);
         break;
       }
     }

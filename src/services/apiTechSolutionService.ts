@@ -17,6 +17,7 @@
 import { enhancedApiClient } from '../lib/apiClient';
 // 使用 `import type` 告诉 TS 这些是类型导入，编译时会被擦除，不会出现在运行时 ESM 中
 import type { TechSolution, TechSolutionStatusValue } from '../types/techSolution';
+import { logger } from '../lib/logger';
 import { TechSolutionStatus } from '../types/techSolution';
 
 // 重新导出类型（让其他模块仍可从 apiTechSolutionService 导入）
@@ -224,7 +225,7 @@ export async function getTechSolutionApprovals(techSolutionId: string): Promise<
     }
     return [];
   } catch (error) {
-    console.error('获取技术方案审批记录失败:', error);
+    logger.error('获取技术方案审批记录失败', error);
     return [];
   }
 }

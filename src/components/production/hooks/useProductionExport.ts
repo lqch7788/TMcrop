@@ -8,6 +8,7 @@ import { useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { showAlert } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import { todayLocal } from '../../../lib/dateUtils';
 import { batchStatusLabels } from '../constants';
 import type { CropBatch } from '../../../types';
@@ -96,7 +97,7 @@ export function useProductionExport({
       setExportMode(false);
       setSelectedRows([]);
     } catch (error) {
-      console.error('[ProductionPlan] 导出失败:', error);
+      logger.error('[ProductionPlan] 导出失败', error);
       await showAlert('导出失败，请重试');
       setShowExportModal(false);
       setExportMode(false);

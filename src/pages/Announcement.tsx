@@ -11,6 +11,7 @@ import { useAnnouncementDataStore } from '../stores/useAnnouncementDataStore';
 import { useAnnouncementTemplateStore, type AnnouncementTemplate } from '../stores/useAnnouncementTemplateStore';
 import { useDictionaryStore, getDictItems } from '../stores/useDictionaryStore';
 import { useToast } from '../contexts/ToastContext';
+import { logger } from '../lib/logger';
 import AnnouncementFilters from './components/Announcement/AnnouncementFilters';
 import AnnouncementTable from './components/Announcement/AnnouncementTable';
 import DetailModal from './components/Announcement/AnnouncementModals/DetailModal';
@@ -178,7 +179,7 @@ export default function Announcement() {
         const url = URL.createObjectURL(blob); const a = document.createElement('a');
         a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
       }
-    } catch (err) { if ((err as Error).name !== 'AbortError') console.error('导出失败:', err); }
+    } catch (err) { if ((err as Error).name !== 'AbortError') logger.error('导出失败', err); }
     setShowExportModal(false); setExportMode(false); setSelectedIds([]);
     toast.success('导出成功');
   }, [selectedIds, items, exportFormat, toast]);

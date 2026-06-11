@@ -5,6 +5,7 @@ import { MaterialReceivingRecord, ExecuteMaterialItem, MaterialExecuteRecord } f
 import { useExecuteDataStore } from '@/stores/useExecuteDataStore';
 import { useMaterialRequestDataStore } from '@/stores/useMaterialRequestDataStore';
 import { showAlert } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
 import type { UseExecuteTabReturn, ExecuteEditFormState, ExecuteAddFormState } from '../types/executeTab.types';
 
@@ -254,7 +255,7 @@ export function useExecuteTab(materialData: MaterialReceivingRecord[] = []): Use
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

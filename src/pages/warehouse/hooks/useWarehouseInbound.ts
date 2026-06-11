@@ -26,6 +26,7 @@ import {
   handleSelectRow as utilSelectRow,
   handleCancelSelection,
 } from '../utils/warehouseInbound.utils';
+import { logger } from '@/lib/logger';
 import { useInboundStore } from '../../../stores';
 import { useWarehouseMaterialStore } from '../../../stores';
 import { showAlert } from '@/lib/dialogService';
@@ -280,7 +281,7 @@ export function useWarehouseInbound() {
       // 刷新数据
       loadItems();
     } catch (error) {
-      console.error('创建入库记录失败:', error);
+      logger.error('创建入库记录失败', error);
     }
     setShowInboundAddModal(false);
   }, [storeAddItem, loadItems]);

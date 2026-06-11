@@ -5,6 +5,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 // ============================================
 // 类型定义
@@ -604,7 +605,7 @@ export async function saveDictionaries(data: {
 
     return result;
   } catch (error) {
-    console.error('[DictionaryService] 保存字典失败:', error);
+    logger.error('[DictionaryService] 保存字典失败', error);
     throw error;
   }
 }

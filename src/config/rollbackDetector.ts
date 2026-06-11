@@ -8,6 +8,8 @@
  * - dataCorruption: 数据损坏检测 (默认 1次即触发)
  */
 
+import { logger } from '../lib/logger';
+
 export type RollbackTrigger = 'error_rate' | 'db_failure' | 'data_corruption' | 'manual';
 
 export interface RollbackConfig {
@@ -170,9 +172,9 @@ async function triggerRollback(
 
   rollbackEvents.push(event);
 
-  console.error(`[RollbackDetector] 🚨 触发回滚: ${module}`);
-  console.error(`[RollbackDetector] 触发原因: ${event.details}`);
-  console.error(`[RollbackDetector] 指标:`, metrics);
+  logger.error(`[RollbackDetector] 🚨 触发回滚: ${module}`);
+  logger.error(`[RollbackDetector] 触发原因: ${event.details}`);
+  logger.error(`[RollbackDetector] 指标`, metrics);
 
   // 触发浏览器事件供监听
   if (typeof window !== 'undefined') {

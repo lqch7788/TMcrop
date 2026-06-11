@@ -8,6 +8,7 @@
 import { enhancedApiClient } from '../lib/apiClient';
 // M-3: 改用 src/types/purchase 的 PurchasePlan（含 executionStatus 字段）
 import type { PurchasePlan, PurchasePlanItem, PurchaseExecutionStatus } from '../types/purchase';
+import { logger } from '../lib/logger';
 import { z } from 'zod';
 
 // 后端返回的数据字段类型
@@ -206,7 +207,7 @@ export async function deletePurchasePlan(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     // 业务校验失败（如已审批/采购中）或网络错误统一返回 false，由调用方处理
-    console.error('[apiPurchasePlanService] deletePurchasePlan 失败:', error);
+    logger.error('[apiPurchasePlanService] deletePurchasePlan 失败', error);
     throw error;
   }
 }

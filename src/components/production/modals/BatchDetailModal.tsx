@@ -11,6 +11,7 @@ import { ProductionPlanApproval, ApprovalRecord } from '@/services/productionPla
 import { useApprovalStore } from '@/stores';
 import { DetailModal, type DetailField } from '@/components/ui/DetailModal';
 import { Button } from '@/components/ui';
+import { logger } from '@/lib/logger';
 
 interface BatchDetailModalProps {
   batch: CropBatch | null;
@@ -52,7 +53,7 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
       fetchApprovals()
         .catch((err) => {
           // H-07 + M-14: 不再静默吞错
-          console.error('[BatchDetailModal] 加载审批单失败:', err);
+          logger.error('[BatchDetailModal] 加载审批单失败', err);
           setLoadError(err?.message || '加载审批记录失败');
         })
         .finally(() => setLoadingApprovals(false));

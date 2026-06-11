@@ -7,6 +7,7 @@
 import { ApprovalType } from '../types/approval';
 import { createApprovalWithLevel } from '../hooks/useApprovalLevel';
 import { useApprovalContext } from '../contexts/ApprovalContext';
+import { logger } from '../lib/logger';
 
 // ============================================================
 // 业务数据接口
@@ -118,7 +119,7 @@ class ApprovalSubmitService {
           );
           console.log('【审批提交】自动通过审批，业务联动更新成功');
         } catch (linkError) {
-          console.error('【审批提交】自动通过审批，业务联动更新失败:', linkError);
+          logger.error('【审批提交】自动通过审批，业务联动更新失败', linkError);
         }
       }
 
@@ -133,7 +134,7 @@ class ApprovalSubmitService {
           : `已提交审批，等待 ${levelResult.approverCount} 位审批人处理`,
       };
     } catch (error) {
-      console.error('【审批提交】提交审批失败', error);
+      logger.error('【审批提交】提交审批失败', error);
       return {
         success: false,
         autoApprove: false,

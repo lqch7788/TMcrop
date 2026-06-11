@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useMemo, useCallback, useEffect, ReactNode } from 'react';
 import { storageGet } from '../lib/storageService';
+import { logger } from '../lib/logger';
 import {
   Approval,
   ApprovalType,
@@ -168,7 +169,7 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
         executeApprovalIntegration('approved', approval, { comment });
       }
     } catch (e) {
-      console.error('业务联动异常（不影响主流程）:', e);
+      logger.error('业务联动异常（不影响主流程）', e);
     }
     await store.approve(id, comment);
   }, [store.approvals, store.approve]);
@@ -180,7 +181,7 @@ export function ApprovalProvider({ children, initialApprovals: _initialApprovals
         executeApprovalIntegration('rejected', approval, { reason: comment });
       }
     } catch (e) {
-      console.error('业务联动异常（不影响主流程）:', e);
+      logger.error('业务联动异常（不影响主流程）', e);
     }
     await store.reject(id, comment);
   }, [store.approvals, store.reject]);

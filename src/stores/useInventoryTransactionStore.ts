@@ -9,6 +9,7 @@
  */
 import { create } from 'zustand';
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 export interface OutboundRow {
   // 主键
@@ -145,7 +146,7 @@ export const useInventoryTransactionStore = create<InventoryTransactionState>()(
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error('[useInventoryTransactionStore.addTransaction] 出库失败:', err);
+      logger.error('[useInventoryTransactionStore.addTransaction] 出库失败', err);
       throw new Error(message);
     }
   },

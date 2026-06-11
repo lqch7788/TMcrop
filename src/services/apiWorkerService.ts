@@ -5,6 +5,7 @@
 
 import { Worker } from '../types';
 import { getAllWorkers, getActiveWorkers } from './apiLaborService';
+import { logger } from '../lib/logger';
 
 // 缓存的员工数据
 let cachedWorkers: Worker[] = [];
@@ -50,7 +51,7 @@ export async function getWorkers(forceRefresh: boolean = false): Promise<Worker[
     cacheTime = now;
     return workers;
   } catch (error) {
-    console.error('获取员工列表失败，使用降级方案:', error);
+    logger.error('获取员工列表失败，使用降级方案', error);
     // API失败时返回降级数据
     return FALLBACK_WORKERS;
   }
@@ -82,7 +83,7 @@ export async function getWorkerList(forceRefresh: boolean = false): Promise<Work
     cacheTime = now;
     return workers;
   } catch (error) {
-    console.error('获取在职员工列表失败，使用降级方案:', error);
+    logger.error('获取在职员工列表失败，使用降级方案', error);
     // API失败时返回降级数据
     return FALLBACK_WORKERS;
   }
@@ -99,7 +100,7 @@ export async function getWorkerNameById(employeeId: string): Promise<string> {
     const worker = workers.find(w => w.id === employeeId || w.workerId === employeeId);
     return worker?.name || '未知员工';
   } catch (error) {
-    console.error('获取员工姓名失败:', error);
+    logger.error('获取员工姓名失败', error);
     // 尝试从降级数据中查找
     const fallbackWorker = FALLBACK_WORKERS.find(w => w.id === employeeId || w.workerId === employeeId);
     return fallbackWorker?.name || '未知员工';

@@ -8,6 +8,7 @@
 import { DataMode, DATA_SOURCE_CONFIG } from '../config/dataSourceConfig';
 import { unifiedCache } from './unifiedCache';
 import { PendingChange } from '../types/dataSource';
+import { logger } from '../lib/logger';
 
 const PENDING_CHANGES_KEY = '_pending_changes';
 
@@ -102,7 +103,7 @@ class DataRouter {
       await unifiedCache.set(key, apiData);
       return apiData;
     } catch (error) {
-      console.error(`[DataRouter] API读取失败 ${key}:`, error);
+      logger.error(`[DataRouter] API读取失败 ${key}`, error);
       return null;
     }
   }

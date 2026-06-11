@@ -4,6 +4,7 @@
  */
 
 import { STORAGE_CONFIG } from '../config/taskConfig';
+import { logger } from '../lib/logger';
 
 const STORAGE_LIMIT = 5 * 1024 * 1024; // 5MB
 
@@ -170,9 +171,8 @@ export function logStorageWarning(): void {
   const stats = getStorageStats();
 
   if (stats.isCritical) {
-    console.error(
-      `%c[存储警告] 存储容量已达 ${(stats.percentage * 100).toFixed(1)}%，即将溢出！`,
-      'color: red; font-weight: bold; font-size: 14px;'
+    logger.error(
+      `[存储警告] 存储容量已达 ${(stats.percentage * 100).toFixed(1)}%，即将溢出！`
     );
     console.log('使用 getStorageReport() 查看详细报告');
     console.log('使用 cleanupExpiredData() 清理过期数据');

@@ -12,6 +12,7 @@
 import LZString from 'lz-string';
 import { db } from '../db/database';
 import { STORAGE_ASSIGNMENT } from '../config/dataSourceConfig';
+import { logger } from '../lib/logger';
 
 // localStorage键名前缀
 const LS_PREFIX = 'TMcrop_';
@@ -156,7 +157,7 @@ class UnifiedCache {
         await table.add(records[0]);
       }
     } catch (error) {
-      console.error(`[UnifiedCache] IndexedDB写入失败 ${key}:`, error);
+      logger.error(`[UnifiedCache] IndexedDB写入失败 ${key}`, error);
       throw error;
     }
   }
@@ -168,7 +169,7 @@ class UnifiedCache {
       localStorage.setItem(fullKey, JSON.stringify(data));
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        console.error('[UnifiedCache] localStorage容量不足，切换到IndexedDB');
+        logger.error('[UnifiedCache] localStorage容量不足，切换到IndexedDB');
         this.setToIndexedDB(key, data, estimateSize(data)).catch(console.error);
       } else {
         throw error;
