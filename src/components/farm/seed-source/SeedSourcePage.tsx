@@ -17,6 +17,7 @@ import { todayLocal } from '@/lib/dateUtils';
 import { ExportFormatModal } from './modals/ExportFormatModal';
 import { PropagationRecordModal } from './modals/PropagationRecordModal';
 import { PropagationStageModal } from './modals/PropagationStageModal';
+import { CirculationHistoryModal } from './modals/CirculationHistoryModal';
 import { Button, DeleteConfirmModal } from '../../../components/ui';
 import {
   cropCategories,
@@ -141,6 +142,10 @@ export default function SeedSourcePage() {
   const [propagationRecordOpen, setPropagationRecordOpen] = useState(false);
   const [propagationStageOpen, setPropagationStageOpen] = useState(false);
   const [propagationRecord, setPropagationRecord] = useState<SeedSource | null>(null);
+
+  // Phase 4: 回流记录弹窗状态
+  const [circulationModalOpen, setCirculationModalOpen] = useState(false);
+  const [circulationRecord, setCirculationRecord] = useState<SeedSource | null>(null);
 
   // 留种初始化数据（从种植页面跳转来）
   const [seedSavingInit, setSeedSavingInit] = useState<{
@@ -389,6 +394,12 @@ export default function SeedSourcePage() {
     setPropagationRecordOpen(true);
   };
 
+  // Phase 4: 处理回流记录查看
+  const handleCirculation = (record: SeedSource) => {
+    setCirculationRecord(record);
+    setCirculationModalOpen(true);
+  };
+
   // 处理繁殖阶段推进
   const handlePropagationStage = (record: SeedSource) => {
     setPropagationRecord(record);
@@ -579,6 +590,7 @@ export default function SeedSourcePage() {
         canPrint={canPrint}
         onPropagationRecord={handlePropagationRecord}
         onPropagationStage={handlePropagationStage}
+        onCirculation={handleCirculation}
       />
 
       {/* 弹窗 */}
@@ -646,6 +658,16 @@ export default function SeedSourcePage() {
         record={propagationRecord}
         onSuccess={loadItems}
       />
+
+      {/* Phase 4: 回流记录弹窗 */}
+      {circulationRecord && (
+        <CirculationHistoryModal
+          isOpen={circulationModalOpen}
+          onClose={() => setCirculationModalOpen(false)}
+          seedSourceId={circulationRecord.id}
+          seedCode={circulationRecord.seedCode}
+        />
+      )}
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
       <DeleteConfirmModal
