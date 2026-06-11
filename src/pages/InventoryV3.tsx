@@ -35,7 +35,6 @@ export default function InventoryV3Page() {
   const stats = useInventoryStore((s) => s.stats);
   const loading = useInventoryStore((s) => s.loading);
   const loadAll = useInventoryStore((s) => s.loadAll);
-  const setStoreFilters = useInventoryStore((s) => s.setFilters);
   const deleteBatch = useInventoryStore((s) => s.deleteBatch);
 
   // 筛选
@@ -68,14 +67,13 @@ export default function InventoryV3Page() {
   const inventoryVersion = useInventoryStore((s) => s.version);
 
   useEffect(() => {
-    // 2026-06-04 V2.1 铁律改造：持久化数据加载走 Store action
-    setStoreFilters({
+    // 2026-06-11 修复: 直接传 filters 给 loadAll, 消除 setStoreFilters 竞态
+    loadAll({
       stockType: filters.stockType as StockType,
       status: filters.status as InventoryStatus,
       sourceType: filters.sourceType as SourceType,
     });
-    loadAll();
-  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, setStoreFilters, loadAll]);
+  }, [inventoryVersion, filters.stockType, filters.status, filters.sourceType, loadAll]);
 
   // 关键字过滤（前端）+ 低库存过滤
   const filteredStocks = useMemo(() => {
