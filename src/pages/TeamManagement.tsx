@@ -12,6 +12,7 @@ import { useTeamStore, useShiftStore } from '../stores';
 import type { Team } from '../services/apiBasicDataService';
 import type { Shift } from '../stores';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 
 export default function TeamManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,13 +77,13 @@ export default function TeamManagement() {
         await addTeam(newTeam);
       }
       setShowTeamModal(false); setEditingTeam(null); setNewTeam({ status: 'active' });
-    } catch (err) { console.error('保存班组失败:', err); await showAlert('保存班组失败'); }
+    } catch (err) { logger.error('保存班组失败', err); await showAlert('保存班组失败'); }
   };
 
   const handleDeleteTeam = async (id: string) => {
     if (!await showConfirm('确定删除该班组吗？')) return;
     try { await removeTeam(id); }
-    catch (err) { console.error('删除班组失败:', err); await showAlert('删除班组失败'); }
+    catch (err) { logger.error('删除班组失败', err); await showAlert('删除班组失败'); }
   };
 
   const editTeam = (team: Team) => {
@@ -104,13 +105,13 @@ export default function TeamManagement() {
       }
       setShowShiftModal(false); setEditingShift(null);
       setNewShift({ status: 'active', shiftType: '早班' });
-    } catch (err) { console.error('保存班次失败:', err); await showAlert('保存班次失败'); }
+    } catch (err) { logger.error('保存班次失败', err); await showAlert('保存班次失败'); }
   };
 
   const handleDeleteShift = async (id: number) => {
     if (!await showConfirm('确定删除该班次吗？')) return;
     try { await removeShift(id); }
-    catch (err) { console.error('删除班次失败:', err); await showAlert('删除班次失败'); }
+    catch (err) { logger.error('删除班次失败', err); await showAlert('删除班次失败'); }
   };
 
   const editShift = (shift: Shift) => {

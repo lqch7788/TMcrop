@@ -8,6 +8,7 @@ import { useRecruitmentStore } from '@/stores';
 import type { RecruitmentData } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { logger } from '@/lib/logger';
 import type {
   RecruitmentRecord,
   RecruitmentFilters,
@@ -272,7 +273,7 @@ export function useRecruitment(
         await showAlert('提交失败，请重试');
       }
     } catch (error) {
-      console.error('提交招聘申请失败:', error);
+      logger.error('提交招聘申请失败', error);
       await showAlert('提交失败，请重试');
     }
   }, [formData, departments, positions, createItem]);
@@ -282,7 +283,7 @@ export function useRecruitment(
     try {
       await updateItem(record.id, { status: 'approved' });
     } catch (error) {
-      console.error('审批通过失败:', error);
+      logger.error('审批通过失败', error);
       await showAlert('审批失败，请重试');
     }
   }, [updateItem]);

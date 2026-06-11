@@ -10,6 +10,7 @@ import { useApproval } from '../../../hooks/useApproval';
 import { USE_API } from '../../../services/apiClient';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { todayLocal } from '../../../lib/dateUtils';
+import { logger } from '@/lib/logger';
 import type { CropBatch } from '../../../types';
 import type { EditedBatch, ProductionFormData } from './types';
 
@@ -145,7 +146,7 @@ export function useProductionActions({
       resetForm();
       setErrors({});
     } catch (error) {
-      console.error('[ProductionPlan] 保存草稿失败:', error);
+      logger.error('[ProductionPlan] 保存草稿失败', error);
       await showAlert('保存草稿失败，请重试');
     }
   }, [formData, greenhouses, validateForm, addPlan, resetForm, setShowCreateModal, setErrors, currentUsername]);
@@ -184,7 +185,7 @@ export function useProductionActions({
       responsiblePerson: formData.responsiblePerson,
       unit: formData.unit || 'kg',
       publishDate: today,
-      batchStatus: 'pending',
+      batchStatus: 'published',
       planDetail: formData.planDetail || '',
       planDetailFileName: '',
       plantingArea: parseFloat(formData.plantingArea) || 0,
@@ -262,7 +263,7 @@ export function useProductionActions({
       }
       await showAlert('删除成功');
     } catch (error) {
-      console.error('[ProductionPlan] 删除生产计划失败:', error);
+      logger.error('[ProductionPlan] 删除生产计划失败', error);
       await showAlert('删除失败，请重试');
     }
   }, [deletePlan]);
@@ -287,7 +288,7 @@ export function useProductionActions({
       setBatchDeleteMode(false); // M-04: 成功后才关闭批量删除模式
       await showAlert('删除成功');
     } catch (error) {
-      console.error('[ProductionPlan] 删除生产计划失败:', error);
+      logger.error('[ProductionPlan] 删除生产计划失败', error);
       await showAlert('删除失败，请重试');
       setBatchDeleteMode(false);
       setSelectedRows([]);
@@ -430,7 +431,7 @@ export function useProductionActions({
                       return String(reason);
                     }
                   })();
-            console.error(`[handlePublish] 批次 ${task.batch.batchCode} 提交失败:`, reason);
+            logger.error(`[handlePublish] 批次 ${task.batch.batchCode} 提交失败`, reason);
             failedBatchCodes.push(task.batch.batchCode);
             failedReasons.push(reasonMsg);
           }
@@ -438,7 +439,7 @@ export function useProductionActions({
 
         await refreshApprovals();
       } catch (error) {
-        console.error('[ProductionPlan] 提交审批失败:', error);
+        logger.error('[ProductionPlan] 提交审批失败', error);
         await showAlert('提交审批失败，请重试');
         return;
       }
@@ -627,7 +628,7 @@ export function useProductionActions({
           await useApprovalStore.getState().addApproval(approvalData);
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
-          console.error('[作废] /approvals POST 失败:', e);
+          logger.error('[作废] /approvals POST 失败', e);
           await showAlert(`作废失败[提交审批单]：${msg}`);
           return;
         }
@@ -649,7 +650,7 @@ export function useProductionActions({
 
       setShowBatchEditModal(false);
     } catch (error) {
-      console.error('[作废] 整体失败:', error);
+      logger.error('[作废] 整体失败', error);
       await showAlert(`提交作废申请失败：${(error as Error)?.message || String(error)}`);
     }
 
