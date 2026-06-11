@@ -1919,6 +1919,22 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• crop_circulation_records 迁移:', e.message);
   }
 
+  // ①b seed_sources.parent_source_id 字段 (任务 7 实施时发现 Phase 1a 遗漏)
+  // PROPAGATION 回流需要建新种源记录关联 parent_source_id
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN parent_source_id TEXT REFERENCES seed_sources(id)`);
+    seedLog.info('✓ seed_sources.parent_source_id 列已添加');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      seedLog.skip('• seed_sources.parent_source_id:', e.message);
+    }
+  }
+  try {
+    db.run(`CREATE INDEX IF NOT EXISTS idx_seed_parent_source ON seed_sources(parent_source_id)`);
+  } catch (e: any) {
+    // 索引已存在, 忽略
+  }
+
   // ② plantings.origin_path 两步迁移 (任务 2)
   try {
     const { runAddOriginPathMigration } = await import('./migrations/originPath');

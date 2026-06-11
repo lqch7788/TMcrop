@@ -21,6 +21,24 @@ const router = Router();
 
 // ========== V3.0 写入操作（必须在 /:id 之前） ==========
 router.post('/inbound', inventoryController.inbound.bind(inventoryController));
+
+// ============================================================
+// V2 改造: 库存来源追溯路由 (任务 11: Phase 2) - 必须在 /:id 之前
+// ============================================================
+import { traceInventorySource } from '../services/inventory.service'
+
+router.get('/inventory-stock/trace-source', (req, res) => {
+  try {
+    const { stockId } = req.query
+    if (!stockId || typeof stockId !== 'string') {
+      return res.status(400).json({ success: false, error: 'stockId 必填' })
+    }
+    const result = traceInventorySource(stockId)
+    res.json({ success: true, data: result })
+  } catch (e: any) {
+    res.status(400).json({ success: false, error: e.message })
+  }
+})
 // 注：2026-06-04 V2.1 铁律改造后，POST /api/inventory/outbound 端点已迁移到 /api/inventory-transactions
 //      （routes/inventoryTransactions.ts）。本路由不再注册 /outbound。
 

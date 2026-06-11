@@ -88,7 +88,56 @@ router.post('/:id/print', asyncHandler(async (req, res) => {
   res.json({ success: true, data: { id: recordId, printCount: printCount || 1 } });
 }));
 
-// 将请求传递给 controller
+// ============================================================
+// V2 改造: 回流闭环路由 (任务 9: Phase 2) - 必须在 /:id 路由之前定义
+// ============================================================
+import { executeCirculation, revokeCirculation, listCirculations } from '../services/circulation.service'
+
+/**
+ * POST /api/seed-sources/circulation
+ * 执行回流 (PROPAGATION/QUANTITY/DISPOSAL, destination 决定去向)
+ */
+router.post('/circulation', (req, res) => {
+  try {
+    const result = executeCirculation(req.body)
+    res.json({ success: true, data: result })
+  } catch (e: any) {
+    res.status(400).json({ success: false, error: e.message })
+  }
+})
+
+/**
+ * GET /api/seed-sources/circulation
+ * 查询回流记录 (按 sourceModule/sourceId/parentSourceId 过滤)
+ */
+router.get('/circulation', (req, res) => {
+  try {
+    const { sourceModule, sourceId, parentSourceId } = req.query
+    const records = listCirculations({
+      sourceModule: sourceModule as string | undefined,
+      sourceId: sourceId as string | undefined,
+      parentSourceId: parentSourceId as string | undefined,
+    })
+    res.json({ success: true, data: records })
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+/**
+ * POST /api/seed-sources/circulation/:id/revoke
+ * 撤销回流 (软删除 + 数量回退)
+ */
+router.post('/circulation/:id/revoke', (req, res) => {
+  try {
+    revokeCirculation(req.params.id, req.body)
+    res.json({ success: true })
+  } catch (e: any) {
+    res.status(400).json({ success: false, error: e.message })
+  }
+})
+
+// 将请求传递给 controller (放在 /circulation 之后, 避免 /circulation 被当成 :id)
 router.get('/', (req, res, next) => seedSourceController.getAll(req, res, next));
 router.get('/:id', (req, res, next) => seedSourceController.getById(req, res, next));
 router.post('/', (req, res, next) => seedSourceController.create(req, res, next));
