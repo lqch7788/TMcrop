@@ -23,12 +23,11 @@ import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
 import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
-import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
-import { showAlert, showConfirm } from '@/lib/dialogService';
+import { showAlert } from '@/lib/dialogService';
 
 export default function PlantingPage() {
   const navigate = useNavigate();
@@ -73,7 +72,7 @@ export default function PlantingPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // 从 Zustand Store 获取种植数据
-  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems, updateItem } = usePlantingStore();
+  const { items: plantings, isLoading: loading, error, clearError, loadItems, deleteItem, deleteItems } = usePlantingStore();
   // 2026-06-06: 监听 store 错误并弹 Toast
   const toast = useToastStore((s) => s.toast);
   const lastShownErrorRef = useRef<string | null>(null);
@@ -255,62 +254,6 @@ export default function PlantingPage() {
       await showAlert('删除失败，请重试。');
     }
   }, [selectedRows, deleteItems, showAlert, enhancedApiClient]);
-
-  // 处理结束计划
-  const handleEnd = async (record: Planting, endType: 'normal' | 'abnormal') => {
-    if (!record.productionPlanCode) {
-      await showAlert('该种植没有关联的生产计划，无法结束');
-      return;
-    }
-
-    const batch = await cropBatchService.getCropBatchByCode(record.productionPlanCode);
-    if (!batch) {
-      // 2026-06-05: 强结分支 — 关联生产计划被删/查不到时引导用户强制结束
-      const confirmed = await showConfirm(
-        `未找到关联的生产计划 [${record.productionPlanCode}]，可能已被删除。\n` +
-        `是否强制结束该种植记录？\n（结束后将解除生产计划关联，并记录结束标记）`
-      );
-      if (!confirmed) return;
-
-      // 走 Store action（V2.1 铁律：写持久化数据走 Store）
-      const isNormal = endType === 'normal';
-      const result = await updateItem(record.id, {
-        endType,
-        endTime: new Date().toISOString(),
-        productionPlanCode: null as unknown as string, // 清空关联（解幽灵引用）
-      });
-      if (result) {
-        await showAlert(isNormal ? '种植记录已正常结束（强结）' : '种植记录已异常结束（强结）');
-        await loadItems();
-      } else {
-        await showAlert('强结失败');
-      }
-      return;
-    }
-
-    if (batch.batchStatus === 'completed') {
-      await showAlert('该生产计划已完成结束，不能重复结束');
-      return;
-    }
-
-    const completionRate = cropBatchService.getCompletionRate(batch, record.harvestQuantity || 0);
-    const isNormal = endType === 'normal';
-    const confirmMsg = isNormal
-      ? `确认正常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
-      : `确认异常结束此生产计划？\n\n采收完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
-
-    if (!await showConfirm(confirmMsg)) {
-      return;
-    }
-
-    const result = await cropBatchService.endCropBatch(batch.id, endType);
-    if (result) {
-      await showAlert(isNormal ? '生产计划已正常结束' : '生产计划已异常结束');
-      window.location.reload();
-    } else {
-      await showAlert('结束失败');
-    }
-  };
 
   // 标签详情 - 加载该种植的标签并打开弹窗
   const handleLabelDetail = async (record: Planting) => {
@@ -584,7 +527,6 @@ export default function PlantingPage() {
         onPrint={handlePrint}
         onDelete={handleDelete}
         onImageClick={handleImageClick}
-        onEnd={handleEnd}
         onAdd={() => setAddModalOpen(true)}
         onLabelDetail={handleLabelDetail}
         onMove={handleMove}
