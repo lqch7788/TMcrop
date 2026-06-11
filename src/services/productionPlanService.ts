@@ -4,6 +4,7 @@
  */
 
 import { StockType } from '../types/inventory';
+import { logger } from '../lib/logger';
 import * as inventoryService from './apiInventoryService';
 import * as seedSourceService from './apiSeedSourceService';
 import * as seedlingService from './apiSeedlingService';
@@ -337,7 +338,7 @@ export async function getProductionPlanApprovals(
     }
     return [];
   } catch (error) {
-    console.error('获取生产计划审批记录失败:', error);
+    logger.error('获取生产计划审批记录失败', error);
     return [];
   }
 }

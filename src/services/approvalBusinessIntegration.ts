@@ -6,6 +6,7 @@
 // ============================================================
 
 import { Approval, BusinessLink, ApprovalType } from '../types/approval';
+import { logger } from '../lib/logger';
 import {
   registerApprovalIntegration,
   ApprovalIntegrationHandler,
@@ -71,7 +72,7 @@ async function updateBusinessTableAPI(
       message: result.message || (result.success ? '业务表已更新' : '更新失败'),
     };
   } catch (error) {
-    console.error('【审批联动】调用后端API失败:', error);
+    logger.error('【审批联动】调用后端API失败', error);
     return { success: false, message: `API调用失败: ${error}` };
   }
 }
@@ -107,7 +108,7 @@ async function batchUpdateBusinessTableAPI(
       results.failCount = (result.data as BatchUpdateResultItem[]).filter((r) => !r.success).length;
     }
   } catch (error) {
-    console.error('【审批联动】批量更新失败:', error);
+    logger.error('【审批联动】批量更新失败', error);
     results.failCount = approvals.length;
   }
 

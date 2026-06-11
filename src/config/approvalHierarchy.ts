@@ -8,6 +8,7 @@
 
 import { ApprovalType } from '../types/approval';
 import { getSystemConfigValueNumber } from './systemConfigReader';
+import { logger } from '../lib/logger';
 
 // ============================================================
 // 审批级别枚举
@@ -438,7 +439,7 @@ export function getHighValueOrderThreshold(): number {
   try {
     return getSystemConfigValueNumber('approval.threshold.high-value', HIGH_VALUE_ORDER_THRESHOLD_DEFAULT);
   } catch (error) {
-    console.error('【审批配置】加载高价值订单阈值失败', error);
+    logger.error('【审批配置】加载高价值订单阈值失败', error);
     return HIGH_VALUE_ORDER_THRESHOLD_DEFAULT;
   }
 }

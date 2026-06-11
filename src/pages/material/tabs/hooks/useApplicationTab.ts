@@ -10,6 +10,7 @@ import { useApprovalContext } from '@/contexts/ApprovalContext';
 import type { UseApplicationTabReturn } from '../types/applicationTab.types';
 import { useMaterialRequestDataStore, useUserStore } from '@/stores';
 import { showAlert } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import { todayLocal } from '@/lib/dateUtils';
 
 // 默认新增表单初始状态
@@ -336,7 +337,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -655,7 +656,7 @@ export function useApplicationTab(): UseApplicationTabReturn {
         };
         await approvalContext.addApproval(approval);
       } catch (error) {
-        console.error('创建审批记录失败:', error);
+        logger.error('创建审批记录失败', error);
       }
     }
 

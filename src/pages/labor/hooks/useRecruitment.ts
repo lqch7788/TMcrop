@@ -293,7 +293,7 @@ export function useRecruitment(
     try {
       await updateItem(record.id, { status: 'rejected' });
     } catch (error) {
-      console.error('审批驳回失败:', error);
+      logger.error('审批驳回失败', error);
       await showAlert('操作失败，请重试');
     }
   }, [updateItem]);

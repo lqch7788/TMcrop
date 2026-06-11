@@ -24,6 +24,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { FilterBar, FilterItem } from '../components/ui/FilterBar';
 import { Label } from '../components/ui/label';
 import { showAlert } from '../lib/dialogService';
+import { logger } from '../lib/logger';
 import { ExportFormatModal } from '../components/common/ExportFormatModal';
 import {
   getAllPropagationRecords,
@@ -93,7 +94,7 @@ export default function PropagationRecordsPage() {
       setRecords(list);
       setTotal(res.total);
     } catch (e) {
-      console.error('[繁殖过程记录] 加载失败', e);
+      logger.error('[繁殖过程记录] 加载失败', e);
       setRecords([]);
       setTotal(0);
     } finally {
@@ -216,7 +217,7 @@ export default function PropagationRecordsPage() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('[繁殖过程记录] 导出失败', err);
+      logger.error('[繁殖过程记录] 导出失败', err);
       showAlert('导出失败：' + (err as Error).message);
     }
 

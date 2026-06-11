@@ -4,6 +4,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
+import { logger } from '../lib/logger';
 
 // 部门数据结构
 export interface Department {
@@ -29,7 +30,7 @@ function getStoredDepartments(): Department[] {
     try {
       return JSON.parse(stored);
     } catch (error) {
-      console.error('部门数据解析失败:', error);
+      logger.error('部门数据解析失败', error);
       return [];
     }
   }
@@ -60,7 +61,7 @@ export async function getDepartments(): Promise<Department[]> {
     saveDepartmentsToStorage(data);
     return data;
   } catch (error) {
-    console.error('API获取部门数据失败，使用本地数据:', error);
+    logger.error('API获取部门数据失败，使用本地数据', error);
     return getStoredDepartments();
   }
 }

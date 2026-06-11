@@ -12,6 +12,7 @@ import { useApproval } from '../hooks/useApproval';
 import { ApprovalStatus, ApprovalType, Approval } from '../types/approval';
 import { usePurchasePlanStore } from '../stores/usePurchasePlanStore';
 import { showConfirm } from '@/lib/dialogService';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
@@ -116,7 +117,7 @@ export default function ProductionApproval() {
       // 重拉列表，确保 UI 状态与服务端一致
       await refreshApprovals();
     } catch (error) {
-      console.error('[ProductionApproval] 审批操作失败:', error);
+      logger.error('[ProductionApproval] 审批操作失败', error);
     } finally {
       setConfirming(false);
     }

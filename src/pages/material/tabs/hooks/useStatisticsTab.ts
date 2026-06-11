@@ -11,6 +11,7 @@ import {
   getMonthDetails,
   type MaterialStatItem,
 } from '@/stores';
+import { logger } from '@/lib/logger';
 import type {
   StatActiveTab,
   QuickFilterPeriod,
@@ -586,7 +587,7 @@ export function useStatisticsTab() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -750,7 +751,7 @@ export function useStatisticsTab() {
         URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      logger.error('Export failed', err);
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

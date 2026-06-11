@@ -4,6 +4,7 @@
  */
 
 import type { Indicator } from '../pages/types/indicators.types';
+import { logger } from '../lib/logger';
 
 const STORAGE_KEY = 'indicators_data';
 
@@ -40,7 +41,7 @@ function getIndicatorsFromStorage(): Indicator[] {
     saveIndicatorsToStorage(INITIAL_INDICATORS);
     return INITIAL_INDICATORS;
   } catch (error) {
-    console.error('读取指标数据失败:', error);
+    logger.error('读取指标数据失败', error);
     return INITIAL_INDICATORS;
   }
 }
@@ -52,7 +53,7 @@ function saveIndicatorsToStorage(indicators: Indicator[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(indicators));
   } catch (error) {
-    console.error('保存指标数据失败:', error);
+    logger.error('保存指标数据失败', error);
   }
 }
 

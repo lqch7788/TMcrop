@@ -4,6 +4,7 @@
  */
 import { create } from 'zustand';
 import { getDictionaries, type Dictionary } from '../services/apiBasicDataService';
+import { logger } from '../lib/logger';
 
 interface DictionaryStore {
   dictionaries: Dictionary[];
@@ -43,7 +44,7 @@ export const useDictionaryStore = create<DictionaryStore>()(
           // 字典数据加载成功
           set({ dictionaries: data, loading: false, lastFetch: now });
         } catch (error) {
-          console.error('[DictionaryStore] 加载字典失败:', error);
+          logger.error('[DictionaryStore] 加载字典失败', error);
           set({ error: error instanceof Error ? error.message : '加载字典失败', loading: false });
         }
       },

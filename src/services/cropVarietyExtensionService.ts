@@ -36,6 +36,7 @@ import {
   getTypeOptionsByCategory as getConfigTypeOptionsByCategory,
   getVarietyOptionsByType as getConfigVarietyOptionsByType
 } from './cropVarietyService';
+import { logger } from '../lib/logger';
 
 export { CategoryExtension, TypeExtension, VarietyExtension, SubVariety1Extension };
 
@@ -62,7 +63,7 @@ export async function initExtensionCache(): Promise<void> {
     subVariety1ExtensionsCache = subVarieties;
     isCacheInitialized = true;
   } catch (error) {
-    console.error('初始化扩展缓存失败:', error);
+    logger.error('初始化扩展缓存失败', error);
   }
 }
 
@@ -80,7 +81,7 @@ async function refreshCache(): Promise<void> {
     varietyExtensionsCache = varieties;
     subVariety1ExtensionsCache = subVarieties;
   } catch (error) {
-    console.error('刷新扩展缓存失败:', error);
+    logger.error('刷新扩展缓存失败', error);
     throw error;
   }
 }

@@ -10,6 +10,7 @@
  */
 
 import { create } from 'zustand';
+import { logger } from '../lib/logger';
 import {
   getInventoryList,
   getInventoryStats,
@@ -91,7 +92,7 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
       const data = await getInventoryStats();
       set({ stats: data });
     } catch (error) {
-      console.error('[useInventoryStore] 加载统计失败:', error);
+      logger.error('[useInventoryStore] 加载统计失败', error);
     }
   },
 

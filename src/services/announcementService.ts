@@ -4,6 +4,7 @@
  */
 
 import type { Notice } from '../pages/types/announcement.types';
+import { logger } from '../lib/logger';
 
 const STORAGE_KEY = 'announcement_notices';
 
@@ -34,7 +35,7 @@ function getNoticesFromStorage(): Notice[] {
     saveNoticesToStorage(INITIAL_NOTICES);
     return INITIAL_NOTICES;
   } catch (error) {
-    console.error('读取公告数据失败:', error);
+    logger.error('读取公告数据失败', error);
     return INITIAL_NOTICES;
   }
 }
@@ -46,7 +47,7 @@ function saveNoticesToStorage(notices: Notice[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notices));
   } catch (error) {
-    console.error('保存公告数据失败:', error);
+    logger.error('保存公告数据失败', error);
   }
 }
 
