@@ -663,4 +663,59 @@ router.delete('/daily-records/:id', (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// V2 改造: 种植结束路由 (任务 10: Phase 2)
+// 4 种结束方式: harvest(采收) | circulate(回种源) | circulate_to_inventory(残株入库存) | self_seed(自交种子) | dispose(废弃)
+// ============================================================
+import { executeCirculation } from '../services/circulation.service'
+
+router.post('/:id/end', (req, res) => {
+  try {
+    const { id } = req.params
+    const { endType, subType, destination, warehouseId, quantity, unit, notes } = req.body || {}
+    const db = getDatabase()
+    const planting = db.prepare(`SELECT * FROM plantings WHERE id = ?`).get(id) as any
+    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' })
+
+    // 验证: 残株回种源/自交种子 必须有种源
+    if ((endType === 'circulate' || endType === 'self_seed') && !planting.source_id) {
+      return res.status(400).json({ success: false, error: '该种植记录无种源,无法回流' })
+    }
+    // 验证: 残株入库存 必须填仓库
+    if (endType === 'circulate_to_inventory' && !warehouseId) {
+      return res.status(400).json({ success: false, error: '残株入库存必须选择仓库' })
+    }
+
+    if (endType === 'harvest') {
+      return res.json({ success: true, message: '已生成采收任务 (走既有 harvest 流程)' })
+    }
+    if (endType === 'dispose') {
+      const result = executeCirculation({
+        circulationType: 'DISPOSAL',
+        sourceModule: 'planting',
+        sourceId: id,
+        parentSourceId: planting.source_id,
+        quantity, unit, notes,
+      })
+      return res.json({ success: true, data: result })
+    }
+    // circulate / circulate_to_inventory / self_seed 走 executeCirculation
+    const circType = subType === 'quantity_refill' || subType === 'quantity_inbound' ? 'QUANTITY' : 'PROPAGATION'
+    const dest = endType === 'circulate_to_inventory' ? 'inventory_stock' : 'seed_source'
+    const result = executeCirculation({
+      circulationType: circType,
+      sourceModule: 'planting',
+      sourceId: id,
+      parentSourceId: planting.source_id,
+      subType: endType === 'self_seed' ? 'seed_saving' : (subType !== 'quantity_refill' && subType !== 'quantity_inbound' ? subType : undefined),
+      destination: dest,
+      warehouseId: dest === 'inventory_stock' ? warehouseId : undefined,
+      quantity, unit, notes,
+    })
+    return res.json({ success: true, data: result })
+  } catch (e: any) {
+    res.status(400).json({ success: false, error: e.message })
+  }
+})
+
 export default router;

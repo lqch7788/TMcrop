@@ -521,3 +521,73 @@ export class InventoryService {
 }
 
 export const inventoryService = new InventoryService();
+
+// ============================================================
+// V2 改造: 库存入库多来源 (任务 8: Phase 2 业务逻辑)
+// 业务边界: 实际 2 种有数据 (harvest/circulation), 2 种路由代码预留 (seedling/seed)
+// ============================================================
+import { z } from 'zod'
+
+/**
+ * 库存入库多来源 - 输入校验
+ * - stockType: 库存形态 (product/residue 有数据, seedling/seed 仅预留)
+ * - businessType: 关联业务类型 (harvest/circulation 有数据, seedling/seed 预留)
+ */
+export const InboundFromSourceInputSchema = z.object({
+  stockType: z.enum(['seed', 'seedling', 'product', 'residue']),
+  businessType: z.enum(['harvest', 'seedling', 'seed', 'circulation']),
+  businessId: z.string().min(1, { message: '业务 ID 必填' }),
+  quantity: z.number().positive({ message: '数量必须 > 0' }),
+  unit: z.string().min(1, { message: '单位必填' }),
+  warehouseId: z.string().min(1, { message: '仓库 ID 必填' }),
+})
+
+export type InboundFromSourceInput = z.infer<typeof InboundFromSourceInputSchema>
+
+function generateId8(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+/**
+ * 库存入库 (复用 inventory_stock 三件套)
+ * - 实际有数据: businessType='harvest' (采收入库) | 'circulation' (回流后入库存)
+ * - 路由代码保留: businessType='seedling' | 'seed' (本期无调用方, 扩展预留)
+ */
+export function inboundFromSource(rawInput: unknown): { stockId: string } {
+  const input = InboundFromSourceInputSchema.parse(rawInput)
+  const db = getDatabase()
+  const stockId = generateId8('STK')
+  db.run(`
+    INSERT INTO inventory_stock
+    (id, stock_type, business_id, business_type, current_quantity, available_quantity, unit, warehouse_id, status, create_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now','localtime'))
+  `, [stockId, input.stockType, input.businessId, input.businessType, input.quantity, input.quantity, input.unit, input.warehouseId])
+  saveDatabase()
+  return { stockId }
+}
+
+/**
+ * 库存详情"来源追溯" - 按 business_type 路由到对应详情页
+ * 返回 detailUrl 前端用于 navigate()
+ */
+const DETAIL_URL_MAP: Record<string, string> = {
+  harvest: '/farm/harvest/',
+  seedling: '/farm/seedling/',
+  seed: '/farm/seed-source/',
+  circulation: '/farm/circulation/',
+}
+
+export function traceInventorySource(stockId: string): { businessType: string; businessId: string; detailUrl: string } {
+  const db = getDatabase()
+  const stock = db.prepare(`SELECT * FROM inventory_stock WHERE id = ?`).get(stockId) as any
+  if (!stock) throw new Error('库存记录不存在')
+  const urlPrefix = DETAIL_URL_MAP[stock.business_type]
+  if (!urlPrefix) {
+    throw new Error(`未实现的业务类型: ${stock.business_type} (暂不提供追溯)`)
+  }
+  return {
+    businessType: stock.business_type,
+    businessId: stock.business_id,
+    detailUrl: `${urlPrefix}${stock.business_id}`,
+  }
+}
