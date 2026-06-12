@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { X, Upload, Link2, MapPin, BarChart3, FileText, RefreshCw } from 'lucide-react';
@@ -128,15 +129,7 @@ export function AddModal({
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
 
   // 方案2.7: 过滤种源列表用于combogrid展示
-  const filteredSeedSources = useMemo(() => {
-    if (!sourceSearch) return seedSources || [];
-    const q = sourceSearch.toLowerCase();
-    return (seedSources || []).filter(s =>
-      s.seedCode?.toLowerCase().includes(q) ||
-      s.cropName?.toLowerCase().includes(q) ||
-      s.cropVariety?.toLowerCase().includes(q)
-    );
-  }, [seedSources, sourceSearch]);
+  // 2026-06-12: 联动过滤版本下移到 availableProductionPlans 之后(避免 TDZ)
 
   // 方案2.7: 获取选中种源的显示文本
   const selectedSourceLabel = useMemo(() => {
@@ -268,6 +261,48 @@ export function AddModal({
       batch.planType === PlanType.SEEDLING
     );
   }, [storePlans]);
+
+  // 2026-06-12: 联动过滤 — 选了种源后,生产计划下拉只显示同 cropName 的计划
+  const productionPlanCropFilter = useMemo(() => {
+    if (!formData.sourceId) return null;
+    const source = seedSources.find(s => s.id === formData.sourceId);
+    return source?.cropName || null;
+  }, [formData.sourceId, seedSources]);
+
+  const filteredProductionPlans = useMemo(() => {
+    let list = availableProductionPlans;
+    if (productionPlanCropFilter) {
+      list = list.filter(p => p.cropName === productionPlanCropFilter);
+    }
+    return list;
+  }, [availableProductionPlans, productionPlanCropFilter]);
+
+  // 2026-06-12: 联动过滤 — 选了生产计划后种源下拉只显示同 cropName
+  // 注: 必须放在 availableProductionPlans 之后,避免 TDZ
+  const productionPlanCropFilterFromPlan = useMemo(() => {
+    if (!formData.productionPlanId) return null;
+    const plan = availableProductionPlans.find(p => p.batchCode === formData.productionPlanId);
+    return plan?.cropName || null;
+  }, [formData.productionPlanId, availableProductionPlans]);
+
+  const filteredSeedSources = useMemo(() => {
+    let list = seedSources || [];
+    if (productionPlanCropFilterFromPlan) {
+      list = list.filter(s => s.cropName === productionPlanCropFilterFromPlan);
+    }
+    if (sourceSearch) {
+      const q = sourceSearch.toLowerCase();
+      list = list.filter(s =>
+        s.seedCode?.toLowerCase().includes(q) ||
+        s.cropName?.toLowerCase().includes(q) ||
+        s.cropVariety?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [seedSources, sourceSearch, productionPlanCropFilterFromPlan]);
+
+  // 跳转种源管理 (空状态"去添加"按钮用)
+  const navigate = useNavigate();
 
   // 来源类型映射（枚举值 -> 中文）
   const sourceTypeLabels: Record<string, string> = {
@@ -504,6 +539,18 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       // 供应商为空时显示"无"
       const supplierName = source.supplierName?.trim() || '无';
 
+      // 2026-06-12: 一致性校验 — 选种源后,若已选生产计划不匹配则清空
+      const currentPlanId = formData.productionPlanId;
+      let shouldClearPlan = false;
+      let mismatchPlan: { batchCode: string; cropName: string } | null = null;
+      if (currentPlanId) {
+        const plan = availableProductionPlans.find(p => p.batchCode === currentPlanId);
+        if (plan && plan.cropName !== source.cropName) {
+          shouldClearPlan = true;
+          mismatchPlan = { batchCode: plan.batchCode, cropName: plan.cropName };
+        }
+      }
+
       setFormData({
         ...formData,
         sourceId,
@@ -512,8 +559,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         supplierName: supplierName,
         selectedCropCode: source.cropCode || '',
         cropName: source.cropName || '',
-        cropVariety: source.cropVariety || ''
+        cropVariety: source.cropVariety || '',
+        // 一致性:清空不匹配的生产计划
+        productionPlanId: shouldClearPlan ? '' : formData.productionPlanId,
       });
+
+      if (shouldClearPlan && mismatchPlan) {
+        showAlert(`已选生产计划 [${mismatchPlan.batchCode}] 为 ${mismatchPlan.cropName}，与新种源 ${source.cropName} 不一致,已自动清空关联计划。`);
+      }
     }
   };
 
@@ -602,13 +655,45 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </Label>
               <Select
                 value={formData.productionPlanId || '__none__'}
-                onValueChange={(val) => setFormData({ ...formData, productionPlanId: val === '__none__' ? '' : val })}
+                onValueChange={(val) => {
+                  const nextId = val === '__none__' ? '' : val;
+                  // 2026-06-12: 一致性校验 — 选生产计划后,若已选种源不匹配则清空
+                  let shouldClearSource = false;
+                  let mismatchSource: { seedCode: string; cropName: string } | null = null;
+                  if (nextId && formData.sourceId) {
+                    const plan = availableProductionPlans.find(p => p.batchCode === nextId);
+                    if (plan) {
+                      const source = seedSources.find(s => s.id === formData.sourceId);
+                      if (source && source.cropName !== plan.cropName) {
+                        shouldClearSource = true;
+                        mismatchSource = { seedCode: source.seedCode, cropName: source.cropName };
+                      }
+                    }
+                  }
+
+                  setFormData({
+                    ...formData,
+                    productionPlanId: nextId,
+                    // 一致性:清空不匹配的种源
+                    sourceId: shouldClearSource ? '' : formData.sourceId,
+                    sourceCode: shouldClearSource ? '' : formData.sourceCode,
+                    sourceType: shouldClearSource ? '' : formData.sourceType,
+                    supplierName: shouldClearSource ? '' : formData.supplierName,
+                  });
+
+                  if (shouldClearSource && mismatchSource) {
+                    showAlert(`已选种源 [${mismatchSource.seedCode}] 为 ${mismatchSource.cropName}，与新生产计划不匹配,已自动清空关联种源。`);
+                  }
+                }}
               >
                 <SelectTrigger className={deepInputClass}>
                   <SelectValue placeholder="不关联（独立批次）" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableProductionPlans.map(plan => (
+                  {/* 固定"不关联"选项 — 2026-06-12 修复：之前漏写在 SelectContent 里 */}
+                  <SelectItem value="__none__">不关联（独立批次）</SelectItem>
+                  {/* 2026-06-12: 联动过滤 — 选了种源后只显示同 cropName 的计划 */}
+                  {filteredProductionPlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.batchCode}>
                       [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.cropName}
                     </SelectItem>
@@ -677,9 +762,22 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     {/* 表格行 */}
                     <div className="overflow-y-auto max-h-48">
                       {filteredSeedSources.length === 0 ? (
-                        <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-1">
-                          <div>未找到匹配的种源</div>
+                        // 2026-06-12: 联动过滤后空状态 — 加"去种源管理添加"按钮
+                        <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-2">
+                          <div>
+                            {productionPlanCropFilterFromPlan
+                              ? `所选生产计划 [${productionPlanCropFilterFromPlan}] 暂无对应种源`
+                              : '未找到匹配的种源'}
+                          </div>
                           <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            onClick={() => navigate('/crop/seed-source')}
+                          >
+                            去种源管理添加
+                          </Button>
                         </div>
                       ) : (
                         filteredSeedSources.map(s => (

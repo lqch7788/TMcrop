@@ -282,21 +282,26 @@ export default function SeedlingPage() {
   };
 
   // 2026-06-09 改造：单条删除入口仅弹 DeleteConfirmModal
+  // 2026-06-12 修复：使用独立的 pendingDeleteIds 而非 selectedRows
+  // 根因：SeedlingTable 的 executeOperation 在 onDelete 后立即 onSelectionChange([])，
+  //       React 批处理后 selectedRows 被清空，弹窗回调里读到 [] 直接 return。
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
   const handleDelete = useCallback((ids: string[]) => {
-    setSelectedRows(ids);
+    setPendingDeleteIds(ids);
     setShowDeleteModal(true);
   }, []);
 
   // 弹窗回调：真正调 Store action 删除
   const handleDeleteConfirm = useCallback(async () => {
-    const ids = [...selectedRows];
+    const ids = [...pendingDeleteIds];
     if (ids.length === 0) return;
     setShowDeleteModal(false);
+    setPendingDeleteIds([]);
     const success = await deleteItems(ids);
     if (success) {
       setSelectedRows([]);
     }
-  }, [selectedRows, deleteItems]);
+  }, [pendingDeleteIds, deleteItems]);
 
   // 处理结束计划
   const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
@@ -692,8 +697,8 @@ export default function SeedlingPage() {
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
-        selectedCount={selectedRows.length}
-        onClose={() => setShowDeleteModal(false)}
+        selectedCount={pendingDeleteIds.length}
+        onClose={() => { setShowDeleteModal(false); setPendingDeleteIds([]); }}
         onConfirm={handleDeleteConfirm}
       />
     </div>

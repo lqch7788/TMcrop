@@ -169,9 +169,10 @@ function updateProductionPlan(db: any, id: string, status: string, approvalCode:
       UPDATE production_plans SET
         status = ?,
         batch_status = ?,
+        publish_date = COALESCE(NULLIF(publish_date, ''), ?),
         update_time = ?
       WHERE id = ?
-    `, [planStatus, planStatus, now, id]);
+    `, [planStatus, planStatus, now, now, id]);
     return true;
   } catch (e) {
     console.error('更新生产计划失败:', e);

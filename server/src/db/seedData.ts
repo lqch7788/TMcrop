@@ -3258,7 +3258,7 @@ function seedBusinessCropBatches() {
     },
     // ========== 育苗计划 ==========
     {
-      id: 'B201', batch_code: 'YMB2026-001', plan_type: 'seedling', plan_type_name: '育苗计划',
+      id: 'B201', plan_code: 'YMB2026-001', plan_type: 'seedling', plan_type_name: '育苗计划',
       crop_name: '番茄', crop_type: '茄果类', variety: '红果番茄',
       greenhouse_id: 'G001', greenhouse_name: '玻璃温室A区', planting_area: 500,
       stage: 'seedling', stage_name: '苗期',
@@ -3274,7 +3274,7 @@ function seedBusinessCropBatches() {
       create_time: new Date().toISOString(), update_time: new Date().toISOString()
     },
     {
-      id: 'B202', batch_code: 'YMB2026-002', plan_type: 'seedling', plan_type_name: '育苗计划',
+      id: 'B202', plan_code: 'YMB2026-002', plan_type: 'seedling', plan_type_name: '育苗计划',
       crop_name: '黄瓜', crop_type: '瓜类', variety: '水果黄瓜',
       greenhouse_id: 'G002', greenhouse_name: '玻璃温室B区', planting_area: 400,
       stage: 'seedling', stage_name: '苗期',
@@ -3290,7 +3290,7 @@ function seedBusinessCropBatches() {
       create_time: new Date().toISOString(), update_time: new Date().toISOString()
     },
     {
-      id: 'B203', batch_code: 'YMB2026-003', plan_type: 'seedling', plan_type_name: '育苗计划',
+      id: 'B203', plan_code: 'YMB2026-003', plan_type: 'seedling', plan_type_name: '育苗计划',
       crop_name: '草莓', crop_type: '浆果类', variety: '红颜',
       greenhouse_id: 'G004', greenhouse_name: '日光温室1号', planting_area: 200,
       stage: 'seedling', stage_name: '苗期',

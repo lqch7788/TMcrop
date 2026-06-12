@@ -125,6 +125,10 @@ export function useProductionPage() {
         greenhouseId: firstGreenhouseId,
         plantingMode: defaultMode,
         responsiblePerson: firstResponsiblePerson,
+        // 2026-06-12 修复: 同步发布人 — useState lazy initializer 只在首次渲染跑一次,
+        // 首次渲染时 auth 可能未就绪导致 publisher 被冻结成空字符串,
+        // 这里在弹窗打开时(且 publisher 仍为空)兜底同步为当前用户名
+        publisher: prev.publisher || currentUsername,
       }));
     }
   }, [showCreateModal, greenhouses, currentUsername]);

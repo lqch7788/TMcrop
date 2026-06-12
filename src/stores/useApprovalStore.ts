@@ -22,6 +22,21 @@ const API_BASE = '/approvals';
 
 // ==================== 第一步：字段映射表 ====================
 
+/**
+ * 2026-06-12: 审批操作后,联动刷新相关业务 Store
+ * 根因: 后端 approval.ts:832-849 已联动修改 production_plans.batch_status 等,
+ *       但前端业务 Store 不会自动感知,需要在审批成功后主动重拉
+ * 用 dynamic import 避免与 useProductionPlanStore 形成循环依赖
+ */
+async function refreshRelatedBusinessStores(): Promise<void> {
+  try {
+    const { useProductionPlanStore } = await import('./useProductionPlanStore');
+    await useProductionPlanStore.getState().fetchPlans();
+  } catch {
+    // 静默失败 — 不阻塞审批主流程
+  }
+}
+
 /** 后端(snake_case) → 前端(camelCase) 字段名映射 */
 const FIELD_MAP: Record<string, string> = {
   id: 'id',
@@ -111,13 +126,22 @@ function denormalizeApproval(data: Partial<Approval>): Record<string, unknown> {
   for (const [snake, camel] of Object.entries(FIELD_MAP)) {
     reverse[camel] = snake;
   }
+  // 2026-06-12 修复: 这 6 个 JSON 字段保持 camelCase 名字 + 对象值,不预先 stringify
+  // 根因: 之前 denormalize 把对象 stringify 成字符串,enhancedApiClient.post 又
+  //       把整个 body stringify 一次,导致 business_link 落库成 '"\"{...}\""' 双层,
+  //       后端 JSON.parse('"{...}"') 拿不到 type/requestId,联动永远跳过
+  // 修法: 直接传对象,让 enhancedApiClient 一次性 stringify
+  const JSON_FIELDS = new Set([
+    'businessLink', 'approvers', 'records', 'attachments',
+    'relatedTaskIds', 'materials',
+  ]);
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    const backendKey = reverse[key] || key;
-    // JSON 字段序列化
-    if (['approvers', 'records', 'businessLink', 'materials', 'relatedTaskIds', 'attachments'].includes(key) && typeof value === 'object') {
-      result[backendKey] = JSON.stringify(value);
+    if (JSON_FIELDS.has(key)) {
+      // 保持 camelCase 字段名,值原样(对象/字符串/null 都保留)
+      result[key] = value;
     } else {
+      const backendKey = reverse[key] || key;
       result[backendKey] = value;
     }
   }
@@ -328,6 +352,9 @@ export const useApprovalStore = create<ApprovalStore>()(
           });
           // 重新加载以获取最新数据
           await get().fetchApprovals();
+          // 2026-06-12: 审批通过后,联动刷新生产计划列表 — 后端 approval.ts:832 已把
+          // production_plans.batch_status 改为 'published',前端 store 需重拉才能感知
+          await refreshRelatedBusinessStores();
         } catch (error) {
           logger.error('[DEBUG] approve 失败', error);
         }
@@ -348,6 +375,8 @@ export const useApprovalStore = create<ApprovalStore>()(
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });
           await get().fetchApprovals();
+          // 2026-06-12: 拒绝后同步刷新生产计划
+          await refreshRelatedBusinessStores();
         } catch (error) {
           logger.error('[ApprovalStore] 拒绝操作失败', error);
         }
@@ -368,6 +397,8 @@ export const useApprovalStore = create<ApprovalStore>()(
             return { approvals, stats: computeStats(approvals as Approval[]) };
           });
           await get().fetchApprovals();
+          // 2026-06-12: 撤回后同步刷新生产计划
+          await refreshRelatedBusinessStores();
         } catch (error) {
           logger.error('[ApprovalStore] 撤回失败', error);
         }

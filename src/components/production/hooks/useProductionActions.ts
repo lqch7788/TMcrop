@@ -184,8 +184,10 @@ export function useProductionActions({
       createBy: formData.publisher || currentUsername,
       responsiblePerson: formData.responsiblePerson,
       unit: formData.unit || 'kg',
-      publishDate: today,
-      batchStatus: 'published',
+      // 2026-06-12 修复: 提交审批时不该直接写入 'published',应等审批通过再流转
+      // 根因: 之前 hard-code 'published' + publishDate,导致新建未审批就显示"已发布"
+      publishDate: '',
+      batchStatus: 'pending',
       planDetail: formData.planDetail || '',
       planDetailFileName: '',
       plantingArea: parseFloat(formData.plantingArea) || 0,
