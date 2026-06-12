@@ -215,7 +215,14 @@ export function ProductionTable({
                   {`${batch.targetYield || 0} ${batch.unit || 'kg'}`}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publishDate || '-'}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  {/* 发布时间只显示年月日(YYYY-MM-DD);为空时 fallback 到创建时间 */}
+                  {(() => {
+                    const v = batch.publishDate || batch.createTime;
+                    if (!v) return '-';
+                    return v.includes('T') ? v.split('T')[0] : v.slice(0, 10);
+                  })()}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${batchStatusColors[batch.batchStatus || 'draft']}`}>
                     {batchStatusLabels[batch.batchStatus || 'draft']}

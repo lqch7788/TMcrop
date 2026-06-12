@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
-import { X, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
+import { X, Upload, RefreshCw, Search, Check, Leaf, ShoppingCart, Dna, Sprout, Scissors } from 'lucide-react';
 import { SourceType, PropagationType, PropagationStatus, BreedingMethod, AsexualMethod } from '../../../../types/crop';
 import { SourceOrigin } from '../../../../types/crop';
 import { PlanType } from '../../../../types';
@@ -34,7 +34,6 @@ import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
-import { ImageUploader } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 
 /** 种源类型 → 供应商类型 级联映射 */
@@ -947,13 +946,59 @@ export function AddModal({
                          />
           </div>
 
-          {/* 图片上传 - 占两列 (M11: 抽离为统一的 ImageUploader 组件) */}
+          {/* 图片上传 - 占两列（与育苗管理新增弹窗尺寸一致：80x80 缩略图 + 整行上传区） */}
           <div className="col-span-2">
             <Label className="text-gray-900">图片上传</Label>
-            <ImageUploader
-              value={formData.pictures}
-              onChange={(pics) => setFormData({ ...formData, pictures: pics })}
-            />
+            <div className="border-2 border-dashed border-gray-400 rounded-lg p-4">
+              {/* 已上传的图片预览 */}
+              {formData.pictures.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {formData.pictures.map((pic, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={pic}
+                        alt={`预览${index + 1}`}
+                        className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFormData({ ...formData, pictures: formData.pictures.filter((_, i) => i !== index) })}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* 上传按钮 */}
+              <Label className="flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 rounded-lg py-4">
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-sm text-gray-500">点击上传图片</span>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      Array.from(files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const result = event.target?.result as string;
+                          setFormData({ ...formData, pictures: [...formData.pictures, result] });
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </Label>
+            </div>
           </div>
 
           {/* 备注 - 占两列 */}

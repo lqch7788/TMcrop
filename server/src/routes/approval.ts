@@ -443,17 +443,29 @@ router.post('/', (req, res) => {
       approvers,
       records,
       status,
+      // 2026-06-12 修复: 兼容 snake_case(camelCase 转译后的字段名)和原始 camelCase
+      // 根因: 前端 useApprovalStore.denormalizeApproval 把 businessLink 转 business_link,
+      //       但本路由解构用的是 camelCase,导致业务联动字段永远拿不到值
+      //       同样问题影响 approvers/records/attachments/relatedTaskIds/materials
+      //       全部优先取 camelCase,缺失时回退到 snake_case 版本
       businessLink,
       attachments,
+      relatedTaskIds,
+      materials,
       priority,
       dueDate,
       relatedBatchCode,
-      relatedTaskIds,
       amount,
-      materials,
       workflowId,
       workflowName,
     } = req.body;
+    // 兜底: 前端 denormalizeApproval 会把 camelCase 转为 snake_case,这里两种都兼容
+    const businessLinkFinal = businessLink ?? req.body.business_link ?? null;
+    const approversFinal = approvers ?? req.body.approvers;
+    const recordsFinal = records ?? req.body.records;
+    const attachmentsFinal = attachments ?? req.body.attachments;
+    const relatedTaskIdsFinal = relatedTaskIds ?? req.body.related_task_ids;
+    const materialsFinal = materials ?? req.body.materials;
 
     if (!id || !type || !title) {
       return res.status(400).json({ success: false, error: 'ID、类型、标题不能为空' });
@@ -490,19 +502,19 @@ router.post('/', (req, res) => {
         applyTime || now.substring(11, 19),
         currentStep || 1,
         totalSteps || 1,
-        JSON.stringify(approvers || []),
-        JSON.stringify(records || []),
+        JSON.stringify(approversFinal || []),
+        JSON.stringify(recordsFinal || []),
         status || 'pending',
-        JSON.stringify(businessLink || null),
-        JSON.stringify(attachments || []),
+        JSON.stringify(businessLinkFinal || null),
+        JSON.stringify(attachmentsFinal || []),
         priority || 'normal',
         dueDate || '',
         0, // reminder_count
         relatedBatchCode || '',
-        JSON.stringify(relatedTaskIds || []),
+        JSON.stringify(relatedTaskIdsFinal || []),
         0, // notification_sent
         amount || '',
-        JSON.stringify(materials || []),
+        JSON.stringify(materialsFinal || []),
         workflowId || '',
         workflowName || '',
         now,

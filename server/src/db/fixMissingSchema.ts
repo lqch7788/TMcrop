@@ -1949,6 +1949,13 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• plantings.origin_path 迁移:', e.message);
   }
 
+  // 2026-06-12: 修复历史 B201/B202/B203 三条育苗计划 plan_code 为 NULL 的问题
+  // 根因：seedData.ts 早期版本用 batch_code 字段名（DB 列名是 plan_code），导致 plan_code 全为 NULL
+  fixProductionPlanSeedlingPlanCode();
+
+  // 2026-06-12: 回溯修复历史"已审批通过但生产计划 batch_status 还是 pending"的脏数据
+  fixApprovedProductionPlanStatus();
+
   saveDatabase();
 }
 
@@ -2050,6 +2057,142 @@ export function deduplicateDictionaries(): void {
 
   saveDatabase();
   seedLog.info('字典数据去重完成');
+}
+
+/**
+ * 修复生产计划表 plan_code NULL 的历史数据
+ * 根因：seedData.ts 早期版本 B201/B202/B203 三条育苗计划写成了 batch_code 字段（DB 列名是 plan_code），
+ *       导致 INSERT 时 plan_code 全部是 NULL/空。
+ *       表现：前端生产计划下拉只显示 1 条（React key 重复丢渲染）或全部不显示。
+ * 修复：按 id 顺序为 B201/B202/B203 补 plan_code = YMB2026-001/002/003。
+ */
+function fixProductionPlanSeedlingPlanCode(): void {
+  const db = getDatabase();
+  const codeMap: Record<string, string> = {
+    B201: 'YMB2026-001',
+    B202: 'YMB2026-002',
+    B203: 'YMB2026-003',
+  };
+  let fixed = 0;
+  for (const [id, planCode] of Object.entries(codeMap)) {
+    const stmt = db.prepare(`SELECT plan_code FROM production_plans WHERE id = ?`);
+    stmt.bind([id]);
+    let exists = false;
+    let current: string | null = null;
+    if (stmt.step()) {
+      exists = true;
+      const row = stmt.getAsObject() as { plan_code?: string | null };
+      current = (row.plan_code ?? '').toString().trim() || null;
+    }
+    stmt.free();
+    if (!exists) continue;
+    if (current === planCode) {
+      seedLog.skip(`• production_plans.${id}.plan_code 已正确 (${planCode})，跳过`);
+      continue;
+    }
+    db.run(`UPDATE production_plans SET plan_code = ? WHERE id = ?`, [planCode, id]);
+    seedLog.info(`✓ 修复 production_plans.${id}.plan_code: '${current ?? 'NULL'}' → '${planCode}'`);
+    fixed += 1;
+  }
+  if (fixed > 0) saveDatabase();
+  seedLog.info(`生产计划育苗计划 plan_code 修复完成（${fixed} 条）`);
+}
+
+/**
+ * 2026-06-12: 回溯修复历史"已审批通过但生产计划 batch_status 还是 pending"的脏数据
+ * 根因：AP* 系列审批单的 business_link 全部是 'null'（或双层 stringify 字符串），
+ *       导致后端联动 SQL `if (businessLink?.type && businessLink?.requestId)` 永远 false，
+ *       production_plans.batch_status 永远停留在 'pending'。
+ * 修复：从 approvals.title 解析出 batchCode，UPDATE production_plans.batch_status='published'。
+ *       title 格式: "生产计划审批：ZZ20260612-002" / "生产计划编辑审批：ZZB2026-003" / "生产计划作废审批：xxx"
+ * 幂等：只把 batch_status='pending' 的改为 'published'，已是 'published' 的跳过。
+ */
+function fixApprovedProductionPlanStatus(): void {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+
+  // 1) 类型为 production_plan + 状态为 approved 的所有审批单
+  const stmt = db.prepare(`
+    SELECT code, title FROM approvals
+    WHERE type = 'production_plan' AND status = 'approved'
+  `);
+  const rows: { code: string; title: string }[] = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject() as { code: string; title: string });
+  }
+  stmt.free();
+
+  let fixed = 0;
+  let noMatch = 0;
+  for (const { code, title } of rows) {
+    // title 解析: 三种审批单(新增/编辑/作废)都需要同步
+    // 编辑和作废审批通过后,业务表状态应也是 published (作废) 或保持 published (编辑)
+    // 这里只处理新增审批通过 → published,作废审批通过 → cancelled 由其它迁移负责
+    if (title.includes('作废')) continue;  // 跳过作废审批 — 不应改成 published
+
+    // 用正则提取 batchCode: title 末尾的 "[A-Z0-9-]+" 形式(生产计划批号)
+    // 例: "生产计划审批：ZZ20260612-002" → "ZZ20260612-002"
+    // 例: "生产计划编辑审批：ZZB2026-003" → "ZZB2026-003"
+    const match = title.match(/[：:]\s*([A-Z]{2,4}[0-9-]+[0-9])$/);
+    if (!match) {
+      noMatch += 1;
+      continue;
+    }
+    const batchCode = match[1];
+
+    // 找对应生产计划
+    const findStmt = db.prepare(`SELECT id, batch_status FROM production_plans WHERE plan_code = ?`);
+    findStmt.bind([batchCode]);
+    let planId: string | null = null;
+    let currentStatus: string | null = null;
+    if (findStmt.step()) {
+      const row = findStmt.getAsObject() as { id: string; batch_status: string };
+      planId = row.id;
+      currentStatus = row.batch_status;
+    }
+    findStmt.free();
+    if (!planId) {
+      noMatch += 1;
+      continue;
+    }
+    if (currentStatus === 'published') {
+      seedLog.skip(`• production_plans[${batchCode}].batch_status 已正确,跳过`);
+      continue;
+    }
+
+    db.run(
+      `UPDATE production_plans SET batch_status = 'published', status = 'published', publish_date = COALESCE(NULLIF(publish_date, ''), ?), update_time = ? WHERE id = ?`,
+      [now, now, planId]
+    );
+    seedLog.info(`✓ 修复 production_plans[${batchCode}]: batch_status '${currentStatus}' → 'published' (审批单 ${code})`);
+    fixed += 1;
+  }
+  if (fixed > 0) saveDatabase();
+  seedLog.info(`已审批通过的生产计划状态回溯完成（修复 ${fixed} 条，跳过/无匹配 ${noMatch} 条）`);
+
+  // 2026-06-12: 补充修复"batch_status='published' 但 publish_date 为空"的历史行
+  // 根因：旧版联动 SQL 只改 batch_status 不写 publish_date,导致发布时间列空
+  // 兜底：用 update_time (这条记录一定有) 同步进 publish_date
+  const missingDateStmt = db.prepare(`
+    UPDATE production_plans
+    SET publish_date = update_time
+    WHERE batch_status = 'published'
+      AND (publish_date IS NULL OR publish_date = '')
+      AND update_time IS NOT NULL AND update_time != ''
+  `);
+  missingDateStmt.run();
+  missingDateStmt.free();
+  // sqlite 不直接返回 changed rows,这里用 prepare/step 重新统计
+  const remainStmt = db.prepare(`
+    SELECT COUNT(*) FROM production_plans
+    WHERE batch_status = 'published'
+      AND (publish_date IS NULL OR publish_date = '')
+  `);
+  remainStmt.step();
+  const remaining = remainStmt.getAsObject()[0] as number;
+  remainStmt.free();
+  saveDatabase();
+  seedLog.info(`发布时间补全完成（仍有 ${remaining} 条未补,需要手工核对）`);
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序
