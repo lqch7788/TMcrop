@@ -14,11 +14,12 @@ const router = Router();
  */
 const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'planting_code', 'plan_type', 'crop_category', 'crop_name', 'crop_variety',
-  'greenhouse_id', 'greenhouse_name', 'area_name', 'planting_area', 'planting_area_unit',
+  'greenhouse_id', 'greenhouse_name', 'area_id', 'area_name', 'planting_area', 'planting_area_unit',
   'planting_date', 'expected_harvest_date', 'actual_harvest_date',
-  'target_yield', 'actual_yield', 'harvest_quantity', 'unit',
+  'target_yield', 'actual_yield', 'planting_quantity', 'harvest_quantity', 'unit',
   'status', 'end_type', 'end_time', 'is_harvest', 'is_deleted',
   'remarks', 'operator_id', 'operator_name', 'production_plan_id', 'production_plan_code',
+  'soil_ph', 'soil_ec', 'attrition_rate',
   'update_time',
 ]);
 
