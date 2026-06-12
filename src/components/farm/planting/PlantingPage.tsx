@@ -97,11 +97,6 @@ export default function PlantingPage() {
     return getDictItems('planting_area').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
 
-  // 来源类型选项
-  const sourceTypeOptions = useMemo(() => {
-    return getDictItems('source_type').map(d => ({ value: d.dictCode, label: d.dictLabel }));
-  }, [dictionaries]);
-
   // 种植状态选项
   const plantingStatusOptions = useMemo(() => {
     return getDictItems('planting_status').map(d => ({ value: d.dictCode, label: d.dictLabel }));
@@ -534,7 +529,6 @@ export default function PlantingPage() {
         onSuccess={loadItems}
         cropNames={cropNames}
         areas={areas}
-        sourceTypeOptions={sourceTypeOptions}
       />
 
       {currentRecord && (
@@ -543,7 +537,6 @@ export default function PlantingPage() {
           onClose={() => setEditModalOpen(false)}
           onSuccess={loadItems}
           record={currentRecord}
-          areas={areas}
         />
       )}
 

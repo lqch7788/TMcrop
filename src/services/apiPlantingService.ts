@@ -122,6 +122,11 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     createBy: item.createBy || '',
     createTime: item.createTime ? item.createTime.split('T')[0] : '',
     updateTime: item.updateTime || '',
+    // V2 改造 (2026-06-11): 补充表格展示字段
+    harvestQuantity: item.harvestQuantity || 0,
+    targetYield: item.targetYield || 0,
+    unit: item.unit || '',
+    originPath: (item.originPath as 'direct_from_seed' | 'via_seedling') || undefined,
   };
 }
 
@@ -175,15 +180,25 @@ export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' |
  * 数据流：API → SQLite DB
  */
 export async function updatePlanting(id: string, updates: Partial<Planting>): Promise<Planting | null> {
-  // 2026-06-05: 强结分支写入 end_type/end_time（后端 PUT 用 Object.keys 原样拼字段，需 snake_case）
-  const backendUpdates: Record<string, any> = { ...updates };
-  if (updates.endType !== undefined) {
-    backendUpdates.end_type = updates.endType;
-    delete backendUpdates.endType;
-  }
-  if (updates.endTime !== undefined) {
-    backendUpdates.end_time = updates.endTime;
-    delete backendUpdates.endTime;
+  // camelCase → snake_case 映射 (后端白名单列使用 snake_case)
+  const FIELD_MAP: Record<string, string> = {
+    areaId: 'area_id',
+    plantingCount: 'planting_quantity',
+    plantingDate: 'planting_date',
+    soilPH: 'soil_ph',
+    soilEC: 'soil_ec',
+    attritionRate: 'attrition_rate',
+    endType: 'end_type',
+    endTime: 'end_time',
+    cropName: 'crop_name',
+    cropVariety: 'crop_variety',
+    productionPlanCode: 'production_plan_code',
+    productionPlanId: 'production_plan_id',
+  };
+  const backendUpdates: Record<string, any> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    const mappedKey = FIELD_MAP[key] || key;
+    backendUpdates[mappedKey] = value;
   }
   const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, backendUpdates);
   return result ? { ...updates, id } as Planting : null;
@@ -246,9 +261,12 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
  * 生成种植单号
  * 数据流：API → SQLite DB
  */
-export async function generatePlantCode(sourceCode: string): Promise<string> {
+export async function generatePlantCode(): Promise<string> {
   try {
-    return await enhancedApiClient.get<string>(`/plantings/generate-code?sourceCode=${sourceCode}`);
+    // 后端返回 { success: true, data: "ZZ20260611-001" }
+    // enhancedApiClient 自动解包为纯字符串
+    const code = await enhancedApiClient.get<string>('/plantings/generate-code');
+    return typeof code === 'string' ? code : '';
   } catch {
     return '';
   }

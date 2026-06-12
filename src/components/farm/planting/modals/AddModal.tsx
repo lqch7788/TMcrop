@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, RefreshCw } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
 import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
@@ -21,6 +21,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
+import { generatePlantCode } from '../../../../services/apiPlantingService';
 
 interface AddModalProps {
   isOpen: boolean;
@@ -28,7 +29,6 @@ interface AddModalProps {
   onSuccess?: () => void;
   cropNames: Array<{ value: string; label: string }>;
   areas: Array<{ value: string; label: string; parent?: string }>;
-  sourceTypeOptions: Array<{ value: string; label: string }>;
 }
 
 // 深度输入框样式
@@ -40,20 +40,20 @@ export function AddModal({
   onSuccess,
   cropNames,
   areas,
-  sourceTypeOptions
 }: AddModalProps) {
   const [formData, setFormData] = useState({
     sourceType: SourceType.SEEDLING,
     originPath: 'direct_from_seed' as 'direct_from_seed' | 'via_seedling',  // V2 改造 (任务 15): 来源路径二选一
     sourceId: '',
     sourceCode: '',
+    selectedCropCode: '',  // 用于查询品种路径
     cropName: '',
     cropVariety: '',
     areaId: '',
     areaName: '',
     rootName: '',
     plantingCount: 0,
-    plantingDate: '',
+    plantingDate: todayLocal(),
     soilPH: 6.5,
     soilEC: 1.0,
     remarks: '',
@@ -66,18 +66,30 @@ export function AddModal({
   const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
 
   useEffect(() => {
-    if (storePlans.length === 0) {
-      fetchPlans();
+    if (isOpen) {
+      fetchPlans(); // 弹窗打开时刷新生产计划列表
     }
-  }, [storePlans.length, fetchPlans]);
+  }, [isOpen, fetchPlans]);
 
-  // 筛选可用的生产计划批次（已发布和执行中，且只显示种植计划类型）
+  // 筛选可用的生产计划批次（只显示种植计划类型，不限状态）
   const availableProductionPlans = useMemo(() => {
     return storePlans.filter((batch: any) =>
-      (batch.batchStatus === 'published' || batch.batchStatus === 'in_progress' || batch.status === 'published' || batch.status === 'in_progress') &&
       batch.planType === PlanType.PLANTING
     );
   }, [storePlans]);
+
+  // 种植批号 (参照种源批号生成模式)
+  const [plantCode, setPlantCode] = useState('');
+
+  // 生成种植批号
+  const handleGeneratePlantCode = async () => {
+    const code = await generatePlantCode();
+    if (code) {
+      setPlantCode(code);
+    } else {
+      await showAlert('生成种植批号失败，请重试');
+    }
+  };
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
@@ -104,23 +116,24 @@ export function AddModal({
   }, [isOpen]);
 
   const handleSubmit = async () => {
+    if (!plantCode) {
+      await showAlert('请先生成种植批号');
+      return;
+    }
     if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
       await showAlert('请填写完整信息');
       return;
     }
 
-    // 生成种植批号
-    const plantCode = `ZZ${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    // 溯源码 (用 todayLocal 替代 toISOString 避免 UTC 时区 bug)
+    const dateStr = todayLocal().replace(/-/g, '');
+    const traceabilityCode = 'TR' + dateStr + formData.cropName.substring(0, 2);
 
-    // 溯源码
-    const traceabilityCode = 'TR' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + formData.cropName.substring(0, 2);
-
-    // 生成作物编码
+    // 作物编码 (从品种信息中获取，sourceCode 选择时已自动填入 cropName/cropVariety)
     const cropInfo = cropVarietyService.getCropCodeInfo(formData.cropName);
     let cropCode = '';
     if (cropInfo) {
-      const seq = Math.floor(Math.random() * 999) + 1;
-      cropCode = `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}${String(seq).padStart(3, '0')}`;
+      cropCode = `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}001`;
     }
 
     // 获取区域信息
@@ -154,7 +167,7 @@ export function AddModal({
         pictures: pictures,
         remarks: formData.remarks,
         status: PlantingStatus.PLANTED,
-        createBy: localStorage.getItem('username') || '陆启闯',
+        createBy: '系统',
         productionPlanId: formData.productionPlanId || undefined,
         productionPlanCode: formData.productionPlanCode || undefined
       });
@@ -187,17 +200,14 @@ export function AddModal({
     onSuccess?.();
   };
 
-  // 处理来源类型变化
-  const handleSourceTypeChange = (sourceType: SourceType) => {
-    setFormData({
-      ...formData,
-      sourceType,
-      sourceId: '',
-      sourceCode: '',
-      cropName: '',
-      cropVariety: ''
-    });
-  };
+  // 完整品种路径: 参照育苗新增弹窗, 用 cropCode 查品种库获取四段路径
+  const fullVarietyPath = useMemo(() => {
+    if (!formData.selectedCropCode) return null;
+    const variety = cropVarietyService.getVarietyByCode(formData.selectedCropCode);
+    if (!variety) return null;
+    return [variety.categoryName, variety.typeName, variety.varietyName, variety.subVariety1Name]
+      .filter(Boolean).join(' - ');
+  }, [formData.selectedCropCode]);
 
   // 处理来源选择变化（种源）
   const handleSeedSourceChange = (sourceId: string) => {
@@ -207,8 +217,9 @@ export function AddModal({
         ...formData,
         sourceId,
         sourceCode: source.seedCode,
+        selectedCropCode: source.cropCode || '',
         cropName: source.cropName,
-        cropVariety: source.cropVariety
+        cropVariety: source.cropVariety,
       });
     }
   };
@@ -221,8 +232,9 @@ export function AddModal({
         ...formData,
         sourceId,
         sourceCode: seedling.seedlingCode,
+        selectedCropCode: seedling.cropCode || '',
         cropName: seedling.cropName,
-        cropVariety: seedling.cropVariety
+        cropVariety: seedling.cropVariety,
       });
     }
   };
@@ -250,130 +262,138 @@ export function AddModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 来源类型 */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">来源类型</Label>
-          <DictSelect
-            category="planting_source_type"
-            value={formData.sourceType}
-            onChange={(value) => handleSourceTypeChange(value as SourceType)}
-            placeholder="选择来源类型"
-          />
-        </div>
-
-        {/* V2 改造 (任务 15): 来源路径二选一 — 直接播种 vs 经育苗移栽 */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">来源路径</Label>
-          <div className="flex gap-6 mt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="originPath"
-                value="direct_from_seed"
-                checked={formData.originPath === 'direct_from_seed'}
-                onChange={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    originPath: 'direct_from_seed',
-                    sourceType: SourceType.SEED,
-                    sourceId: '',
-                    sourceCode: '',
-                    cropName: '',
-                    cropVariety: ''
-                  }));
-                }}
-                className="w-4 h-4 text-emerald-600 accent-emerald-600"
+        {/* 种植批号 + 关联生产计划 — 同行排列 */}
+        <div className="col-span-2 grid grid-cols-2 gap-x-6">
+          <div>
+            <Label className="text-gray-900">种植批号</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                value={plantCode}
+                readOnly
+                placeholder="点击生成按钮获取批号"
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-800 font-mono"
               />
-              <span className="text-sm text-gray-700">直接播种</span>
-              <span className="text-xs text-gray-400">（从种源库选择）</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="originPath"
-                value="via_seedling"
-                checked={formData.originPath === 'via_seedling'}
-                onChange={() => {
-                  setFormData(prev => ({
-                    ...prev,
-                    originPath: 'via_seedling',
-                    sourceType: SourceType.SEEDLING,
-                    sourceId: '',
-                    sourceCode: '',
-                    cropName: '',
-                    cropVariety: ''
-                  }));
-                }}
-                className="w-4 h-4 text-emerald-600 accent-emerald-600"
-              />
-              <span className="text-sm text-gray-700">经育苗移栽</span>
-              <span className="text-xs text-gray-400">（从育苗批次选择）</span>
-            </label>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleGeneratePlantCode}
+              >
+                <RefreshCw className="w-4 h-4" />
+                生成
+              </Button>
+            </div>
+          </div>
+          <div>
+            <Label className="text-gray-900">关联生产计划</Label>
+            <Select
+              value={formData.productionPlanId || '__none__'}
+              onValueChange={(val) => {
+                if (val === '__none__') {
+                  setFormData(prev => ({ ...prev, productionPlanId: '', productionPlanCode: '' }));
+                  return;
+                }
+                const plan = storePlans.find((b: any) => b.id === val);
+                setFormData(prev => ({ ...prev, productionPlanId: val, productionPlanCode: plan?.batchCode || '' }));
+              }}
+            >
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="不关联" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">不关联</SelectItem>
+                {availableProductionPlans.map(plan => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-
-        {/* V3.0 生产计划关联 - 只显示种植计划类型 */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">关联生产计划</Label>
-          <Select
-            value={formData.productionPlanId}
-            onValueChange={(val) => {
-              const plan = storePlans.find((b: any) => b.id === val);
-              setFormData(prev => ({
-                ...prev,
-                productionPlanId: val,
-                productionPlanCode: plan?.batchCode || ''
-              }));
-            }}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="不关联" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableProductionPlans.map(plan => (
-                <SelectItem key={plan.id} value={plan.id}>
-                  [{plan.planTypeName || '种植计划'}] {plan.batchCode} - {plan.cropName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="mt-1 text-xs text-gray-400">只显示种植计划类型的生产批次</p>
-        </div>
-
-        {/* 来源选择（种源或育苗） */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">
-            {formData.sourceType === SourceType.SEED ? '选择种源' : '选择育苗批次'}
-          </Label>
-          <Select
-            value={formData.sourceId}
-            onValueChange={(val) => {
-              if (formData.sourceType === SourceType.SEED) {
-                handleSeedSourceChange(val);
-              } else {
-                handleSeedlingChange(val);
-              }
-            }}
-          >
-            <SelectTrigger className={deepInputClass}>
-              <SelectValue placeholder="请选择" />
-            </SelectTrigger>
-            <SelectContent>
-              {formData.sourceType === SourceType.SEED ? (
-                seedSources.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount}
-                  </SelectItem>
-                ))
-              ) : (
-                seedlings.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {s.survivalCount - s.plantedCount}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+        {/* 来源路径 + 来源选择 — 同行排列 */}
+        <div className="col-span-2 grid grid-cols-2 gap-x-6">
+          <div>
+            <Label className="text-gray-900">来源路径</Label>
+            <div className="flex gap-4 mt-1">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="originPath"
+                  value="direct_from_seed"
+                  checked={formData.originPath === 'direct_from_seed'}
+                  onChange={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      originPath: 'direct_from_seed',
+                      sourceType: SourceType.SEED,
+                      sourceId: '',
+                      sourceCode: '',
+                      cropName: '',
+                      cropVariety: ''
+                    }));
+                  }}
+                  className="w-4 h-4 text-emerald-600 accent-emerald-600"
+                />
+                <span className="text-sm text-gray-700">直接播种</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="originPath"
+                  value="via_seedling"
+                  checked={formData.originPath === 'via_seedling'}
+                  onChange={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      originPath: 'via_seedling',
+                      sourceType: SourceType.SEEDLING,
+                      sourceId: '',
+                      sourceCode: '',
+                      cropName: '',
+                      cropVariety: ''
+                    }));
+                  }}
+                  className="w-4 h-4 text-emerald-600 accent-emerald-600"
+                />
+                <span className="text-sm text-gray-700">经育苗移栽</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <Label className="text-gray-900">
+              {formData.sourceType === SourceType.SEED ? '选择种源' : '选择育苗批次'}
+            </Label>
+            <Select
+              value={formData.sourceId}
+              onValueChange={(val) => {
+                if (formData.sourceType === SourceType.SEED) {
+                  handleSeedSourceChange(val);
+                } else {
+                  handleSeedlingChange(val);
+                }
+              }}
+            >
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="请选择" />
+              </SelectTrigger>
+              <SelectContent>
+                {formData.sourceType === SourceType.SEED ? (
+                  seedSources.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.seedCode} - {s.cropName} ({s.cropVariety}) - 可用: {s.availableCount}
+                    </SelectItem>
+                  ))
+                ) : (
+                  seedlings.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {s.survivalCount - s.plantedCount}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* 作物品种 */}
@@ -388,12 +408,12 @@ export function AddModal({
           />
         </div>
 
-        {/* 品种 */}
+        {/* 品种路径 — 用 cropCode 查品种库获取四段完整路径 */}
         <div>
-          <Label className="text-gray-900">品种</Label>
+          <Label className="text-gray-900">品种路径</Label>
           <Input
             type="text"
-            value={formData.cropVariety}
+            value={fullVarietyPath || ''}
             readOnly
             className={`${deepInputClass} bg-gray-50`}
             placeholder="选择来源后自动填充"

@@ -461,6 +461,11 @@ export interface Planting {
   // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
   endType?: 'normal' | 'abnormal'; // 结束类型
   endTime?: string;                // 结束时间（ISO）
+  // V2 改造 (2026-06-11): 补充表格展示字段
+  originPath?: 'direct_from_seed' | 'via_seedling'; // 来源路径
+  harvestQuantity?: number;        // 已采收数量
+  targetYield?: number;            // 目标产量（来自关联生产计划）
+  unit?: string;                   // 数量单位
 }
 
 // ========== 筛选状态类型 ==========

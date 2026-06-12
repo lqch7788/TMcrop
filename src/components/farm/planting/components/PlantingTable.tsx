@@ -725,7 +725,7 @@ export function PlantingTable({
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-380px)]">
-        <Table className="min-w-[1900px]">
+        <Table className="min-w-[2200px]">
           <TableHeader className="bg-gradient-to-r from-blue-500 to-blue-600 sticky top-0 z-10">
             <TableRow className="hover:from-blue-500 hover:to-blue-600">
               {showCheckbox && (
@@ -746,6 +746,8 @@ export function PlantingTable({
               )}
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">种植批号</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">关联生产计划</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源批号</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源类型</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物编码</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">作物品种</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">品种路径</TableHead>
@@ -764,7 +766,7 @@ export function PlantingTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 16 : 15} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -802,6 +804,16 @@ export function PlantingTable({
                         {record.productionPlanCode}
                       </span>
                     ) : '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    <span className="font-mono text-gray-700">{record.sourceCode || '-'}</span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                    {record.sourceType === 'seed' ? (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-medium">种子</span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs font-medium">种苗</span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm">
                     <span className="font-mono text-orange-600">{getStandardCropCode(record) || '-'}</span>

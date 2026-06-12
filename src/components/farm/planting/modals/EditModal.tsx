@@ -1,82 +1,76 @@
 /**
  * 种植编辑弹窗
+ * 与 AddModal 字段对齐: 创建时字段只读, 可编辑字段使用相同数据源
  */
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Planting } from '../../../../types/crop';
-import CropCodeSelector from '../../common/CropCodeSelector';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
 import { DictSelect } from '../../../common/settings/DictSelect';
 import { Input } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import * as cropVarietyService from '../../../../services/cropVarietyService';
 
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   record: Planting;
-  areas: Array<{ value: string; label: string; parent?: string }>;
 }
 
-// 深度输入框样式
 const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
 
-export function EditModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  record,
-  areas
-}: EditModalProps) {
+export function EditModal({ isOpen, onClose, onSuccess, record }: EditModalProps) {
   const [formData, setFormData] = useState({
-    selectedCropCode: record.cropCode || '',
-    cropName: record.cropName,
-    cropVariety: record.cropVariety,
     areaId: record.areaId,
     plantingCount: record.plantingCount,
     plantingDate: record.plantingDate,
-    soilPH: record.soilPH,
-    soilEC: record.soilEC,
+    soilPH: record.soilPH ?? 0,
+    soilEC: record.soilEC ?? 0,
     attritionRate: record.attritionRate ?? 0,
-    remarks: record.remarks || ''
+    remarks: record.remarks || '',
   });
+
+  // 品种路径: 通过 cropCode 查品种库, 兜底用 cropName
+  const varietyPath = useMemo(() => {
+    let variety = record.cropCode ? cropVarietyService.getVarietyByCode(record.cropCode) : undefined;
+    // 兜底: 遍历品种库用 cropName 模糊匹配
+    if (!variety && record.cropName) {
+      const all = cropVarietyService.getAllVarieties();
+      variety = all.find(v =>
+        v.varietyName === record.cropName ||
+        v.subVariety1Name === record.cropName ||
+        v.cropName === record.cropName
+      );
+    }
+    if (!variety) return record.cropName || '-';
+    return [variety.categoryName, variety.typeName, variety.varietyName, variety.subVariety1Name]
+      .filter(Boolean).join(' - ');
+  }, [record.cropCode, record.cropName]);
 
   const handleSubmit = async () => {
     try {
       await usePlantingStore.getState().updateItem(String(record.id), {
-        cropCode: formData.selectedCropCode,
-        cropName: formData.cropName,
-        cropVariety: formData.cropVariety,
         areaId: formData.areaId,
         plantingCount: formData.plantingCount,
         plantingDate: formData.plantingDate,
         soilPH: formData.soilPH,
         soilEC: formData.soilEC,
         attritionRate: formData.attritionRate,
-        remarks: formData.remarks
+        remarks: formData.remarks,
       });
       onSuccess?.();
       onClose();
     } catch (error) {
-      // logger.error('更新失败:', error);
       showAlert('更新失败，请重试');
     }
   };
 
-  // 处理作物品种选择
-  const handleCropCodeChange = (cropCode: string, varietyInfo: any) => {
-    setFormData({
-      ...formData,
-      selectedCropCode: cropCode,
-      cropName: varietyInfo?.varietyName || '',
-      cropVariety: varietyInfo?.subVariety1Name || varietyInfo?.varietyName || ''
-    });
-  };
+  const sourceTypeLabel = record.sourceType === 'seed' ? '种子（直接播种）' : '种苗（经育苗移栽）';
 
   return (
     <UnifiedModal
@@ -90,16 +84,45 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-        {/* 作物品种选择 */}
-        <div className="col-span-2">
-          <Label className="text-gray-900">作物品种</Label>
-          <CropCodeSelector
-            value={formData.selectedCropCode}
-            onChange={handleCropCodeChange}
-            placeholder="搜索或选择作物品种..."
-            size="md"
-          />
+        {/* ====== 只读: 创建时信息 ====== */}
+
+        {/* 种植批号 */}
+        <div>
+          <Label className="text-gray-900">种植批号</Label>
+          <Input type="text" value={record.plantCode} readOnly className={`${deepInputClass} bg-gray-50 font-mono text-gray-700`} />
         </div>
+
+        {/* 关联生产计划 */}
+        <div>
+          <Label className="text-gray-900">关联生产计划</Label>
+          <Input type="text" value={record.productionPlanCode || '不关联'} readOnly className={`${deepInputClass} bg-gray-50`} />
+        </div>
+
+        {/* 来源路径 + 来源类型 */}
+        <div>
+          <Label className="text-gray-900">来源路径</Label>
+          <Input type="text" value={sourceTypeLabel} readOnly className={`${deepInputClass} bg-gray-50`} />
+        </div>
+
+        {/* 来源批号 */}
+        <div>
+          <Label className="text-gray-900">来源批号</Label>
+          <Input type="text" value={record.sourceCode || '-'} readOnly className={`${deepInputClass} bg-gray-50 font-mono text-gray-700`} />
+        </div>
+
+        {/* 作物品种 */}
+        <div>
+          <Label className="text-gray-900">作物品种</Label>
+          <Input type="text" value={record.cropName} readOnly className={`${deepInputClass} bg-gray-50`} />
+        </div>
+
+        {/* 品种路径 */}
+        <div>
+          <Label className="text-gray-900">品种路径</Label>
+          <Input type="text" value={varietyPath} readOnly className={`${deepInputClass} bg-gray-50`} />
+        </div>
+
+        {/* ====== 可编辑字段 ====== */}
 
         {/* 种植区域 */}
         <div>
