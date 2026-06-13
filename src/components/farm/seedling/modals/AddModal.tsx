@@ -432,19 +432,32 @@ export function AddModal({
       theoreticalYield: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? theoreticalYield : undefined
     };
 
-    // 保存育苗数据
-    let addedSeedling;
+    // 保存育苗数据（原子操作：扣减种源 + 创建育苗 + 流水写入）
+    let addedSeedlingId: string | null = null;
     try {
-      addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
+      if (formData.sourceId) {
+        const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+          ? formData.motherPlantCount
+          : formData.initialCount;
+        // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
+        const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
+        const result = await addSeedlingWithDeduct({
+          sourceId: formData.sourceId,
+          count: deductCount,
+          seedling: seedlingData,
+        });
+        addedSeedlingId = result.id;
+      } else {
+        const addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
+        addedSeedlingId = addedSeedling?.id || null;
+      }
     } catch (error) {
-      // logger.error('保存育苗记录失败:', error);
       await showAlert('保存失败，请重试');
       return;
     }
 
     // 创建草稿任务（供任务中心分派执行人）
-    if (addedSeedling?.id) {
-      // 构建详细的工作内容描述
+    if (addedSeedlingId) {
       const workContent = `作物品种：${formData.cropVariety || formData.cropName}
 育苗方式：${formData.seedlingType}
 初始数量：${formData.initialCount}株
@@ -457,8 +470,8 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         type: 'seedling',
         typeName: '育苗任务',
         sourceType: 'dispatch',
-        sourceId: addedSeedling.id,  // 关联育苗ID
-        sourceCode: formData.seedlingCode,  // 育苗批号（来源编号）
+        sourceId: addedSeedlingId,
+        sourceCode: formData.seedlingCode,
         remarks: workContent,
         siteName: siteName,
         startDate: formData.startDate,
@@ -466,20 +479,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         initialCount: formData.initialCount,
         targetSurvivalCount: targetSurvivalCount,
       }, 'farm', 'draft');
-    }
-
-    // 扣减种源可用数量（仅当关联了种源时才扣减）
-    // 单株育苗模式：扣减 initialCount
-    // 扩繁育苗模式：扣减 motherPlantCount
-    if (formData.sourceId) {
-      const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
-        ? formData.motherPlantCount
-        : formData.initialCount;
-      try {
-        await decreaseAvailableCount(formData.sourceId, deductCount);
-      } catch (error) {
-        // logger.error('扣减种源可用数量失败:', error);
-      }
     }
 
     // 更新作物实例状态为育苗中
