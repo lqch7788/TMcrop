@@ -87,39 +87,39 @@ export function AddModal({
     return getDictItems('operator').map(d => ({ value: d.dictCode, label: d.dictLabel }));
   }, [dictionaries]);
 
-  const [formData, setFormData] = useState({
+  // 初始表单数据（弹窗每次打开时重置）
+  const INITIAL_FORM_DATA = {
     sourceId: '',
     sourceCode: '',
-    sourceType: '',           // 来源类型（自动带入）
-    supplierName: '',        // 供应商（自动带入）
+    sourceType: '',
+    supplierName: '',
     selectedCropCode: '',
     cropName: '',
     cropVariety: '',
     seedlingType: '',
-    seedlingTypeOther: '',   // 当选择"其他"时的自定义输入
+    seedlingTypeOther: '',
     siteId: '',
     siteName: '',
-    seedlingCode: '',        // 育苗批次号（可手动编辑）
-    productionPlanId: '',    // 关联生产计划批次号
+    seedlingCode: '',
+    productionPlanId: '',
     startDate: '',
     expectedEndDate: '',
     initialCount: 0,
-    targetSurvivalRate: 90,  // 目标成苗率默认值90%（可手动输入0-100）
-    planType: SeedlingPlanType.ROUTINE, // 计划类型默认常规
-    chargePerson: '',         // 负责人
+    targetSurvivalRate: 90,
+    planType: SeedlingPlanType.ROUTINE,
+    chargePerson: '',
     remarks: '',
-    // 扩繁计算模式
-    calculateMode: SeedlingCalculateMode.SINGLE,  // 计算模式：单株育苗/扩繁育苗
-    motherPlantCount: 0,       // 母株数量（扩繁模式用）
-    propagationMultiple: 0,   // 扩繁倍数（扩繁模式用）
-    customMultiple: 0,        // 自定义扩繁倍数
-    theoreticalYield: 0,        // 理论产量（扩繁模式用）
-    // 方案2.6: 育苗工时
+    calculateMode: SeedlingCalculateMode.SINGLE,
+    motherPlantCount: 0,
+    propagationMultiple: 0,
+    customMultiple: 0,
+    theoreticalYield: 0,
     workHours: 0,
-    // V3.1 补录相关字段
-    isSupplementary: false,  // 是否补录
-    supplementaryReason: '',  // 补录原因
-  });
+    isSupplementary: false,
+    supplementaryReason: '',
+  };
+
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
   // 图片上传状态
   const [pictures, setPictures] = useState<string[]>([]);
@@ -127,6 +127,16 @@ export function AddModal({
   // 方案2.7: combogrid种源选择器状态
   const [sourceSearch, setSourceSearch] = useState('');
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
+
+  // 弹窗每次打开时重置所有状态
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(INITIAL_FORM_DATA);
+      setPictures([]);
+      setSourceSearch('');
+      setSourcePopoverOpen(false);
+    }
+  }, [isOpen]);
 
   // 方案2.7: 过滤种源列表用于combogrid展示
   // 2026-06-12: 联动过滤版本下移到 availableProductionPlans 之后(避免 TDZ)
@@ -262,8 +272,9 @@ export function AddModal({
     );
   }, [storePlans]);
 
-  // 2026-06-12: 联动过滤 — 选了种源后,生产计划下拉只显示同 cropName 的计划
-  const productionPlanCropFilter = useMemo(() => {
+  // 联动过滤 — 选了种源后,生产计划下拉只显示同品种(variety)的计划
+  // 种源的 cropName 是最细化名称(如"红颜"),生产计划的 variety 是品种名(如"红颜"),两者语义一致
+  const productionPlanVarietyFilter = useMemo(() => {
     if (!formData.sourceId) return null;
     const source = seedSources.find(s => s.id === formData.sourceId);
     return source?.cropName || null;
@@ -271,24 +282,23 @@ export function AddModal({
 
   const filteredProductionPlans = useMemo(() => {
     let list = availableProductionPlans;
-    if (productionPlanCropFilter) {
-      list = list.filter(p => p.cropName === productionPlanCropFilter);
+    if (productionPlanVarietyFilter) {
+      list = list.filter(p => p.variety === productionPlanVarietyFilter);
     }
     return list;
-  }, [availableProductionPlans, productionPlanCropFilter]);
+  }, [availableProductionPlans, productionPlanVarietyFilter]);
 
-  // 2026-06-12: 联动过滤 — 选了生产计划后种源下拉只显示同 cropName
-  // 注: 必须放在 availableProductionPlans 之后,避免 TDZ
-  const productionPlanCropFilterFromPlan = useMemo(() => {
+  // 联动过滤 — 选了生产计划后种源下拉只显示同品种(variety)
+  const productionPlanVarietyFilterFromPlan = useMemo(() => {
     if (!formData.productionPlanId) return null;
     const plan = availableProductionPlans.find(p => p.batchCode === formData.productionPlanId);
-    return plan?.cropName || null;
+    return plan?.variety || null;
   }, [formData.productionPlanId, availableProductionPlans]);
 
   const filteredSeedSources = useMemo(() => {
     let list = seedSources || [];
-    if (productionPlanCropFilterFromPlan) {
-      list = list.filter(s => s.cropName === productionPlanCropFilterFromPlan);
+    if (productionPlanVarietyFilterFromPlan) {
+      list = list.filter(s => s.cropName === productionPlanVarietyFilterFromPlan);
     }
     if (sourceSearch) {
       const q = sourceSearch.toLowerCase();
@@ -299,7 +309,7 @@ export function AddModal({
       );
     }
     return list;
-  }, [seedSources, sourceSearch, productionPlanCropFilterFromPlan]);
+  }, [seedSources, sourceSearch, productionPlanVarietyFilterFromPlan]);
 
   // 跳转种源管理 (空状态"去添加"按钮用)
   const navigate = useNavigate();
@@ -695,7 +705,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   {/* 2026-06-12: 联动过滤 — 选了种源后只显示同 cropName 的计划 */}
                   {filteredProductionPlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.batchCode}>
-                      [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.cropName}
+                      [{plan.planTypeName || '育苗计划'}] {plan.batchCode} - {plan.variety}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -765,8 +775,8 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                         // 2026-06-12: 联动过滤后空状态 — 加"去种源管理添加"按钮
                         <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-2">
                           <div>
-                            {productionPlanCropFilterFromPlan
-                              ? `所选生产计划 [${productionPlanCropFilterFromPlan}] 暂无对应种源`
+                            {productionPlanVarietyFilterFromPlan
+                              ? `所选生产计划 [${productionPlanVarietyFilterFromPlan}] 暂无对应种源`
                               : '未找到匹配的种源'}
                           </div>
                           <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>

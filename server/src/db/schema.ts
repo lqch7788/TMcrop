@@ -479,6 +479,10 @@ export function initializeDatabase() {
       survival_quantity INTEGER DEFAULT 0,
       survival_rate REAL DEFAULT 0,
       planted_count INTEGER DEFAULT 0,
+      loss_count INTEGER DEFAULT 0,
+      loss_rate REAL DEFAULT 0,
+      target_survival_rate REAL,
+      target_survival_count INTEGER,
       pictures TEXT,
       quality_grade TEXT,
       status TEXT DEFAULT 'in_progress',
@@ -1052,6 +1056,13 @@ export function initializeDatabase() {
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN parent_female_code TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN mother_plant_id TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN mother_plant_code TEXT`); } catch (e) {}
+
+  // 育苗表：目标成苗率 & 目标成苗数
+  try { db.run(`ALTER TABLE seedlings ADD COLUMN target_survival_rate REAL`); } catch (e) {}
+  try { db.run(`ALTER TABLE seedlings ADD COLUMN target_survival_count INTEGER`); } catch (e) {}
+  // 育苗表：损耗数量 & 损耗率
+  try { db.run(`ALTER TABLE seedlings ADD COLUMN loss_count INTEGER DEFAULT 0`); } catch (e) {}
+  try { db.run(`ALTER TABLE seedlings ADD COLUMN loss_rate REAL DEFAULT 0`); } catch (e) {}
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN linked_planting_id TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN linked_planting_code TEXT`); } catch (e) {}
   try { db.run(`ALTER TABLE seed_sources ADD COLUMN propagation_start_date TEXT`); } catch (e) {}

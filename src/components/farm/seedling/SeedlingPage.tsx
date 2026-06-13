@@ -305,10 +305,30 @@ export default function SeedlingPage() {
 
   // 处理结束计划
   const handleEnd = async (record: Seedling, endType: 'normal' | 'abnormal') => {
-    // 检查是否有关联的生产计划
+    // 2026-06-13: 放宽限制 — 没关联生产计划的记录也允许结束（仅关本记录，不动生产计划）
     const planCode = record.productionPlanCode;
+    const isNormal = endType === 'normal';
+    const confirmMsg = planCode
+      ? (isNormal
+          ? `确认正常结束此生产计划？\n\n结束后禁止一切入库和补录操作`
+          : `确认异常结束此生产计划？\n\n结束后如需补录，需提交审核申请`)
+      : (isNormal
+          ? `确认正常结束此育苗记录？\n（未关联生产计划，仅关闭本记录）`
+          : `确认异常结束此育苗记录？\n（未关联生产计划，仅关闭本记录）`);
+
     if (!planCode || planCode.trim() === '') {
-      await showAlert('该育苗没有关联的生产计划，无法结束');
+      // 本地强结 — 只需更新本条记录
+      if (!await showConfirm(confirmMsg)) return;
+      const result = await updateItem(record.id, {
+        endType,
+        endTime: new Date().toISOString(),
+      });
+      if (result) {
+        await showAlert(isNormal ? '育苗记录已正常结束' : '育苗记录已异常结束');
+        await loadItems();
+      } else {
+        await showAlert('结束失败');
+      }
       return;
     }
 
@@ -343,8 +363,7 @@ export default function SeedlingPage() {
     }
 
     const completionRate = cropBatchService.getCompletionRate(batch, record.survivalCount || 0);
-    const isNormal = endType === 'normal';
-    const confirmMsg = isNormal
+    confirmMsg = isNormal
       ? `确认正常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后禁止一切入库和补录操作`
       : `确认异常结束此生产计划？\n\n入库完成比例：${Math.round(completionRate * 100)}%\n结束后如需补录，需提交审核申请`;
 
@@ -449,8 +468,8 @@ export default function SeedlingPage() {
     const headers = [
       '育苗批号', '作物编码', '关联种源', '作物名称', '作物品种',
       '育苗方式', '场地', '开始日期', '预计结束日期', '实际结束日期',
-      '初始数量', '成苗数量', '已定植数量', '损耗数量', '剩余总数',
-      '成苗率', '损耗率', '育苗结束', '状态', '品质等级',
+      '初始数量', '目标成苗率', '目标成苗数', '成活数量', '损耗数量', '现存数量',
+      '完成比例', '已定植数量', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
     ];
 
@@ -470,11 +489,13 @@ export default function SeedlingPage() {
       '预计结束日期': record.expectedEndDate || '',
       '实际结束日期': record.endDate || '',
       '初始数量': record.initialCount,
-      '成苗数量': record.survivalCount,
-      '已定植数量': record.plantedCount,
+      '目标成苗率': record.targetSurvivalRate != null ? `${record.targetSurvivalRate}%` : '-',
+      '目标成苗数': record.targetSurvivalCount ?? '-',
+      '成活数量': record.survivalCount,
       '损耗数量': record.lossCount,
-      '剩余总数': getRemainingCount(record),
-      '成苗率': `${record.survivalRate}%`,
+      '现存数量': getRemainingCount(record),
+      '完成比例': record.targetSurvivalCount && record.targetSurvivalCount > 0 ? `${Math.round((record.survivalCount || 0) / record.targetSurvivalCount * 100)}%` : '-',
+      '已定植数量': record.plantedCount,
       '损耗率': `${record.lossRate}%`,
       '育苗结束': record.isFinished ? '是' : '否',
       '状态': record.status === SeedlingStatus.IN_PROGRESS ? '进行中' : record.status === SeedlingStatus.TRANSPLANT_READY ? '待定植' : record.status === SeedlingStatus.COMPLETED ? '已完成' : '异常',

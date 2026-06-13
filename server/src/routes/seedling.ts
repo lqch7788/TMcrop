@@ -573,7 +573,7 @@ router.post('/', (req: Request, res: Response) => {
     const { id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
-            work_hours, production_plan_code } = req.body;
+            work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate } = req.body;
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
@@ -597,12 +597,12 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
-        production_plan_code, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate, create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
-        productionPlanCode || null, now, now]
+        productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0, now, now]
         .map(v => v === undefined ? null : v));
 
     saveDatabase();
@@ -620,18 +620,31 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
-    const fields = Object.keys(updates).filter(k => k !== 'id').map(k => `${k} = ?`).join(', ');
-    if (fields.length === 0) {
+    // 白名单：只允许更新 DB 真实存在的列；过滤前端传来的额外字段（避免 SQL 注入 + 兼容字段缺失）
+    const ALLOWED_FIELDS = new Set([
+      'seedling_code', 'source_id', 'source_name', 'production_plan_code',
+      'crop_code', 'crop_name', 'crop_variety', 'seedling_type',
+      'greenhouse_name', 'area_name', 'seedling_date', 'expected_finish_date', 'actual_finish_date',
+      'seedling_quantity', 'survival_quantity', 'survival_rate', 'planted_count',
+      'pictures', 'quality_grade', 'status', 'seedling_status', 'remarks',
+      'create_by', 'work_hours', 'print_count', 'end_type', 'end_time',
+      'target_survival_rate', 'target_survival_count',
+      'loss_count', 'loss_rate',
+    ]);
+    const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
+    if (safeKeys.length === 0) {
       return res.status(400).json({ success: false, error: '没有需要更新的字段' });
     }
 
-    const values = Object.keys(updates).filter(k => k !== 'id').map(k => updates[k]);
+    const fields = safeKeys.map(k => `${k} = ?`).join(', ');
+    const values = safeKeys.map(k => updates[k]);
     values.push(now, id);
 
     db.run(`UPDATE seedlings SET ${fields}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
+    console.error('更新育苗记录失败:', error);
     res.status(500).json({ success: false, error: '更新育苗记录失败' });
   }
 });

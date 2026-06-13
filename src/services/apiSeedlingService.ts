@@ -133,8 +133,8 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     orgName: undefined,
     seedlingTaskTime: item.workHours || item.work_hours || undefined,
     planType: undefined,
-    targetSurvivalRate: undefined,
-    targetSurvivalCount: item.targetSurvivalCount,
+    targetSurvivalRate: item.targetSurvivalRate ?? item.target_survival_rate ?? undefined,
+    targetSurvivalCount: item.targetSurvivalCount ?? item.target_survival_count,
     chargePerson: item.chargePerson,
     productionPlanId: undefined,
     calculateMode: undefined,
@@ -236,6 +236,10 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     survival_quantity: seedling.survivalCount || 0,
     survival_rate: seedling.survivalRate || 0,
     planted_count: seedling.plantedCount || 0,
+    loss_count: seedling.lossCount || 0,
+    loss_rate: seedling.lossRate || 0,
+    target_survival_rate: seedling.targetSurvivalRate ?? null,
+    target_survival_count: seedling.targetSurvivalCount ?? null,
     status: seedling.status,
     seedling_status: seedling.seedlingStatus,
     remarks: seedling.remarks,
@@ -253,15 +257,40 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
 export async function updateSeedling(id: string, updates: Partial<Seedling>): Promise<Seedling | null> {
-  // 2026-06-05: 强结分支写入 end_type/end_time（后端 PUT 用 Object.keys 原样拼字段，需 snake_case）
-  const backendUpdates: Record<string, any> = { ...updates };
-  if (updates.endType !== undefined) {
-    backendUpdates.end_type = updates.endType;
-    delete backendUpdates.endType;
-  }
-  if (updates.endTime !== undefined) {
-    backendUpdates.end_time = updates.endTime;
-    delete backendUpdates.endTime;
+  // 后端 PUT 用 Object.keys 原样拼字段，必须 snake_case；前端 camelCase 需转换
+  const FIELD_TO_SNAKE: Record<string, string> = {
+    seedlingCode: 'seedling_code',
+    sourceId: 'source_id',
+    sourceCode: 'source_name',
+    productionPlanCode: 'production_plan_code',
+    cropCode: 'crop_code',
+    cropName: 'crop_name',
+    cropVariety: 'crop_variety',
+    seedlingType: 'seedling_type',
+    greenhouseName: 'greenhouse_name',
+    areaName: 'area_name',
+    startDate: 'seedling_date',
+    expectedEndDate: 'expected_finish_date',
+    endDate: 'actual_finish_date',
+    initialCount: 'seedling_quantity',
+    survivalCount: 'survival_quantity',
+    survivalRate: 'survival_rate',
+    plantedCount: 'planted_count',
+    qualityGrade: 'quality_grade',
+    workHours: 'work_hours',
+    endType: 'end_type',
+    endTime: 'end_time',
+    targetSurvivalRate: 'target_survival_rate',
+    targetSurvivalCount: 'target_survival_count',
+    lossCount: 'loss_count',
+    lossRate: 'loss_rate',
+    printCount: 'print_count',
+  };
+  const backendUpdates: Record<string, any> = {};
+  for (const [k, v] of Object.entries(updates)) {
+    if (v === undefined) continue;
+    const snake = FIELD_TO_SNAKE[k] ?? k;
+    backendUpdates[snake] = v;
   }
   const result = await enhancedApiClient.put<{ id: string }>(`/seedlings/${id}`, backendUpdates);
   return result ? { ...updates, id } as Seedling : null;

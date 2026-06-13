@@ -65,7 +65,16 @@ export function EditModal({
     qualityGrade: record.qualityGrade || '',
     isFinished: record.isFinished || false,
     chargePerson: record.chargePerson || '',
-    targetSurvivalCount: record.targetSurvivalCount || 0
+    targetSurvivalCount: record.targetSurvivalCount || 0,
+    // 补齐 AddModal 同名字段 — 否则编辑保存会丢这些值
+    targetSurvivalRate: (record as any).targetSurvivalRate || 0,
+    productionPlanId: (record as any).productionPlanCode || '',
+    planType: (record as any).planType || 'routine',
+    calculateMode: (record as any).calculateMode || 'single',
+    motherPlantCount: (record as any).motherPlantCount || 0,
+    propagationMultiple: (record as any).propagationMultiple || 0,
+    customMultiple: (record as any).customMultiple || 0,
+    theoreticalYield: (record as any).theoreticalYield || 0,
   });
 
   // 方案2.7: combogrid种源选择器状态
@@ -124,7 +133,16 @@ export function EditModal({
       qualityGrade: record.qualityGrade || '',
       isFinished: record.isFinished || false,
       chargePerson: record.chargePerson || '',
-      targetSurvivalCount: record.targetSurvivalCount || 0
+      targetSurvivalCount: record.targetSurvivalCount || 0,
+      // 补齐 AddModal 同名字段
+      targetSurvivalRate: (record as any).targetSurvivalRate || 0,
+      productionPlanId: (record as any).productionPlanCode || '',
+      planType: (record as any).planType || 'routine',
+      calculateMode: (record as any).calculateMode || 'single',
+      motherPlantCount: (record as any).motherPlantCount || 0,
+      propagationMultiple: (record as any).propagationMultiple || 0,
+      customMultiple: (record as any).customMultiple || 0,
+      theoreticalYield: (record as any).theoreticalYield || 0,
     });
   }, [record]);
 
@@ -168,6 +186,14 @@ export function EditModal({
         isFinished: formData.isFinished,
         chargePerson: formData.chargePerson,
         targetSurvivalCount: formData.targetSurvivalCount,
+        targetSurvivalRate: formData.targetSurvivalRate,
+        productionPlanCode: formData.productionPlanId || undefined,
+        planType: formData.planType,
+        calculateMode: formData.calculateMode,
+        motherPlantCount: formData.motherPlantCount,
+        propagationMultiple: formData.propagationMultiple,
+        customMultiple: formData.customMultiple,
+        theoreticalYield: formData.theoreticalYield,
         workHours: formData.workHours || undefined,
       });
     } catch (error) {
