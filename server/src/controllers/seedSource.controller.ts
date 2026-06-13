@@ -162,7 +162,12 @@ export class SeedSourceController {
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      await this.service.delete(id);
+      // 软删除：标记 deleted_at 而不物理删除
+      const { getDatabase, saveDatabase } = require('../db');
+      const db = getDatabase();
+      const now = new Date().toISOString();
+      db.run('UPDATE seed_sources SET deleted_at = ? WHERE id = ?', [now, id]);
+      saveDatabase();
       res.json({ success: true, data: { id } });
     } catch (error) {
       next(toHttpError(error as Error));
