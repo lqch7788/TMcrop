@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Modal, FormField } from '@/components/ui';
-import { Input, Select } from '@/components/ui';
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { TextArea } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Package, AlertCircle, Search, X } from 'lucide-react';
@@ -18,6 +18,8 @@ import { useInventoryStore } from '../../../stores';
 import { useSupplierStore } from '../../../stores';
 import { todayLocal } from '@/lib/dateUtils';
 import type { Supplier } from '../../../types/supplier';
+// 反查品种库，自动补 cropId / cropCode（列表展示需要）
+import { initVarieties, getVarietyByName } from '../../../services/cropVarietyService';
 // 一次性动作（"非持久化数据"）：按修订后铁律直接调 service，
 // 写后显式调 useInventoryStore.notifyChange() 触发跨页刷新（保留原功能）
 import { inbound } from '../../../services/inventoryService';
@@ -100,18 +102,21 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
   const [sourceType, setSourceType] = useState<SourceType>(SourceType.EXTERNAL_PURCHASED);
   const [stockType, setStockType] = useState<StockType>(StockType.PRODUCT);
   const [cropName, setCropName] = useState('');
+  const [cropId, setCropId] = useState('');
+  const [cropCode, setCropCode] = useState('');
   const [variety, setVariety] = useState('');
   const [quantity, setQuantity] = useState<string>('');
   const [unit, setUnit] = useState('公斤');
   const [warehouseId, setWarehouseId] = useState('');
   const [inboundDate, setInboundDate] = useState(todayLocal());
   const [grade, setGrade] = useState('good');
+  const [plantingMode, setPlantingMode] = useState('');
+  const [greenhouseName, setGreenhouseName] = useState('');
   const [remarks, setRemarks] = useState('');
   // 采购信息（所有入库来源共用）
   const [supplierId, setSupplierId] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [unitPrice, setUnitPrice] = useState<string>('');
-  const [totalAmount, setTotalAmount] = useState<string>('');
   const [purchaseDate, setPurchaseDate] = useState(todayLocal());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +149,25 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 品种库反查：作物名称变化时自动补 cropId / cropCode（列表展示需要）
+  // 兜底模式与 InventoryTable 保持一致：cropName 当作 varietyName 查
+  useEffect(() => {
+    if (!cropName.trim()) {
+      setCropId('');
+      setCropCode('');
+      return;
+    }
+    initVarieties();
+    const v = getVarietyByName(cropName.trim());
+    if (v) {
+      setCropId(v.id);
+      setCropCode(v.cropCode);
+    } else {
+      setCropId('');
+      setCropCode('');
+    }
+  }, [cropName]);
+
   // 弹窗打开时重置
   useEffect(() => {
     if (isOpen) {
@@ -151,17 +175,20 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
       setSourceType(SourceType.EXTERNAL_PURCHASED);
       setStockType(StockType.PRODUCT);
       setCropName('');
+      setCropId('');
+      setCropCode('');
       setVariety('');
       setQuantity('');
       setUnit('公斤');
       setWarehouseId('');
       setInboundDate(todayLocal());
       setGrade('good');
+      setPlantingMode('');
+      setGreenhouseName('');
       setRemarks('');
       setSupplierId('');
       setSupplierName('');
       setUnitPrice('');
-      setTotalAmount('');
       setPurchaseDate(todayLocal());
       setSupplierSearchKeyword('');
       setShowSupplierSearch(false);
@@ -212,8 +239,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           businessId: genBusinessId(),
           businessType: BusinessType.MANUAL,
           businessCode,
-          cropId: '',
+          cropId: cropId || undefined,
           cropName: cropName.trim(),
+          cropCode: cropCode || undefined,
           varietyName: variety.trim() || undefined,
           quantity: qty,
           unit: unit.trim(),
@@ -230,8 +258,9 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           },
           // V3 扩展字段（让库存页展示完整元数据）
           grade,
-          auditor: supplierName.trim() || undefined,
-          greenhouseName: undefined,
+          plantingMode: plantingMode.trim() || undefined,
+          greenhouseName: greenhouseName.trim() || undefined,
+          auditor: '系统管理员',  // 手动录入的审核人=操作人，供应商走 supplierName 字段
           // 采购信息
           unitPrice: unitPrice ? Number(unitPrice) : undefined,
           totalAmount: computedTotal || undefined,
@@ -307,11 +336,16 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
         {/* 基础信息 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="库存类型 *">
-            <Select
-              value={stockType}
-              onChange={(e) => setStockType(e.target.value as StockType)}
-              options={STOCK_TYPE_OPTIONS}
-            />
+            <Select value={stockType} onValueChange={(val) => setStockType(val as StockType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择库存类型" />
+              </SelectTrigger>
+              <SelectContent>
+                {STOCK_TYPE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField label="入库日期 *">
             <Input
@@ -353,34 +387,67 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
             />
           </FormField>
           <FormField label="单位 *">
-            <Select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              options={UNIT_OPTIONS}
-            />
+            <Select value={unit} onValueChange={(val) => setUnit(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择单位" />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIT_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </div>
 
         {/* 仓库 + 品质 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="入库仓库 *">
-            <Select
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              options={[
-                { value: '', label: '请选择仓库' },
-                ...activeWarehouses.map(w => ({
-                  value: (w as any).oid || (w as any).id,
-                  label: `${(w as any).name}（${(w as any).warehouseType || (w as any).type || ''}）`,
-                })),
-              ]}
-            />
+            <Select value={warehouseId} onValueChange={(val) => setWarehouseId(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择仓库" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">请选择仓库</SelectItem>
+                {activeWarehouses.map(w => (
+                  <SelectItem
+                    key={(w as any).oid || (w as any).id}
+                    value={(w as any).oid || (w as any).id}
+                  >
+                    {(w as any).name}（{(w as any).warehouseType || (w as any).type || ''}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
           <FormField label="品质等级">
-            <Select
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              options={GRADE_OPTIONS}
+            <Select value={grade} onValueChange={(val) => setGrade(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="请选择品质等级" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        </div>
+
+        {/* 种植模式 + 采收区域（V3 字段，列表展示需要）*/}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField label="种植模式">
+            <Input
+              value={plantingMode}
+              onChange={(e) => setPlantingMode(e.target.value)}
+              placeholder="如：土壤/水培/基质（选填）"
+            />
+          </FormField>
+          <FormField label="采收区域">
+            <Input
+              value={greenhouseName}
+              onChange={(e) => setGreenhouseName(e.target.value)}
+              placeholder="如：A栋1号棚（选填）"
             />
           </FormField>
         </div>
