@@ -7,7 +7,6 @@ import { Button } from '@/components/ui';
 import { useStatisticsTab } from './hooks/useStatisticsTab';
 
 // 导入子组件
-import { StatCards } from './components/StatCards';
 import { MonthlyDashboard, CategorySummaryCards } from './components/MonthlyDashboard';
 import { MonthlyFilters } from './components/MonthlyFilters';
 import { MonthlyTable } from './components/MonthlyTable';
@@ -48,7 +47,7 @@ export default function StatisticsTab() {
           <Button
             variant="ghost"
             onClick={() => { hook.setStatActiveTab('monthly'); hook.setStatCurrentPage(1); }}
-            className={`pb-3 text-sm font-semibold ${
+            className={`relative pb-3 text-sm font-semibold ${
               hook.statActiveTab === 'monthly'
                 ? 'text-emerald-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -63,7 +62,7 @@ export default function StatisticsTab() {
           <Button
             variant="ghost"
             onClick={() => { hook.setStatActiveTab('material'); hook.setStatCurrentPage(1); }}
-            className={`pb-3 text-sm font-semibold ${
+            className={`relative pb-3 text-sm font-semibold ${
               hook.statActiveTab === 'material'
                 ? 'text-emerald-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -78,9 +77,6 @@ export default function StatisticsTab() {
         </div>
 
         <div className="px-6 pt-6 pb-0">
-          {/* 统计卡片区域 */}
-          <StatCards data={hook.getStatSummaryData()} />
-
           {/* 仪表盘 - 仅月度汇总Tab显示 */}
           {hook.statActiveTab === 'monthly' && (
             <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 mb-6 shadow-lg shadow-cyan-500/10">
