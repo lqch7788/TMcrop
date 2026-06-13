@@ -317,7 +317,8 @@ export class SeedSourceRepository {
    */
   async delete(id: string): Promise<void> {
     const db = getDatabase();
-    db.run('DELETE FROM seed_sources WHERE id = ?', [id]);
+    const now = new Date().toISOString();
+    db.run('UPDATE seed_sources SET deleted_at = ? WHERE id = ?', [now, id]);
     saveDatabase();
   }
 
@@ -329,7 +330,8 @@ export class SeedSourceRepository {
   async deleteBatch(ids: string[]): Promise<number> {
     const db = getDatabase();
     const placeholders = ids.map(() => '?').join(',');
-    db.run(`DELETE FROM seed_sources WHERE id IN (${placeholders})`, ids);
+    const now = new Date().toISOString();
+    db.run(`UPDATE seed_sources SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...ids]);
     saveDatabase();
     return ids.length;
   }

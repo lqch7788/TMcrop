@@ -101,7 +101,8 @@ router.delete('/batch', (req: Request, res: Response) => {
     }
     const db = getDatabase();
     const placeholders = idArray.map(() => '?').join(',');
-    db.run(`DELETE FROM seedlings WHERE id IN (${placeholders})`, idArray);
+    const now = new Date().toISOString();
+    db.run(`UPDATE seedlings SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...idArray]);
     saveDatabase();
     res.json({ success: true, data: { deletedCount: idArray.length } });
   } catch (error) {
@@ -646,6 +647,41 @@ router.post('/', (req: Request, res: Response) => {
         sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
         now, now]
         .map(v => v === undefined ? null : v));
+
+    // 写入 material_flow_log（外部种源 → external→seedling，内部种源 → seed_source→seedling）
+    if (sourceMode === 'external') {
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        writeFlowLog({
+          flow_type: 'external→seedling',
+          crop_name: crop_name,
+          source_type: null, source_id: null, source_code: external_seed_code || null,
+          source_quantity: external_seed_quantity ?? null, source_category: 'external',
+          target_type: 'seedling', target_id: newId, target_code: seedling_code,
+          target_quantity: seedling_quantity || 0, target_unit: '株',
+          business_code: seedling_code, created_by: create_by || '',
+        });
+      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+    } else if (source_id) {
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        const { mapPropagationToCategory } = require('../lib/sourceCategoryMapper');
+        let sourceCategory = 'external_purchase';
+        try {
+          const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [source_id]);
+          if (srcInfo[0]?.values?.[0]) { sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string); }
+        } catch {}
+        writeFlowLog({
+          flow_type: 'seed_source→seedling',
+          crop_name: crop_name,
+          source_type: 'seed_source', source_id: source_id, source_code: source_name || source_id,
+          source_quantity: seedling_quantity ?? 0, source_unit: '粒', source_category: sourceCategory,
+          target_type: 'seedling', target_id: newId, target_code: seedling_code,
+          target_quantity: seedling_quantity || 0, target_unit: '株',
+          business_code: seedling_code, created_by: create_by || '',
+        });
+      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+    }
 
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId } });
