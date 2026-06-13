@@ -446,10 +446,71 @@ export async function getPropagationRecords(seedSourceId: string): Promise<Propa
   const data = await enhancedApiClient.get<any[]>(
     `/seed-sources/${seedSourceId}/propagation-records`
   );
-  return (data || []).map(item => ({
+  return (data || []).map(item => transformPropagationRecordFromBackend(item, seedSourceId));
+}
+
+/**
+ * 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑
+ * 后端 PUT 返回完整 snake_case 记录，需转 camelCase
+ * 注：与 addPropagationRecord 保持一致，PUT body 用 snake_case 字段名
+ */
+export async function updatePropagationRecord(
+  seedSourceId: string,
+  recordId: string,
+  updates: Partial<PropagationRecord>
+): Promise<PropagationRecord> {
+  // camelCase → snake_case，与 addPropagationRecord 一致
+  const backendUpdates: Record<string, any> = {};
+  if (updates.recordDate !== undefined) backendUpdates.record_date = updates.recordDate;
+  if (updates.stage !== undefined) backendUpdates.stage = updates.stage;
+  if (updates.temperature !== undefined) backendUpdates.temperature = updates.temperature;
+  if (updates.humidity !== undefined) backendUpdates.humidity = updates.humidity;
+  if (updates.abnormality !== undefined) backendUpdates.abnormality = updates.abnormality;
+  if (updates.operator !== undefined) backendUpdates.operator = updates.operator;
+  if (updates.remarks !== undefined) backendUpdates.remarks = updates.remarks;
+  if (updates.pictures !== undefined) backendUpdates.pictures = updates.pictures;
+  if (updates.pollinationType !== undefined) backendUpdates.pollination_type = updates.pollinationType;
+  if (updates.pollinatorCrop !== undefined) backendUpdates.pollinator_crop = updates.pollinatorCrop;
+  if (updates.flowerCount !== undefined) backendUpdates.flower_count = updates.flowerCount;
+  if (updates.fruitSetCount !== undefined) backendUpdates.fruit_set_count = updates.fruitSetCount;
+  if (updates.harvestSeedCount !== undefined) backendUpdates.harvest_seed_count = updates.harvestSeedCount;
+  if (updates.seedWeight !== undefined) backendUpdates.seed_weight = updates.seedWeight;
+  if (updates.harvestPlantCount !== undefined) backendUpdates.harvest_plant_count = updates.harvestPlantCount;
+  if (updates.germinationRate !== undefined) backendUpdates.germination_rate = updates.germinationRate;
+  if (updates.purity !== undefined) backendUpdates.purity = updates.purity;
+  if (updates.moisture !== undefined) backendUpdates.moisture = updates.moisture;
+  if (updates.survivalRate !== undefined) backendUpdates.survival_rate = updates.survivalRate;
+  if (updates.rootedRate !== undefined) backendUpdates.rooted_rate = updates.rootedRate;
+  if (updates.graftSuccessRate !== undefined) backendUpdates.graft_success_rate = updates.graftSuccessRate;
+
+  const result = await enhancedApiClient.put<any>(
+    `/seed-sources/${seedSourceId}/propagation-records/${recordId}`,
+    backendUpdates
+  );
+  return transformPropagationRecordFromBackend(result, seedSourceId);
+}
+
+/**
+ * 2026-06-13: 与育苗每日记录对齐，操作列支持删除
+ */
+export async function deletePropagationRecord(
+  seedSourceId: string,
+  recordId: string
+): Promise<boolean> {
+  await enhancedApiClient.delete(
+    `/seed-sources/${seedSourceId}/propagation-records/${recordId}`
+  );
+  return true;
+}
+
+/**
+ * 内部工具：后端 snake_case → 前端 camelCase 转换（统一 GET/PUT 返回使用）
+ */
+function transformPropagationRecordFromBackend(item: any, fallbackSeedSourceId: string): PropagationRecord {
+  return {
     id: item.id,
-    seedSourceId: item.seed_source_id || seedSourceId,
-    recordDate: item.record_date || '',
+    seedSourceId: item.seed_source_id || item.seedSourceId || fallbackSeedSourceId,
+    recordDate: item.record_date || item.recordDate || '',
     stage: item.stage || '',
     temperature: item.temperature,
     humidity: item.humidity,
@@ -457,20 +518,20 @@ export async function getPropagationRecords(seedSourceId: string): Promise<Propa
     operator: item.operator,
     remarks: item.remarks,
     pictures: typeof item.pictures === 'string' ? JSON.parse(item.pictures || '[]') : (item.pictures || []),
-    pollinationType: item.pollination_type,
-    pollinatorCrop: item.pollinator_crop,
-    flowerCount: item.flower_count,
-    fruitSetCount: item.fruit_set_count,
-    harvestSeedCount: item.harvest_seed_count,
-    seedWeight: item.seed_weight,
-    harvestPlantCount: item.harvest_plant_count,
-    germinationRate: item.germination_rate,
+    pollinationType: item.pollination_type ?? item.pollinationType,
+    pollinatorCrop: item.pollinator_crop ?? item.pollinatorCrop,
+    flowerCount: item.flower_count ?? item.flowerCount,
+    fruitSetCount: item.fruit_set_count ?? item.fruitSetCount,
+    harvestSeedCount: item.harvest_seed_count ?? item.harvestSeedCount,
+    seedWeight: item.seed_weight ?? item.seedWeight,
+    harvestPlantCount: item.harvest_plant_count ?? item.harvestPlantCount,
+    germinationRate: item.germination_rate ?? item.germinationRate,
     purity: item.purity,
     moisture: item.moisture,
-    survivalRate: item.survival_rate,
-    rootedRate: item.rooted_rate,
-    graftSuccessRate: item.graft_success_rate,
-  }));
+    survivalRate: item.survival_rate ?? item.survivalRate,
+    rootedRate: item.rooted_rate ?? item.rootedRate,
+    graftSuccessRate: item.graft_success_rate ?? item.graftSuccessRate,
+  };
 }
 
 /**

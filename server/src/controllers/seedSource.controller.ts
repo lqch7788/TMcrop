@@ -246,6 +246,38 @@ export class SeedSourceController {
   }
 
   /**
+   * PUT /seed-sources/:id/propagation-records/:recordId
+   * 更新繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑
+   * body 字段名约定：snake_case（与 addPropagationRecord 一致）
+   */
+  async updatePropagationRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, recordId } = req.params;
+      const data: Record<string, any> = req.body || {};
+      const result = await this.service.updatePropagationRecord(id, recordId, data);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(toHttpError(error as Error));
+    }
+  }
+
+  /**
+   * DELETE /seed-sources/:id/propagation-records/:recordId
+   * 删除繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持删除
+   */
+  async deletePropagationRecord(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, recordId } = req.params;
+      await this.service.deletePropagationRecord(id, recordId);
+      res.json({ success: true, data: { id: recordId } });
+    } catch (error) {
+      next(toHttpError(error as Error));
+    }
+  }
+
+  /**
    * POST /seed-sources/:id/complete-propagation
    * 完成繁殖入库
    */
