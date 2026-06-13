@@ -52,6 +52,10 @@ interface SeedSourceState {
   // ===== 繁殖过程 =====
   addPropagationRecord: (seedSourceId: string, data: Partial<PropagationRecord>) => Promise<PropagationRecord>;
   loadPropagationRecords: (seedSourceId: string) => Promise<PropagationRecord[]>;
+  /** 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑 */
+  updatePropagationRecord: (seedSourceId: string, recordId: string, updates: Partial<PropagationRecord>) => Promise<PropagationRecord>;
+  /** 2026-06-13: 与育苗每日记录对齐，操作列支持删除 */
+  deletePropagationRecord: (seedSourceId: string, recordId: string) => Promise<void>;
   updatePropagationStage: (seedSourceId: string, newStage: PropagationStatus) => Promise<void>;
   completePropagation: (seedSourceId: string, quantity: number) => Promise<void>;
 }
@@ -150,6 +154,15 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
 
   loadPropagationRecords: async (seedSourceId) => {
     return await seedSourceService.getPropagationRecords(seedSourceId);
+  },
+
+  // 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑/删除
+  updatePropagationRecord: async (seedSourceId, recordId, updates) => {
+    return await seedSourceService.updatePropagationRecord(seedSourceId, recordId, updates);
+  },
+
+  deletePropagationRecord: async (seedSourceId, recordId) => {
+    await seedSourceService.deletePropagationRecord(seedSourceId, recordId);
   },
 
   updatePropagationStage: async (seedSourceId, newStage) => {

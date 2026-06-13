@@ -32,6 +32,9 @@ router.get('/available-for-seed-saving', (req, res, next) => seedSourceControlle
 router.get('/propagation-records', (req, res, next) => seedSourceController.getAllPropagationRecords(req, res, next));
 router.get('/:id/propagation-records', (req, res, next) => seedSourceController.getPropagationRecords(req, res, next));
 router.post('/:id/propagation-records', (req, res, next) => seedSourceController.addPropagationRecord(req, res, next));
+// 2026-06-13: 与育苗每日记录对齐，新增单条记录的 PUT/DELETE（之前只有 GET 列表 + POST 新增）
+router.put('/:id/propagation-records/:recordId', (req, res, next) => seedSourceController.updatePropagationRecord(req, res, next));
+router.delete('/:id/propagation-records/:recordId', (req, res, next) => seedSourceController.deletePropagationRecord(req, res, next));
 router.put('/:id/propagation-stage', (req, res, next) => seedSourceController.updatePropagationStage(req, res, next));
 router.post('/:id/complete-propagation', (req, res, next) => seedSourceController.completePropagation(req, res, next));
 

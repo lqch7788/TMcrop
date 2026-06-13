@@ -417,6 +417,101 @@ export class SeedSourceRepository {
   }
 
   /**
+   * 更新繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑
+   * 白名单字段：防止任意字段写入 DB
+   */
+  async updatePropagationRecord(recordId: string, data: Partial<any>): Promise<any> {
+    const db = getDatabase();
+
+    // 白名单：仅允许更新 propagation_records 表里的业务字段（不带 create_time 等系统列）
+    const ALLOWED_PROPAGATION_UPDATE_COLUMNS = new Set<string>([
+      'record_date',
+      'stage',
+      'temperature',
+      'humidity',
+      'abnormality',
+      'operator',
+      'remarks',
+      'pictures',
+      'pollination_type',
+      'pollinator_crop',
+      'flower_count',
+      'fruit_set_count',
+      'harvest_seed_count',
+      'seed_weight',
+      'harvest_plant_count',
+      'germination_rate',
+      'purity',
+      'moisture',
+      'survival_rate',
+      'rooted_rate',
+      'graft_success_rate',
+    ]);
+
+    const keys = Object.keys(data).filter(k => k !== 'id' && k !== 'seed_source_id');
+    const invalidKeys = keys.filter(k => !ALLOWED_PROPAGATION_UPDATE_COLUMNS.has(k));
+    if (invalidKeys.length > 0) {
+      throw new Error(`不允许更新的字段: ${invalidKeys.join(', ')}`);
+    }
+
+    const fields = keys.map(k => `${k} = ?`).join(', ');
+    if (fields.length === 0) {
+      throw new Error('没有需要更新的字段');
+    }
+
+    const now = new Date().toISOString();
+    const values: any[] = keys.map(k => {
+      const v = (data as any)[k];
+      // pictures 特殊处理：写入前 JSON.stringify
+      if (k === 'pictures') {
+        if (v == null) return '[]';
+        return typeof v === 'string' ? v : JSON.stringify(v);
+      }
+      return v;
+    });
+    values.push(now, recordId);
+
+    db.run(`UPDATE propagation_records SET ${fields}, update_time = ? WHERE id = ?`, values);
+    saveDatabase();
+
+    // 返回更新后的完整记录
+    return this.findPropagationRecordById(recordId);
+  }
+
+  /**
+   * 删除繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持删除
+   */
+  async deletePropagationRecord(recordId: string): Promise<void> {
+    const db = getDatabase();
+    db.run('DELETE FROM propagation_records WHERE id = ?', [recordId]);
+    saveDatabase();
+  }
+
+  /**
+   * 根据ID查询单条繁殖过程记录
+   * 2026-06-13: updatePropagationRecord 后回查用
+   */
+  async findPropagationRecordById(recordId: string): Promise<any | null> {
+    const db = getDatabase();
+    const stmt = db.prepare('SELECT * FROM propagation_records WHERE id = ?');
+    stmt.bind([recordId]);
+    let row: any = null;
+    if (stmt.step()) {
+      row = stmt.getAsObject();
+    }
+    stmt.free();
+    if (!row) return null;
+    if (typeof row.pictures === 'string') {
+      try { row.pictures = JSON.parse(row.pictures); } catch { row.pictures = []; }
+    } else {
+      row.pictures = row.pictures || [];
+    }
+    return row;
+  }
+
+  /**
    * 获取繁殖过程记录列表
    */
   async getPropagationRecords(seedSourceId: string): Promise<any[]> {

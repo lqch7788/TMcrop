@@ -273,6 +273,49 @@ export class SeedSourceService {
   }
 
   /**
+   * 更新繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持内联编辑
+   * 入参约定：snake_case 字段名（与 addPropagationRecord / 前端 PUT body 一致）
+   * 校验：种源存在 + 记录归属该种源
+   */
+  async updatePropagationRecord(seedSourceId: string, recordId: string, data: Record<string, any>) {
+    const existing = await this.repository.findById(seedSourceId);
+    if (!existing) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
+    }
+
+    // 校验记录归属：通过查列表 + 匹配 id 来判断（避免新增 repository 方法）
+    const records = await this.repository.getPropagationRecords(seedSourceId);
+    const target = records.find((r: any) => r.id === recordId);
+    if (!target) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '繁殖过程记录不存在', 404);
+    }
+
+    // 入参已为 snake_case（与 addPropagationRecord 一致），直接传递给 repository
+    return this.repository.updatePropagationRecord(recordId, data);
+  }
+
+  /**
+   * 删除繁殖过程记录
+   * 2026-06-13: 与育苗每日记录对齐，操作列支持删除
+   */
+  async deletePropagationRecord(seedSourceId: string, recordId: string) {
+    const existing = await this.repository.findById(seedSourceId);
+    if (!existing) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
+    }
+
+    const records = await this.repository.getPropagationRecords(seedSourceId);
+    const target = records.find((r: any) => r.id === recordId);
+    if (!target) {
+      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '繁殖过程记录不存在', 404);
+    }
+
+    await this.repository.deletePropagationRecord(recordId);
+    return { id: recordId };
+  }
+
+  /**
    * 全量查询繁殖过程记录（JOIN seed_sources）
    * 用于"繁殖过程记录"全量查看页
    */
