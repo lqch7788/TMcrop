@@ -604,11 +604,18 @@ router.post('/', (req: Request, res: Response) => {
     const { id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
-            work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate } = req.body;
+            work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
+            source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note } = req.body;
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
     const cropCode = crop_code ?? req.body.cropCode;
+    // 2026-06-13: 兼容 camelCase externalSeedCode / externalSeedName / externalSeedQuantity / externalSeedNote / sourceMode
+    const sourceMode = source_mode ?? req.body.sourceMode;
+    const externalSeedCode = external_seed_code ?? req.body.externalSeedCode;
+    const externalSeedName = external_seed_name ?? req.body.externalSeedName;
+    const externalSeedQuantity = external_seed_quantity ?? req.body.externalSeedQuantity;
+    const externalSeedNote = external_seed_note ?? req.body.externalSeedNote;
 
     // 方案2.5: 验证育苗地点AreaType=4（种植区）
     if (greenhouse_name) {
@@ -628,12 +635,16 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
-        production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
+        source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
+        create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
-        productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0, now, now]
+        productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
+        sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
+        now, now]
         .map(v => v === undefined ? null : v));
 
     saveDatabase();
@@ -674,6 +685,7 @@ router.put('/:id', (req: Request, res: Response) => {
       'create_by', 'work_hours', 'print_count', 'end_type', 'end_time',
       'target_survival_rate', 'target_survival_count',
       'loss_count', 'loss_rate',
+      'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
     ]);
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
     if (safeKeys.length === 0) {

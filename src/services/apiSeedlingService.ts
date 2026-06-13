@@ -246,6 +246,12 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     create_by: seedling.createBy,
     work_hours: seedling.workHours,
     pictures: Array.isArray(seedling.pictures) ? JSON.stringify(seedling.pictures) : seedling.pictures,
+    // 2026-06-13: 外部种源字段（从 Record<string, unknown> 透传）
+    source_mode: (seedling as any).sourceMode,
+    external_seed_code: (seedling as any).externalSeedCode,
+    external_seed_name: (seedling as any).externalSeedName,
+    external_seed_quantity: (seedling as any).externalSeedQuantity,
+    external_seed_note: (seedling as any).externalSeedNote,
   };
 
   const result = await enhancedApiClient.post<{ id: string }>('/seedlings', backendData);

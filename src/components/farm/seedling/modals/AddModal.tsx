@@ -559,7 +559,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
         businessLink: {
           type: 'seedling' as const,
           requestCode: formData.seedlingCode,
-          requestId: addedSeedling?.id || '',
+          requestId: addedSeedlingId || '',
         },
         supplementaryData: {
           reason: formData.supplementaryReason,
