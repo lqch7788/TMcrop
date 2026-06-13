@@ -391,8 +391,12 @@ export function EditModal({
           <Label className="text-gray-900">初始数量</Label>
           <Input
             type="number"
+            min={0}
             value={formData.initialCount || ''}
-            onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setFormData({ ...formData, initialCount: v < 0 ? 0 : v });
+            }}
             className={deepInputClass}
           />
         </div>
@@ -402,8 +406,12 @@ export function EditModal({
           <Label className="text-gray-900">成活数量</Label>
           <Input
             type="number"
+            min={0}
             value={formData.survivalCount || ''}
-            onChange={(e) => setFormData({ ...formData, survivalCount: Number(e.target.value) })}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setFormData({ ...formData, survivalCount: v < 0 ? 0 : v });
+            }}
             className={deepInputClass}
           />
         </div>
@@ -413,8 +421,12 @@ export function EditModal({
           <Label className="text-gray-900">已定植数量</Label>
           <Input
             type="number"
+            min={0}
             value={formData.plantedCount || ''}
-            onChange={(e) => setFormData({ ...formData, plantedCount: Number(e.target.value) })}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setFormData({ ...formData, plantedCount: v < 0 ? 0 : v });
+            }}
             className={deepInputClass}
           />
         </div>
@@ -448,8 +460,12 @@ export function EditModal({
           <Label className="text-gray-900">目标成活数量</Label>
           <Input
             type="number"
+            min={0}
             value={formData.targetSurvivalCount || ''}
-            onChange={(e) => setFormData({ ...formData, targetSurvivalCount: Number(e.target.value) })}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setFormData({ ...formData, targetSurvivalCount: v < 0 ? 0 : v });
+            }}
             className={deepInputClass}
             placeholder="请输入目标成活数量"
           />
@@ -460,8 +476,12 @@ export function EditModal({
           <Label className="text-gray-900">工时（小时）</Label>
           <Input
             type="number"
+            min={0}
             value={formData.workHours || ''}
-            onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setFormData({ ...formData, workHours: (v < 0 ? 0 : v) || 0 });
+            }}
             className={deepInputClass}
             placeholder="请输入育苗工时"
             min="0"
