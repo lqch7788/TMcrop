@@ -48,6 +48,7 @@ const cropSubItems = [
   { icon: CheckCircle, label: '采收入库', path: '/crop/harvest' },
   { icon: Box, label: '作物库存', path: '/crop-inventory' },
   { icon: FileDown, label: '出库记录', path: '/crop/outbound-records' },
+  { icon: TrendingUp, label: '流转追溯', path: '/crop/material-flow' },
   { icon: Sprout, label: '施肥管理', path: '/crop/fertilizer' },
   { icon: Bug, label: '病虫害管理', path: '/pest-control' },
 ];
