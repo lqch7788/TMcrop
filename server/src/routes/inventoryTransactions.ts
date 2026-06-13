@@ -245,7 +245,34 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
       saveDatabase();
     }
 
-    // 7. 返回 Store OutboundRow 全字段（用 transformRow）
+    // 8. 写入 material_flow_log（按 businessType 白名单）
+    try {
+      const { writeFlowLog } = require('../services/flowLogService');
+      const { mapOutboundToFlowType, mapInventorySourceToCategory } = require('../lib/sourceCategoryMapper');
+      const flowType = mapOutboundToFlowType(body.businessType || '');
+      if (flowType) {
+        writeFlowLog({
+          flow_type: flowType,
+          crop_name: stock.crop_name || '',
+          crop_variety: stock.crop_variety || stock.variety || '',
+          source_type: 'inventory_stock',
+          source_id: body.instanceId || '',
+          source_code: body.instanceId || '',
+          source_quantity: body.quantity || 0,
+          source_unit: stock.unit || '',
+          source_category: mapInventorySourceToCategory(stock.source_type || stock.sourceType),
+          target_type: body.businessType || '',
+          target_id: body.target_id || body.instanceId || '',
+          target_code: body.business_code || body.businessCode || '',
+          target_quantity: body.quantity || 0,
+          target_unit: stock.unit || '',
+          business_code: body.business_code || body.businessCode || '',
+          created_by: (req as any).user?.name || '',
+        });
+      }
+    } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+
+    // 9. 返回 Store OutboundRow 全字段（用 transformRow）
     const txRow = {
       id: txId,
       instanceId: body.instanceId,

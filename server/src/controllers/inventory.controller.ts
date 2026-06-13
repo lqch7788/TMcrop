@@ -20,6 +20,30 @@ export class InventoryController {
         return;
       }
 
+      // 写入 material_flow_log（入库无上游，target = inventory_stock）
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        const { mapInventorySourceToCategory } = require('../lib/sourceCategoryMapper');
+        const body = req.body || {} as any;
+        writeFlowLog({
+          flow_type: 'harvest→inventory',
+          crop_name: body.crop_name || body.cropName || '',
+          crop_variety: body.crop_variety || body.cropVariety || body.variety || '',
+          source_type: null,
+          source_id: null,
+          source_code: null,
+          source_quantity: null,
+          source_category: mapInventorySourceToCategory(body.source_type || body.sourceType),
+          target_type: 'inventory_stock',
+          target_id: result.instanceId || '',
+          target_code: body.business_code || body.businessCode || '',
+          target_quantity: body.quantity || 0,
+          target_unit: body.unit || '',
+          business_code: body.business_code || body.businessCode || '',
+          created_by: body.create_by || body.createBy || '',
+        });
+      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
+
       res.json({
         success: true,
         data: {

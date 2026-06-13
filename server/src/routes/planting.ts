@@ -5,6 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
+import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 
 const router = Router();
 
@@ -255,28 +256,88 @@ router.post('/', (req: Request, res: Response) => {
     const finalProductionPlanCode = body.production_plan_code || body.productionPlanCode || '';
 
     const db = getDatabase();
-    db.run(`
-      INSERT INTO plantings (
-        id, planting_code, source_type, source_id, source_name, crop_name, crop_variety, crop_code,
-        area_id, area_name, root_name, greenhouse_name, planting_date, planting_quantity, planted_quantity,
-        survival_quantity, survival_rate, growth_status, expected_harvest_date, status, remarks, create_by, create_time, update_time,
-        soil_ph, soil_ec, attrition_rate, transplant_count, transplant_date, is_harvest, harvest_date,
-        harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
-      finalCropName, finalCropVariety, finalCropCode,
-      finalAreaId, finalAreaName, finalRootName, finalGreenhouseName, finalPlantingDate,
-      finalPlantingQuantity, finalPlantedQuantity,
-      finalSurvivalQuantity, finalSurvivalRate, finalGrowthStatus, finalExpectedHarvestDate,
-      finalStatus, finalRemarks, finalCreateBy, now, now,
-      finalSoilPh, finalSoilEc, finalAttritionRate, finalTransplantCount, finalTransplantDate,
-      finalIsHarvest, finalHarvestDate, finalHarvestQuantity, finalPrintCount, finalTraceabilityCode,
-      finalPictures, finalProductionPlanId, finalProductionPlanCode
-    ]);
 
-    saveDatabase();
-    res.status(201).json({ success: true, data: { id: newId } });
+    // 事务开始：扣减来源数量 + 插入种植记录 + 写物料流转流水
+    db.exec('BEGIN');
+    try {
+      let flowType = 'external→planting'; // 默认外部来源
+
+      // 根据来源类型扣减上游数量
+      if (finalSourceType === 'seed_source' || finalSourceType === 'SEED') {
+        if (finalSourceId) {
+          // 扣减种源 remaining_quantity
+          const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ?', [finalSourceId]);
+          const remaining = Number(chk[0]?.values?.[0]?.[0] || 0);
+          if (remaining >= finalPlantingQuantity) {
+            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
+              [finalPlantingQuantity, now, finalSourceId]);
+          }
+        }
+        flowType = 'seed_source→planting';
+      } else if (finalSourceType === 'seedling' || finalSourceType === 'SEEDLING') {
+        if (finalSourceId) {
+          // 增加育苗 planted_quantity（扣减可种植余量 = survival - planted）
+          const chk = db.exec('SELECT survival_quantity, planted_quantity FROM seedlings WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
+          if (chk[0]?.values?.[0]) {
+            const survival = Number(chk[0].values[0][0] || 0);
+            const planted = Number(chk[0].values[0][1] || 0);
+            if (survival - planted >= finalPlantingQuantity) {
+              db.run('UPDATE seedlings SET planted_quantity = planted_quantity + ? WHERE id = ?',
+                [finalPlantingQuantity, finalSourceId]);
+            }
+          }
+        }
+        flowType = 'seedling→planting';
+      }
+
+      // 插入种植记录
+      db.run(`
+        INSERT INTO plantings (
+          id, planting_code, source_type, source_id, source_name, crop_name, crop_variety, crop_code,
+          area_id, area_name, root_name, greenhouse_name, planting_date, planting_quantity, planted_quantity,
+          survival_quantity, survival_rate, growth_status, expected_harvest_date, status, remarks, create_by, create_time, update_time,
+          soil_ph, soil_ec, attrition_rate, transplant_count, transplant_date, is_harvest, harvest_date,
+          harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
+        finalCropName, finalCropVariety, finalCropCode,
+        finalAreaId, finalAreaName, finalRootName, finalGreenhouseName, finalPlantingDate,
+        finalPlantingQuantity, finalPlantedQuantity,
+        finalSurvivalQuantity, finalSurvivalRate, finalGrowthStatus, finalExpectedHarvestDate,
+        finalStatus, finalRemarks, finalCreateBy, now, now,
+        finalSoilPh, finalSoilEc, finalAttritionRate, finalTransplantCount, finalTransplantDate,
+        finalIsHarvest, finalHarvestDate, finalHarvestQuantity, finalPrintCount, finalTraceabilityCode,
+        finalPictures, finalProductionPlanId, finalProductionPlanCode
+      ]);
+
+      // 写入 material_flow_log 流转流水
+      writeFlowLog({
+        flow_type: flowType,
+        crop_name: finalCropName,
+        crop_variety: finalCropVariety,
+        source_type: finalSourceType || null,
+        source_id: finalSourceId || null,
+        source_code: finalSourceName || null,
+        source_quantity: finalPlantingQuantity,
+        source_unit: '株',
+        source_category: null,
+        target_type: 'planting',
+        target_id: newId,
+        target_code: finalPlantCode,
+        target_quantity: finalPlantingQuantity,
+        target_unit: '株',
+        business_code: finalPlantCode,
+        created_by: finalCreateBy,
+      });
+
+      db.exec('COMMIT');
+      saveDatabase();
+      res.status(201).json({ success: true, data: { id: newId } });
+    } catch (txErr) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw txErr;
+    }
   } catch (error) {
     console.error('创建种植记录失败:', error);
     res.status(500).json({ success: false, error: '创建种植记录失败' });
@@ -290,6 +351,20 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
+    // 数量变更检测：UPDATE 前先查旧值，用于 correction 补偿流水
+    const plantingQtyChanged = updates.planting_quantity !== undefined || updates.plantingQuantity !== undefined;
+    let oldPlantingQty = 0;
+    let oldCropName = '';
+    let oldCropVariety = '';
+    if (plantingQtyChanged) {
+      try {
+        const oldChk = db.exec('SELECT planting_quantity, crop_name, crop_variety FROM plantings WHERE id = ?', [id]);
+        oldPlantingQty = Number(oldChk[0]?.values?.[0]?.[0] || 0);
+        oldCropName = (oldChk[0]?.values?.[0]?.[1] as string) || '';
+        oldCropVariety = (oldChk[0]?.values?.[0]?.[2] as string) || '';
+      } catch {}
+    }
+
     const { fields, values, rejected } = buildWhitelistedUpdate(updates, [now, id]);
     if (fields.length === 0) {
       return res.status(400).json({ success: false, error: '没有可更新的合法字段' });
@@ -300,6 +375,26 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id = ?`, values);
+
+    // correction 补偿流水：数量变更时写入 material_flow_log
+    if (plantingQtyChanged) {
+      try {
+        const newQty = updates.planting_quantity ?? updates.plantingQuantity ?? 0;
+        const delta = newQty - oldPlantingQty;
+        if (Math.abs(delta) > 0.001) {
+          writeCorrection({
+            flow_type: 'external→planting',
+            target_type: 'planting',
+            target_id: id,
+            source_quantity_delta: delta,
+            source_unit: '株',
+            crop_name: oldCropName,
+            crop_variety: oldCropVariety,
+          });
+        }
+      } catch {}
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
@@ -423,7 +518,9 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    db.run('DELETE FROM plantings WHERE id = ?', [id]);
+    const now = new Date().toISOString();
+    // 软删除：标记 deleted_at 而非物理删除
+    db.run('UPDATE plantings SET deleted_at = ? WHERE id = ?', [now, id]);
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
