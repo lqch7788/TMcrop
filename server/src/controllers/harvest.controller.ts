@@ -64,6 +64,40 @@ export class HarvestController {
     try {
       const data = req.body;
       const result = await this.service.create(data);
+      // 写入 material_flow_log
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        const products = data.products || [];
+        const saleType = data.sale_type || data.saleType || 'external_sale';
+        const batchSourceType = data.source_type || data.sourceType || '';
+        const batchCode = data.batch_code || data.batchCode || '';
+        const batchSourceId = data.source_id || data.sourceId || '';
+        const createdBy = data.create_by || data.createBy || '';
+        for (const p of products) {
+          const cropName = p.crop_name || p.cropName || '';
+          const cropVariety = p.crop_variety || p.cropVariety || p.variety || '';
+          const harvestQty = p.harvest_quantity || p.harvestQuantity || 0;
+          const unit = p.unit || data.unit || 'kg';
+          writeFlowLog({
+            flow_type: batchCode ? (batchSourceType === 'planting' ? 'planting→harvest' : 'seedling→harvest') : 'harvest→inventory',
+            crop_name: cropName,
+            crop_variety: cropVariety,
+            source_type: batchSourceType || null,
+            source_id: batchSourceId || null,
+            source_code: batchCode || null,
+            source_quantity: harvestQty,
+            source_unit: unit,
+            source_category: null,
+            target_type: saleType === 'self_use' ? 'self_use' : 'inventory_stock',
+            target_id: result?.id || result?.harvest_id || '',
+            target_code: data.harvest_code || data.harvestCode || '',
+            target_quantity: harvestQty,
+            target_unit: unit,
+            business_code: data.harvest_code || data.harvestCode || '',
+            created_by: createdBy,
+          });
+        }
+      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       console.error('创建采收记录失败:', error);

@@ -9,6 +9,8 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { seedSourceService, BusinessError, SeedSourceErrorCode } from '../services/seedSource.service';
+import { writeFlowLog, writeCorrection } from '../services/flowLogService';
+import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
 
 const router = Router();
 
@@ -228,6 +230,35 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
         productionPlanCode || null, now, now]
         .map(v => v === undefined ? null : v));
+
+    // 步骤3.5：写入 material_flow_log（在 COMMIT 前，同事务）
+    try {
+      // 反查种源的 propagation_type 获取 source_category
+      let sourceCategory = 'other';
+      const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [sourceId]);
+      if (srcInfo[0]?.values?.[0]) {
+        sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string);
+      }
+      const finalSourceCode = (seedling as any).source_code || (seedling as any).sourceCode || sourceId;
+      writeFlowLog({
+        flow_type: 'seed_source→seedling',
+        crop_name: crop_name,
+        crop_variety: crop_variety,
+        source_type: 'seed_source',
+        source_id: sourceId,
+        source_code: finalSourceCode,
+        source_quantity: safeCount,
+        source_unit: '粒',
+        source_category: sourceCategory,
+        target_type: 'seedling',
+        target_id: newId,
+        target_code: seedling_code,
+        target_quantity: seedling_quantity || 0,
+        target_unit: '株',
+        business_code: seedling_code,
+        created_by: create_by || '',
+      });
+    } catch { /* flow_log 写入失败不影响主流程 */ }
 
     // 步骤4：提交 + 落盘
     db.exec('COMMIT');
@@ -620,6 +651,19 @@ router.put('/:id', (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const db = getDatabase();
 
+    // 查询旧记录（用于数量变更检测）
+    const oldStmt = db.prepare('SELECT * FROM seedlings WHERE id = ?');
+    oldStmt.bind([id]);
+    let old: any = null;
+    if (oldStmt.step()) {
+      old = oldStmt.getAsObject();
+    }
+    oldStmt.free();
+
+    if (!old || Object.keys(old).length === 0) {
+      return res.status(404).json({ success: false, error: '育苗记录不存在' });
+    }
+
     // 白名单：只允许更新 DB 真实存在的列；过滤前端传来的额外字段（避免 SQL 注入 + 兼容字段缺失）
     const ALLOWED_FIELDS = new Set([
       'seedling_code', 'source_id', 'source_name', 'production_plan_code',
@@ -642,6 +686,32 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(`UPDATE seedlings SET ${fields}, update_time = ? WHERE id = ?`, values);
     saveDatabase();
+
+    // 数量变更 correction 流水
+    const hasQtyChanged = (
+      (updates.seedling_quantity !== undefined && updates.seedling_quantity !== old.seedling_quantity) ||
+      (updates.survival_quantity !== undefined && updates.survival_quantity !== old.survival_quantity)
+    );
+    if (hasQtyChanged) {
+      try {
+        const oldQty = (updates.seedling_quantity !== undefined) ? old.seedling_quantity : old.survival_quantity;
+        const newQty = (updates.seedling_quantity !== undefined) ? updates.seedling_quantity : updates.survival_quantity;
+        const delta = newQty - oldQty;
+        if (Math.abs(delta) > 0.001) {
+          writeCorrection({
+            flow_type: 'seed_source→seedling',
+            target_type: 'seedling',
+            target_id: id,
+            source_quantity_delta: delta,
+            source_unit: '株',
+            crop_name: old.crop_name || '',
+            crop_variety: old.crop_variety || '',
+            created_by: updates.create_by || '',
+          });
+        }
+      } catch { /* correction 失败不影响主流程 */ }
+    }
+
     res.json({ success: true, data: { id } });
   } catch (error) {
     console.error('更新育苗记录失败:', error);
@@ -653,9 +723,10 @@ router.delete('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    db.run('DELETE FROM seedlings WHERE id = ?', [id]);
+    const now = new Date().toISOString();
+    db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, message: '育苗记录已删除' });
   } catch (error) {
     res.status(500).json({ success: false, error: '删除育苗记录失败' });
   }

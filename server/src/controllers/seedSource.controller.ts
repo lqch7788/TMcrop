@@ -90,6 +90,29 @@ export class SeedSourceController {
     try {
       const data: CreateSeedSourceDTO = req.body;
       const result = await this.service.create(data);
+      // 写入 material_flow_log
+      try {
+        const { writeFlowLog } = require('../services/flowLogService');
+        const { mapPropagationToCategory } = require('../lib/sourceCategoryMapper');
+        const propagationType = (data as any).propagation_type || (data as any).propagationType || '';
+        writeFlowLog({
+          flow_type: 'plan→seed_source',
+          crop_name: (data as any).crop_name || (data as any).cropName || '',
+          crop_variety: (data as any).crop_variety || (data as any).cropVariety || '',
+          source_type: null,
+          source_id: null,
+          source_code: null,
+          source_quantity: null,
+          source_category: mapPropagationToCategory(propagationType),
+          target_type: 'seed_source',
+          target_id: (result as any)?.id || '',
+          target_code: (data as any).seed_code || (data as any).seedCode || '',
+          target_quantity: (data as any).quantity || 0,
+          target_unit: (data as any).unit || '袋',
+          business_code: (data as any).seed_code || (data as any).seedCode || '',
+          created_by: (data as any).create_by || (data as any).createBy || '',
+        });
+      } catch (e) { /* flow_log 写入失败不影响主流程 */ }
       res.status(201).json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
@@ -105,6 +128,27 @@ export class SeedSourceController {
       const { id } = req.params;
       const data: UpdateSeedSourceDTO = req.body;
       const result = await this.service.update(id, data);
+      // 数量变更时写 correction
+      if ((data as any).quantity !== undefined) {
+        try {
+          const { writeCorrection } = require('../services/flowLogService');
+          const oldRecord = await this.service.getById(id);
+          const oldQty = (oldRecord as any)?.quantity || 0;
+          const newQty = (data as any).quantity || 0;
+          const delta = newQty - oldQty;
+          if (Math.abs(delta) > 0.001) {
+            writeCorrection({
+              flow_type: 'plan→seed_source',
+              target_type: 'seed_source',
+              target_id: id,
+              source_quantity_delta: delta,
+              source_unit: (data as any).unit || '袋',
+              crop_name: (oldRecord as any)?.crop_name || (oldRecord as any)?.cropName || '',
+              crop_variety: (oldRecord as any)?.crop_variety || (oldRecord as any)?.cropVariety || '',
+            });
+          }
+        } catch (e) { /* correction 写入失败不影响主流程 */ }
+      }
       res.json({ success: true, data: result });
     } catch (error) {
       next(toHttpError(error as Error));
