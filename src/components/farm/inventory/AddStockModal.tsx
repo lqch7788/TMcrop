@@ -104,7 +104,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
   const [cropName, setCropName] = useState('');
   const [cropId, setCropId] = useState('');
   const [cropCode, setCropCode] = useState('');
-  const [variety, setVariety] = useState('');
+  const [cropVariety, setCropVariety] = useState('');
   const [quantity, setQuantity] = useState<string>('');
   const [unit, setUnit] = useState('公斤');
   const [warehouseId, setWarehouseId] = useState('');
@@ -177,7 +177,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
       setCropName('');
       setCropId('');
       setCropCode('');
-      setVariety('');
+      setCropVariety('');
       setQuantity('');
       setUnit('公斤');
       setWarehouseId('');
@@ -242,7 +242,7 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           cropId: cropId || undefined,
           cropName: cropName.trim(),
           cropCode: cropCode || undefined,
-          varietyName: variety.trim() || undefined,
+          varietyName: cropVariety.trim() || undefined,
           quantity: qty,
           unit: unit.trim(),
           sourceType,
@@ -367,8 +367,8 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({ isOpen, onClose, o
           </FormField>
           <FormField label="品种">
             <Input
-              value={variety}
-              onChange={(e) => setVariety(e.target.value)}
+              value={cropVariety}
+              onChange={(e) => setCropVariety(e.target.value)}
               placeholder="例如：粉冠F1"
             />
           </FormField>

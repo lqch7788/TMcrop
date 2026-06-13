@@ -69,10 +69,10 @@ function ProductRow({ record, recordIdx, generateProductCode }: ProductRowProps)
           return (
             <tr key={i} className="border-t" style={{ backgroundColor: 'white' }}>
               <td className="px-2 py-2 text-xs font-mono text-emerald-600 whitespace-nowrap">
-                {p.productCode || generateProductCode(p.cropName || record.cropName, p.variety || '', recordIdx + i)}
+                {p.productCode || generateProductCode(p.cropName || record.cropName, p.cropVariety || p.variety || '', recordIdx + i)}
               </td>
               <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{p.cropName || record.cropName || '-'}</td>
-              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.variety || '-'}</td>
+              <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.cropVariety || p.variety || '-'}</td>
               <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{p.batchCode || record.batchCode || '-'}</td>
               <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">{getPlantingModeLabel(p.plantingMode) || '-'}</td>
               <td className="px-2 py-2 text-xs text-gray-900 whitespace-nowrap">{qty} {p.unit || record.unit}</td>

@@ -357,7 +357,7 @@ export default function HarvestPage() {
               '单价(元/kg)': (record.unitPrice != null) ? record.unitPrice.toFixed(2) : '-',
               '收入(元)': (record.totalAmount != null) ? record.totalAmount.toFixed(2) : '-',
               '作物编码': product.cropCode || '-',
-              '作物品种': product.variety || record.variety || '-',
+              '作物品种': product.cropVariety || record.variety || '-',
               '批次号': record.batchCode || '-',
               '种植模式': record.plantingMode || '-',
               '采收量(kg)': `${product.harvestQuantity || 0} ${unit}`,
@@ -587,7 +587,7 @@ export default function HarvestPage() {
     products: [] as Array<{
       productCode: string;
       cropName: string;
-      variety: string;
+      cropVariety: string;
       batchCode: string;
       plantingMode: string;
       harvestQuantity: number;
@@ -669,7 +669,7 @@ export default function HarvestPage() {
       ...prev,
       products: [...prev.products, {
         cropCode: cropVarietyInfo?.cropCode || '',  // 作物编码（11位）
-        variety: selectedBatchForProduct?.cropName || '',  // 作物品种（最细化名，如"黑美人西瓜"）
+        cropVariety: selectedBatchForProduct?.cropName || '',  // 作物品种（最细化名，如"黑美人西瓜"）
         cropName: selectedBatchForProduct?.variety || '',  // 品种（类型名，如"西瓜"）
         plantingMode: defaultPlantingMode,  // ← 修复：批次没值时按关联温室默认
         harvestQuantity: 0,
@@ -732,7 +732,7 @@ export default function HarvestPage() {
             const updatedProducts = prev.products.map((p, idx) => ({
               ...p,
               cropCode: cropVarietyInfo?.cropCode || p.cropCode,
-              variety: newBatch?.cropName || p.variety,
+              cropVariety: newBatch?.cropName || p.cropVariety,
               cropName: newBatch?.variety || p.cropName,
               plantingMode: newBatch?.plantingMode || p.plantingMode,
               targetYield: newBatch?.targetYield || p.targetYield,
@@ -797,7 +797,7 @@ export default function HarvestPage() {
     // 主档 cropName/grade/plantingMode/variety/targetYield 取第一个产品（兼容无产品场景回落 batch）
     const mainCropName = firstProduct?.cropName || selectedBatch?.cropName || '';
     const mainGrade = firstProduct?.grade || 'good';
-    const mainVariety = firstProduct?.variety || selectedBatch?.variety || '';
+    const mainVariety = firstProduct?.cropVariety || selectedBatch?.variety || '';
     const mainPlantingMode = firstProduct?.plantingMode || selectedBatch?.plantingMode || '';
     const mainTargetYield = firstProduct?.targetYield ?? selectedBatch?.targetYield ?? 0;
 
@@ -830,7 +830,7 @@ export default function HarvestPage() {
         productCode: p.productCode || '',
         cropName: p.cropName || mainCropName,
         cropCode: p.cropCode || '',
-        variety: p.variety || mainVariety,
+        cropVariety: p.cropVariety || mainVariety,
         batchCode: p.batchCode || newRecord.batchCode,
         plantingMode: p.plantingMode || mainPlantingMode,
         harvestQuantity: p.harvestQuantity || 0,
@@ -883,7 +883,7 @@ export default function HarvestPage() {
         cropId: selectedBatch?.cropId || '',
         cropName: product.cropName || mainCropName,
         varietyId: selectedBatch?.varietyId,
-        varietyName: product.variety || mainVariety,
+        varietyName: product.cropVariety || mainVariety,
         quantity,
         unit: product.unit || newRecord.unit,
         sourceType: SourceType.SELF_PRODUCED,
@@ -984,6 +984,7 @@ export default function HarvestPage() {
       unitPrice: 0,
       unit: '公斤',
       warehouseId: '',
+      saleType: 'external_sale' as 'self_use' | 'external_sale',
     });
     setErrors({});
   };
