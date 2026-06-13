@@ -6,6 +6,7 @@
 
 import { getDatabase, saveDatabase, initDatabase } from './index';
 import { seedLog } from '../lib/seedLogger';
+import { createMaterialFlowLogTable } from './materialFlowLog';
 
 /**
  * 修复数据库结构 - 添加缺失的列和表
@@ -1955,6 +1956,68 @@ export async function fixMissingSchema(): Promise<void> {
 
   // 2026-06-12: 回溯修复历史"已审批通过但生产计划 batch_status 还是 pending"的脏数据
   fixApprovedProductionPlanStatus();
+
+  // ============================================================
+  // 2026-06-13: material_flow_log 流水表 + 存量表字段补齐
+  // ============================================================
+  seedLog.info('开始 material_flow_log 流水表迁移...\n');
+  createMaterialFlowLogTable();
+
+  // seedlings 加 unit 字段
+  try {
+    db.run("ALTER TABLE seedlings ADD COLUMN unit TEXT DEFAULT '株'");
+    seedLog.info('  ✓ seedlings.unit 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - seedlings.unit 已存在，跳过');
+    } else { seedLog.error(`  ✗ seedlings.unit 失败: ${e.message}`); }
+  }
+  // seedlings 加 deleted_at 字段
+  try {
+    db.run('ALTER TABLE seedlings ADD COLUMN deleted_at TEXT');
+    seedLog.info('  ✓ seedlings.deleted_at 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - seedlings.deleted_at 已存在，跳过');
+    } else { seedLog.error(`  ✗ seedlings.deleted_at 失败: ${e.message}`); }
+  }
+  // plantings 加 unit 字段
+  try {
+    db.run("ALTER TABLE plantings ADD COLUMN unit TEXT DEFAULT '株'");
+    seedLog.info('  ✓ plantings.unit 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - plantings.unit 已存在，跳过');
+    } else { seedLog.error(`  ✗ plantings.unit 失败: ${e.message}`); }
+  }
+  // plantings 加 deleted_at 字段
+  try {
+    db.run('ALTER TABLE plantings ADD COLUMN deleted_at TEXT');
+    seedLog.info('  ✓ plantings.deleted_at 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - plantings.deleted_at 已存在，跳过');
+    } else { seedLog.error(`  ✗ plantings.deleted_at 失败: ${e.message}`); }
+  }
+  // seed_sources 加 deleted_at 字段
+  try {
+    db.run('ALTER TABLE seed_sources ADD COLUMN deleted_at TEXT');
+    seedLog.info('  ✓ seed_sources.deleted_at 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - seed_sources.deleted_at 已存在，跳过');
+    } else { seedLog.error(`  ✗ seed_sources.deleted_at 失败: ${e.message}`); }
+  }
+
+  // material_flow_log 加 business_code 字段（幂等补列）
+  try {
+    db.run('ALTER TABLE material_flow_log ADD COLUMN business_code TEXT');
+    seedLog.info('  ✓ material_flow_log.business_code 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - material_flow_log.business_code 已存在，跳过');
+    } else { seedLog.error(`  ✗ material_flow_log.business_code 失败: ${e.message}`); }
+  }
 
   saveDatabase();
 }

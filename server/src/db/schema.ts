@@ -6,6 +6,7 @@
 
 import { getDatabase } from './index';
 import { createIndexes } from './createIndexes';
+import { createMaterialFlowLogTable } from './materialFlowLog';
 
 export function initializeDatabase() {
   const db = getDatabase();
@@ -454,7 +455,8 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      deleted_at TEXT
     )
   `);
 
@@ -490,7 +492,9 @@ export function initializeDatabase() {
       remarks TEXT,
       create_by TEXT,
       create_time TEXT,
-      update_time TEXT
+      update_time TEXT,
+      unit TEXT DEFAULT '株',
+      deleted_at TEXT
     )
   `);
 
@@ -523,6 +527,8 @@ export function initializeDatabase() {
       create_by TEXT,
       create_time TEXT,
       update_time TEXT,
+      unit TEXT DEFAULT '株',
+      deleted_at TEXT,
       soil_ph REAL,
       soil_ec REAL,
       attrition_rate REAL,
@@ -3237,4 +3243,9 @@ export function initializeDatabase() {
   } catch (e) {
     console.error('索引创建失败:', e);
   }
+
+  // 物料流转流水表
+  createMaterialFlowLogTable();
 }
+
+export { createMaterialFlowLogTable };
