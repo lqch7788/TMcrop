@@ -105,7 +105,7 @@ export default function SeedlingPage() {
     });
   }, [dictionaries]);
 
-  // 场地选项
+  // 育苗区域选项
   const sites = useMemo(() => {
     const items = getDictItems('seedling_site').map(d => ({ value: d.dictCode, label: d.dictLabel }));
     // 去重
@@ -467,7 +467,7 @@ export default function SeedlingPage() {
     // 导出表头（按规划完整字段）
     const headers = [
       '育苗批号', '作物编码', '关联种源', '作物名称', '作物品种',
-      '育苗方式', '场地', '开始日期', '预计结束日期', '实际结束日期',
+      '育苗方式', '育苗区域', '开始日期', '预计结束日期', '实际结束日期',
       '初始数量', '目标成苗率', '目标成苗数', '成活数量', '损耗数量', '现存数量',
       '完成比例', '已定植数量', '损耗率', '育苗结束', '状态', '品质等级',
       '创建人', '创建时间', '备注'
@@ -484,7 +484,7 @@ export default function SeedlingPage() {
       '作物名称': record.cropName,
       '作物品种': record.cropVariety,
       '育苗方式': record.seedlingType || '',
-      '场地': record.siteName,
+      '育苗区域': record.siteName,
       '开始日期': record.startDate,
       '预计结束日期': record.expectedEndDate || '',
       '实际结束日期': record.endDate || '',

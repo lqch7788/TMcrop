@@ -3,7 +3,7 @@ import {
   Search, Plus, Warehouse, Calendar, User, Package, ChevronDown, Filter, ChevronLeft, ChevronRight, Download, Trash2, Check
 } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useUserStore, useGreenhouseStore, useHarvestStore, useProductionPlanStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useCropVarietyStore, useToastStore } from '../../../stores';
+import { useUserStore, useGreenhouseStore, useHarvestStore, useWarehouseStore, useInventoryStore, usePlantingStore, useSeedlingStore, useSeedSourceStore, useCropVarietyStore, useToastStore } from '../../../stores';
 import { BatchEditModal, DeleteWarningModal, HarvestDetailModal, AddModal } from './modals';
 import { MaterialExportModal } from '@/components/warehouse/MaterialExportModal';
 import {
@@ -56,9 +56,6 @@ export default function HarvestPage() {
   const greenhouses = useGreenhouseStore((state) => state.greenhouses);
   const loadGreenhouses = useGreenhouseStore((state) => state.loadGreenhouses);
 
-  // 生产计划Store
-  const plans = useProductionPlanStore((s) => s.batches);
-  const fetchPlans = useProductionPlanStore((s) => s.fetchPlans);
   // 仓库Store（用于筛选工具栏）
   const warehouses = useWarehouseStore((s) => s.warehouses);
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses);
@@ -67,6 +64,8 @@ export default function HarvestPage() {
   const loadPlantings = usePlantingStore((s) => s.loadItems);
   const seedlingItems = useSeedlingStore((s) => s.items);
   const loadSeedlings = useSeedlingStore((s) => s.loadItems);
+  const seedSourceItems = useSeedSourceStore((s) => s.items);
+  const loadSeedSources = useSeedSourceStore((s) => s.loadItems);
 
   useEffect(() => {
     if (users.length === 0) {
@@ -74,9 +73,6 @@ export default function HarvestPage() {
     }
     if (greenhouses.length === 0) {
       loadGreenhouses();
-    }
-    if (plans.length === 0) {
-      fetchPlans();
     }
     if (warehouses.length === 0) {
       loadWarehouses();
@@ -87,10 +83,13 @@ export default function HarvestPage() {
     if (seedlingItems.length === 0) {
       loadSeedlings();
     }
-  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, plans.length, fetchPlans, warehouses.length, loadWarehouses, plantingItems.length, loadPlantings, seedlingItems.length, loadSeedlings]);
+    if (seedSourceItems.length === 0) {
+      loadSeedSources();
+    }
+  }, [users.length, loadUsers, greenhouses.length, loadGreenhouses, warehouses.length, loadWarehouses, plantingItems.length, loadPlantings, seedlingItems.length, loadSeedlings, seedSourceItems.length, loadSeedSources]);
 
   // 构建批次号 → 关联温室ID 映射
-  // 数据源：1) 种植记录的 areaId (productionPlanCode 关联) 2) 育苗记录的 siteId (productionPlanCode 关联)
+  // 数据源：1) 种植记录 (plantCode → areaId) 2) 育苗记录 (seedlingCode → siteId)
   // 用于过滤"采收区域"下拉，避免选错非种植区域
   const batchAreasMap: Record<string, string[]> = useMemo(() => {
     const map: Record<string, Set<string>> = {};
@@ -99,13 +98,17 @@ export default function HarvestPage() {
       if (!map[key]) map[key] = new Set();
       map[key].add(areaId);
     };
-    // 种植记录（最常见，一个批次可能种在多个棚）
+    // 种植记录 — 用 plantCode 作为关联 key
     for (const p of plantingItems) {
-      add(p.productionPlanCode, p.areaId);
+      add(p.plantCode, p.areaId);
     }
-    // 育苗记录（siteId 是育苗场地）
+    // 育苗记录 — 用 seedlingCode 作为关联 key
     for (const s of seedlingItems) {
-      add(s.productionPlanCode, s.siteId);
+      add(s.seedlingCode, s.siteId);
+    }
+    // 种源记录 — 用 seedCode 作为关联 key，baseId 作为区域
+    for (const ss of seedSourceItems) {
+      add(ss.seedCode, ss.baseId);
     }
     // 转成普通对象
     const out: Record<string, string[]> = {};
@@ -115,38 +118,71 @@ export default function HarvestPage() {
     return out;
   }, [plantingItems, seedlingItems]);
 
-  // 从Store计算 equivalent options（去重：同一批次号只保留一条）
-  const cropBatches = (() => {
+  // 构建可关联批次列表（种植批次 + 育苗批次，去重）
+  // 采收时直接关联执行层批次号，而非生产计划号
+  const cropBatches = useMemo(() => {
     const seen = new Set<string>();
-    return plans
-      .map(p => ({
+    const result: Array<{
+      id: string;
+      batchCode: string;
+      batchStatus?: string;
+      sourceType: 'seedling' | 'planting';
+      cropName: string;
+      variety: string;
+      plantingMode: string;
+      targetYield: number;
+    }> = [];
+
+    // 种植批次（成品采收入库时关联）
+    for (const p of plantingItems) {
+      if (seen.has(p.plantCode)) continue;
+      seen.add(p.plantCode);
+      result.push({
         id: p.id,
-        batchCode: p.batchCode,
-        batchStatus: p.batchStatus || p.status,
-        planType: p.planType,
-        planTypeName: p.planTypeName,
-        cropName: p.cropName || p.cropTypeName,
-        variety: p.variety,
-        plantingMode: p.plantingMode,
-        targetYield: p.targetYield,
-        cropId: p.cropId,
-        varietyId: p.varietyId,
-        productionPlanId: p.productionPlanId,
-        productionPlanCode: p.productionPlanCode,
-        instanceId: p.instanceId,
-        // 批次自带的温室（兜底字段：当 batchAreasMap 没数据时用）
-        // 例如：种源/育苗计划可能没有种植记录，但计划表自带了 greenhouseId
-        greenhouseId: p.greenhouseId,
-        greenhouseName: p.greenhouseName,
-      }))
-      .filter(item => {
-        if (seen.has(item.batchCode)) {
-          return false; // 跳过重复的批次号
-        }
-        seen.add(item.batchCode);
-        return true;
+        batchCode: p.plantCode,
+        batchStatus: p.status,
+        sourceType: 'planting',
+        cropName: p.cropName,
+        variety: p.cropVariety,
+        plantingMode: '',
+        targetYield: p.targetYield || 0,
       });
-  })();
+    }
+
+    // 育苗批次（种苗采收入库时关联）
+    for (const s of seedlingItems) {
+      if (seen.has(s.seedlingCode)) continue;
+      seen.add(s.seedlingCode);
+      result.push({
+        id: s.id,
+        batchCode: s.seedlingCode,
+        batchStatus: s.status,
+        sourceType: 'seedling',
+        cropName: s.cropName,
+        variety: s.cropVariety || s.cropName,
+        plantingMode: s.seedlingType || '',
+        targetYield: 0,
+      });
+    }
+
+    // 种源批次（种源采收入库时关联）
+    for (const ss of seedSourceItems) {
+      if (seen.has(ss.seedCode)) continue;
+      seen.add(ss.seedCode);
+      result.push({
+        id: ss.id,
+        batchCode: ss.seedCode,
+        batchStatus: ss.status,
+        sourceType: 'seed',
+        cropName: ss.cropName,
+        variety: ss.cropVariety || '',
+        plantingMode: '',
+        targetYield: 0,
+      });
+    }
+
+    return result;
+  }, [plantingItems, seedlingItems, seedSourceItems]);
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -569,6 +605,8 @@ export default function HarvestPage() {
     unit: '公斤',  // 单位
     // V3.3 仓库
     warehouseId: '',  // 仓库ID
+    // V3.4 采收去向
+    saleType: 'external_sale' as 'self_use' | 'external_sale',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -660,11 +698,11 @@ export default function HarvestPage() {
       // 找到新批次的信息
       const newBatch = cropBatches.find(b => b.batchCode === newRecord.batchCode);
 
-      // 联动1：根据 planType 自动设置采收类型
+      // 联动1：根据 sourceType 自动设置采收类型
       let derivedHarvestType: 'seed' | 'seedling' | 'product' = 'product';
-      if (newBatch?.planType === 'seed_breeding') derivedHarvestType = 'seed';
-      else if (newBatch?.planType === 'seedling') derivedHarvestType = 'seedling';
-      else if (newBatch?.planType === 'planting') derivedHarvestType = 'product';
+      if (newBatch?.sourceType === 'seed') derivedHarvestType = 'seed';
+      else if (newBatch?.sourceType === 'seedling') derivedHarvestType = 'seedling';
+      else if (newBatch?.sourceType === 'planting') derivedHarvestType = 'product';
 
       // 联动2：自动锁定采收区域为该批次实际种植/育苗的温室（多对一）
       // 优先级：batchAreasMap（从种植/育苗记录反查） > 批次自带的 greenhouseId
@@ -909,6 +947,7 @@ export default function HarvestPage() {
       unitPrice: 0,
       unit: '公斤',
       warehouseId: '',
+      saleType: 'external_sale' as 'self_use' | 'external_sale',
     });
     setErrors({});
     } catch (error) {

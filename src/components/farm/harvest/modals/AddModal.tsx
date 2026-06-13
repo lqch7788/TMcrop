@@ -4,7 +4,7 @@
  * V3.1: 使用 API 驱动的 Select 组件替换硬编码选项
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -29,7 +29,7 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 interface ProductDetail {
   cropCode: string;      // 作物编码（11位）
   cropName: string;      // 作物名称
-  variety: string;        // 品种
+  cropVariety: string;   // 作物品种（最细化名称）
   plantingMode: string;  // 种植模式
   harvestQuantity: number;
   unit: string;  // 单位
@@ -56,6 +56,7 @@ interface AddModalProps {
     // V3.0 新增字段
     harvestType: 'seed' | 'seedling' | 'product';  // 采收类型
     targetInventory: 'seed' | 'seedling' | 'product';  // 目标库存
+    saleType: 'self_use' | 'external_sale';  // 自用不入库，外售入作物库存
     products: ProductDetail[];
     // V3.1 补录相关字段
     isSupplementary: boolean;  // 是否补录
@@ -73,7 +74,7 @@ interface AddModalProps {
   onGenerateCode: () => void;
   greenhouses: Array<{ id: string; name: string }>;
   warehouses: Array<{ id: string; name: string; warehouseType?: string }>;
-  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; planType?: string; status?: string; cropCode?: string; greenhouseId?: string; greenhouseName?: string }>;
+  cropBatches: Array<{ id: string; batchCode: string; cropName: string; variety: string; plantingMode: string; targetYield: number; sourceType?: string; planType?: string; status?: string; cropCode?: string; greenhouseId?: string; greenhouseName?: string; batchStatus?: string; endType?: string }>;
   /** 批次号 → 实际种植/育苗的温室ID 列表（用于过滤采收区域下拉） */
   batchAreasMap?: Record<string, string[]>;
   users: Array<{ id: string; name: string; role: string }>;
@@ -115,11 +116,22 @@ export const AddModal: React.FC<AddModalProps> = ({
   // 从数据字典获取采收人员列表（feedback_personnel 分类）
   const harvestWorkerOptions = getDictItems('feedback_personnel');
 
-  // 过滤批次号列表（排除已正常结束的批次）
+  // 批次类型筛选（种源/育苗/种植分开展示）
+  const [batchTypeFilter, setBatchTypeFilter] = useState<'all' | 'seed' | 'seedling' | 'planting'>('all');
+
+  // 过滤批次号列表（排除已正常结束 + 按类型筛选）
   const filteredBatches = cropBatches.filter(batch => {
-    if (batch.batchStatus === 'completed' && batch.endType === 'normal') return false;
+    const status = batch.batchStatus || batch.status;
+    if (status === 'completed' && (batch as any).endType === 'normal') return false;
+    if (batchTypeFilter !== 'all' && (batch as any).sourceType !== batchTypeFilter) return false;
     return true;
   });
+
+  // 切换类型筛选时清除已选批次
+  const handleBatchTypeChange = (type: 'all' | 'seed' | 'seedling' | 'planting') => {
+    setBatchTypeFilter(type);
+    onFormChange('batchCode', '');
+  };
 
   // 根据种源类型获取单位
   const getUnitBySourceType = (sourceType: string): string => {
@@ -230,7 +242,26 @@ export const AddModal: React.FC<AddModalProps> = ({
           />
         </div>
         <div>
-          <Label className="text-gray-900">生产计划批次号</Label>
+          <Label className="text-gray-900">关联批次</Label>
+          {/* 批次类型筛选按钮组 */}
+          <div className="flex gap-1 mb-2">
+            {[
+              { key: 'all' as const, label: '全部' },
+              { key: 'seed' as const, label: '种源' },
+              { key: 'seedling' as const, label: '育苗' },
+              { key: 'planting' as const, label: '种植' },
+            ].map(t => (
+              <Button
+                key={t.key}
+                size="sm"
+                variant={batchTypeFilter === t.key ? 'default' : 'secondary'}
+                className="text-xs px-3 h-7"
+                onClick={() => handleBatchTypeChange(t.key)}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
           <Select
             value={addForm.batchCode}
             onValueChange={(val) => {
@@ -386,7 +417,28 @@ export const AddModal: React.FC<AddModalProps> = ({
             {addForm.targetInventory === 'product' && '采收成品将进入产品库存'}
           </p>
         </div>
-        {/* V3.3 仓库选择 - 根据目标库存类型联动过滤 */}
+        {/* V3.4 采收去向（自用不入库 / 外售入作物库存） */}
+        <div>
+          <Label className="text-gray-900">采收去向</Label>
+          <div className="flex gap-2 mt-1">
+            <Button
+              variant={addForm.saleType === 'self_use' ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => onFormChange('saleType', 'self_use')}
+            >
+              自用（不入库）
+            </Button>
+            <Button
+              variant={addForm.saleType === 'external_sale' ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => onFormChange('saleType', 'external_sale')}
+            >
+              外售（入作物库存）
+            </Button>
+          </div>
+        </div>
+        {/* V3.3 仓库选择 - 根据目标库存类型联动过滤，自用时隐藏 */}
+        {addForm.saleType !== 'self_use' && (
         <div>
           <Label className="text-gray-900">目标仓库</Label>
           <WarehouseSelect
@@ -403,6 +455,7 @@ export const AddModal: React.FC<AddModalProps> = ({
           </p>
           {errors.warehouseId && <p className="text-red-500 text-xs mt-1">{errors.warehouseId}</p>}
         </div>
+        )}
         {/* V3.1 补录字段 + 采收人员 同一行 */}
         <div className="flex gap-4">
           <div className="flex-1">
@@ -531,8 +584,8 @@ export const AddModal: React.FC<AddModalProps> = ({
                       <td className="px-2 py-2">
                         <Input
                           type="text"
-                          value={product.variety}
-                          onChange={(e) => onProductChange(idx, 'variety', e.target.value)}
+                          value={product.cropVariety}
+                          onChange={(e) => onProductChange(idx, 'cropVariety', e.target.value)}
                           placeholder="作物品种"
                           className={deepInputClass}
                         />
