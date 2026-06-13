@@ -1981,6 +1981,12 @@ export async function fixMissingSchema(): Promise<void> {
       seedLog.info('  - seedlings.deleted_at 已存在，跳过');
     } else { seedLog.error(`  ✗ seedlings.deleted_at 失败: ${e.message}`); }
   }
+  // seedlings 加外部种源字段（2026-06-13）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN source_mode TEXT DEFAULT 'internal'"); seedLog.info('  ✓ seedlings.source_mode 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.source_mode 已存在，跳过'); else seedLog.error(`  ✗ seedlings.source_mode 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_code TEXT"); seedLog.info('  ✓ seedlings.external_seed_code 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_code 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_code 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_name TEXT"); seedLog.info('  ✓ seedlings.external_seed_name 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_name 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_name 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_quantity INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.external_seed_quantity 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_quantity 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_quantity 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_note TEXT"); seedLog.info('  ✓ seedlings.external_seed_note 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_note 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_note 失败: ${e.message}`); }
   // plantings 加 unit 字段
   try {
     db.run("ALTER TABLE plantings ADD COLUMN unit TEXT DEFAULT '株'");
