@@ -106,14 +106,14 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     cropVariety: item.varietyName || item.cropName || '',
     cropCode: item.cropCode || '',
     seedlingType: item.seedlingType || '',
-    siteId: '',
+    siteId: item.areaName || '',
     siteName: item.greenhouseName || item.areaName || '',
     startDate: item.seedlingDate ? item.seedlingDate.split('T')[0] : '',
     expectedEndDate: item.expectedFinishDate ? item.expectedFinishDate.split('T')[0] : '',
     endDate: item.actualFinishDate ? item.actualFinishDate.split('T')[0] : '',
     initialCount: item.seedlingQuantity || 0,
     survivalCount: item.survivalQuantity || 0,
-    plantedCount: 0,
+    plantedCount: item.planted_count || 0,
     survivalRate: survivalRate,
     lossCount: item.lossCount || 0,
     lossRate: item.lossRate || 0,
@@ -228,7 +228,7 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     crop_variety: seedling.cropVariety,
     seedling_type: seedling.seedlingType,
     greenhouse_name: seedling.greenhouseName || seedling.siteName,
-    area_name: seedling.areaName || seedling.siteName,
+    area_name: seedling.areaName || seedling.siteId,
     seedling_date: seedling.startDate || seedling.seedlingDate,
     expected_finish_date: seedling.expectedEndDate || seedling.expectedFinishDate,
     actual_finish_date: seedling.actualFinishDate,
@@ -253,6 +253,23 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
 }
 
 /**
+ * 原子操作：扣减种源 + 创建育苗记录（调用后端 /with-deduct）
+ * 替代旧的 addSeedling + decreaseAvailableCount 两步调用
+ */
+export async function addSeedlingWithDeduct(data: {
+  sourceId: string;
+  count: number;
+  seedling: Record<string, unknown>;
+}): Promise<{ id: string }> {
+  const result = await enhancedApiClient.post<{ id: string }>('/seedlings/with-deduct', {
+    sourceId: data.sourceId,
+    count: data.count,
+    seedling: data.seedling,
+  });
+  return result;
+}
+
+/**
  * 更新育苗记录
  * 网络策略：API 直连 + enhancedApiClient 3 次重试（V2.1 铁律：无离线队列）
  */
@@ -268,7 +285,9 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     cropVariety: 'crop_variety',
     seedlingType: 'seedling_type',
     greenhouseName: 'greenhouse_name',
+    siteName: 'greenhouse_name',
     areaName: 'area_name',
+    siteId: 'area_name',
     startDate: 'seedling_date',
     expectedEndDate: 'expected_finish_date',
     endDate: 'actual_finish_date',
