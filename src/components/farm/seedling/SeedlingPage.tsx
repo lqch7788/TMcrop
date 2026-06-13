@@ -208,8 +208,8 @@ export default function SeedlingPage() {
       if (filters.survivalCountMax !== undefined && item.survivalCount > filters.survivalCountMax) return false;
       if (filters.lossCountMin !== undefined && item.lossCount < filters.lossCountMin) return false;
       if (filters.lossCountMax !== undefined && item.lossCount > filters.lossCountMax) return false;
-      // 剩余数量 = initialCount - lossCount
-      const surplus = item.initialCount - item.lossCount;
+      // 现存数量 = 成活 - 已定植
+      const surplus = (item.survivalCount || 0) - (item.plantedCount || 0);
       if (filters.surplusMin !== undefined && surplus < filters.surplusMin) return false;
       if (filters.surplusMax !== undefined && surplus > filters.surplusMax) return false;
       if (filters.survivalRateMin !== undefined && item.survivalRate < filters.survivalRateMin) return false;
@@ -474,7 +474,7 @@ export default function SeedlingPage() {
     ];
 
     // 计算剩余总数
-    const getRemainingCount = (record: Seedling) => record.initialCount - record.lossCount;
+    const getRemainingCount = (record: Seedling) => (record.survivalCount || 0) - (record.plantedCount || 0);
 
     // 生成导出数据
     const exportData = selectedData.map(record => ({
