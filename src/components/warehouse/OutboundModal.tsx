@@ -203,6 +203,12 @@ export function OutboundModal({ isOpen, onClose, stock, onSuccess }: OutboundMod
                 <SelectItem value={OutboundBusinessType.INTERNAL_PLANTING}>
                   {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_PLANTING].label}
                 </SelectItem>
+                <SelectItem value={OutboundBusinessType.INTERNAL_SEEDLING}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_SEEDLING].label}
+                </SelectItem>
+                <SelectItem value={OutboundBusinessType.INTERNAL_SEED_SOURCE}>
+                  {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.INTERNAL_SEED_SOURCE].label}
+                </SelectItem>
                 <SelectItem value={OutboundBusinessType.GIFT_SAMPLE}>
                   {OUTBOUND_BUSINESS_TYPE_META[OutboundBusinessType.GIFT_SAMPLE].label}
                 </SelectItem>
