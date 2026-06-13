@@ -91,6 +91,7 @@ export { useSeedSourceStore } from './useSeedSourceStore';
 
 export { useSeedlingStore } from './useSeedlingStore';
 
+export { useMaterialFlowStore } from './useMaterialFlowStore';
 export { usePlantingStore } from './usePlantingStore';
 export { usePlantLabelStore } from './usePlantLabelStore';
 export type { PlantLabel, PlantLabelResume, PlantMark, MoveFormData } from './usePlantLabelStore';
