@@ -128,6 +128,15 @@ export function AddModal({
   const [sourceSearch, setSourceSearch] = useState('');
   const [sourcePopoverOpen, setSourcePopoverOpen] = useState(false);
 
+  // ═══════════════════════════════════════════════════
+  // 种源来源切换：内部种源（combogrid选择）/ 外部种源（手动录入）
+  // ═══════════════════════════════════════════════════
+  const [sourceMode, setSourceMode] = useState<'internal' | 'external'>('internal');
+  const [externalSeedCode, setExternalSeedCode] = useState('');
+  const [externalSeedName, setExternalSeedName] = useState('');
+  const [externalSeedQuantity, setExternalSeedQuantity] = useState<number>(0);
+  const [externalSeedNote, setExternalSeedNote] = useState('');
+
   // 弹窗每次打开时重置所有状态
   useEffect(() => {
     if (isOpen) {
@@ -135,6 +144,11 @@ export function AddModal({
       setPictures([]);
       setSourceSearch('');
       setSourcePopoverOpen(false);
+      setSourceMode('internal');
+      setExternalSeedCode('');
+      setExternalSeedName('');
+      setExternalSeedQuantity(0);
+      setExternalSeedNote('');
     }
   }, [isOpen]);
 
@@ -327,10 +341,22 @@ export function AddModal({
   };
 
   const handleSubmit = async () => {
-    // 关联种源必填（单一数据源原则：种源必须先在种源管理中录入）
-    if (!formData.sourceId) {
+    // 内部种源模式：关联种源必填
+    if (sourceMode === 'internal' && !formData.sourceId) {
       await showAlert('请先选择种源');
       return;
+    }
+
+    // 外部种源模式：必须填写种源批号和名称
+    if (sourceMode === 'external') {
+      if (!externalSeedCode.trim()) {
+        await showAlert('请输入外部种源批号');
+        return;
+      }
+      if (!externalSeedName.trim()) {
+        await showAlert('请输入种源名称');
+        return;
+      }
     }
 
     // 基本信息验证
@@ -350,7 +376,7 @@ export function AddModal({
         await showAlert('请输入初始数量');
         return;
       }
-      if (formData.sourceId && formData.initialCount > sourceAvailableCount) {
+      if (sourceMode === 'internal' && formData.sourceId && formData.initialCount > sourceAvailableCount) {
         await showAlert(`初始数量 ${formData.initialCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
         return;
       }
@@ -362,7 +388,7 @@ export function AddModal({
         await showAlert('请输入母株数量');
         return;
       }
-      if (formData.sourceId && formData.motherPlantCount > sourceAvailableCount) {
+      if (sourceMode === 'internal' && formData.sourceId && formData.motherPlantCount > sourceAvailableCount) {
         await showAlert(`母株数量 ${formData.motherPlantCount} 超过种源可用数量 ${sourceAvailableCount}，请调整`);
         return;
       }
@@ -393,10 +419,10 @@ export function AddModal({
     const sourceCode = source?.seedCode || '';
 
     // 构建育苗数据
-    const seedlingData = {
+    const seedlingData: Record<string, unknown> = {
       seedlingCode: formData.seedlingCode,
-      sourceId: formData.sourceId,         // 关联种源 DB 主键（后端 source_id 字段）
-      sourceCode,                          // 关联种源批号（显示用）
+      sourceId: formData.sourceId,         // 关联种源 DB 主键（后端 source_id 字段）；外部种源时为空
+      sourceCode: sourceMode === 'internal' ? sourceCode : externalSeedCode,
       cropName: formData.cropName,
       cropVariety: formData.cropVariety,
       cropCode: formData.selectedCropCode,
@@ -429,13 +455,19 @@ export function AddModal({
       propagationMultiple: formData.calculateMode === SeedlingCalculateMode.PROPAGATION
         ? (formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple)
         : undefined,
-      theoreticalYield: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? theoreticalYield : undefined
+      theoreticalYield: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? theoreticalYield : undefined,
+      // 外部种源信息
+      sourceMode,
+      externalSeedCode: sourceMode === 'external' ? externalSeedCode : undefined,
+      externalSeedName: sourceMode === 'external' ? externalSeedName : undefined,
+      externalSeedQuantity: sourceMode === 'external' ? externalSeedQuantity : undefined,
+      externalSeedNote: sourceMode === 'external' ? externalSeedNote : undefined,
     };
 
-    // 保存育苗数据（原子操作：扣减种源 + 创建育苗 + 流水写入）
+    // 保存育苗数据（内部种源：原子操作扣减 + 创建；外部种源：直接创建）
     let addedSeedlingId: string | null = null;
     try {
-      if (formData.sourceId) {
+      if (sourceMode === 'internal' && formData.sourceId) {
         const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
           ? formData.motherPlantCount
           : formData.initialCount;
@@ -447,6 +479,10 @@ export function AddModal({
           seedling: seedlingData,
         });
         addedSeedlingId = result.id;
+      } else if (sourceMode === 'external') {
+        // 外部种源：直接创建育苗记录，不扣减种源
+        const addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
+        addedSeedlingId = addedSeedling?.id || null;
       } else {
         const addedSeedling = await useSeedlingStore.getState().addItem(seedlingData);
         addedSeedlingId = addedSeedling?.id || null;
@@ -720,165 +756,209 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             <h3 className="text-sm font-semibold text-blue-900">关联种源信息</h3>
           </div>
           <p className="text-xs text-gray-500 mb-3">种源必须先在种源管理中录入</p>
-          <div className="grid grid-cols-2 gap-4">
-            {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
-            <div>
-              <Label className="text-gray-900">
-                关联种源 <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
-                  placeholder="搜索种源批号或作物名称..."
-                  onFocus={() => {
-                    setSourcePopoverOpen(true);
-                    setSourceSearch('');
-                  }}
-                  onChange={(e) => {
-                    setSourceSearch(e.target.value);
-                    setSourcePopoverOpen(true);
-                  }}
-                  className={deepInputClass}
-                />
-                {/* 清除按钮 */}
-                {formData.sourceId && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' }));
+          {/* 种源来源类型切换 */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={sourceMode === 'internal' ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => { setSourceMode('internal'); setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' })); }}
+            >
+              内部种源
+            </Button>
+            <Button
+              variant={sourceMode === 'external' ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => setSourceMode('external')}
+            >
+              外部种源
+            </Button>
+          </div>
+
+          {sourceMode === 'internal' ? (
+            /* 内部种源：combogrid 种源选择器 */
+            <div className="grid grid-cols-2 gap-4">
+              {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
+              <div>
+                <Label className="text-gray-900">
+                  关联种源 <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={sourcePopoverOpen ? sourceSearch : selectedSourceLabel}
+                    placeholder="搜索种源批号或作物名称..."
+                    onFocus={() => {
+                      setSourcePopoverOpen(true);
                       setSourceSearch('');
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
-                {/* 下拉表格 Popover */}
-                {sourcePopoverOpen && (
-                  <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
-                    style={{ minWidth: '500px', left: 0 }}
-                  >
-                    {/* 表头 */}
-                    <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
-                      <div>作物名称</div>
-                      <div>种源批号</div>
-                      <div>采购数量</div>
-                      <div>可用数量</div>
-                    </div>
-                    {/* 表格行 */}
-                    <div className="overflow-y-auto max-h-48">
-                      {filteredSeedSources.length === 0 ? (
-                        // 2026-06-12: 联动过滤后空状态 — 加"去种源管理添加"按钮
-                        <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-2">
-                          <div>
-                            {productionPlanVarietyFilterFromPlan
-                              ? `所选生产计划 [${productionPlanVarietyFilterFromPlan}] 暂无对应种源`
-                              : '未找到匹配的种源'}
-                          </div>
-                          <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>
-                          <Button
-                            type="button"
-                            variant="default"
-                            size="sm"
-                            onClick={() => navigate('/crop/seed-source')}
-                          >
-                            去种源管理添加
-                          </Button>
-                        </div>
-                      ) : (
-                        filteredSeedSources.map(s => (
-                          <div
-                            key={s.id}
-                            onClick={() => {
-                              handleSourceChange(s.id);
-                              setSourcePopoverOpen(false);
-                              setSourceSearch('');
-                            }}
-                            className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
-                              ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
-                          >
-                            <div className="truncate font-medium text-gray-800">{s.cropName}</div>
-                            <div className="truncate text-emerald-700">{s.seedCode}</div>
-                            <div className="text-gray-600">{s.quantity} {s.unit}</div>
-                            <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
-                              {s.availableCount} {s.unit}
+                    onChange={(e) => {
+                      setSourceSearch(e.target.value);
+                      setSourcePopoverOpen(true);
+                    }}
+                    className={deepInputClass}
+                  />
+                  {/* 清除按钮 */}
+                  {formData.sourceId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, sourceId: '', sourceCode: '', sourceType: '', supplierName: '' }));
+                        setSourceSearch('');
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {/* 下拉表格 Popover */}
+                  {sourcePopoverOpen && (
+                    <div ref={sourcePopoverRef} className="absolute z-50 mt-1 w-full bg-white border border-gray-400 rounded-lg shadow-lg max-h-64 overflow-hidden"
+                      style={{ minWidth: '500px', left: 0 }}
+                    >
+                      {/* 表头 */}
+                      <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600">
+                        <div>作物名称</div>
+                        <div>种源批号</div>
+                        <div>采购数量</div>
+                        <div>可用数量</div>
+                      </div>
+                      {/* 表格行 */}
+                      <div className="overflow-y-auto max-h-48">
+                        {filteredSeedSources.length === 0 ? (
+                          <div className="px-3 py-4 text-sm text-gray-500 text-center space-y-2">
+                            <div>
+                              {productionPlanVarietyFilterFromPlan
+                                ? `所选生产计划 [${productionPlanVarietyFilterFromPlan}] 暂无对应种源`
+                                : '未找到匹配的种源'}
                             </div>
+                            <div className="text-xs text-gray-400">请前往「种源管理」添加种源后，再返回此处选择</div>
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              onClick={() => navigate('/crop/seed-source')}
+                            >
+                              去种源管理添加
+                            </Button>
                           </div>
-                        ))
+                        ) : (
+                          filteredSeedSources.map(s => (
+                            <div
+                              key={s.id}
+                              onClick={() => {
+                                handleSourceChange(s.id);
+                                setSourcePopoverOpen(false);
+                                setSourceSearch('');
+                              }}
+                              className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
+                                ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
+                            >
+                              <div className="truncate font-medium text-gray-800">{s.cropName}</div>
+                              <div className="truncate text-emerald-700">{s.seedCode}</div>
+                              <div className="text-gray-600">{s.quantity} {s.unit}</div>
+                              <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
+                                {s.availableCount} {s.unit}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      {/* 底部提示 */}
+                      <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
+                        共 {filteredSeedSources.length} 条 | 点击行选择 | 点击外部关闭
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 来源类型（只读自动带入） */}
+              <div>
+                <Label className="text-gray-700">来源类型</Label>
+                <Input
+                  type="text"
+                  value={formData.sourceType || '请先选择种源'}
+                  readOnly
+                  className={`${deepInputClass} bg-gray-100 text-gray-600`}
+                />
+              </div>
+
+              {/* 供应商（只读自动带入） */}
+              <div>
+                <Label className="text-gray-700">供应商</Label>
+                <Input
+                  type="text"
+                  value={formData.supplierName || '请先选择种源'}
+                  readOnly
+                  className={`${deepInputClass} bg-gray-100 text-gray-600`}
+                />
+              </div>
+
+              {/* 作物品种：与种源列表"作物品种"列一致，仅显示最终品种名（由种源自动带入） */}
+              <div>
+                <Label className="text-gray-900">
+                  作物品种 <span className="text-red-500">*</span>
+                </Label>
+                <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center min-h-[46px]`}>
+                  {formData.cropVariety ? (
+                    <span>{formData.cropVariety}</span>
+                  ) : (
+                    <span className="text-gray-400">请先选择种源</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 品种路径：与种源列表/育苗列表"品种路径"列 4 段格式保持一致 */}
+              <div className="col-span-2">
+                <Label className="text-gray-700">品种路径</Label>
+                <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center gap-1 flex-wrap min-h-[46px]`}>
+                  {fullVarietyPath ? (
+                    <>
+                      <span className="text-gray-400">{fullVarietyPath.categoryName}</span>
+                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-700">{fullVarietyPath.typeName}</span>
+                      <span className="text-gray-400">-</span>
+                      <span className="text-gray-700">{fullVarietyPath.varietyName}</span>
+                      {fullVarietyPath.subVariety1Name && (
+                        <>
+                          <span className="text-gray-400">-</span>
+                          <span className="text-gray-900 font-medium">{fullVarietyPath.subVariety1Name}</span>
+                        </>
                       )}
-                    </div>
-                    {/* 底部提示 */}
-                    <div className="px-3 py-1.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-400">
-                      共 {filteredSeedSources.length} 条 | 点击行选择 | 点击外部关闭
-                    </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">请先选择种源</span>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* 来源类型（只读自动带入） */}
-            <div>
-              <Label className="text-gray-700">来源类型</Label>
-              <Input
-                type="text"
-                value={formData.sourceType || '请先选择种源'}
-                readOnly
-                className={`${deepInputClass} bg-gray-100 text-gray-600`}
-              />
-            </div>
-
-            {/* 供应商（只读自动带入） */}
-            <div>
-              <Label className="text-gray-700">供应商</Label>
-              <Input
-                type="text"
-                value={formData.supplierName || '请先选择种源'}
-                readOnly
-                className={`${deepInputClass} bg-gray-100 text-gray-600`}
-              />
-            </div>
-
-            {/* 作物品种：与种源列表"作物品种"列一致，仅显示最终品种名（由种源自动带入） */}
-            <div>
-              <Label className="text-gray-900">
-                作物品种 <span className="text-red-500">*</span>
-              </Label>
-              <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center min-h-[46px]`}>
-                {formData.cropVariety ? (
-                  <span>{formData.cropVariety}</span>
-                ) : (
-                  <span className="text-gray-400">请先选择种源</span>
-                )}
+          ) : (
+            /* 外部种源：手动录入 */
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-900">外部种源批号</Label>
+                <Input type="text" value={externalSeedCode} onChange={(e) => setExternalSeedCode(e.target.value)}
+                  className={deepInputClass} placeholder="如：EXT-2026-001" />
+              </div>
+              <div>
+                <Label className="text-gray-900">种源名称</Label>
+                <Input type="text" value={externalSeedName} onChange={(e) => setExternalSeedName(e.target.value)}
+                  className={deepInputClass} placeholder="如：红富士自留种" />
+              </div>
+              <div>
+                <Label className="text-gray-900">数量</Label>
+                <Input type="number" min={0} value={externalSeedQuantity || ''} onChange={(e) => setExternalSeedQuantity(Number(e.target.value))}
+                  className={deepInputClass} placeholder="外部种源数量" />
+              </div>
+              <div>
+                <Label className="text-gray-900">来源说明</Label>
+                <Input type="text" value={externalSeedNote} onChange={(e) => setExternalSeedNote(e.target.value)}
+                  className={deepInputClass} placeholder="如：本地农资店购买" />
               </div>
             </div>
-
-            {/* 品种路径：与种源列表/育苗列表"品种路径"列 4 段格式保持一致 */}
-            <div className="col-span-2">
-              <Label className="text-gray-700">品种路径</Label>
-              <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center gap-1 flex-wrap min-h-[46px]`}>
-                {fullVarietyPath ? (
-                  <>
-                    <span className="text-gray-400">{fullVarietyPath.categoryName}</span>
-                    <span className="text-gray-400">-</span>
-                    <span className="text-gray-700">{fullVarietyPath.typeName}</span>
-                    <span className="text-gray-400">-</span>
-                    <span className="text-gray-700">{fullVarietyPath.varietyName}</span>
-                    {fullVarietyPath.subVariety1Name && (
-                      <>
-                        <span className="text-gray-400">-</span>
-                        <span className="text-gray-900 font-medium">{fullVarietyPath.subVariety1Name}</span>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-gray-400">请先选择种源</span>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* ========== 场地与计划区 ========== */}

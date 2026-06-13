@@ -96,9 +96,9 @@ export function SeedlingFilter({
           />
         </div>
 
-        {/* 温室场地 */}
+        {/* 育苗区域 */}
         <div className="min-w-[120px]">
-          <Label className="text-gray-700">温室场地</Label>
+          <Label className="text-gray-700">育苗区域</Label>
           <Select
             value={filters.siteName}
             onValueChange={(val) => onChange({ ...filters, siteName: val })}

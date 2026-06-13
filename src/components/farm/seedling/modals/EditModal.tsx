@@ -111,6 +111,13 @@ export function EditModal({
 
   // 当 record 变化时重置表单
   useEffect(() => {
+    // 兼容旧数据：siteId 为空时，尝试从 sites 字典按 siteName 匹配
+    let resolvedSiteId = record.siteId;
+    if (!resolvedSiteId && record.siteName) {
+      const match = sites.find(s => s.label === record.siteName);
+      resolvedSiteId = match?.value || '';
+    }
+
     setFormData({
       sourceId: record.sourceId,
       sourceCode: record.sourceCode,
@@ -118,7 +125,7 @@ export function EditModal({
       cropName: record.cropName,
       cropVariety: record.cropVariety,
       seedlingType: record.seedlingType,
-      siteId: record.siteId,
+      siteId: resolvedSiteId,
       siteName: record.siteName,
       startDate: record.startDate,
       expectedEndDate: record.expectedEndDate || '',
@@ -347,9 +354,9 @@ export function EditModal({
           </Select>
         </div>
 
-        {/* 温室场地 */}
+        {/* 育苗区域 */}
         <div>
-          <Label className="text-gray-900">温室场地</Label>
+          <Label className="text-gray-900">育苗区域</Label>
           <Select
             value={formData.siteId}
             onValueChange={(val) => {
@@ -492,13 +499,19 @@ export function EditModal({
         {/* 品质等级 */}
         <div>
           <Label className="text-gray-900">品质等级</Label>
-          <Input
-            type="text"
+          <Select
             value={formData.qualityGrade}
-            onChange={(e) => setFormData({ ...formData, qualityGrade: e.target.value })}
-            className={deepInputClass}
-            placeholder="请输入品质等级"
-          />
+            onValueChange={(val) => setFormData({ ...formData, qualityGrade: val })}
+          >
+            <SelectTrigger className={deepInputClass}>
+              <SelectValue placeholder="请选择品质等级" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="A级">A级</SelectItem>
+              <SelectItem value="B级">B级</SelectItem>
+              <SelectItem value="C级">C级</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 是否结束 */}

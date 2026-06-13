@@ -463,7 +463,7 @@ export function SeedlingTable({
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">品种路径</th>
-              <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">场地</th>
+              <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">育苗区域</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">初始数量</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">目标成苗率</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">目标成苗数</th>
