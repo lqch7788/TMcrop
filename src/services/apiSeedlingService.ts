@@ -261,7 +261,19 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
 /**
  * 原子操作：扣减种源 + 创建育苗记录（调用后端 /with-deduct）
  * 替代旧的 addSeedling + decreaseAvailableCount 两步调用
+ * 2026-06-13: 修复 — seedling 子对象需做嵌套 camelCase→snake_case 转换，
+ * 否则后端路由读 seedling_code/crop_name 等 snake_case 字段全部 undefined
  */
+function toSnakeObject(obj: Record<string, unknown>): Record<string, unknown> {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const snake = k.replace(/([A-Z])/g, (_, c) => '_' + c.toLowerCase());
+    out[snake] = v;
+  }
+  return out;
+}
+
 export async function addSeedlingWithDeduct(data: {
   sourceId: string;
   count: number;
@@ -270,7 +282,7 @@ export async function addSeedlingWithDeduct(data: {
   const result = await enhancedApiClient.post<{ id: string }>('/seedlings/with-deduct', {
     sourceId: data.sourceId,
     count: data.count,
-    seedling: data.seedling,
+    seedling: toSnakeObject(data.seedling),
   });
   return result;
 }

@@ -8,6 +8,20 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 import { SeedSourceRecord, SeedSourceQuery } from '../types/seedSource';
 
 /**
+ * 2026-06-13: 把单行 snake_case 字段转 camelCase（与 queryToObjects 行为一致）
+ * 用于 findById/create 等用 stmt.getAsObject() 而非 queryToObjects 的场景
+ */
+function mapRowToCamel(obj: any): any {
+  if (!obj) return obj;
+  const result: any = {};
+  for (const k of Object.keys(obj)) {
+    const camel = k.replace(/_([a-z])/g, (_: string, c: string) => c.toUpperCase());
+    result[camel] = obj[k];
+  }
+  return result;
+}
+
+/**
  * 种源表允许更新的列白名单（C10：防止任意字段被写入 DB）
  * 调用方传入的 key 必须命中此白名单，否则抛出错误。
  */
@@ -177,7 +191,7 @@ export class SeedSourceRepository {
     const stmt = db.prepare('SELECT * FROM seed_sources WHERE id = ?');
     stmt.bind([id]);
 
-    let item = null;
+    let item: any = null;
     if (stmt.step()) {
       item = stmt.getAsObject();
     }
@@ -186,6 +200,9 @@ export class SeedSourceRepository {
     if (!item || Object.keys(item).length === 0) {
       return undefined;
     }
+    // 2026-06-13: 修复 — getAsObject 返回 snake_case 字段，前端用 camelCase
+    // 与 queryToObjects 行为对齐，确保 list/byId/create 返回值字段名一致
+    item = mapRowToCamel(item);
 
     // 先转换为 unknown 再转换为目标类型
     return item as unknown as SeedSourceRecord;
