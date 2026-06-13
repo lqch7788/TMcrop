@@ -551,7 +551,7 @@ export function SeedlingTable({
                   <td className="px-3 py-2 text-sm text-emerald-600 font-medium text-center">{(record.survivalCount || 0).toLocaleString()}</td>
                   <td className="px-3 py-2 text-sm text-red-500 font-medium text-center">{(record.lossCount || 0).toLocaleString()}</td>
                   <td className="px-3 py-2 text-sm text-purple-600 font-medium text-center">
-                    {(record.initialCount - (record.lossCount || 0)).toLocaleString()}
+                    {((record.survivalCount || 0) - (record.plantedCount || 0)).toLocaleString()}
                   </td>
                   <td className="px-3 py-2 text-sm text-center whitespace-nowrap">
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (
