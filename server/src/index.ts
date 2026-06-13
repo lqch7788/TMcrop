@@ -102,6 +102,11 @@ async function start() {
     // API 路由（optionalAuthenticate：演示模式无 token 放行；带 token 验证）
     const { optionalAuthenticate } = await import('./middleware/auth');
     app.use('/api', optionalAuthenticate);
+    // 2026-06-13: 全局响应 camelCase 转换
+    // 把 res.json 输出从 snake_case 转 camelCase，让前端统一用 camelCase 读
+    // 注意：请求体仍保持 snake_case（前端 store 的 toBackendPayload 已转换）
+    const { camelCaseResponseMiddleware } = await import('./middleware/camelCaseResponse');
+    app.use('/api', camelCaseResponseMiddleware);
     app.use('/api', routes);
 
     // 生产环境/Electron：托管前端静态文件

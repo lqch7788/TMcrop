@@ -1421,6 +1421,9 @@ export async function fixMissingSchema(): Promise<void> {
     // 2026-06-05: 强结分支写入
     { name: 'end_type', sql: 'ALTER TABLE plantings ADD COLUMN end_type TEXT' },
     { name: 'end_time', sql: 'ALTER TABLE plantings ADD COLUMN end_time TEXT' },
+    // 2026-06-13: 修复 — plantings.planted_quantity 列缺失导致种植 POST 报"no such column"
+    // schema.ts L421 有，fixMissingSchema 历史漏补，存量 DB 升级失败
+    { name: 'planted_quantity', sql: 'ALTER TABLE plantings ADD COLUMN planted_quantity INTEGER DEFAULT 0' },
   ];
 
   for (const col of plantingsColumns) {

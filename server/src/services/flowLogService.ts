@@ -5,7 +5,10 @@
  */
 
 import { getDatabase } from '../db';
-import { v4 } from 'crypto';
+// 2026-06-13: 修复 — 原代码 `import { v4 } from 'crypto'` 错（crypto 没 v4 导出）
+// 改用 Node 内置 randomUUID（uuid v4 等价）
+import { randomUUID } from 'crypto';
+const v4 = (): string => randomUUID();
 
 interface FlowLogInput {
   flow_type: string;

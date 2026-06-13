@@ -158,9 +158,12 @@ router.get('/generate-code', (req: Request, res: Response) => {
  * 保留请求/响应结构（兼容前端）：成功 {success:true, data:{id}}；失败抛 BusinessError。
  */
 router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => {
-  const { sourceId, count, seedling } = req.body || {};
+  // 2026-06-13: 修复 — 支持外部种源模式（sourceId 为空 + externalSource 字段）
+  // 设计文档 §4 场景B/E/F：育苗户/种植户/育苗+种植 三个场景需要 sourceId 可空
+  const { sourceId, count, seedling, externalSource } = req.body || {};
+  const isExternalMode = !sourceId && externalSource;
 
-  if (!sourceId || typeof sourceId !== 'string') {
+  if (!sourceId && !isExternalMode) {
     return res.status(400).json({ success: false, error: '缺少 sourceId 参数' });
   }
   if (!seedling || typeof seedling !== 'object') {
@@ -178,7 +181,7 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const workHours = work_hours ?? seedling.workHours;
   const cropCode = crop_code ?? seedling.cropCode;
 
-  // 步骤0：参数校验（与 seedSourceService.decreaseAvailable 保持等价语义）
+  // 步骤0：参数校验
   const safeCount = Number(count);
   if (!Number.isFinite(safeCount) || !Number.isInteger(safeCount) || safeCount <= 0) {
     throw new BusinessError(
@@ -190,34 +193,58 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   // 真事务：扣减 + 插入 整体原子化
   db.exec('BEGIN');
   try {
-    // 步骤1：查询种源（事务内取最新值）
-    const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ?');
-    stmt.bind([sourceId]);
-    let existing: { remaining_quantity?: number; propagation_status?: string } | null = null;
-    if (stmt.step()) {
-      existing = stmt.getAsObject() as any;
-    }
-    stmt.free();
+    let effectiveSourceId = sourceId;
 
-    if (!existing) {
-      throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
-    }
-    // L3：拒绝 FAILED 状态扣减
-    if (existing.propagation_status === 'failed') {
-      throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
-    }
-    const current = existing.remaining_quantity ?? 0;
-    if (current < safeCount) {
-      throw new BusinessError(
-        SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
-        `可用数量不足：当前 ${current}，需扣减 ${safeCount}`,
-      );
-    }
-    const newAvailable = current - safeCount;
+    // 步骤1a：外部种源模式 — 自动创建简化种源记录
+    if (isExternalMode) {
+      const extCode = externalSource.code || externalSource.seedCode || `ES${Date.now()}`;
+      const extName = externalSource.name || externalSource.seedName || extCode;
+      const extQty = Number(externalSource.quantity ?? safeCount);
+      const extCropName = externalSource.cropName || crop_name;
+      const extCropVariety = externalSource.cropVariety || crop_variety;
+      effectiveSourceId = `ES${Date.now()}`;
 
-    // 步骤2：扣减种源（不调用 service，避免内部 saveDatabase 提前落盘）
-    db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
-      [newAvailable, now, sourceId]);
+      // 自动创建简化种源（propagationType=EXTERNAL, sourceOrigin=external_purchase）
+      db.run(`
+        INSERT INTO seed_sources (
+          id, source_code, source_name, source_type, source_origin, crop_name, crop_variety,
+          quantity, remaining_quantity, used_quantity, unit, propagation_type, create_by, create_time, update_time
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        effectiveSourceId, extCode, extName, 'external_seed', 'external_purchase',
+        extCropName, extCropVariety, extQty, extQty, 0,
+        externalSource.unit || '粒', 'EXTERNAL',
+        create_by || '', now, now,
+      ]);
+    } else {
+      // 步骤1b：内部种源模式 — 校验并扣减
+      const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ?');
+      stmt.bind([sourceId]);
+      let existing: { remaining_quantity?: number; propagation_status?: string } | null = null;
+      if (stmt.step()) {
+        existing = stmt.getAsObject() as any;
+      }
+      stmt.free();
+
+      if (!existing) {
+        throw new BusinessError(SeedSourceErrorCode.NOT_FOUND, '种源记录不存在', 404);
+      }
+      if (existing.propagation_status === 'failed') {
+        throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
+      }
+      const current = existing.remaining_quantity ?? 0;
+      if (current < safeCount) {
+        throw new BusinessError(
+          SeedSourceErrorCode.INSUFFICIENT_AVAILABLE,
+          `可用数量不足：当前 ${current}，需扣减 ${safeCount}`,
+        );
+      }
+      const newAvailable = current - safeCount;
+
+      // 步骤2：扣减种源
+      db.run('UPDATE seed_sources SET remaining_quantity = ?, update_time = ? WHERE id = ?',
+        [newAvailable, now, sourceId]);
+    }
 
     // 步骤3：创建育苗记录
     db.run(`
@@ -226,27 +253,33 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
         production_plan_code, create_time, update_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, seedling_code, sourceId, source_name, cropCode, crop_name, crop_variety,
+    `, [newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
         productionPlanCode || null, now, now]
         .map(v => v === undefined ? null : v));
 
-    // 步骤3.5：写入 material_flow_log（在 COMMIT 前，同事务）
+    // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
     try {
-      // 反查种源的 propagation_type 获取 source_category
+      const flowType = isExternalMode ? 'external→seedling' : 'seed_source→seedling';
       let sourceCategory = 'other';
-      const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [sourceId]);
-      if (srcInfo[0]?.values?.[0]) {
-        sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string);
+      let finalSourceCode: string = effectiveSourceId;
+      if (isExternalMode) {
+        sourceCategory = 'external';
+        finalSourceCode = (externalSource as any).code || (externalSource as any).seedCode || effectiveSourceId;
+      } else {
+        const srcInfo = db.exec('SELECT propagation_type FROM seed_sources WHERE id = ?', [effectiveSourceId]);
+        if (srcInfo[0]?.values?.[0]) {
+          sourceCategory = mapPropagationToCategory(srcInfo[0].values[0][0] as string);
+        }
+        finalSourceCode = (seedling as any).source_code || (seedling as any).sourceCode || effectiveSourceId;
       }
-      const finalSourceCode = (seedling as any).source_code || (seedling as any).sourceCode || sourceId;
       writeFlowLog({
-        flow_type: 'seed_source→seedling',
+        flow_type: flowType,
         crop_name: crop_name,
         crop_variety: crop_variety,
-        source_type: 'seed_source',
-        source_id: sourceId,
+        source_type: isExternalMode ? null : 'seed_source',
+        source_id: isExternalMode ? null : effectiveSourceId,
         source_code: finalSourceCode,
         source_quantity: safeCount,
         source_unit: '粒',
@@ -259,7 +292,9 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         business_code: seedling_code,
         created_by: create_by || '',
       });
-    } catch { /* flow_log 写入失败不影响主流程 */ }
+    } catch (e) {
+      console.error('flow_log write failed:', e);
+    }
 
     // 步骤4：提交 + 落盘
     db.exec('COMMIT');
@@ -1239,7 +1274,8 @@ router.get('/:id/available-count', (req: Request, res: Response) => {
     }
 
     const survivalQuantity = item.survival_quantity || 0;
-    const plantedQuantity = item.planted_quantity || 0;
+    // 2026-06-13: 修复 — seedlings 表列名是 planted_count，不是 planted_quantity
+    const plantedQuantity = item.planted_count || 0;
     const availableCount = survivalQuantity - plantedQuantity;
 
     res.json({ success: true, data: Math.max(0, availableCount) });
@@ -1277,13 +1313,14 @@ router.post('/:id/increase-planted', (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
-    const currentPlanted = item.planted_quantity || 0;
+    // 2026-06-13: 修复 — seedlings 表列名是 planted_count
+    const currentPlanted = item.planted_count || 0;
     const newPlanted = currentPlanted + count;
 
-    db.run('UPDATE seedlings SET planted_quantity = ?, update_time = ? WHERE id = ?', [newPlanted, now, id]);
+    db.run('UPDATE seedlings SET planted_count = ?, update_time = ? WHERE id = ?', [newPlanted, now, id]);
     saveDatabase();
 
-    res.json({ success: true, data: { planted_quantity: newPlanted } });
+    res.json({ success: true, data: { planted_count: newPlanted } });
   } catch (error) {
     res.status(500).json({ success: false, error: '增加已定植数量失败' });
   }

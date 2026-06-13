@@ -276,13 +276,14 @@ router.post('/', (req: Request, res: Response) => {
         flowType = 'seed_source→planting';
       } else if (finalSourceType === 'seedling' || finalSourceType === 'SEEDLING') {
         if (finalSourceId) {
-          // 增加育苗 planted_quantity（扣减可种植余量 = survival - planted）
-          const chk = db.exec('SELECT survival_quantity, planted_quantity FROM seedlings WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
+          // 增加育苗 planted_count（扣减可种植余量 = survival - planted）
+          // 2026-06-13: 修复 — seedlings 表列名是 planted_count 不是 planted_quantity
+          const chk = db.exec('SELECT survival_quantity, planted_count FROM seedlings WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
           if (chk[0]?.values?.[0]) {
             const survival = Number(chk[0].values[0][0] || 0);
             const planted = Number(chk[0].values[0][1] || 0);
             if (survival - planted >= finalPlantingQuantity) {
-              db.run('UPDATE seedlings SET planted_quantity = planted_quantity + ? WHERE id = ?',
+              db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?',
                 [finalPlantingQuantity, finalSourceId]);
             }
           }
