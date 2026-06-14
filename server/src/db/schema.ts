@@ -494,7 +494,14 @@ export function initializeDatabase() {
       create_time TEXT,
       update_time TEXT,
       unit TEXT DEFAULT '株',
-      deleted_at TEXT
+      deleted_at TEXT,
+      -- 2026-06-14: 繁殖模式（决定数量字段语义）
+      propagation_mode TEXT DEFAULT 'seed',
+      mother_plant_count INTEGER DEFAULT 0,
+      expanded_plant_count INTEGER DEFAULT 0,
+      scion_count INTEGER DEFAULT 0,
+      -- 2026-06-14: 记录创建时从种源扣减的数量（DELETE/PUT 反向补偿用）
+      source_deducted_quantity INTEGER DEFAULT 0
     )
   `);
 
@@ -1804,6 +1811,10 @@ export function initializeDatabase() {
       seedling_site_name TEXT,
       seed_quantity INTEGER DEFAULT 0,
       target_seedling_count INTEGER DEFAULT 0,
+      -- 2026-06-14: 区分"目标投入" vs "目标产出" vs "扩繁目标"（按 plan_type 语义分流）
+      target_input_count INTEGER DEFAULT 0,
+      target_output_count INTEGER DEFAULT 0,
+      target_expanded_count INTEGER DEFAULT 0,
       execution_status TEXT DEFAULT 'pending_execution'
     )
   `);

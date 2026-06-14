@@ -2429,6 +2429,14 @@ function seedDictionaries() {
     { id: 'biz-011', category: 'seedling_type', code: 'division', name: '分株育苗', sort_number: 11 },
     { id: 'biz-012', category: 'seedling_type', code: 'other', name: '其他', sort_number: 12 },
 
+    // 2026-06-14: 繁殖模式（决定育苗数量语义的核心字段）
+    { id: 'biz-200', category: 'propagation_mode', code: 'seed', name: '种子育苗', sort_number: 1 },
+    { id: 'biz-201', category: 'propagation_mode', code: 'layering', name: '匍匐茎育苗', sort_number: 2 },
+    { id: 'biz-202', category: 'propagation_mode', code: 'tissue_culture', name: '组培育苗', sort_number: 3 },
+    { id: 'biz-203', category: 'propagation_mode', code: 'cutting', name: '扦插育苗', sort_number: 4 },
+    { id: 'biz-204', category: 'propagation_mode', code: 'division', name: '分株育苗', sort_number: 5 },
+    { id: 'biz-205', category: 'propagation_mode', code: 'grafting', name: '嫁接育苗', sort_number: 6 },
+
     // 种源类型
     { id: 'biz-020', category: 'source_type', code: 'seed', name: '种子', sort_number: 1 },
     { id: 'biz-021', category: 'source_type', code: 'seedling', name: '种苗', sort_number: 2 },
