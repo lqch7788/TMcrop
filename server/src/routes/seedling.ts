@@ -933,17 +933,26 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
   const expandedDelta = ri * sign;
   const survivalDelta = sc * sign;
 
+  // 2026-06-14: 兜底 — 累加后任何字段不能为负（防止反向补偿时把数据减成负数）
+  const safeAdd = (col: string, delta: number) => {
+    if (delta === 0) return;
+    db.run(
+      `UPDATE seedlings SET ${col} = MAX(0, ${col} + ?) WHERE id = ?`,
+      [delta, id]
+    );
+  };
+
   if (['layering', 'tissue_culture', 'cutting'].includes(mode)) {
     // 母株类：survivalCountChange 累加到母株；runnerIncreaseCount 累加到扩繁产出
-    if (motherPlantDelta !== 0) db.run('UPDATE seedlings SET mother_plant_count = mother_plant_count + ? WHERE id = ?', [motherPlantDelta, id]);
-    if (plantedDelta !== 0) db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?', [plantedDelta, id]);
-    if (lossDelta !== 0) db.run('UPDATE seedlings SET loss_count = loss_count + ? WHERE id = ?', [lossDelta, id]);
-    if (expandedDelta !== 0) db.run('UPDATE seedlings SET expanded_plant_count = expanded_plant_count + ? WHERE id = ?', [expandedDelta, id]);
+    safeAdd('mother_plant_count', motherPlantDelta);
+    safeAdd('planted_count', plantedDelta);
+    safeAdd('loss_count', lossDelta);
+    safeAdd('expanded_plant_count', expandedDelta);
   } else {
     // seed/division/grafting：直接累加到 survival/planted/loss
-    if (survivalDelta !== 0) db.run('UPDATE seedlings SET survival_quantity = survival_quantity + ? WHERE id = ?', [survivalDelta, id]);
-    if (plantedDelta !== 0) db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?', [plantedDelta, id]);
-    if (lossDelta !== 0) db.run('UPDATE seedlings SET loss_count = loss_count + ? WHERE id = ?', [lossDelta, id]);
+    safeAdd('survival_quantity', survivalDelta);
+    safeAdd('planted_count', plantedDelta);
+    safeAdd('loss_count', lossDelta);
   }
 }
 
