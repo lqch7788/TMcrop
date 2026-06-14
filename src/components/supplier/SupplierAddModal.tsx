@@ -30,6 +30,9 @@ interface SupplierAddModalProps {
 }
 
 export default function SupplierAddModal({ isOpen, onClose, onAdd, generatedCode }: SupplierAddModalProps) {
+  // 深度输入框样式（与其他 AddModal 一致）
+  const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner";
+
   const today = todayLocal();
 
   // 从全局设置数据获取供应商属性字典
