@@ -10,6 +10,9 @@ import type { CropBatch } from '../../../types';
 export interface EditedBatch {
   targetQuantity?: number;
   targetYield?: number;
+  // 2026-06-14: 育苗目标语义字段（仅育苗计划用）
+  targetInputCount?: number;
+  targetOutputCount?: number;
   cropName?: string;
   cropCode?: string;          // 2026-06-05: 作物品种编码（弹窗回显用）
   variety?: string;
@@ -25,6 +28,7 @@ export interface EditedBatch {
   planDetailFileName?: string;
   isCompleted?: boolean;
   executionStatus?: string;
+  unit?: string;
 }
 
 // 表单数据类型
@@ -50,11 +54,10 @@ export interface ProductionFormData {
   // 关联订单字段
   orderId: string[];
   orderCode: string[];
-  // 2026-06-14: 目标语义分流（区分"目标投入 / 目标产出 / 扩繁目标"）
+  // 2026-06-14: 目标语义分流（区分"目标投入 / 目标产出"，仅育苗计划用）
   targetSeedlingCount?: number;  // 兼容字段（总目标，= targetOutputCount 兜底）
   targetInputCount?: number;     // 目标投入（母株数 / 种子数 / 分株基数）
   targetOutputCount?: number;    // 目标产出（成活苗 / 扩繁子苗 / 嫁接苗）
-  targetExpandedCount?: number;  // 母株类的扩繁产出目标（仅 layering/tissue_culture/cutting 用）
 }
 
 // 返回类型

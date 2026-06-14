@@ -173,6 +173,10 @@ export function ProductionChainTable({ type, data, onView }: ProductionChainTabl
 
     // 数量添加单位（如果没有单位字段）
     if (column.key === 'targetQuantity' || column.key === 'seedlingQuantity' || column.key === 'harvestQuantity' || column.key === 'quantity') {
+      // 2026-06-14: targetQuantity 列按计划类型分流（育苗显示投入→产出）
+      if (column.key === 'targetQuantity' && record.planType === 'seedling') {
+        return `${record.targetInputCount || 0}株 → ${record.targetOutputCount || 0}株`;
+      }
       if (value !== undefined && value !== null) {
         const unit = record.unit || 'kg';
         return `${value} ${unit}`;

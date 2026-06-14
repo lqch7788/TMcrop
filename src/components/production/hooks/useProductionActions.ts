@@ -133,6 +133,9 @@ export function useProductionActions({
       seedlingSiteName: '',
       seedQuantity: 0,
       targetSeedlingCount: 0,
+      // 2026-06-14: 育苗目标语义字段（仅育苗计划用）
+      targetInputCount: formData.targetInputCount || 0,
+      targetOutputCount: formData.targetOutputCount || 0,
       // 关联订单
       orderId: formData.orderId.join(',') || undefined,
       orderCode: formData.orderCode.join(',') || undefined,
@@ -197,6 +200,9 @@ export function useProductionActions({
       seedlingSiteName: '',
       seedQuantity: 0,
       targetSeedlingCount: 0,
+      // 2026-06-14: 育苗目标语义字段（仅育苗计划用）
+      targetInputCount: formData.targetInputCount || 0,
+      targetOutputCount: formData.targetOutputCount || 0,
       orderId: formData.orderId.join(',') || '',
       orderCode: formData.orderCode.join(',') || '',
     };
@@ -340,6 +346,8 @@ export function useProductionActions({
               const apiData: Record<string, unknown> = {};
               if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
               if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
+              if (edited.targetInputCount !== undefined) apiData.targetInputCount = edited.targetInputCount;
+              if (edited.targetOutputCount !== undefined) apiData.targetOutputCount = edited.targetOutputCount;
               if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
               if (edited.cropCode !== undefined) apiData.cropCode = edited.cropCode; // 2026-06-05
               if (edited.variety !== undefined) apiData.variety = edited.variety;
@@ -512,6 +520,8 @@ export function useProductionActions({
             const apiData: Record<string, unknown> = {};
             if (edited.targetQuantity !== undefined) apiData.targetQuantity = edited.targetQuantity;
             if (edited.targetYield !== undefined) apiData.targetYield = edited.targetYield;
+            if (edited.targetInputCount !== undefined) apiData.targetInputCount = edited.targetInputCount;
+            if (edited.targetOutputCount !== undefined) apiData.targetOutputCount = edited.targetOutputCount;
             if (edited.cropName !== undefined) apiData.cropName = edited.cropName;
             if (edited.cropCode !== undefined) apiData.cropCode = edited.cropCode; // 2026-06-05
             if (edited.variety !== undefined) apiData.variety = edited.variety;

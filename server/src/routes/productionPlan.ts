@@ -321,7 +321,6 @@ router.post('/', (req: Request, res: Response) => {
       targetSeedlingCount,
       targetInputCount,
       targetOutputCount,
-      targetExpandedCount,
       orderId,
       orderCode,
       executionStatus
@@ -391,7 +390,7 @@ router.post('/', (req: Request, res: Response) => {
       targetSeedlingCount || 0,
       targetInputCount || 0,      // 2026-06-14: 目标投入（母株/种子/分株基数）
       targetOutputCount || 0,     // 2026-06-14: 目标产出（成活苗/扩繁子苗/嫁接苗）
-      targetExpandedCount || 0,   // 2026-06-14: 母株类扩繁产出目标
+      0,                          // target_expanded_count（已废弃，保留 schema 列防回滚）
       orderId || '',
       orderCode || '',
       executionStatus || 'pending_execution'
@@ -472,6 +471,9 @@ router.put('/:id', (req: Request, res: Response) => {
       seedlingSiteName: 'seedling_site_name',
       seedQuantity: 'seed_quantity',
       targetSeedlingCount: 'target_seedling_count',
+      // 2026-06-14: 育苗目标语义分流字段
+      targetInputCount: 'target_input_count',
+      targetOutputCount: 'target_output_count',
       // 关联订单字段
       orderId: 'order_id',
       orderCode: 'order_code',

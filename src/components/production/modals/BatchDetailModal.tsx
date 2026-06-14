@@ -137,7 +137,10 @@ export function BatchDetailModal({ batch, onClose, onViewWorkOrders }: BatchDeta
     ],
     [
       { label: '负责人', value: batch.responsiblePerson },
-      { label: '目标产量', value: batch.targetYield != null ? `${batch.targetYield} ${unitLabel}` : '-' },
+      // 2026-06-14: 育苗计划显示"投入→产出"，育种/种植显示"目标产量+单位"
+      batch.planType === 'seedling'
+        ? { label: '目标投入 → 产出', value: `${batch.targetInputCount || 0}株 → ${batch.targetOutputCount || 0}株` }
+        : { label: '目标产量', value: batch.targetYield != null ? `${batch.targetYield} ${unitLabel}` : (batch.targetQuantity != null ? `${batch.targetQuantity} ${unitLabel}` : '-') },
     ],
     [
       { label: '当前状态', value: statusBadge },

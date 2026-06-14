@@ -82,6 +82,9 @@ export interface CropBatch {
   // 目标数量字段 - 种源=采购数量, 育苗=目标成苗数, 种植=目标产量
   targetQuantity?: number;      // 通用目标数量
   unit?: string;                // 单位（kg、株、m²等）
+  // 2026-06-14: 育苗专属目标字段（按 plan_type='seedling' 显示）
+  targetInputCount?: number;    // 目标投入（母株/种子/分株基数）
+  targetOutputCount?: number;   // 目标产出（成活/扩繁/嫁接苗）
   // 供应商（种源计划专用）
   supplierName?: string;
   // 采购数量（种源计划专用）
