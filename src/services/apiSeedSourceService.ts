@@ -171,6 +171,12 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     sourceType = SourceType.GRAFTING;
   } else if (item.sourceType === 'tissue_culture') {
     sourceType = SourceType.TISSUE_CULTURE;
+  } else if (item.sourceType === 'split') {
+    sourceType = SourceType.SPLIT;
+  } else if (item.sourceType === 'bulb') {
+    sourceType = SourceType.BULB;
+  } else if (item.sourceType === 'other') {
+    sourceType = SourceType.OTHER;
   }
 
   // 2026-06-04: status 改为实时计算，后端不再返回此字段，转换时不再读 item.status

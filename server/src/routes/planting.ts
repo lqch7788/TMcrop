@@ -266,7 +266,7 @@ router.post('/', (req: Request, res: Response) => {
       if (finalSourceType === 'seed_source' || finalSourceType === 'SEED') {
         if (finalSourceId) {
           // 扣减种源 remaining_quantity
-          const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ?', [finalSourceId]);
+          const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
           const remaining = Number(chk[0]?.values?.[0]?.[0] || 0);
           if (remaining >= finalPlantingQuantity) {
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',

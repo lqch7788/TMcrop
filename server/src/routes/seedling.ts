@@ -218,7 +218,7 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       ]);
     } else {
       // 步骤1b：内部种源模式 — 校验并扣减
-      const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ?');
+      const stmt = db.prepare('SELECT remaining_quantity, propagation_status FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
       stmt.bind([sourceId]);
       let existing: { remaining_quantity?: number; propagation_status?: string } | null = null;
       if (stmt.step()) {

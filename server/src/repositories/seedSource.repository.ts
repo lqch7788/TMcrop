@@ -364,7 +364,7 @@ export class SeedSourceRepository {
     const pattern = `ZZ${dateStr}-___`;
     const stmt = db.prepare(`
       SELECT source_code FROM seed_sources
-      WHERE source_code LIKE ? AND LENGTH(source_code) = 16
+      WHERE source_code LIKE ? AND LENGTH(source_code) = 16 AND deleted_at IS NULL
       ORDER BY source_code DESC LIMIT 1
     `);
     stmt.bind([pattern]);
@@ -595,7 +595,7 @@ export class SeedSourceRepository {
         ss.propagation_type AS propagationType
       FROM propagation_records pr
       LEFT JOIN seed_sources ss ON pr.seed_source_id = ss.id
-      WHERE 1=1`;
+      WHERE 1=1 AND ss.deleted_at IS NULL`;
 
     const params: any[] = [];
 
@@ -752,7 +752,7 @@ export class SeedSourceRepository {
       // 引用方1：育苗记录（seedlings.source_id）
       for (const row of queryRows(
         `SELECT id, seedling_code, crop_name, crop_variety, seedling_date, status
-         FROM seedlings WHERE source_id = ? ORDER BY create_time DESC`, id)) {
+         FROM seedlings WHERE source_id = ? AND deleted_at IS NULL ORDER BY create_time DESC`, id)) {
         references.push({
           module: '育苗管理', moduleCode: 'seedling',
           id: row[0] as string, code: row[1] as string,
@@ -789,7 +789,7 @@ export class SeedSourceRepository {
       // 引用方4：种植记录（plantings.source_id, V2 种植直接用种源）
       for (const row of queryRows(
         `SELECT id, planting_code, crop_name, crop_variety, planting_date, status
-         FROM plantings WHERE source_id = ?
+         FROM plantings WHERE source_id = ? AND deleted_at IS NULL
          ORDER BY update_time DESC LIMIT 100`, id)) {
         references.push({
           module: '种植管理', moduleCode: 'planting',
@@ -844,7 +844,7 @@ export class SeedSourceRepository {
     const db = getDatabase();
     const result = db.exec(`
       SELECT * FROM plantings
-      WHERE status = 'harvested'
+      WHERE status = 'harvested' AND deleted_at IS NULL
       ORDER BY update_time DESC
     `);
 
