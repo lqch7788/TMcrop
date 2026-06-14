@@ -446,6 +446,38 @@ export function CreateBatchModal({
                 />
               </FormField>
             </div>
+            {/* 2026-06-14: 育苗计划专属目标字段（区分投入/产出/扩繁） */}
+            {formData.planType === 'seedling' && (
+              <>
+                <FormField label="目标投入（母株/种子/分株基数）">
+                  <Input
+                    type="number"
+                    value={String(formData.targetInputCount ?? 0)}
+                    onChange={(e) => onFormChange('targetInputCount', Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="目标产出（成活苗/扩繁子苗/嫁接苗）">
+                  <Input
+                    type="number"
+                    value={String(formData.targetOutputCount ?? 0)}
+                    onChange={(e) => onFormChange('targetOutputCount', Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </FormField>
+                <FormField label="目标扩繁产出（仅母株类）">
+                  <Input
+                    type="number"
+                    value={String(formData.targetExpandedCount ?? 0)}
+                    onChange={(e) => onFormChange('targetExpandedCount', Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </FormField>
+              </>
+            )}
             <div>
               <FormField label="单位">
                 <DictSelect

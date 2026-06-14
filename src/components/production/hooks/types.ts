@@ -50,6 +50,11 @@ export interface ProductionFormData {
   // 关联订单字段
   orderId: string[];
   orderCode: string[];
+  // 2026-06-14: 目标语义分流（区分"目标投入 / 目标产出 / 扩繁目标"）
+  targetSeedlingCount?: number;  // 兼容字段（总目标，= targetOutputCount 兜底）
+  targetInputCount?: number;     // 目标投入（母株数 / 种子数 / 分株基数）
+  targetOutputCount?: number;    // 目标产出（成活苗 / 扩繁子苗 / 嫁接苗）
+  targetExpandedCount?: number;  // 母株类的扩繁产出目标（仅 layering/tissue_culture/cutting 用）
 }
 
 // 返回类型
