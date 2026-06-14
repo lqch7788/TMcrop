@@ -32,5 +32,10 @@ export const getInitialFormData = (): ProductionFormData => {
     // 关联订单字段
     orderId: [],
     orderCode: [],
+    // 2026-06-14: 目标语义分流（默认 0，按 plan_type 决定显示哪些字段）
+    targetSeedlingCount: 0,
+    targetInputCount: 0,
+    targetOutputCount: 0,
+    targetExpandedCount: 0,
   };
 };

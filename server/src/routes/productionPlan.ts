@@ -319,6 +319,9 @@ router.post('/', (req: Request, res: Response) => {
       seedlingSiteName,
       seedQuantity,
       targetSeedlingCount,
+      targetInputCount,
+      targetOutputCount,
+      targetExpandedCount,
       orderId,
       orderCode,
       executionStatus
@@ -350,8 +353,9 @@ router.post('/', (req: Request, res: Response) => {
         responsible_person, unit, publish_date, batch_status,
         plan_detail, plan_detail_file_name, planting_area, planting_area_unit, planting_mode,
         supplier_name, seedling_site_name, seed_quantity, target_seedling_count,
+        target_input_count, target_output_count, target_expanded_count,
         order_id, order_code, execution_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       finalId,
       code,
@@ -385,6 +389,9 @@ router.post('/', (req: Request, res: Response) => {
       seedlingSiteName || '',
       seedQuantity || 0,
       targetSeedlingCount || 0,
+      targetInputCount || 0,      // 2026-06-14: 目标投入（母株/种子/分株基数）
+      targetOutputCount || 0,     // 2026-06-14: 目标产出（成活苗/扩繁子苗/嫁接苗）
+      targetExpandedCount || 0,   // 2026-06-14: 母株类扩繁产出目标
       orderId || '',
       orderCode || '',
       executionStatus || 'pending_execution'
