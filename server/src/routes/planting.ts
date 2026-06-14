@@ -262,8 +262,9 @@ router.post('/', (req: Request, res: Response) => {
     try {
       let flowType = 'external→planting'; // 默认外部来源
 
-      // 根据来源类型扣减上游数量
-      if (finalSourceType === 'seed_source' || finalSourceType === 'SEED') {
+      // 根据来源类型扣减上游数量（兼容小写和大写）
+      const lowerSourceType = finalSourceType.toLowerCase();
+      if (lowerSourceType === 'seed' || lowerSourceType === 'seed_source') {
         if (finalSourceId) {
           // 扣减种源 remaining_quantity
           const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
@@ -274,19 +275,35 @@ router.post('/', (req: Request, res: Response) => {
           }
         }
         flowType = 'seed_source→planting';
-      } else if (finalSourceType === 'seedling' || finalSourceType === 'SEEDLING') {
+      } else if (lowerSourceType === 'seedling') {
         if (finalSourceId) {
-          // 增加育苗 planted_count（扣减可种植余量 = survival - planted）
-          // 2026-06-13: 修复 — seedlings 表列名是 planted_count 不是 planted_quantity
-          const chk = db.exec('SELECT survival_quantity, planted_count FROM seedlings WHERE id = ? AND deleted_at IS NULL', [finalSourceId]);
-          if (chk[0]?.values?.[0]) {
-            const survival = Number(chk[0].values[0][0] || 0);
-            const planted = Number(chk[0].values[0][1] || 0);
-            if (survival - planted >= finalPlantingQuantity) {
-              db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?',
-                [finalPlantingQuantity, finalSourceId]);
-            }
+          // 2026-06-14: 按 propagation_mode 计算可定植量
+          // seed/division/grafting: 可定植量 = survival_quantity - planted_count
+          // layering/tissue_culture/cutting: 可定植量 = (mother_plant_count + expanded_plant_count) - planted_count
+          const chk = db.exec(
+            "SELECT propagation_mode, survival_quantity, mother_plant_count, expanded_plant_count, planted_count FROM seedlings WHERE id = ? AND deleted_at IS NULL",
+            [finalSourceId]
+          );
+          if (!chk[0]?.values?.[0]) {
+            try { db.exec('ROLLBACK'); } catch {}
+            return res.status(404).json({ success: false, error: '育苗记录不存在' });
           }
+          const mode = String(chk[0].values[0][0] || 'seed');
+          const survival = Number(chk[0].values[0][1] || 0);
+          const mother = Number(chk[0].values[0][2] || 0);
+          const expanded = Number(chk[0].values[0][3] || 0);
+          const planted = Number(chk[0].values[0][4] || 0);
+          const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(mode);
+          const available = isMotherMode ? (mother + expanded - planted) : (survival - planted);
+          if (available < finalPlantingQuantity) {
+            try { db.exec('ROLLBACK'); } catch {}
+            return res.status(400).json({
+              success: false,
+              error: `可定植余量不足：当前 ${available}（${isMotherMode ? '母株+扩繁-已定植' : '成活-已定植'}），需 ${finalPlantingQuantity}`
+            });
+          }
+          db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?',
+            [finalPlantingQuantity, finalSourceId]);
         }
         flowType = 'seedling→planting';
       }
@@ -357,12 +374,16 @@ router.put('/:id', (req: Request, res: Response) => {
     let oldPlantingQty = 0;
     let oldCropName = '';
     let oldCropVariety = '';
+    let oldSourceType = '';
+    let oldSourceId = '';
     if (plantingQtyChanged) {
       try {
-        const oldChk = db.exec('SELECT planting_quantity, crop_name, crop_variety FROM plantings WHERE id = ?', [id]);
+        const oldChk = db.exec('SELECT planting_quantity, crop_name, crop_variety, source_type, source_id FROM plantings WHERE id = ?', [id]);
         oldPlantingQty = Number(oldChk[0]?.values?.[0]?.[0] || 0);
         oldCropName = (oldChk[0]?.values?.[0]?.[1] as string) || '';
         oldCropVariety = (oldChk[0]?.values?.[0]?.[2] as string) || '';
+        oldSourceType = String(oldChk[0]?.values?.[0]?.[3] || '').toLowerCase();
+        oldSourceId = String(oldChk[0]?.values?.[0]?.[4] || '');
       } catch {}
     }
 
@@ -377,7 +398,7 @@ router.put('/:id', (req: Request, res: Response) => {
 
     db.run(`UPDATE plantings SET ${fields}, update_time = ? WHERE id = ?`, values);
 
-    // correction 补偿流水：数量变更时写入 material_flow_log
+    // correction 补偿流水 + 上游增量补偿
     if (plantingQtyChanged) {
       try {
         const newQty = updates.planting_quantity ?? updates.plantingQuantity ?? 0;
@@ -392,6 +413,16 @@ router.put('/:id', (req: Request, res: Response) => {
             crop_name: oldCropName,
             crop_variety: oldCropVariety,
           });
+          // 2026-06-14: 上游增量补偿
+          // delta > 0 多用了 → 种源扣减 / 育苗已定植 +delta
+          // delta < 0 少用了 → 种源归还 / 育苗已定植 -delta
+          if (oldSourceType === 'seed' && oldSourceId) {
+            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
+              [delta, now, oldSourceId]);
+          } else if (oldSourceType === 'seedling' && oldSourceId) {
+            db.run('UPDATE seedlings SET planted_count = planted_count - ?, update_time = ? WHERE id = ?',
+              [delta, now, oldSourceId]);
+          }
         }
       } catch {}
     }
@@ -521,8 +552,38 @@ router.delete('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     const now = new Date().toISOString();
+
+    // 2026-06-14: 删除前先取 source_type/source_id/planting_quantity 用于反向累加
+    const stmt = db.prepare('SELECT source_type, source_id, planting_quantity FROM plantings WHERE id = ?');
+    stmt.bind([id]);
+    let row: any = null;
+    if (stmt.step()) row = stmt.getAsObject();
+    stmt.free();
+
     // 软删除：标记 deleted_at 而非物理删除
     db.run('UPDATE plantings SET deleted_at = ? WHERE id = ?', [now, id]);
+
+    // 2026-06-14: 反向累加到上游
+    if (row) {
+      try {
+        const qty = Number(row.planting_quantity) || 0;
+        const stype = String(row.source_type || '').toLowerCase();
+        const sid = row.source_id;
+        if (qty > 0 && sid) {
+          if (stype === 'seedling') {
+            // 育苗 → 回滚 seedlings.planted_count
+            db.run('UPDATE seedlings SET planted_count = planted_count - ? WHERE id = ?', [qty, sid]);
+          } else if (stype === 'seed') {
+            // 种源 → 回滚 seed_sources.remaining_quantity
+            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ? WHERE id = ?', [qty, sid]);
+          }
+        }
+      } catch (e) {
+        // 反向累加失败不影响主流程（删除已生效）
+        console.error('[planting DELETE] 反向累加失败:', e);
+      }
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id } });
   } catch (error) {
