@@ -144,7 +144,7 @@ export class SeedSourceRepository {
     FROM seed_sources ss
     LEFT JOIN crop_varieties cv
       ON ss.crop_code = cv.crop_code
-    WHERE 1=1`;
+    WHERE ss.deleted_at IS NULL`;
 
     const params: any[] = [];
 
@@ -156,7 +156,7 @@ export class SeedSourceRepository {
     // status 过滤已废弃（2026-06-04 改实时计算）
 
     // Count 查询
-    let countSql = `SELECT COUNT(*) as total FROM seed_sources ss LEFT JOIN crop_varieties cv ON ss.crop_code = cv.crop_code WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) as total FROM seed_sources ss LEFT JOIN crop_varieties cv ON ss.crop_code = cv.crop_code WHERE ss.deleted_at IS NULL`;
     const countParams: any[] = [];
 
     if (crop_name) {
@@ -188,7 +188,7 @@ export class SeedSourceRepository {
    */
   async findById(id: string): Promise<SeedSourceRecord | undefined> {
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM seed_sources WHERE id = ?');
+    const stmt = db.prepare('SELECT * FROM seed_sources WHERE id = ? AND deleted_at IS NULL');
     stmt.bind([id]);
 
     let item: any = null;

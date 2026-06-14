@@ -460,7 +460,7 @@ router.get('/transplant-ready', (req: Request, res: Response) => {
       )
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
-      WHERE s.status = 'completed'
+      WHERE s.deleted_at IS NULL AND s.status = 'completed'
     `;
     const params: any[] = [];
 
@@ -470,7 +470,7 @@ router.get('/transplant-ready', (req: Request, res: Response) => {
     }
 
     // 获取总数
-    let countSql = 'SELECT COUNT(*) FROM seedlings s WHERE s.status = ?';
+    let countSql = 'SELECT COUNT(*) FROM seedlings s WHERE s.deleted_at IS NULL AND s.status = ?';
     const countParams: any[] = ['completed'];
     if (crop_name) {
       countSql += ' AND s.crop_name LIKE ?';
@@ -564,7 +564,7 @@ router.get('/', (req: Request, res: Response) => {
       LEFT JOIN crop_varieties cv ON s.crop_name = cv.sub_variety1_name
       LEFT JOIN seed_sources ss ON s.source_id = ss.id
       LEFT JOIN production_plans pp ON s.production_plan_code = pp.plan_code OR ss.production_plan_code = pp.plan_code
-      WHERE 1=1
+      WHERE s.deleted_at IS NULL
     `;
     const params: any[] = [];
 
@@ -579,7 +579,7 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // 构建count查询（不使用JOIN，直接查询seedlings表）
-    let countSql = 'SELECT COUNT(*) FROM seedlings s WHERE 1=1';
+    let countSql = 'SELECT COUNT(*) FROM seedlings s WHERE s.deleted_at IS NULL';
     const countParams: any[] = [];
     if (crop_name) {
       countSql += ' AND s.crop_name LIKE ?';
