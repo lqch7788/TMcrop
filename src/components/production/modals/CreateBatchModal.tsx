@@ -439,7 +439,7 @@ export function CreateBatchModal({
             /* 育苗计划：投入 + 产出（单位锁定为"株"） */
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <FormField label="目标投入（母株/种子/分株基数）">
+                <FormField label="目标投入（母株/种子/分株基数）" error={errors.targetInputCount}>
                   <Input
                     type="number"
                     min="0"
@@ -459,7 +459,7 @@ export function CreateBatchModal({
                 </FormField>
               </div>
               <div>
-                <FormField label="目标产出（成活/扩繁/嫁接苗）">
+                <FormField label="目标产出（成活/扩繁/嫁接苗）" error={errors.targetOutputCount}>
                   <Input
                     type="number"
                     min="0"

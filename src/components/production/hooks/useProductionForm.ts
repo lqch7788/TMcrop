@@ -9,6 +9,7 @@ import * as apiProductionPlanService from '../../../services/apiProductionPlanSe
 import { showAlert } from '@/lib/dialogService';
 import { logger } from '@/lib/logger';
 import { getInitialFormData } from './initialFormData';
+import { PlanType } from '../../../types';
 import type { ProductionFormData } from './types';
 
 interface UseProductionFormParams {
@@ -34,7 +35,17 @@ export function useProductionForm({
     if (formData.greenhouseId.length === 0) newErrors.greenhouseId = '请选择区域';
     if (!formData.startDate) newErrors.startDate = '请选择定植日期';
     if (!formData.expectedHarvestDate) newErrors.expectedHarvestDate = '请选择预计采收日期';
-    if (!formData.targetYield) newErrors.targetYield = '请输入目标产量';
+    // 2026-06-14: 按 planType 分流目标字段校验，与 CreateBatchModal UI 分流保持一致
+    // 育苗：投入 / 产出 至少其一 > 0；育种 / 种植：填 targetYield
+    if (formData.planType === PlanType.SEEDLING) {
+      const input = formData.targetInputCount ?? 0;
+      const output = formData.targetOutputCount ?? 0;
+      if (input <= 0 && output <= 0) {
+        newErrors.targetOutputCount = '请填写目标投入或目标产出';
+      }
+    } else {
+      if (!formData.targetYield) newErrors.targetYield = '请输入目标产量';
+    }
     if (formData.plantingMode.length === 0) newErrors.plantingMode = '请选择种植模式';
     if (!formData.responsiblePerson) newErrors.responsiblePerson = '请选择负责人';
 
