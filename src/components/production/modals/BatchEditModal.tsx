@@ -440,25 +440,71 @@ export function BatchEditModal({
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">目标产量</div>
-                    <Input
-                      type="number"
-                      value={editedData.targetYield ?? currentBatch.targetYield ?? ''}
-                      onChange={(e) => handleFieldChange('targetYield', e.target.value)}
-                      placeholder="0"
-                      className={deepInputClass}
-                    />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">单位</div>
-                    <DictSelect
-                      category="unit"
-                      value={editedData.unit || currentBatch.unit || ''}
-                      onChange={(v) => handleFieldChange('unit', v)}
-                      placeholder="选择单位"
-                    />
-                  </div>
+                  {/* 2026-06-14: 育苗计划显示"目标投入+目标产出"，育种/种植显示"目标产量+单位" */}
+                  {currentPlanType === 'seedling' ? (
+                    <>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">目标投入（母株/种子/分株基数）</div>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={(() => {
+                            const v = editedData.targetInputCount ?? currentBatch.targetInputCount;
+                            return v === undefined || v === null || v === 0 ? '' : v;
+                          })()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '') { handleFieldChange('targetInputCount', 0); return; }
+                            const n = Number(v);
+                            if (!Number.isNaN(n) && n >= 0) handleFieldChange('targetInputCount', n);
+                          }}
+                          placeholder="0"
+                          className={deepInputClass}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">目标产出（成活/扩繁/嫁接苗）</div>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={(() => {
+                            const v = editedData.targetOutputCount ?? currentBatch.targetOutputCount;
+                            return v === undefined || v === null || v === 0 ? '' : v;
+                          })()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '') { handleFieldChange('targetOutputCount', 0); return; }
+                            const n = Number(v);
+                            if (!Number.isNaN(n) && n >= 0) handleFieldChange('targetOutputCount', n);
+                          }}
+                          placeholder="0"
+                          className={deepInputClass}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">目标产量</div>
+                        <Input
+                          type="number"
+                          value={editedData.targetYield ?? currentBatch.targetYield ?? ''}
+                          onChange={(e) => handleFieldChange('targetYield', e.target.value)}
+                          placeholder="0"
+                          className={deepInputClass}
+                        />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">单位</div>
+                        <DictSelect
+                          category="unit"
+                          value={editedData.unit || currentBatch.unit || ''}
+                          onChange={(v) => handleFieldChange('unit', v)}
+                          placeholder="选择单位"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
