@@ -432,6 +432,20 @@ export function AddModal({
     const source = seedSources.find(s => s.id === formData.sourceId);
     const sourceCode = source?.seedCode || '';
 
+    // 2026-06-14: 真正的初始投入量 — 按 calculateMode + propagationMode 联合决定
+    // 因为 UI 在不同模式下显示不同输入框：
+    //  - calculateMode=PROPAGATION（扩繁育苗） → 用户填的是 formData.motherPlantCount（母株数）
+    //  - calculateMode=SINGLE + propagationMode=母株类 → 用户填的是 formData.propagationMotherPlantCount
+    //  - calculateMode=SINGLE + 其他 → 用户填的是 formData.initialCount
+    const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode);
+    const finalInitialCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+      ? formData.motherPlantCount
+      : (isMotherMode ? formData.propagationMotherPlantCount : formData.initialCount);
+
+    // 后端 mother_plant_count 字段（仅母株类繁殖才校验 > 0）
+    // 此值要从 finalInitialCount 同源（相当于"母株数量"）
+    const motherCountForBackend = isMotherMode ? finalInitialCount : 0;
+
     // 构建育苗数据
     const seedlingData: Record<string, unknown> = {
       seedlingCode: formData.seedlingCode,
@@ -445,7 +459,7 @@ export function AddModal({
       siteName,
       startDate: formData.startDate,
       expectedEndDate: formData.expectedEndDate || undefined,
-      initialCount: formData.initialCount,
+      initialCount: finalInitialCount,
       survivalCount: 0,
       plantedCount: 0,
       survivalRate: 0,
@@ -465,7 +479,6 @@ export function AddModal({
       productionPlanCode: formData.productionPlanId || undefined,
       workHours: formData.workHours || undefined,
       calculateMode: formData.calculateMode,
-      motherPlantCount: formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? formData.motherPlantCount : undefined,
       propagationMultiple: formData.calculateMode === SeedlingCalculateMode.PROPAGATION
         ? (formData.propagationMultiple === 0 ? formData.customMultiple : formData.propagationMultiple)
         : undefined,
@@ -478,7 +491,7 @@ export function AddModal({
       externalSeedNote: sourceMode === 'external' ? externalSeedNote : undefined,
       // 2026-06-14: 繁殖模式（建档后锁定）
       propagationMode: formData.propagationMode,
-      motherPlantCount: formData.propagationMotherPlantCount,  // 映射到后端 mother_plant_count
+      motherPlantCount: motherCountForBackend,  // 映射到后端 mother_plant_count
       expandedPlantCount: 0,
       scionCount: formData.propagationScionCount,
     };
@@ -487,14 +500,8 @@ export function AddModal({
     let addedSeedlingId: string | null = null;
     try {
       if (sourceMode === 'internal' && formData.sourceId) {
-        // 2026-06-14: deductCount 优先按繁殖模式决定
-        // layering/tissue_culture/cutting → 用 propagationMotherPlantCount（扣的是母株）
-        // 其他 → 用原来的 calculateMode 决定
-        const deductCount = ['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode)
-          ? formData.propagationMotherPlantCount
-          : formData.calculateMode === SeedlingCalculateMode.PROPAGATION
-            ? formData.motherPlantCount
-            : formData.initialCount;
+        // 2026-06-14: 扣种源数量 = finalInitialCount（已统一按模式选取真实输入值）
+        const deductCount = finalInitialCount;
         // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
         const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
         const result = await addSeedlingWithDeduct({
@@ -512,7 +519,9 @@ export function AddModal({
         addedSeedlingId = addedSeedling?.id || null;
       }
     } catch (error) {
-      await showAlert('保存失败，请重试');
+      // 2026-06-14: 透出真正的错误信息（后端校验失败、种源余量不足等）
+      const msg = error instanceof Error ? error.message : String(error);
+      await showAlert(`保存失败：${msg}`);
       return;
     }
 
@@ -609,14 +618,15 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       const supplierName = source.supplierName?.trim() || '无';
 
       // 2026-06-12: 一致性校验 — 选种源后,若已选生产计划不匹配则清空
+      // 2026-06-14: 修复字段错配 — 计划用 variety（品种名）对比，不是 cropName（作物名）
       const currentPlanId = formData.productionPlanId;
       let shouldClearPlan = false;
-      let mismatchPlan: { batchCode: string; cropName: string } | null = null;
+      let mismatchPlan: { batchCode: string; variety: string } | null = null;
       if (currentPlanId) {
         const plan = availableProductionPlans.find(p => p.batchCode === currentPlanId);
-        if (plan && plan.cropName !== source.cropName) {
+        if (plan && plan.variety !== source.cropName) {
           shouldClearPlan = true;
-          mismatchPlan = { batchCode: plan.batchCode, cropName: plan.cropName };
+          mismatchPlan = { batchCode: plan.batchCode, variety: plan.variety };
         }
       }
 
@@ -634,7 +644,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       });
 
       if (shouldClearPlan && mismatchPlan) {
-        showAlert(`已选生产计划 [${mismatchPlan.batchCode}] 为 ${mismatchPlan.cropName}，与新种源 ${source.cropName} 不一致,已自动清空关联计划。`);
+        showAlert(`已选生产计划 [${mismatchPlan.batchCode}] 品种为 ${mismatchPlan.variety}，与新种源 ${source.cropName} 不一致,已自动清空关联计划。`);
       }
     }
   };
@@ -769,13 +779,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 onValueChange={(val) => {
                   const nextId = val === '__none__' ? '' : val;
                   // 2026-06-12: 一致性校验 — 选生产计划后,若已选种源不匹配则清空
+                  // 2026-06-14: 修复字段错配 — 计划用 variety（品种名）对比种源 cropName
                   let shouldClearSource = false;
                   let mismatchSource: { seedCode: string; cropName: string } | null = null;
                   if (nextId && formData.sourceId) {
                     const plan = availableProductionPlans.find(p => p.batchCode === nextId);
                     if (plan) {
                       const source = seedSources.find(s => s.id === formData.sourceId);
-                      if (source && source.cropName !== plan.cropName) {
+                      if (source && source.cropName !== plan.variety) {
                         shouldClearSource = true;
                         mismatchSource = { seedCode: source.seedCode, cropName: source.cropName };
                       }
