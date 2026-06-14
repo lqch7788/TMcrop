@@ -1990,6 +1990,22 @@ export async function fixMissingSchema(): Promise<void> {
   try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_name TEXT"); seedLog.info('  ✓ seedlings.external_seed_name 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_name 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_name 失败: ${e.message}`); }
   try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_quantity INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.external_seed_quantity 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_quantity 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_quantity 失败: ${e.message}`); }
   try { db.run("ALTER TABLE seedlings ADD COLUMN external_seed_note TEXT"); seedLog.info('  ✓ seedlings.external_seed_note 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.external_seed_note 已存在，跳过'); else seedLog.error(`  ✗ seedlings.external_seed_note 失败: ${e.message}`); }
+  // 2026-06-14: 繁殖模式字段
+  try { db.run("ALTER TABLE seedlings ADD COLUMN propagation_mode TEXT DEFAULT 'seed'"); seedLog.info('  ✓ seedlings.propagation_mode 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.propagation_mode 已存在，跳过'); else seedLog.error(`  ✗ seedlings.propagation_mode 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN mother_plant_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.mother_plant_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.mother_plant_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.mother_plant_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN expanded_plant_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.expanded_plant_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.expanded_plant_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.expanded_plant_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN scion_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.scion_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.scion_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.scion_count 失败: ${e.message}`); }
+  // 2026-06-14: 种源扣减记录字段（用于 DELETE/PUT 反向补偿）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN source_deducted_quantity INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.source_deducted_quantity 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.source_deducted_quantity 已存在，跳过'); else seedLog.error(`  ✗ seedlings.source_deducted_quantity 失败: ${e.message}`); }
+  // 2026-06-14: 生产计划目标语义字段（区分投入/产出/扩繁）
+  try { db.run("ALTER TABLE production_plans ADD COLUMN target_input_count INTEGER DEFAULT 0"); seedLog.info('  ✓ production_plans.target_input_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - production_plans.target_input_count 已存在，跳过'); else seedLog.error(`  ✗ production_plans.target_input_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE production_plans ADD COLUMN target_output_count INTEGER DEFAULT 0"); seedLog.info('  ✓ production_plans.target_output_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - production_plans.target_output_count 已存在，跳过'); else seedLog.error(`  ✗ production_plans.target_output_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE production_plans ADD COLUMN target_expanded_count INTEGER DEFAULT 0"); seedLog.info('  ✓ production_plans.target_expanded_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - production_plans.target_expanded_count 已存在，跳过'); else seedLog.error(`  ✗ production_plans.target_expanded_count 失败: ${e.message}`); }
+  // 2026-06-14: 历史数据回填 — 所有现有 seedlings 默认视为 seed 模式
+  try {
+    const upd = db.run("UPDATE seedlings SET propagation_mode = 'seed' WHERE propagation_mode IS NULL OR propagation_mode = ''");
+    seedLog.info(`  ✓ seedlings 历史 propagation_mode 回填完成`);
+  } catch (e: any) { seedLog.error(`  ✗ propagation_mode 历史回填失败: ${e.message}`); }
   // plantings 加 unit 字段
   try {
     db.run("ALTER TABLE plantings ADD COLUMN unit TEXT DEFAULT '株'");

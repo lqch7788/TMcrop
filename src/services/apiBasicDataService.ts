@@ -477,28 +477,13 @@ export async function deleteSystemConfig(id: string): Promise<void> {
  * 获取所有字典项
  * 网络策略：API 直连（V2.1 铁律：无缓存）
  *
- * 注意：后端返回 snake_case (category_code, dict_code)，
- * 需要转换为前端使用的 camelCase (categoryCode, dictCode)
+ * 2026-06-13 起：server/src/middleware/camelCaseResponse.ts 全局把响应转 camelCase，
+ * 所以这里直接用响应即可，不要再做 snake→camel 二次转换（否则会拿到 undefined）。
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
-  // 临时禁用缓存，确保获取最新数据
-  const response = await enhancedApiClient.get<Record<string, any>[]>('/dictionary/dictionaries');
-
+  const response = await enhancedApiClient.get<Dictionary[]>('/dictionary/dictionaries');
   if (!response) return [];
-
-  // 转换 snake_case 为 camelCase
-  return response.map(item => ({
-    id: item.id,
-    categoryCode: item.category_code,
-    dictCode: item.dict_code,
-    dictLabel: item.dict_label,
-    dictValue: item.dict_value,
-    sortOrder: item.sort_order,
-    color: item.color,
-    status: item.status,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at,
-  }));
+  return response;
 }
 
 /**
