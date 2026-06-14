@@ -104,6 +104,26 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       return;
     }
 
+    // 2026-06-14: 上限自检 — 新增成活量不能超过"剩余可用小苗"
+    // 剩余可用 = 现存小苗(survival - planted) + 本日损耗(本次录入)
+    // 但本日的损耗还没计入，所以更严格：剩余可用 = survival - planted (录入前)
+    const currentAvailable = (record.survivalCount || 0) - (record.plantedCount || 0);
+    const sc = formData.survivalCountChange || 0;
+    const ri = formData.runnerIncreaseCount || 0;
+    if (sc > 0 && sc > currentAvailable) {
+      await showAlert(`成活变化 +${sc} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
+      return;
+    }
+    if (ri > 0 && ri > currentAvailable) {
+      await showAlert(`扩繁小苗数量 +${ri} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
+      return;
+    }
+    // 损耗不能为负
+    if ((formData.lossCountChange || 0) < 0) {
+      await showAlert('损耗数量不能为负数');
+      return;
+    }
+
     try {
       // 2026-06-05: 把业务字段打包成 data 对象（后端会 JSON.stringify 一次并存到 data 列，GET 时再 JSON.parse 还原）
       const bizData = {
@@ -153,10 +173,26 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     handleSuccess();
   };
 
-  // 开始编辑
+  // 开始编辑 — 2026-06-14: 修复编辑后字段被清空 bug
+  // 根因：GET 返回的对象里混入了 data 字段（4 层嵌套的乱码 JSON 字符串）和 sql.js 展开的
+  // 数字键 map（"0": "{", "1": "\""...），直接 `{ ...r }` 会把这些垃圾原样 PUT 给后端，
+  // 后端再 stringify 一层写入 data 列 → 覆盖真实业务字段 → 下次 GET spread 时业务字段全消失。
+  // 修复：只挑真正的业务字段作为 editingRow 初始值。
+  const BUSINESS_FIELDS = [
+    'recordDate', 'temperature', 'humidity', 'watering', 'abnormality',
+    'survivalCountChange', 'plantedCountChange', 'lossCountChange',
+    'runnerIncreaseCount', 'phValue', 'ecValue', 'operator', 'remarks',
+  ] as const;
+
   const handleStartEdit = (r: DailyRecord) => {
     setEditingId(r.id);
-    setEditingRow({ ...r });
+    const cleanRow: Partial<DailyRecord> = {};
+    BUSINESS_FIELDS.forEach(k => {
+      if ((r as any)[k] !== undefined) {
+        (cleanRow as any)[k] = (r as any)[k];
+      }
+    });
+    setEditingRow(cleanRow);
   };
 
   // 取消编辑
@@ -169,7 +205,26 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const handleSaveEdit = async () => {
     if (!editingId) return;
     try {
-      const success = await updateDailyRecord(record.id, editingId, editingRow);
+      // 2026-06-14: 与 POST addDailyRecord 保持一致结构 — 业务字段打包成 data 对象
+      // 后端 PUT 路由：req.body.data = 业务字段对象 → JSON.stringify 存到 data 列
+      // 这样写入的 data JSON 结构干净，下次 GET 能正常 spread 还原
+      const data = (editingRow as any).data && typeof (editingRow as any).data === 'object'
+        ? (editingRow as any).data
+        : (() => {
+            const biz: any = {};
+            ['temperature', 'humidity', 'watering', 'abnormality',
+             'survivalCountChange', 'plantedCountChange', 'lossCountChange',
+             'runnerIncreaseCount', 'phValue', 'ecValue', 'operator'].forEach(k => {
+              if ((editingRow as any)[k] !== undefined) biz[k] = (editingRow as any)[k];
+            });
+            return biz;
+          })();
+      const payload: any = {
+        recordDate: editingRow.recordDate,
+        data,
+        remarks: editingRow.remarks,
+      };
+      const success = await updateDailyRecord(record.id, editingId, payload);
       if (!success) {
         await showAlert('更新记录失败，请重试');
         return;
@@ -398,6 +453,9 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 placeholder="正数增加，负数减少"
                 className={deepInputClass}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                剩余可用小苗：{(record.survivalCount || 0) - (record.plantedCount || 0) + (record.lossCount || 0)} 株（不可超过）
+              </p>
             </div>
             {/* 第三行：定植变化 */}
             <div>
@@ -418,12 +476,21 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
               <Label className="text-gray-700">损耗数量</Label>
               <Input
                 type="number"
+                min="0"
                 value={formData.lossCountChange ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  lossCountChange: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="正数增加"
+                onChange={(e) => {
+                  // 2026-06-14: 损耗只允许 ≥ 0（损耗不能减少）
+                  const v = e.target.value;
+                  if (v === '' || v === '-') {
+                    setFormData({ ...formData, lossCountChange: undefined });
+                    return;
+                  }
+                  const n = Number(v);
+                  if (!isNaN(n) && n >= 0) {
+                    setFormData({ ...formData, lossCountChange: n });
+                  }
+                }}
+                placeholder="正数（不可为负）"
                 className={deepInputClass}
               />
             </div>
