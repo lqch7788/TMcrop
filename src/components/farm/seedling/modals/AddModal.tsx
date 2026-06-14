@@ -117,7 +117,21 @@ export function AddModal({
     workHours: 0,
     isSupplementary: false,
     supplementaryReason: '',
+    // 2026-06-14: 繁殖模式（建档后锁定）
+    propagationMode: 'seed' as 'seed' | 'layering' | 'tissue_culture' | 'cutting' | 'division' | 'grafting',
+    propagationMotherPlantCount: 0,  // 用于 layering/tissue_culture/cutting 模式
+    propagationScionCount: 0,         // 用于 grafting 模式
   };
+
+  // 2026-06-14: 繁殖模式选项（决定后续字段显示和数量语义）
+  const PROPAGATION_MODES = [
+    { value: 'seed', label: '种子育苗', desc: '一对一，传统模式', needsMother: false, needsScion: false },
+    { value: 'layering', label: '匍匐茎育苗', desc: '母株+子苗，母株最后清理', needsMother: true, needsScion: false },
+    { value: 'tissue_culture', label: '组培育苗', desc: '母株+子苗，母株可继续', needsMother: true, needsScion: false },
+    { value: 'cutting', label: '扦插育苗', desc: '母株+剪枝，母株可继续', needsMother: true, needsScion: false },
+    { value: 'division', label: '分株育苗', desc: '母株分多株后消失', needsMother: false, needsScion: false },
+    { value: 'grafting', label: '嫁接育苗', desc: '砧木+接穗一体', needsMother: false, needsScion: true },
+  ] as const;
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
@@ -462,15 +476,25 @@ export function AddModal({
       externalSeedName: sourceMode === 'external' ? externalSeedName : undefined,
       externalSeedQuantity: sourceMode === 'external' ? externalSeedQuantity : undefined,
       externalSeedNote: sourceMode === 'external' ? externalSeedNote : undefined,
+      // 2026-06-14: 繁殖模式（建档后锁定）
+      propagationMode: formData.propagationMode,
+      motherPlantCount: formData.propagationMotherPlantCount,  // 映射到后端 mother_plant_count
+      expandedPlantCount: 0,
+      scionCount: formData.propagationScionCount,
     };
 
     // 保存育苗数据（内部种源：原子操作扣减 + 创建；外部种源：直接创建）
     let addedSeedlingId: string | null = null;
     try {
       if (sourceMode === 'internal' && formData.sourceId) {
-        const deductCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
-          ? formData.motherPlantCount
-          : formData.initialCount;
+        // 2026-06-14: deductCount 优先按繁殖模式决定
+        // layering/tissue_culture/cutting → 用 propagationMotherPlantCount（扣的是母株）
+        // 其他 → 用原来的 calculateMode 决定
+        const deductCount = ['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode)
+          ? formData.propagationMotherPlantCount
+          : formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+            ? formData.motherPlantCount
+            : formData.initialCount;
         // V2.1: 使用 /with-deduct 原子端点，替代 addItem + decreaseAvailableCount 两步调用
         const { addSeedlingWithDeduct } = await import('../../../../services/apiSeedlingService');
         const result = await addSeedlingWithDeduct({
@@ -660,6 +684,48 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
       cancelText="取消"
     >
       <div className="space-y-6">
+        {/* ========== 2026-06-14: 繁殖模式选择（建档后锁定） ========== */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="w-4 h-4 text-indigo-600" />
+            <h3 className="text-sm font-semibold text-indigo-900">
+              繁殖模式 <span className="text-red-500">*</span>
+              <span className="text-xs text-gray-500 ml-2 font-normal">建档后不可修改，决定数量字段语义</span>
+            </h3>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {PROPAGATION_MODES.map(m => (
+              <label
+                key={m.value}
+                className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-colors
+                  ${formData.propagationMode === m.value
+                    ? 'border-indigo-500 bg-indigo-100 ring-2 ring-indigo-200'
+                    : 'border-gray-300 bg-white hover:border-indigo-300'}`}
+              >
+                <input
+                  type="radio"
+                  name="propagationMode"
+                  value={m.value}
+                  checked={formData.propagationMode === m.value}
+                  onChange={() => setFormData({
+                    ...formData,
+                    propagationMode: m.value,
+                    // 切换模式时重置对应字段
+                    initialCount: 0,
+                    propagationMotherPlantCount: 0,
+                    propagationScionCount: 0,
+                  })}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">{m.label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{m.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* ========== 育苗批次号（最顶层） ========== */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -1107,24 +1173,76 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           {/* 单株育苗模式 */}
           {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
             <div className="grid grid-cols-2 gap-4">
-              {/* 初始数量 */}
-              <div>
-                <Label className="text-gray-900">
-                  初始数量 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  value={formData.initialCount || ''}
-                  onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-                  className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                  placeholder="请输入播种数量"
-                />
-                {initialCountExceeds && (
-                  <p className="text-xs text-red-500 mt-1">
-                    超过种源可用数量（{sourceAvailableCount}）
+              {/* 2026-06-14: 根据 propagation_mode 动态显示数量字段 */}
+              {(['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode)) ? (
+                /* 母株类：母株数量 */
+                <div>
+                  <Label className="text-gray-900">
+                    母株数量 <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      （{formData.propagationMode === 'layering' ? '匍匐茎' : formData.propagationMode === 'tissue_culture' ? '组培' : '扦插'}母株）
+                    </span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.propagationMotherPlantCount || ''}
+                    onChange={(e) => setFormData({ ...formData, propagationMotherPlantCount: Number(e.target.value) })}
+                    className={deepInputClass}
+                    placeholder="请输入母株数量（>0）"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    子苗将通过每日记录"扩繁增量"累加；母株{formData.propagationMode === 'layering' ? '最终会被清理' : '可继续产苗'}
                   </p>
-                )}
-              </div>
+                </div>
+              ) : formData.propagationMode === 'grafting' ? (
+                /* 嫁接：嫁接苗数 + 砧木数 */
+                <>
+                  <div>
+                    <Label className="text-gray-900">
+                      嫁接苗数量 <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.initialCount || ''}
+                      onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+                      className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                      placeholder="嫁接成功的苗数"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-700">砧木数量</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.propagationScionCount || ''}
+                      onChange={(e) => setFormData({ ...formData, propagationScionCount: Number(e.target.value) })}
+                      className={deepInputClass}
+                      placeholder="用于嫁接的砧木数（仅记录）"
+                    />
+                  </div>
+                </>
+              ) : (
+                /* seed / division：初始数量 */
+                <div>
+                  <Label className="text-gray-900">
+                    {formData.propagationMode === 'division' ? '分出苗数量' : '初始数量'} <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.initialCount || ''}
+                    onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+                    className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                    placeholder={formData.propagationMode === 'division' ? '分株出的苗数' : '请输入播种数量'}
+                  />
+                  {initialCountExceeds && (
+                    <p className="text-xs text-red-500 mt-1">
+                      超过种源可用数量（{sourceAvailableCount}）
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* 目标成苗率 */}
               <div>

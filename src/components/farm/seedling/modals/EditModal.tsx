@@ -250,6 +250,30 @@ export function EditModal({
       cancelText="取消"
     >
       <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {/* 2026-06-14: 繁殖模式 banner（建档后锁定） */}
+        <div className="col-span-2">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-indigo-900">繁殖模式：</span>
+              <span className="text-sm text-indigo-700 font-medium">
+                {(() => {
+                  const map: Record<string, string> = {
+                    seed: '种子育苗',
+                    layering: '匍匐茎育苗',
+                    tissue_culture: '组培育苗',
+                    cutting: '扦插育苗',
+                    division: '分株育苗',
+                    grafting: '嫁接育苗',
+                  };
+                  return map[(record as any).propagationMode || 'seed'] || '种子育苗';
+                })()}
+              </span>
+              <span className="text-xs text-gray-500 ml-2">（建档后不可修改）</span>
+            </div>
+            <span className="text-xs text-amber-600">数量字段由「每日记录」自动累加</span>
+          </div>
+        </div>
+
         {/* 关联种源 - 方案2.7: combogrid下拉表格替代Select */}
         <div className="col-span-2">
           <Label className="text-gray-900">关联种源</Label>
@@ -408,33 +432,33 @@ export function EditModal({
           />
         </div>
 
-        {/* 成活数量 */}
+        {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，不可手动改） */}
         <div>
-          <Label className="text-gray-900">成活数量</Label>
+          <Label className="text-gray-700">
+            {['layering','tissue_culture','cutting'].includes((record as any).propagationMode || 'seed') ? '母株数量' : '成活数量'}
+            <span className="text-xs text-gray-500 ml-1">（每日记录自动累加）</span>
+          </Label>
           <Input
             type="number"
             min={0}
             value={formData.survivalCount || ''}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setFormData({ ...formData, survivalCount: v < 0 ? 0 : v });
-            }}
-            className={deepInputClass}
+            readOnly
+            className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
           />
         </div>
 
-        {/* 已定植数量 */}
+        {/* 已定植数量（每日记录+种植管理自动累加，不可手动改） */}
         <div>
-          <Label className="text-gray-900">已定植数量</Label>
+          <Label className="text-gray-700">
+            已定植数量
+            <span className="text-xs text-gray-500 ml-1">（每日记录+种植管理自动累加）</span>
+          </Label>
           <Input
             type="number"
             min={0}
             value={formData.plantedCount || ''}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setFormData({ ...formData, plantedCount: v < 0 ? 0 : v });
-            }}
-            className={deepInputClass}
+            readOnly
+            className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
           />
         </div>
 

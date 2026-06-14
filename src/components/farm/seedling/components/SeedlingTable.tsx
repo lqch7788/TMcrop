@@ -458,6 +458,7 @@ export function SeedlingTable({
                 </th>
               )}
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">育苗批号</th>
+              <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">繁殖模式</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">关联生产计划</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">关联种源</th>
               <th className="px-3 py-3 text-center text-sm font-semibold text-white whitespace-nowrap">作物编码</th>
@@ -478,7 +479,7 @@ export function SeedlingTable({
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 17 : 16} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -510,6 +511,21 @@ export function SeedlingTable({
                     >
                       {record.seedlingCode}
                     </Button>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-center whitespace-nowrap">
+                    {(() => {
+                      const mode = (record as any).propagationMode || 'seed';
+                      const map: Record<string, {label:string, color:string}> = {
+                        seed:        {label:'种子育苗', color:'bg-blue-100 text-blue-700'},
+                        layering:    {label:'匍匐茎', color:'bg-pink-100 text-pink-700'},
+                        tissue_culture:{label:'组培', color:'bg-purple-100 text-purple-700'},
+                        cutting:     {label:'扦插', color:'bg-orange-100 text-orange-700'},
+                        division:    {label:'分株', color:'bg-green-100 text-green-700'},
+                        grafting:    {label:'嫁接', color:'bg-yellow-100 text-yellow-700'},
+                      };
+                      const m = map[mode] || map.seed;
+                      return <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${m.color}`}>{m.label}</span>;
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-600 text-center whitespace-nowrap truncate" title={record.productionPlanCode || ''}>
                     {record.productionPlanCode ? (
