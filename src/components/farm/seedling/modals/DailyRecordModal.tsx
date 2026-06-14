@@ -31,6 +31,9 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 
 export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
+  // 2026-06-14: 繁殖模式（决定字段显示与文案）
+  const propagationMode = (record.propagationMode as string) || 'seed';
+  const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(propagationMode);
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
   const updateDailyRecord = useSeedlingStore((state) => state.updateDailyRecord);
   const deleteDailyRecord = useSeedlingStore((state) => state.deleteDailyRecord);
@@ -377,9 +380,14 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 <span className="ml-2 text-sm text-gray-600">{formData.watering ? '是' : '否'}</span>
               </div>
             </div>
-            {/* 第三行：成活变化 */}
+            {/* 第三行：成活变化 / 母株变化（按模式） */}
             <div>
-              <Label className="text-gray-700">成活变化</Label>
+              <Label className="text-gray-700">
+                {isMotherMode ? '母株变化' : '成活变化'}
+                <span className="text-xs text-gray-500 ml-1">
+                  （{isMotherMode ? '母株成活数变化' : '成活苗数变化'}）
+                </span>
+              </Label>
               <Input
                 type="number"
                 value={formData.survivalCountChange ?? ''}
@@ -447,9 +455,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
-            {/* 第四行：扩繁小苗数量（2026-06-05 草莓匍匐茎育苗等无性繁殖场景，可选） */}
+            {/* 第四行：扩繁小苗数量（仅母株类模式显示） */}
+            {isMotherMode && (
             <div>
-              <Label className="text-gray-700">扩繁小苗数量</Label>
+              <Label className="text-gray-700">
+                扩繁小苗数量
+                <span className="text-xs text-gray-500 ml-1">
+                  （{propagationMode === 'layering' ? '匍匐茎' : propagationMode === 'tissue_culture' ? '组培' : '扦插'}新出苗数）
+                </span>
+              </Label>
               <Input
                 type="number"
                 value={formData.runnerIncreaseCount ?? ''}
@@ -461,6 +475,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
+            )}
             {/* 备注（单独一行，占3列） */}
             <div className="col-span-3">
               <Label className="text-gray-700">备注</Label>
@@ -505,8 +520,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold">pH</th>
                     <th className="px-2 py-2 text-left font-semibold">EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
-                    <th className="px-2 py-2 text-left font-semibold">成活变化</th>
-                    <th className="px-2 py-2 text-left font-semibold">扩繁小苗数量</th>
+                    <th className="px-2 py-2 text-left font-semibold">{isMotherMode ? '母株变化' : '成活变化'}</th>
+                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">扩繁小苗数量</th>}
                     <th className="px-2 py-2 text-left font-semibold">定植变化</th>
                     <th className="px-2 py-2 text-left font-semibold">损耗变化</th>
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
@@ -545,9 +560,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
                       </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
-                      </td>
+                      {isMotherMode && (
+                        <td className="px-2 py-1.5">
+                          {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
+                        </td>
+                      )}
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'plantedCountChange', r.plantedCountChange)}
                       </td>

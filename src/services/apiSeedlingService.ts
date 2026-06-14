@@ -261,17 +261,50 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
 /**
  * 原子操作：扣减种源 + 创建育苗记录（调用后端 /with-deduct）
  * 替代旧的 addSeedling + decreaseAvailableCount 两步调用
- * 2026-06-13: 修复 — seedling 子对象需做嵌套 camelCase→snake_case 转换，
- * 否则后端路由读 seedling_code/crop_name 等 snake_case 字段全部 undefined
+ *
+ * 2026-06-14 修复：seedling 子对象必须做业务字段映射（不是机械的 camelCase→snake_case），
+ * 否则前端字段（initialCount/siteName/startDate）与后端字段（seedling_quantity/greenhouse_name/seedling_date）
+ * 错位，写入数据库全部为 null。同时透传 targetSurvivalRate/targetSurvivalCount/lossCount/sourceMode 等字段，
+ * 与 addSeedling 走 POST / 的字段映射保持一致。
  */
-function toSnakeObject(obj: Record<string, unknown>): Record<string, unknown> {
-  if (!obj || typeof obj !== 'object') return obj;
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    const snake = k.replace(/([A-Z])/g, (_, c) => '_' + c.toLowerCase());
-    out[snake] = v;
-  }
-  return out;
+function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, unknown> {
+  return {
+    seedling_code: s.seedlingCode,
+    source_id: s.sourceId,
+    source_name: s.sourceCode,
+    production_plan_code: s.productionPlanCode || '',
+    crop_code: s.cropCode,
+    crop_name: s.cropName,
+    crop_variety: s.cropVariety,
+    seedling_type: s.seedlingType,
+    greenhouse_name: (s as any).greenhouseName || s.siteName,
+    area_name: (s as any).areaName || s.siteId,
+    seedling_date: (s as any).seedlingDate || s.startDate,
+    expected_finish_date: (s as any).expectedFinishDate || s.expectedEndDate,
+    seedling_quantity: (s as any).seedlingQuantity ?? s.initialCount,
+    survival_quantity: s.survivalCount ?? 0,
+    survival_rate: s.survivalRate ?? 0,
+    planted_count: s.plantedCount ?? 0,
+    loss_count: s.lossCount ?? 0,
+    loss_rate: s.lossRate ?? 0,
+    target_survival_rate: s.targetSurvivalRate ?? null,
+    target_survival_count: s.targetSurvivalCount ?? null,
+    status: s.status,
+    seedling_status: s.seedlingStatus,
+    remarks: s.remarks,
+    create_by: s.createBy,
+    work_hours: s.workHours,
+    pictures: Array.isArray(s.pictures) ? JSON.stringify(s.pictures) : s.pictures,
+    source_mode: (s as any).sourceMode || 'internal',
+    external_seed_code: (s as any).externalSeedCode,
+    external_seed_name: (s as any).externalSeedName,
+    external_seed_quantity: (s as any).externalSeedQuantity,
+    external_seed_note: (s as any).externalSeedNote,
+    propagation_mode: (s as any).propagationMode || 'seed',
+    mother_plant_count: (s as any).motherPlantCount ?? 0,
+    expanded_plant_count: (s as any).expandedPlantCount ?? 0,
+    scion_count: (s as any).scionCount ?? 0,
+  };
 }
 
 export async function addSeedlingWithDeduct(data: {
@@ -282,7 +315,7 @@ export async function addSeedlingWithDeduct(data: {
   const result = await enhancedApiClient.post<{ id: string }>('/seedlings/with-deduct', {
     sourceId: data.sourceId,
     count: data.count,
-    seedling: toSnakeObject(data.seedling),
+    seedling: toBackendSeedlingPayload(data.seedling),
   });
   return result;
 }
