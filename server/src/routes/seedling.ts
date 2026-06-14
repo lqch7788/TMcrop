@@ -173,13 +173,27 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const db = getDatabase();
   const newId = seedling.id || `SD${Date.now()}`;
   const now = new Date().toISOString();
+  // 2026-06-14: 补全与 POST / 一致的字段（target_survival_rate/count、loss_count/rate、source_mode、external_seed_*、propagation_mode/4 字段）
   const { seedling_code, source_name, crop_code, crop_name, crop_variety,
           seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
           seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
-          work_hours, production_plan_code } = seedling;
+          work_hours, production_plan_code,
+          target_survival_rate, target_survival_count, loss_count, loss_rate,
+          source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
+          propagation_mode, mother_plant_count, expanded_plant_count, scion_count } = seedling;
   const productionPlanCode = production_plan_code ?? seedling.productionPlanCode;
   const workHours = work_hours ?? seedling.workHours;
   const cropCode = crop_code ?? seedling.cropCode;
+  const propagationMode = propagation_mode ?? 'seed';
+  // 模式校验
+  const validModes = ['seed', 'layering', 'tissue_culture', 'cutting', 'division', 'grafting'];
+  if (!validModes.includes(propagationMode)) {
+    return res.status(400).json({ success: false, error: `不支持的繁殖模式: ${propagationMode}` });
+  }
+  // 模式对应字段校验
+  if (['layering', 'tissue_culture', 'cutting'].includes(propagationMode) && (!mother_plant_count || mother_plant_count <= 0)) {
+    return res.status(400).json({ success: false, error: `${propagationMode} 模式必须填写母株数量 > 0` });
+  }
 
   // 步骤0：参数校验
   const safeCount = Number(count);
@@ -251,12 +265,22 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
       INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
-        production_plan_code, create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        production_plan_code,
+        target_survival_rate, target_survival_count, loss_count, loss_rate,
+        source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
+        propagation_mode, mother_plant_count, expanded_plant_count, scion_count,
+        source_deducted_quantity,
+        create_time, update_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
-        productionPlanCode || null, now, now]
+        productionPlanCode || null,
+        target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
+        source_mode || 'internal', external_seed_code || null, external_seed_name || null, external_seed_quantity ?? 0, external_seed_note || null,
+        propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
+        safeCount,  // 2026-06-14: 记录从种源扣减的数量
+        now, now]
         .map(v => v === undefined ? null : v));
 
     // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
@@ -641,7 +665,8 @@ router.post('/', (req: Request, res: Response) => {
             seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
             seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by,
             work_hours, production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
-            source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note } = req.body;
+            source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
+            propagation_mode, mother_plant_count, expanded_plant_count, scion_count } = req.body;
     // 2026-06-05: 兼容 camelCase productionPlanCode 和 cropCode
     const productionPlanCode = production_plan_code ?? req.body.productionPlanCode;
     const workHours = work_hours ?? req.body.workHours;
@@ -652,6 +677,15 @@ router.post('/', (req: Request, res: Response) => {
     const externalSeedName = external_seed_name ?? req.body.externalSeedName;
     const externalSeedQuantity = external_seed_quantity ?? req.body.externalSeedQuantity;
     const externalSeedNote = external_seed_note ?? req.body.externalSeedNote;
+    // 2026-06-14: 繁殖模式
+    const propagationMode = propagation_mode ?? req.body.propagationMode ?? 'seed';
+    const validModes = ['seed', 'layering', 'tissue_culture', 'cutting', 'division', 'grafting'];
+    if (!validModes.includes(propagationMode)) {
+      return res.status(400).json({ success: false, error: `不支持的繁殖模式: ${propagationMode}` });
+    }
+    if (['layering', 'tissue_culture', 'cutting'].includes(propagationMode) && (!mother_plant_count || mother_plant_count <= 0)) {
+      return res.status(400).json({ success: false, error: `${propagationMode} 模式必须填写母株数量 > 0` });
+    }
 
     // 方案2.5: 验证育苗地点AreaType=4（种植区）
     if (greenhouse_name) {
@@ -673,15 +707,36 @@ router.post('/', (req: Request, res: Response) => {
         seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
         production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
         source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
+        propagation_mode, mother_plant_count, expanded_plant_count, scion_count,
+        source_deducted_quantity,
         create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
         seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
         seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
         productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
         sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
+        propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
+        // 2026-06-14: 内部种源时记下扣减量（外部种源不扣减种源，设为0）
+        (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
         now, now]
         .map(v => v === undefined ? null : v));
+
+    // 2026-06-14: 内部种源时扣减种源 remaining_quantity（POST / 路径原本没扣，P1-B 补全）
+    if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
+      try {
+        const chk = db.exec('SELECT remaining_quantity FROM seed_sources WHERE id = ? AND deleted_at IS NULL', [source_id]);
+        const remaining = Number(chk[0]?.values?.[0]?.[0] || 0);
+        if (remaining >= seedling_quantity) {
+          db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
+            [seedling_quantity, now, source_id]);
+        } else {
+          console.warn(`[seedling POST] 种源可用余量不足: remaining=${remaining}, need=${seedling_quantity}`);
+        }
+      } catch (e) {
+        console.error('[seedling POST] 扣减种源失败:', e);
+      }
+    }
 
     // 写入 material_flow_log（外部种源 → external→seedling，内部种源 → seed_source→seedling）
     if (sourceMode === 'external') {
@@ -791,6 +846,15 @@ router.put('/:id', (req: Request, res: Response) => {
             crop_variety: old.crop_variety || '',
             created_by: updates.create_by || '',
           });
+          // 2026-06-14: 种源增量补偿（PUT 改 initialCount 时）
+          // delta > 0 多扣；delta < 0 归还
+          if (old.source_mode === 'internal' && old.source_id) {
+            db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
+              [delta, now, old.source_id]);
+            // 同步更新 source_deducted_quantity 让 DELETE 时能正确归还
+            const newDeducted = (Number(old.source_deducted_quantity) || 0) + delta;
+            db.run('UPDATE seedlings SET source_deducted_quantity = ? WHERE id = ?', [newDeducted, id]);
+          }
         }
       } catch { /* correction 失败不影响主流程 */ }
     }
@@ -807,13 +871,81 @@ router.delete('/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const db = getDatabase();
     const now = new Date().toISOString();
+
+    // 2026-06-14: 删除前先读 source_id/source_mode/source_deducted_quantity 用于反向补偿种源
+    const stmt = db.prepare('SELECT source_id, source_mode, source_deducted_quantity FROM seedlings WHERE id = ?');
+    stmt.bind([id]);
+    let row: any = null;
+    if (stmt.step()) row = stmt.getAsObject();
+    stmt.free();
+
     db.run('UPDATE seedlings SET deleted_at = ? WHERE id = ?', [now, id]);
+
+    // 2026-06-14: 反向补偿种源（内部种源 + 有扣减量）
+    if (row && row.source_mode === 'internal' && row.source_id) {
+      const deducted = Number(row.source_deducted_quantity) || 0;
+      if (deducted > 0) {
+        try {
+          db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ?, update_time = ? WHERE id = ?',
+            [deducted, now, row.source_id]);
+        } catch (e) {
+          console.error('[seedling DELETE] 种源反向补偿失败:', e);
+        }
+      }
+    }
+
     saveDatabase();
     res.json({ success: true, message: '育苗记录已删除' });
   } catch (error) {
+    console.error('删除育苗记录失败:', error);
     res.status(500).json({ success: false, error: '删除育苗记录失败' });
   }
 });
+
+/**
+ * 2026-06-14: 每日记录变更应用到育苗主表
+ * 按 propagation_mode 分别累加到不同字段：
+ *   seed/division/grafting → survival_quantity + planted_count + loss_count
+ *   layering/tissue_culture/cutting → mother_plant_count + planted_count + loss_count + expanded_plant_count
+ * @param id 育苗 ID
+ * @param changeData 业务字段包（含 survivalCountChange/plantedCountChange/lossCountChange/runnerIncreaseCount）
+ * @param sign +1 表示新增/正向变更；-1 表示删除/反向补偿
+ */
+function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): void {
+  const db = getDatabase();
+  // 取 propagation_mode
+  const stmt = db.prepare('SELECT propagation_mode FROM seedlings WHERE id = ?');
+  stmt.bind([id]);
+  let row: any = null;
+  if (stmt.step()) row = stmt.getAsObject();
+  stmt.free();
+  if (!row) return;
+  const mode = row.propagation_mode || 'seed';
+
+  const sc = Number(changeData?.survivalCountChange) || 0;
+  const pc = Number(changeData?.plantedCountChange) || 0;
+  const lc = Number(changeData?.lossCountChange) || 0;
+  const ri = Number(changeData?.runnerIncreaseCount) || 0;
+
+  const motherPlantDelta = sc * sign;
+  const plantedDelta = pc * sign;
+  const lossDelta = lc * sign;
+  const expandedDelta = ri * sign;
+  const survivalDelta = sc * sign;
+
+  if (['layering', 'tissue_culture', 'cutting'].includes(mode)) {
+    // 母株类：survivalCountChange 累加到母株；runnerIncreaseCount 累加到扩繁产出
+    if (motherPlantDelta !== 0) db.run('UPDATE seedlings SET mother_plant_count = mother_plant_count + ? WHERE id = ?', [motherPlantDelta, id]);
+    if (plantedDelta !== 0) db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?', [plantedDelta, id]);
+    if (lossDelta !== 0) db.run('UPDATE seedlings SET loss_count = loss_count + ? WHERE id = ?', [lossDelta, id]);
+    if (expandedDelta !== 0) db.run('UPDATE seedlings SET expanded_plant_count = expanded_plant_count + ? WHERE id = ?', [expandedDelta, id]);
+  } else {
+    // seed/division/grafting：直接累加到 survival/planted/loss
+    if (survivalDelta !== 0) db.run('UPDATE seedlings SET survival_quantity = survival_quantity + ? WHERE id = ?', [survivalDelta, id]);
+    if (plantedDelta !== 0) db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?', [plantedDelta, id]);
+    if (lossDelta !== 0) db.run('UPDATE seedlings SET loss_count = loss_count + ? WHERE id = ?', [lossDelta, id]);
+  }
+}
 
 /**
  * 添加每日记录
@@ -880,6 +1012,14 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
       now
     ]);
 
+    // 2026-06-14: 按 propagation_mode 累加到 seedlings 主表
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        applyDailyChangeToSeedling(id, parsed, 1);
+      } catch (e) { /* JSON 解析失败不影响 daily_records 插入 */ }
+    }
+
     saveDatabase();
     res.status(201).json({ success: true, data: { id: newId, oid: newOid } });
   } catch (error) {
@@ -941,9 +1081,19 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    // 业务字段打包成 data JSON（与 POST 一致）
-    const { recordDate, remarks, ...bizFields } = req.body;
-    const dataJson = Object.keys(bizFields).length > 0 ? JSON.stringify(bizFields) : null;
+    // 2026-06-14: 先取旧记录算 diff，用于反向补偿 + 正向应用
+    const oldStmt = db.prepare('SELECT data FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?');
+    oldStmt.bind([recordId, id, 'seedling']);
+    let oldData: any = {};
+    if (oldStmt.step()) {
+      const row = oldStmt.getAsObject() as any;
+      try { oldData = row.data ? JSON.parse(row.data) : {}; } catch { oldData = {}; }
+    }
+    oldStmt.free();
+
+    // 业务字段打包成 data JSON（与 POST 一致：只 stringify data 字段内容，不要嵌套包装）
+    const { recordDate, remarks, data } = req.body;
+    const dataJson = data ? JSON.stringify(data) : null;
 
     const fields = ['update_time = ?'];
     const values: any[] = [now];
@@ -956,6 +1106,24 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
       `UPDATE daily_records SET ${fields.join(', ')} WHERE id = ? AND related_id = ? AND related_type = ?`,
       values
     );
+
+    // 2026-06-14: 应用 diff（new - old）到主表
+    if (dataJson !== null) {
+      try {
+        const newData = JSON.parse(dataJson);
+        const diff: any = {};
+        ['survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount'].forEach(k => {
+          const oldVal = Number(oldData[k]) || 0;
+          const newVal = Number(newData[k]) || 0;
+          const d = newVal - oldVal;
+          if (d !== 0) diff[k] = d;
+        });
+        if (Object.keys(diff).length > 0) {
+          applyDailyChangeToSeedling(id, diff, 1);
+        }
+      } catch (e) { /* JSON 解析失败不影响 daily_records 更新 */ }
+    }
+
     saveDatabase();
     res.json({ success: true, data: { id: recordId, updated: true } });
   } catch (error) {
@@ -973,10 +1141,27 @@ router.delete('/:id/daily-records/:recordId', (req: Request, res: Response) => {
   try {
     const { id, recordId } = req.params;
     const db = getDatabase();
+
+    // 2026-06-14: 删除前先取旧 data，反向累加（sign=-1）回退主表变更
+    const oldStmt = db.prepare('SELECT data FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?');
+    oldStmt.bind([recordId, id, 'seedling']);
+    let oldData: any = {};
+    if (oldStmt.step()) {
+      const row = oldStmt.getAsObject() as any;
+      try { oldData = row.data ? JSON.parse(row.data) : {}; } catch { oldData = {}; }
+    }
+    oldStmt.free();
+
     db.run(
       'DELETE FROM daily_records WHERE id = ? AND related_id = ? AND related_type = ?',
       [recordId, id, 'seedling']
     );
+
+    // 反向累加（用 -1 把之前 +1 的变更抵消）
+    if (oldData && Object.keys(oldData).length > 0) {
+      applyDailyChangeToSeedling(id, oldData, -1);
+    }
+
     saveDatabase();
     res.json({ success: true });
   } catch (error) {
