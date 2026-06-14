@@ -36,6 +36,5 @@ export const getInitialFormData = (): ProductionFormData => {
     targetSeedlingCount: 0,
     targetInputCount: 0,
     targetOutputCount: 0,
-    targetExpandedCount: 0,
   };
 };

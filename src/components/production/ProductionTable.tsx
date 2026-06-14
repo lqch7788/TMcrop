@@ -212,7 +212,14 @@ export function ProductionTable({
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.expectedHarvestDate || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.responsiblePerson}</td>
                 <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap font-medium">
-                  {`${batch.targetYield || 0} ${batch.unit || 'kg'}`}
+                  {/* 2026-06-14: 育苗计划显示"投入→产出"，育种/种植显示"目标产量+单位" */}
+                  {batch.planType === 'seedling' ? (
+                    <span className="text-blue-700">
+                      {batch.targetInputCount || 0}株投入 → {batch.targetOutputCount || 0}株产出
+                    </span>
+                  ) : (
+                    `${batch.targetQuantity || batch.targetYield || 0} ${batch.unit || 'kg'}`
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{batch.publisher || '-'}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">

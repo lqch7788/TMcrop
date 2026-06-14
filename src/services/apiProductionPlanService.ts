@@ -62,7 +62,6 @@ function normalizeBatch(raw: Record<string, unknown>): CropBatch {
     targetSeedlingCount: raw.targetSeedlingCount as number | undefined,
     targetInputCount: raw.targetInputCount as number | undefined,
     targetOutputCount: raw.targetOutputCount as number | undefined,
-    targetExpandedCount: raw.targetExpandedCount as number | undefined,
     orderId: raw.orderId as string | undefined,
     orderCode: raw.orderCode as string | undefined,
     remarks: raw.remarks as string | undefined,
