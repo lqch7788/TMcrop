@@ -106,7 +106,7 @@ router.get('/', (req: Request, res: Response) => {
       p.create_time AS createTime,
       p.update_time AS updateTime
     FROM plantings p
-    WHERE 1=1`;
+    WHERE p.deleted_at IS NULL`;
     const params: any[] = [];
 
     if (crop_name) {
@@ -120,7 +120,7 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // COUNT 查询用同样的 WHERE 条件
-    const countSql = `SELECT COUNT(*) FROM plantings p WHERE 1=1` +
+    const countSql = `SELECT COUNT(*) FROM plantings p WHERE p.deleted_at IS NULL` +
       (crop_name ? ' AND p.crop_name LIKE ?' : '') +
       (status ? ' AND p.status = ?' : '');
 
@@ -188,7 +188,7 @@ router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const db = getDatabase();
-    const stmt = db.prepare('SELECT * FROM plantings WHERE id = ?');
+    const stmt = db.prepare('SELECT * FROM plantings WHERE id = ? AND deleted_at IS NULL');
     stmt.bind([id]);
     let item = null;
     if (stmt.step()) {
@@ -487,8 +487,9 @@ router.delete('/batch', (req: Request, res: Response) => {
       return res.json({ success: true, data: { deletedCount: 0 } });
     }
     const db = getDatabase();
+    const now = new Date().toISOString();
     const placeholders = idArray.map(() => '?').join(',');
-    db.run(`DELETE FROM plantings WHERE id IN (${placeholders})`, idArray);
+    db.run(`UPDATE plantings SET deleted_at = ? WHERE id IN (${placeholders})`, [now, ...idArray]);
     saveDatabase();
     res.json({ success: true, data: { deletedCount: idArray.length } });
   } catch (error) {
@@ -569,7 +570,7 @@ router.get('/source/:sourceId', (req: Request, res: Response) => {
   try {
     const { sourceId } = req.params;
     const db = getDatabase();
-    const sql = 'SELECT * FROM plantings WHERE source_id = ? ORDER BY create_time DESC';
+    const sql = 'SELECT * FROM plantings WHERE source_id = ? AND deleted_at IS NULL ORDER BY create_time DESC';
     const items = queryToObjects(db, sql, [sourceId]);
 
     res.json({ success: true, data: items });
@@ -585,7 +586,7 @@ router.get('/source/:sourceId', (req: Request, res: Response) => {
 router.get('/unharvested', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const sql = "SELECT * FROM plantings WHERE status != 'harvested' ORDER BY create_time DESC";
+    const sql = "SELECT * FROM plantings WHERE deleted_at IS NULL AND status != 'harvested' ORDER BY create_time DESC";
     const items = queryToObjects(db, sql, []);
 
     res.json({ success: true, data: items });
@@ -601,7 +602,7 @@ router.get('/unharvested', (req: Request, res: Response) => {
 router.get('/harvested', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const sql = "SELECT * FROM plantings WHERE status = 'harvested' ORDER BY actual_harvest_date DESC";
+    const sql = "SELECT * FROM plantings WHERE deleted_at IS NULL AND status = 'harvested' ORDER BY actual_harvest_date DESC";
     const items = queryToObjects(db, sql, []);
 
     res.json({ success: true, data: items });
