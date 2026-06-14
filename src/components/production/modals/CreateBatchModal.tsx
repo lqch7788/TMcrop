@@ -434,60 +434,76 @@ export function CreateBatchModal({
               />
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <FormField label="目标产量" error={errors.targetYield}>
-                <Input
-                  type="number"
-                  value={formData.targetYield}
-                  onChange={(e) => onFormChange('targetYield', e.target.value)}
-                  placeholder="0"
-                  className={inputClass}
-                />
-              </FormField>
-            </div>
-            {/* 2026-06-14: 育苗计划专属目标字段（区分投入/产出/扩繁） */}
-            {formData.planType === 'seedling' && (
-              <>
+          {/* 2026-06-14: 按计划类型分流 */}
+          {formData.planType === 'seedling' ? (
+            /* 育苗计划：投入 + 产出（单位锁定为"株"） */
+            <div className="grid grid-cols-2 gap-2">
+              <div>
                 <FormField label="目标投入（母株/种子/分株基数）">
                   <Input
                     type="number"
-                    value={String(formData.targetInputCount ?? 0)}
-                    onChange={(e) => onFormChange('targetInputCount', Number(e.target.value) || 0)}
+                    min="0"
+                    value={formData.targetInputCount === 0 ? '' : (formData.targetInputCount ?? '')}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '') {
+                        onFormChange('targetInputCount', 0);
+                      } else {
+                        const n = Number(v);
+                        if (!Number.isNaN(n) && n >= 0) onFormChange('targetInputCount', n);
+                      }
+                    }}
                     placeholder="0"
                     className={inputClass}
                   />
                 </FormField>
-                <FormField label="目标产出（成活苗/扩繁子苗/嫁接苗）">
+              </div>
+              <div>
+                <FormField label="目标产出（成活/扩繁/嫁接苗）">
                   <Input
                     type="number"
-                    value={String(formData.targetOutputCount ?? 0)}
-                    onChange={(e) => onFormChange('targetOutputCount', Number(e.target.value) || 0)}
+                    min="0"
+                    value={formData.targetOutputCount === 0 ? '' : (formData.targetOutputCount ?? '')}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '') {
+                        onFormChange('targetOutputCount', 0);
+                      } else {
+                        const n = Number(v);
+                        if (!Number.isNaN(n) && n >= 0) onFormChange('targetOutputCount', n);
+                      }
+                    }}
                     placeholder="0"
                     className={inputClass}
                   />
                 </FormField>
-                <FormField label="目标扩繁产出（仅母株类）">
-                  <Input
-                    type="number"
-                    value={String(formData.targetExpandedCount ?? 0)}
-                    onChange={(e) => onFormChange('targetExpandedCount', Number(e.target.value) || 0)}
-                    placeholder="0"
-                    className={inputClass}
-                  />
-                </FormField>
-              </>
-            )}
-            <div>
-              <FormField label="单位">
-                <DictSelect
-                  category="unit"
-                  value={formData.unit}
-                  onChange={(value) => onFormChange('unit', value)}
-                />
-              </FormField>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* 育种 / 种植计划：目标产量 + 单位 */
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <FormField label="目标产量" error={errors.targetYield}>
+                  <Input
+                    type="number"
+                    value={formData.targetYield}
+                    onChange={(e) => onFormChange('targetYield', e.target.value)}
+                    placeholder="0"
+                    className={inputClass}
+                  />
+                </FormField>
+              </div>
+              <div>
+                <FormField label="单位">
+                  <DictSelect
+                    category="unit"
+                    value={formData.unit}
+                    onChange={(value) => onFormChange('unit', value)}
+                  />
+                </FormField>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 第七行：种植面积 + 面积单位 */}
