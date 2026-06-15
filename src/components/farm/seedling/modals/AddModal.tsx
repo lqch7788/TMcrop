@@ -820,6 +820,25 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   readOnly
                   className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
                 />
+                <p className="text-xs text-gray-500 mt-1">初始数量 × 目标成苗率</p>
+              </div>
+
+              {/* 负责人（与目标成苗数配对，2 个一排） */}
+              <div>
+                <Label className="text-gray-900">负责人</Label>
+                <Select
+                  value={formData.chargePerson}
+                  onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
+                >
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPERATORS.map(op => (
+                      <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
@@ -916,38 +935,40 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </div>
 
               {/* 目标成苗数（自动计算） */}
-              <div>
-                <Label className="text-gray-700">目标成苗数</Label>
-                <Input
-                  type="text"
-                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
-                  readOnly
-                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                />
-                <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700">目标成苗数</Label>
+                  <Input
+                    type="text"
+                    value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
+                    readOnly
+                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
+                </div>
+
+                {/* 负责人（与目标成苗数配对，2 个一排） */}
+                <div>
+                  <Label className="text-gray-900">负责人</Label>
+                  <Select
+                    value={formData.chargePerson}
+                    onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPERATORS.map(op => (
+                        <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
 
-          {/* 负责人 */}
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div>
-              <Label className="text-gray-900">负责人</Label>
-              <Select
-                value={formData.chargePerson}
-                onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
-              >
-                <SelectTrigger className={deepInputClass}>
-                  <SelectValue placeholder="请选择" />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPERATORS.map(op => (
-                    <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* 2026-06-16: 负责人已迁移到"数量与品质"区与目标成苗数配对 */}
         </div>
 
         {/* ========== 育苗批次号（最顶层） ========== */}
@@ -1359,18 +1380,19 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               />
             </div>
 
-            {/* 方案2.6: 育苗工时 */}
-            <div>
+            {/* 方案2.6: 育苗工时（整行独占，2 个一排规则例外） */}
+            <div className="col-span-2">
               <Label className="text-gray-900">工时（小时）</Label>
               <Input
                 type="number"
                 value={formData.workHours || ''}
                 onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
                 className={deepInputClass}
-                placeholder="请输入育苗工时"
+                placeholder="请输入育苗工时（预估执行时间）"
                 min="0"
                 step="0.5"
               />
+              <p className="text-xs text-gray-500 mt-1">预估本次育苗的执行工时</p>
             </div>
           </div>
         </div>
