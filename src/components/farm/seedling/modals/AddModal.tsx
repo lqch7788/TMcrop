@@ -713,8 +713,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   onChange={() => setFormData({
                     ...formData,
                     propagationMode: m.value,
+                    // 2026-06-16: 取消 UI 重复选择 — propagationMode 自动联动 calculateMode
+                    // 1:1 ↔ single，1:多 ↔ propagation（语义 1:1 对应）
+                    calculateMode: m.value === 'one_to_many' ? SeedlingCalculateMode.PROPAGATION : SeedlingCalculateMode.SINGLE,
                     // 切换模式时重置对应字段
                     initialCount: 0,
+                    motherPlantCount: 0,
                     propagationMotherPlantCount: 0,
                     propagationScionCount: 0,
                   })}
@@ -1161,18 +1165,8 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             <h3 className="text-sm font-semibold text-amber-900">数量与品质</h3>
           </div>
 
-          {/* 育苗计算模式切换 */}
-          <div className="mb-4">
-            <Label className="text-gray-900">
-              育苗计算模式 <span className="text-red-500">*</span>
-            </Label>
-            <DictSelect
-              category="calculate_mode"
-              value={formData.calculateMode}
-              onChange={(value) => handleCalculateModeChange(value as SeedlingCalculateMode)}
-              placeholder="选择育苗计算模式"
-            />
-          </div>
+          {/* 2026-06-16: 育苗计算模式取消 UI 选择（propagationMode 自动联动，避免前后矛盾）
+              字段保留在 state 中（calculateMode）以兼容 EditModal/apiSeedlingService/历史数据 */}
 
           {/* 单株育苗模式 */}
           {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
