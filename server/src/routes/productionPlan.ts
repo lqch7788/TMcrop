@@ -16,6 +16,19 @@ const router = Router();
 // ============================================
 
 /**
+ * 2026-06-15: 规范化逗号分隔字符串字段（plantingMode / orderId / orderCode 等）
+ * 后端期望存 string，但前端历史路径可能传 array / object,落库后变脏数据导致列表崩溃
+ * 这里统一兜底:array → join(','), object → '', string/number → String
+ */
+function normalizeCommaString(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.map(item => String(item)).join(',');
+  if (typeof v === 'object') return ''; // 历史脏数据(对象)直接清空
+  return String(v);
+}
+
+/**
  * 生成唯一ID
  */
 function generateId(prefix: string): string {
@@ -383,7 +396,7 @@ router.post('/', (req: Request, res: Response) => {
       planDetailFileName || '',
       plantingArea || 0,
       plantingAreaUnit || 'm²',
-      plantingMode || '',
+      normalizeCommaString(plantingMode),
       supplierName || '',
       seedlingSiteName || '',
       seedQuantity || 0,
@@ -391,8 +404,8 @@ router.post('/', (req: Request, res: Response) => {
       targetInputCount || 0,      // 2026-06-14: 目标投入（母株/种子/分株基数）
       targetOutputCount || 0,     // 2026-06-14: 目标产出（成活苗/扩繁子苗/嫁接苗）
       0,                          // target_expanded_count（已废弃，保留 schema 列防回滚）
-      orderId || '',
-      orderCode || '',
+      normalizeCommaString(orderId),
+      normalizeCommaString(orderCode),
       executionStatus || 'pending_execution'
     ]);
 
@@ -488,13 +501,18 @@ router.put('/:id', (req: Request, res: Response) => {
     //  后续迁移到统一 camelCase 列时再删 fieldMap
     // H-09: 过滤合法字段，只允许 fieldMap 声明的字段写入；丢弃未声明 key（防 SQL 注入 + 脏数据）
     const allowedKeys = new Set(Object.keys(fieldMap));
+    // 2026-06-15: 这些字段是逗号分隔字符串，但前端历史路径可能传 array/object，必须 normalize
+    const commaStringFields = new Set(['plantingMode', 'orderId', 'orderCode']);
     for (const [key, value] of Object.entries(updates)) {
       if (key === 'id') continue;
       if (!allowedKeys.has(key)) continue; // 丢弃未声明字段
 
       const dbField = fieldMap[key];
       updateFields.push(`${dbField} = ?`);
-      values.push(value as string | number | null);
+      const normalized = commaStringFields.has(key)
+        ? normalizeCommaString(value)
+        : (value as string | number | null);
+      values.push(normalized);
     }
 
     if (updateFields.length === 0) {
