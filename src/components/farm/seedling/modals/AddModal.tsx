@@ -428,19 +428,16 @@ export function AddModal({
     const source = seedSources.find(s => s.id === formData.sourceId);
     const sourceCode = source?.seedCode || '';
 
-    // 2026-06-14: 真正的初始投入量 — 按 calculateMode + propagationMode 联合决定
-    // 因为 UI 在不同模式下显示不同输入框：
-    //  - calculateMode=PROPAGATION（扩繁育苗） → 用户填的是 formData.motherPlantCount（母株数）
-    //  - calculateMode=SINGLE + propagationMode=母株类 → 用户填的是 formData.propagationMotherPlantCount
-    //  - calculateMode=SINGLE + 其他 → 用户填的是 formData.initialCount
-    const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode);
-    const finalInitialCount = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+    // 2026-06-15: 数量体系重构 — finalInitialCount 改按 propagationMode 2 模式决定
+    //  - one_to_many（1:多 育苗） → 用户填的是 formData.motherPlantCount（母株数）
+    //  - one_to_one（1:1 育苗） → 用户填的是 formData.initialCount
+    const isOneToMany = formData.propagationMode === 'one_to_many';
+    const finalInitialCount = isOneToMany
       ? formData.motherPlantCount
-      : (isMotherMode ? formData.propagationMotherPlantCount : formData.initialCount);
+      : formData.initialCount;
 
-    // 后端 mother_plant_count 字段（仅母株类繁殖才校验 > 0）
-    // 此值要从 finalInitialCount 同源（相当于"母株数量"）
-    const motherCountForBackend = isMotherMode ? finalInitialCount : 0;
+    // 后端 mother_plant_count 字段（仅 1:多 模式才校验 > 0）
+    const motherCountForBackend = isOneToMany ? finalInitialCount : 0;
 
     // 构建育苗数据
     const seedlingData: Record<string, unknown> = {
