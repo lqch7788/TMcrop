@@ -1997,6 +1997,41 @@ export async function fixMissingSchema(): Promise<void> {
   try { db.run("ALTER TABLE seedlings ADD COLUMN scion_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.scion_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.scion_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.scion_count 失败: ${e.message}`); }
   // 2026-06-14: 种源扣减记录字段（用于 DELETE/PUT 反向补偿）
   try { db.run("ALTER TABLE seedlings ADD COLUMN source_deducted_quantity INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.source_deducted_quantity 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.source_deducted_quantity 已存在，跳过'); else seedLog.error(`  ✗ seedlings.source_deducted_quantity 失败: ${e.message}`); }
+  // 2026-06-15: 负责人/工时字段（编辑弹窗"负责人"显示空 bug 修复）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN charge_person TEXT"); seedLog.info('  ✓ seedlings.charge_person 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.charge_person 已存在，跳过'); else seedLog.error(`  ✗ seedlings.charge_person 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN work_hours REAL"); seedLog.info('  ✓ seedlings.work_hours 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.work_hours 已存在，跳过'); else seedLog.error(`  ✗ seedlings.work_hours 失败: ${e.message}`); }
+
+  // 2026-06-15: 数量体系重构 — 5 个新字段 DDL（拆分损耗/定植/采收）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN mother_loss_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.mother_loss_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.mother_loss_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.mother_loss_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN seedling_loss_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.seedling_loss_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.seedling_loss_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.seedling_loss_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN transplanted_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.transplanted_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.transplanted_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.transplanted_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN auto_planted_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.auto_planted_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.auto_planted_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.auto_planted_count 失败: ${e.message}`); }
+  try { db.run("ALTER TABLE seedlings ADD COLUMN harvest_stocked_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.harvest_stocked_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.harvest_stocked_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.harvest_stocked_count 失败: ${e.message}`); }
+
+  // 2026-06-15: 数据迁移 — propagation_mode 6 种 → 2 种合并
+  // 旧值: seed / layering / tissue_culture / cutting / division / grafting
+  // 新值: one_to_one (seed/grafting) | one_to_many (layering/tissue_culture/cutting/division)
+  try {
+    db.run("UPDATE seedlings SET propagation_mode = 'one_to_one' WHERE propagation_mode IN ('seed', 'grafting')");
+    db.run("UPDATE seedlings SET propagation_mode = 'one_to_many' WHERE propagation_mode IN ('layering', 'tissue_culture', 'cutting', 'division')");
+    seedLog.info('  ✓ seedlings.propagation_mode 6→2 合并完成');
+  } catch (e: any) { seedLog.error(`  ✗ propagation_mode 合并失败: ${e.message}`); }
+
+  // 2026-06-15: 数据迁移 — 1:1 模式 mother_plant_count 回填为 seedling_quantity
+  // 兜底历史数据：早期 1:1 模式没填 mother_plant_count，按 seedling_quantity 等价回填
+  try {
+    db.run("UPDATE seedlings SET mother_plant_count = seedling_quantity WHERE propagation_mode = 'one_to_one' AND (mother_plant_count IS NULL OR mother_plant_count = 0)");
+    seedLog.info('  ✓ seedlings 1:1 模式 mother_plant_count 回填完成');
+  } catch (e: any) { seedLog.error(`  ✗ 1:1 模式 mother_plant_count 回填失败: ${e.message}`); }
+
+  // 2026-06-15: 数据迁移 — 旧字段值迁移到新字段（保留历史已记录的数据）
+  // planted_count → transplanted_count（已定植数）
+  // loss_count → seedling_loss_count（已损耗苗数）
+  try {
+    db.run("UPDATE seedlings SET transplanted_count = planted_count WHERE transplanted_count = 0 AND planted_count > 0");
+    db.run("UPDATE seedlings SET seedling_loss_count = loss_count WHERE seedling_loss_count = 0 AND loss_count > 0");
+    seedLog.info('  ✓ seedlings 旧字段值迁移到新字段完成');
+  } catch (e: any) { seedLog.error(`  ✗ 旧字段迁移失败: ${e.message}`); }
   // 2026-06-14: 生产计划目标语义字段（区分投入/产出/扩繁）
   try { db.run("ALTER TABLE production_plans ADD COLUMN target_input_count INTEGER DEFAULT 0"); seedLog.info('  ✓ production_plans.target_input_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - production_plans.target_input_count 已存在，跳过'); else seedLog.error(`  ✗ production_plans.target_input_count 失败: ${e.message}`); }
   try { db.run("ALTER TABLE production_plans ADD COLUMN target_output_count INTEGER DEFAULT 0"); seedLog.info('  ✓ production_plans.target_output_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - production_plans.target_output_count 已存在，跳过'); else seedLog.error(`  ✗ production_plans.target_output_count 失败: ${e.message}`); }
