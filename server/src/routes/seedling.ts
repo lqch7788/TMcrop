@@ -170,6 +170,19 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     return res.status(400).json({ success: false, error: '缺少 seedling 参数' });
   }
 
+  // 2026-06-15: 显式校验业务必填字段，避免后续 INSERT 因 NOT NULL 字段缺失导致 500
+  const requiredFields: Array<[string, unknown]> = [
+    ['seedling_code', seedling.seedling_code ?? seedling.seedlingCode],
+    ['crop_name', seedling.crop_name ?? seedling.cropName],
+    ['seedling_type', seedling.seedling_type ?? seedling.seedlingType],
+    ['seedling_date', seedling.seedling_date ?? seedling.seedlingDate],
+  ];
+  for (const [name, val] of requiredFields) {
+    if (val === undefined || val === null || val === '') {
+      return res.status(400).json({ success: false, error: `缺少必填字段: ${name}` });
+    }
+  }
+
   const db = getDatabase();
   const newId = seedling.id || `SD${Date.now()}`;
   const now = new Date().toISOString();
@@ -184,6 +197,8 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const productionPlanCode = production_plan_code ?? seedling.productionPlanCode;
   const workHours = work_hours ?? seedling.workHours;
   const cropCode = crop_code ?? seedling.cropCode;
+  // 2026-06-15: 负责人字段兼容 camelCase
+  const chargePerson = (seedling as any).charge_person ?? (seedling as any).chargePerson ?? null;
   const propagationMode = propagation_mode ?? 'seed';
   // 模式校验
   const validModes = ['seed', 'layering', 'tissue_culture', 'cutting', 'division', 'grafting'];
@@ -260,28 +275,39 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
         [newAvailable, now, sourceId]);
     }
 
-    // 步骤3：创建育苗记录
-    db.run(`
-      INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
-        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
-        production_plan_code,
-        target_survival_rate, target_survival_count, loss_count, loss_rate,
-        source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
-        propagation_mode, mother_plant_count, expanded_plant_count, scion_count,
-        source_deducted_quantity,
-        create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
-        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
-        productionPlanCode || null,
-        target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
-        source_mode || 'internal', external_seed_code || null, external_seed_name || null, external_seed_quantity ?? 0, external_seed_note || null,
-        propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
-        safeCount,  // 2026-06-14: 记录从种源扣减的数量
-        now, now]
-        .map(v => v === undefined ? null : v));
+    // 步骤3：创建育苗记录（2026-06-15: 用数组列名 + 自动 ?，避免加列时占位符数错位导致 500）
+    const insertCols = [
+      'id', 'seedling_code', 'source_id', 'source_name', 'crop_code', 'crop_name', 'crop_variety',
+      'seedling_type', 'greenhouse_name', 'area_name', 'seedling_date', 'expected_finish_date',
+      'seedling_quantity', 'survival_quantity', 'survival_rate', 'status', 'seedling_status', 'remarks', 'create_by', 'work_hours',
+      'production_plan_code',
+      'target_survival_rate', 'target_survival_count', 'loss_count', 'loss_rate',
+      'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
+      'propagation_mode', 'mother_plant_count', 'expanded_plant_count', 'scion_count',
+      'source_deducted_quantity',
+      'charge_person',
+      'create_time', 'update_time',
+    ];
+    const insertValues = [
+      newId, seedling_code, effectiveSourceId, source_name, cropCode, crop_name, crop_variety,
+      seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
+      seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+      productionPlanCode || null,
+      target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
+      source_mode || 'internal', external_seed_code || null, external_seed_name || null, external_seed_quantity ?? 0, external_seed_note || null,
+      propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
+      safeCount,
+      chargePerson,
+      now, now,
+    ];
+    if (insertCols.length !== insertValues.length) {
+      // 铁律 #12: 字段不匹配必须 throw，绝不静默成功
+      throw new Error(`INSERT 列数(${insertCols.length}) 与值数(${insertValues.length}) 不一致: cols=${insertCols.join(',')}`);
+    }
+    db.run(
+      `INSERT INTO seedlings (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
+      insertValues.map(v => v === undefined ? null : v)
+    );
 
     // 步骤3.5：写入 material_flow_log（外部种源→external→seedling，内部种源→seed_source→seedling）
     try {
@@ -686,6 +712,8 @@ router.post('/', (req: Request, res: Response) => {
     if (['layering', 'tissue_culture', 'cutting'].includes(propagationMode) && (!mother_plant_count || mother_plant_count <= 0)) {
       return res.status(400).json({ success: false, error: `${propagationMode} 模式必须填写母株数量 > 0` });
     }
+    // 2026-06-15: 负责人字段（前端 chargePerson）
+    const chargePerson = req.body.charge_person ?? req.body.chargePerson ?? null;
 
     // 方案2.5: 验证育苗地点AreaType=4（种植区）
     if (greenhouse_name) {
@@ -701,26 +729,36 @@ router.post('/', (req: Request, res: Response) => {
     const now = new Date().toISOString();
 
     const db = getDatabase();
-    db.run(`
-      INSERT INTO seedlings (id, seedling_code, source_id, source_name, crop_code, crop_name, crop_variety,
-        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status, seedling_status, remarks, create_by, work_hours,
-        production_plan_code, target_survival_rate, target_survival_count, loss_count, loss_rate,
-        source_mode, external_seed_code, external_seed_name, external_seed_quantity, external_seed_note,
-        propagation_mode, mother_plant_count, expanded_plant_count, scion_count,
-        source_deducted_quantity,
-        create_time, update_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
-        seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
-        seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
-        productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
-        sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
-        propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
-        // 2026-06-14: 内部种源时记下扣减量（外部种源不扣减种源，设为0）
-        (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
-        now, now]
-        .map(v => v === undefined ? null : v));
+    // 2026-06-15: 数组列名 + 自动 ? 占位符（避免加列时占位符错位）
+    const insertCols = [
+      'id', 'seedling_code', 'source_id', 'source_name', 'crop_code', 'crop_name', 'crop_variety',
+      'seedling_type', 'greenhouse_name', 'area_name', 'seedling_date', 'expected_finish_date',
+      'seedling_quantity', 'survival_quantity', 'survival_rate', 'status', 'seedling_status', 'remarks', 'create_by', 'work_hours',
+      'production_plan_code', 'target_survival_rate', 'target_survival_count', 'loss_count', 'loss_rate',
+      'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
+      'propagation_mode', 'mother_plant_count', 'expanded_plant_count', 'scion_count',
+      'source_deducted_quantity',
+      'charge_person',
+      'create_time', 'update_time',
+    ];
+    const insertValues = [
+      newId, seedling_code, source_id, source_name, cropCode, crop_name, crop_variety,
+      seedling_type, greenhouse_name, area_name, seedling_date, expected_finish_date,
+      seedling_quantity, survival_quantity, survival_rate, status || 'in_progress', seedling_status, remarks, create_by, workHours || null,
+      productionPlanCode || null, target_survival_rate ?? null, target_survival_count ?? null, loss_count ?? 0, loss_rate ?? 0,
+      sourceMode || 'internal', externalSeedCode || null, externalSeedName || null, externalSeedQuantity ?? 0, externalSeedNote || null,
+      propagationMode, mother_plant_count ?? 0, expanded_plant_count ?? 0, scion_count ?? 0,
+      (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0 ? (seedling_quantity || 0) : 0),
+      chargePerson,
+      now, now,
+    ];
+    if (insertCols.length !== insertValues.length) {
+      throw new Error(`INSERT 列数(${insertCols.length}) 与值数(${insertValues.length}) 不一致`);
+    }
+    db.run(
+      `INSERT INTO seedlings (${insertCols.join(', ')}) VALUES (${insertCols.map(() => '?').join(', ')})`,
+      insertValues.map(v => v === undefined ? null : v)
+    );
 
     // 2026-06-14: 内部种源时扣减种源 remaining_quantity（POST / 路径原本没扣，P1-B 补全）
     if (sourceMode === 'internal' && source_id && (seedling_quantity || 0) > 0) {
@@ -777,7 +815,9 @@ router.post('/', (req: Request, res: Response) => {
     res.status(201).json({ success: true, data: { id: newId } });
   } catch (error) {
     console.error('创建育苗记录失败:', error);
-    res.status(500).json({ success: false, error: '创建育苗记录失败' });
+    // 2026-06-15: 透出真实错误（铁律 #12：失败大声）
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ success: false, error: `创建育苗记录失败: ${msg}` });
   }
 });
 
@@ -812,6 +852,8 @@ router.put('/:id', (req: Request, res: Response) => {
       'target_survival_rate', 'target_survival_count',
       'loss_count', 'loss_rate',
       'source_mode', 'external_seed_code', 'external_seed_name', 'external_seed_quantity', 'external_seed_note',
+      // 2026-06-15: 负责人（编辑弹窗"负责人"显示空 bug 修复）
+      'charge_person',
     ]);
     const safeKeys = Object.keys(updates).filter(k => k !== 'id' && ALLOWED_FIELDS.has(k));
     if (safeKeys.length === 0) {
@@ -903,37 +945,118 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 /**
- * 2026-06-14: 每日记录变更应用到育苗主表
- * 按 propagation_mode 分别累加到不同字段：
- *   seed/division/grafting → survival_quantity + planted_count + loss_count
- *   layering/tissue_culture/cutting → mother_plant_count + planted_count + loss_count + expanded_plant_count
- * @param id 育苗 ID
- * @param changeData 业务字段包（含 survivalCountChange/plantedCountChange/lossCountChange/runnerIncreaseCount）
- * @param sign +1 表示新增/正向变更；-1 表示删除/反向补偿
+ * 2026-06-15: 数量体系重构 — 统一校验函数（按 2 模式分支）
+ * 1:1 模式（one_to_one）：母株+母株损耗 ≤ initial；expanded 自动 = mother
+ * 1:多 模式（one_to_many）：母株存活 [0, initial]；expanded ≥ 0；planted+loss ≤ mother+expanded
+ * @returns null 表示通过；string 表示错误消息
  */
-function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): void {
+function validateDailyChange(id: string, changeData: any): string | null {
   const db = getDatabase();
-  // 取 propagation_mode
-  const stmt = db.prepare('SELECT propagation_mode FROM seedlings WHERE id = ?');
+  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count, expanded_plant_count, seedling_loss_count, transplanted_count FROM seedlings WHERE id = ?');
   stmt.bind([id]);
   let row: any = null;
   if (stmt.step()) row = stmt.getAsObject();
   stmt.free();
-  if (!row) return;
-  const mode = row.propagation_mode || 'seed';
+  if (!row) return null;
+  const initial = Number(row.seedling_quantity) || 0;
+  if (initial <= 0) return null;
+  const mode = row.propagation_mode || 'one_to_one';
+  const is11 = mode === 'one_to_one';
 
-  const sc = Number(changeData?.survivalCountChange) || 0;
-  const pc = Number(changeData?.plantedCountChange) || 0;
-  const lc = Number(changeData?.lossCountChange) || 0;
-  const ri = Number(changeData?.runnerIncreaseCount) || 0;
+  // 4 个 delta（统一新字段名）
+  const mlc = Number(changeData?.motherLossChange) || 0;
+  const slc = Number(changeData?.seedlingLossChange) || 0;
+  const ec = Number(changeData?.expandedChange) || 0;
+  const tc = Number(changeData?.transplantedChange) || 0;
 
-  const motherPlantDelta = sc * sign;
-  const plantedDelta = pc * sign;
-  const lossDelta = lc * sign;
-  const expandedDelta = ri * sign;
-  const survivalDelta = sc * sign;
+  const newMother = (Number(row.mother_plant_count) || 0) - mlc;
+  const newMotherLoss = (Number(row.mother_loss_count) || 0) + mlc;
+  const newExpanded = is11 ? newMother : ((Number(row.expanded_plant_count) || 0) + ec);
+  const newSeedlingLoss = (Number(row.seedling_loss_count) || 0) + slc;
+  const newTransplanted = (Number(row.transplanted_count) || 0) + tc;
+  const smallAvailable = newMother + newExpanded;
 
-  // 2026-06-14: 兜底 — 累加后任何字段不能为负（防止反向补偿时把数据减成负数）
+  // 通用校验
+  if (newMother < 0 || newMother > initial) return `母株存活数 ${newMother} 越界 [0, ${initial}]`;
+  if (newMotherLoss < 0) return '母株累计损耗不能为负';
+  if (newExpanded < 0) return '小苗产出累计越界';
+  if (newSeedlingLoss < 0) return '小苗累计损耗不能为负';
+  if (newSeedlingLoss > newExpanded) return `小苗损耗 ${newSeedlingLoss} 超过已产出 ${newExpanded}`;
+
+  // 1:1 模式额外校验
+  if (is11 && (newMother + newMotherLoss > initial)) {
+    return `母株存活+母株损耗 ${newMother + newMotherLoss} 超过初始 ${initial}`;
+  }
+
+  // 小苗消耗校验（不动 auto_planted/harvest_stocked：这两个由系统自动累加，校验在各自路径做）
+  if (newSeedlingLoss + newTransplanted > smallAvailable) {
+    return `小苗去向合计 ${newSeedlingLoss + newTransplanted} 超过可用 ${smallAvailable}`;
+  }
+  return null;
+}
+
+/**
+ * 2026-06-15: 数量体系重构 — 旧字段名 → 新字段名 兼容映射
+ * daily_record.data 字段历史上存的是旧字段名（survivalCountChange/plantedCountChange/lossCountChange/runnerIncreaseCount）
+ * 按 propagation_mode 路由到新字段：
+ *   1:1 模式：survivalCountChange 视为 expandedChange（产出=存活=母株存活）
+ *   1:多 模式：survivalCountChange 视为 motherLossChange（旧 "成活变化" UI 实际填的是母株损耗）
+ *   其他字段：直接映射
+ * @returns 转换后的对象（含新字段名）
+ */
+function normalizeChangeData(raw: any, propagationMode: string): any {
+  if (!raw || typeof raw !== 'object') return raw || {};
+  const is11 = (propagationMode || 'one_to_one') === 'one_to_one';
+  const legacySc = Number(raw.survivalCountChange) || 0;
+  return {
+    // 旧字段名 → 新字段名映射
+    motherLossChange: is11 ? 0 : legacySc,  // 1:1 模式无母株损耗概念；1:多 模式旧 SC = 母株损耗
+    seedlingLossChange: Number(raw.lossCountChange) || Number(raw.seedlingLossChange) || 0,
+    expandedChange: Number(raw.expandedChange) || Number(raw.runnerIncreaseCount) || (is11 ? legacySc : 0),
+    transplantedChange: Number(raw.transplantedChange) || Number(raw.plantedCountChange) || 0,
+    // 保留旧字段名（用于 daily_record.data 写回时的兼容性）
+    survivalCountChange: raw.survivalCountChange,
+    plantedCountChange: raw.plantedCountChange,
+    lossCountChange: raw.lossCountChange,
+    runnerIncreaseCount: raw.runnerIncreaseCount,
+  };
+}
+
+/**
+ * 2026-06-15: 数量体系重构 — 每日记录变更应用到育苗主表
+ * 累加到新 5 字段（mother_loss_count/seedling_loss_count/transplanted_count/expanded_plant_count/auto_planted_count 等）
+ * @param id 育苗 ID
+ * @param changeData 业务字段包（motherLossChange/seedlingLossChange/expandedChange/transplantedChange）
+ * @param sign +1 表示新增/正向变更；-1 表示删除/反向补偿
+ * @returns null 表示成功；string 表示业务校验失败的错误消息
+ *
+ * 反向补偿（sign=-1，删除每日记录）跳过业务校验，但保留字段非负兜底（MAX(0, ...)）
+ */
+function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): string | null {
+  const db = getDatabase();
+  const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, expanded_plant_count FROM seedlings WHERE id = ?');
+  stmt.bind([id]);
+  let row: any = null;
+  if (stmt.step()) row = stmt.getAsObject();
+  stmt.free();
+  if (!row) return null;
+  const initial = Number(row.seedling_quantity) || 0;
+  const mode = row.propagation_mode || 'one_to_one';
+  const is11 = mode === 'one_to_one';
+
+  // 4 个 delta（新字段名）
+  const mlc = Number(changeData?.motherLossChange) || 0;
+  const slc = Number(changeData?.seedlingLossChange) || 0;
+  const ec = Number(changeData?.expandedChange) || 0;
+  const tc = Number(changeData?.transplantedChange) || 0;
+
+  // sign=+1 时校验；sign=-1 反向补偿跳过校验（铁律：能修复脏数据）
+  if (sign > 0 && initial > 0) {
+    const err = validateDailyChange(id, changeData);
+    if (err) return err;
+  }
+
+  // 兜底：累加后任何字段不能为负
   const safeAdd = (col: string, delta: number) => {
     if (delta === 0) return;
     db.run(
@@ -942,18 +1065,18 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
     );
   };
 
-  if (['layering', 'tissue_culture', 'cutting'].includes(mode)) {
-    // 母株类：survivalCountChange 累加到母株；runnerIncreaseCount 累加到扩繁产出
-    safeAdd('mother_plant_count', motherPlantDelta);
-    safeAdd('planted_count', plantedDelta);
-    safeAdd('loss_count', lossDelta);
-    safeAdd('expanded_plant_count', expandedDelta);
-  } else {
-    // seed/division/grafting：直接累加到 survival/planted/loss
-    safeAdd('survival_quantity', survivalDelta);
-    safeAdd('planted_count', plantedDelta);
-    safeAdd('loss_count', lossDelta);
+  // 累加到新字段
+  safeAdd('mother_loss_count', mlc * sign);
+  safeAdd('seedling_loss_count', slc * sign);
+  safeAdd('transplanted_count', tc * sign);
+  if (!is11) {
+    safeAdd('expanded_plant_count', ec * sign);
   }
+  // 1:1 模式：expanded_plant_count 由 mother_plant_count 派生，后端自动同步
+  if (is11) {
+    db.run('UPDATE seedlings SET expanded_plant_count = mother_plant_count WHERE id = ?', [id]);
+  }
+  return null;
 }
 
 /**
@@ -989,6 +1112,20 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: '育苗记录不存在' });
     }
 
+    // 2026-06-15: 先做业务上限校验，越界直接 400 拒绝（避免先 INSERT daily_records 再发现越界）
+    // 复用 applyDailyChangeToSeedling 的校验逻辑：dryRun 仅校验不写库
+    // 兼容旧字段名：survivalCountChange/lossCountChange/plantedCountChange/runnerIncreaseCount → 新字段名
+    if (data) {
+      try {
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const normalized = normalizeChangeData(parsed, (seedling as any).propagation_mode);
+        const validateErr = validateDailyChange(id, normalized);
+        if (validateErr) {
+          return res.status(400).json({ success: false, error: validateErr });
+        }
+      } catch (e) { /* JSON 解析失败时 校验跳过，下面 applyDailyChangeToSeedling 内的 try 也会兜底 */ }
+    }
+
     // 生成每日记录ID和OID
     const newId = `DR${Date.now()}`;
     const newOid = `DR${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
@@ -1022,10 +1159,12 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
     ]);
 
     // 2026-06-14: 按 propagation_mode 累加到 seedlings 主表
+    // 2026-06-15: 兼容旧字段名（survivalCountChange 等）→ 新字段名
     if (data) {
       try {
         const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        applyDailyChangeToSeedling(id, parsed, 1);
+        const normalized = normalizeChangeData(parsed, (seedling as any).propagation_mode);
+        applyDailyChangeToSeedling(id, normalized, 1);
       } catch (e) { /* JSON 解析失败不影响 daily_records 插入 */ }
     }
 
@@ -1104,6 +1243,44 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
     const { recordDate, remarks, data } = req.body;
     const dataJson = data ? JSON.stringify(data) : null;
 
+    // 2026-06-15: 编辑场景上限校验
+    // 思路：先临时反向抵消旧值，让主表退回到"没有这条记录"的状态，再校验新值是否越界
+    //      校验失败必须把旧值补回去，避免数据不一致
+    // 兼容旧字段名：调用 normalizeChangeData 把旧字段名映射为新字段名
+    if (dataJson !== null) {
+      try {
+        const newData = JSON.parse(dataJson);
+        // 加载育苗记录以获取 propagation_mode
+        const sStmt = db.prepare('SELECT propagation_mode FROM seedlings WHERE id = ?');
+        sStmt.bind([id]);
+        let sRow: any = null;
+        if (sStmt.step()) sRow = sStmt.getAsObject();
+        sStmt.free();
+        const propagationMode = sRow?.propagation_mode || 'one_to_one';
+        const newDataNormalized = normalizeChangeData(newData, propagationMode);
+        const oldDataNormalized = normalizeChangeData(oldData, propagationMode);
+        const hasMeaningfulChange = ['survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount']
+          .some(k => Number(oldData[k] ?? 0) !== Number(newData[k] ?? 0));
+        if (hasMeaningfulChange) {
+          // 1) 临时反向抵消旧值（用 normalized 数据）
+          if (oldData && Object.keys(oldData).length > 0) {
+            applyDailyChangeToSeedling(id, oldDataNormalized, -1);
+          }
+          // 2) 校验新值（用 normalized 数据）
+          const validateErr = validateDailyChange(id, newDataNormalized);
+          if (validateErr) {
+            // 3) 校验失败：旧值还原回去（避免数据不一致）
+            if (oldData && Object.keys(oldData).length > 0) {
+              applyDailyChangeToSeedling(id, oldDataNormalized, 1);
+            }
+            return res.status(400).json({ success: false, error: validateErr });
+          }
+          // 4) 校验通过：把新值应用上去（用 normalized 数据）
+          applyDailyChangeToSeedling(id, newDataNormalized, 1);
+        }
+      } catch (e) { /* JSON 解析失败时跳过校验 */ }
+    }
+
     const fields = ['update_time = ?'];
     const values: any[] = [now];
     if (recordDate) { fields.push('record_date = ?'); values.push(recordDate); }
@@ -1116,22 +1293,8 @@ router.put('/:id/daily-records/:recordId', (req: Request, res: Response) => {
       values
     );
 
-    // 2026-06-14: 应用 diff（new - old）到主表
-    if (dataJson !== null) {
-      try {
-        const newData = JSON.parse(dataJson);
-        const diff: any = {};
-        ['survivalCountChange', 'plantedCountChange', 'lossCountChange', 'runnerIncreaseCount'].forEach(k => {
-          const oldVal = Number(oldData[k]) || 0;
-          const newVal = Number(newData[k]) || 0;
-          const d = newVal - oldVal;
-          if (d !== 0) diff[k] = d;
-        });
-        if (Object.keys(diff).length > 0) {
-          applyDailyChangeToSeedling(id, diff, 1);
-        }
-      } catch (e) { /* JSON 解析失败不影响 daily_records 更新 */ }
-    }
+    // 2026-06-15: 上面已经先反向抵消旧值再正向应用新值，此处不再二次 apply diff
+    // (原 2026-06-14 的 diff 累加逻辑在新校验流程下会重复累加，已移除)
 
     saveDatabase();
     res.json({ success: true, data: { id: recordId, updated: true } });
