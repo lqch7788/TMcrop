@@ -1177,64 +1177,35 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           {/* 单株育苗模式 */}
           {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
             <div className="grid grid-cols-2 gap-4">
-              {/* 2026-06-14: 根据 propagation_mode 动态显示数量字段 */}
-              {(['layering', 'tissue_culture', 'cutting'].includes(formData.propagationMode)) ? (
-                /* 母株类：母株数量 */
+              {/* 2026-06-15: 数量体系重构 — 1:多 模式显示母株数量输入框 */}
+              {formData.propagationMode === 'one_to_many' ? (
+                /* 1:多 模式：母株数量 */
                 <div>
                   <Label className="text-gray-900">
                     母株数量 <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      （{formData.propagationMode === 'layering' ? '匍匐茎' : formData.propagationMode === 'tissue_culture' ? '组培' : '扦插'}母株）
-                    </span>
+                    <span className="text-xs text-gray-500 ml-2">（匍匐茎/组培/扦插/分株）</span>
                   </Label>
                   <Input
                     type="number"
                     min="1"
-                    value={formData.propagationMotherPlantCount || ''}
-                    onChange={(e) => setFormData({ ...formData, propagationMotherPlantCount: Number(e.target.value) })}
-                    className={deepInputClass}
+                    value={formData.motherPlantCount || ''}
+                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                     placeholder="请输入母株数量（>0）"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    子苗将通过每日记录"扩繁增量"累加；母株{formData.propagationMode === 'layering' ? '最终会被清理' : '可继续产苗'}
+                    子苗通过每日记录"新出苗数"累加；母株可继续产苗或一次性分出
                   </p>
                 </div>
-              ) : formData.propagationMode === 'grafting' ? (
-                /* 嫁接：嫁接苗数 + 砧木数 */
-                <>
-                  <div>
-                    <Label className="text-gray-900">
-                      嫁接苗数量 <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={formData.initialCount || ''}
-                      onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-                      className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                      placeholder="嫁接成功的苗数"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-700">砧木数量</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={formData.propagationScionCount || ''}
-                      onChange={(e) => setFormData({ ...formData, propagationScionCount: Number(e.target.value) })}
-                      className={deepInputClass}
-                      placeholder="用于嫁接的砧木数（仅记录）"
-                    />
-                  </div>
-                </>
               ) : (
-                /* seed / division：初始数量 */
+                /* 1:1 模式：初始数量 */
                 <div>
                   <Label className="text-gray-900">
-                    {formData.propagationMode === 'division' ? '分出苗数量' : '初始数量'} <span className="text-red-500">*</span>
+                    初始数量 <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="number"
+                    min="1"
                     value={formData.initialCount || ''}
                     onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
                     className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
