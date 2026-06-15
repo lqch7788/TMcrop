@@ -117,20 +117,16 @@ export function AddModal({
     workHours: 0,
     isSupplementary: false,
     supplementaryReason: '',
-    // 2026-06-14: 繁殖模式（建档后锁定）
-    propagationMode: 'seed' as 'seed' | 'layering' | 'tissue_culture' | 'cutting' | 'division' | 'grafting',
-    propagationMotherPlantCount: 0,  // 用于 layering/tissue_culture/cutting 模式
-    propagationScionCount: 0,         // 用于 grafting 模式
+    // 2026-06-15: 数量体系重构 — 繁殖模式合并为 2 种（1:1 / 1:多）
+    propagationMode: 'one_to_one' as 'one_to_one' | 'one_to_many',
+    propagationMotherPlantCount: 0,  // 兼容字段（后续可移除）
+    propagationScionCount: 0,         // 兼容字段（后续可移除）
   };
 
-  // 2026-06-14: 繁殖模式选项（决定后续字段显示和数量语义）
+  // 2026-06-15: 数量体系重构 — 6 种模式合并为 2 种
   const PROPAGATION_MODES = [
-    { value: 'seed', label: '种子育苗', desc: '一对一，传统模式', needsMother: false, needsScion: false },
-    { value: 'layering', label: '匍匐茎育苗', desc: '母株+子苗，母株最后清理', needsMother: true, needsScion: false },
-    { value: 'tissue_culture', label: '组培育苗', desc: '母株+子苗，母株可继续', needsMother: true, needsScion: false },
-    { value: 'cutting', label: '扦插育苗', desc: '母株+剪枝，母株可继续', needsMother: true, needsScion: false },
-    { value: 'division', label: '分株育苗', desc: '母株分多株后消失', needsMother: false, needsScion: false },
-    { value: 'grafting', label: '嫁接育苗', desc: '砧木+接穗一体', needsMother: false, needsScion: true },
+    { value: 'one_to_one', label: '1:1 育苗', desc: '一对一（种子/嫁接）', needsMother: false, needsScion: false },
+    { value: 'one_to_many', label: '1:多 育苗', desc: '母株+子苗（匍匐茎/组培/扦插/分株）', needsMother: true, needsScion: false },
   ] as const;
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
