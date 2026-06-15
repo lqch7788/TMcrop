@@ -17,9 +17,12 @@ interface MaterialFlowState {
   loadCropStats: (year?: number) => Promise<void>;
   loadSourceStats: (year?: number) => Promise<void>;
   loadAnnualStats: (year?: number) => Promise<void>;
+  // 2026-06-15: 删除支持
+  deleteLog: (id: string) => Promise<boolean>;
+  batchDeleteLogs: (ids: string[]) => Promise<boolean>;
 }
 
-export const useMaterialFlowStore = create<MaterialFlowState>()((set) => ({
+export const useMaterialFlowStore = create<MaterialFlowState>()((set, get) => ({
   logs: [],
   total: 0,
   loading: false,
@@ -73,6 +76,27 @@ export const useMaterialFlowStore = create<MaterialFlowState>()((set) => ({
       set({ statsData: data || [], loading: false });
     } catch {
       set({ loading: false });
+    }
+  },
+
+  deleteLog: async (id) => {
+    try {
+      await flowService.deleteFlowLog(id);
+      set({ logs: get().logs.filter((l: any) => l.id !== id), total: Math.max(0, get().total - 1) });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  batchDeleteLogs: async (ids) => {
+    try {
+      await flowService.batchDeleteFlowLogs(ids);
+      const idSet = new Set(ids);
+      set({ logs: get().logs.filter((l: any) => !idSet.has(l.id)), total: Math.max(0, get().total - ids.length) });
+      return true;
+    } catch {
+      return false;
     }
   },
 }));

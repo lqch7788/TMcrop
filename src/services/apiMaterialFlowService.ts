@@ -13,7 +13,7 @@ export async function getFlowLogs(params: {
 }
 
 export async function traceFlow(code: string) {
-  return enhancedApiClient.get('/material-flow-log/trace', { code });
+  return enhancedApiClient.get(`/material-flow-log/trace?code=${encodeURIComponent(code)}`);
 }
 
 export async function getCropStats(year?: number) {
@@ -30,4 +30,15 @@ export async function getAnnualStats(year?: number) {
 
 export async function getInventoryTrace(instanceId: string) {
   return enhancedApiClient.get('/material-flow-log/stats/inventory-trace', { instanceId });
+}
+
+// 2026-06-15: 单条删除
+export async function deleteFlowLog(id: string): Promise<{ deletedCount: number }> {
+  return enhancedApiClient.delete(`/material-flow-log/${id}`);
+}
+
+// 2026-06-15: 批量删除
+export async function batchDeleteFlowLogs(ids: string[]): Promise<{ deletedCount: number }> {
+  const query = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
+  return enhancedApiClient.delete(`/material-flow-log?${query}`);
 }

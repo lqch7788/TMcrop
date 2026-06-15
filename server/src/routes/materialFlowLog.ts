@@ -3,7 +3,7 @@
  * 2026-06-13 新建
  */
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 
 const router = Router();
 
@@ -171,6 +171,55 @@ router.get('/stats/annual', (req: Request, res: Response) => {
       return obj;
     }) || [];
     res.json({ success: true, data: list });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// DELETE /:id — 单条删除流转记录
+// 2026-06-15 新增（前端要求删除测试数据）
+// ============================================================
+router.delete('/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const result = db.run('DELETE FROM material_flow_log WHERE id = ? OR oid = ?', [id, id]);
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: '流转记录不存在' });
+    }
+    saveDatabase();
+    res.json({ success: true, data: { deletedCount: result.changes } });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// DELETE / — 批量删除（按 ids 复数 query 参数）
+// 2026-06-15 新增
+// ============================================================
+router.delete('/', (req: Request, res: Response) => {
+  try {
+    // 兼容 ids=id1&ids=id2 和 ids=id1,id2 两种格式
+    let ids: string[] = [];
+    const raw = req.query.ids;
+    if (Array.isArray(raw)) {
+      ids = raw.flatMap(v => String(v).split(','));
+    } else if (typeof raw === 'string' && raw.trim()) {
+      ids = raw.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids 必填且非空' });
+    }
+    const db = getDatabase();
+    const placeholders = ids.map(() => '?').join(',');
+    const result = db.run(
+      `DELETE FROM material_flow_log WHERE id IN (${placeholders}) OR oid IN (${placeholders})`,
+      [...ids, ...ids]
+    );
+    saveDatabase();
+    res.json({ success: true, data: { deletedCount: result.changes } });
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message });
   }
