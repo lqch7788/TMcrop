@@ -31,9 +31,9 @@ const deepInputClass = "px-4 py-3 border border-gray-400 rounded-lg text-sm focu
 
 export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRecordModalProps) {
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
-  // 2026-06-14: 繁殖模式（决定字段显示与文案）
-  const propagationMode = (record.propagationMode as string) || 'seed';
-  const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(propagationMode);
+  // 2026-06-15: 数量体系重构 — 2 模式判断
+  const propagationMode = (record.propagationMode as string) || 'one_to_one';
+  const isMotherMode = propagationMode === 'one_to_many';  // 2026-06-15: 6 种 → 1 种（one_to_many）
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
   const updateDailyRecord = useSeedlingStore((state) => state.updateDailyRecord);
   const deleteDailyRecord = useSeedlingStore((state) => state.deleteDailyRecord);
