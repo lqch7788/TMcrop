@@ -50,6 +50,23 @@ interface BackendSeedling {
   varietyName?: string;
   subVarietyName?: string;
   sourceCode?: string;
+  // 2026-06-15: 繁殖模式相关字段（后端 snake_case → queryHelper 转 camelCase）
+  propagationMode?: 'one_to_one' | 'one_to_many';  // 2026-06-15: 6 种合并为 2 种
+  motherPlantCount?: number;
+  expandedPlantCount?: number;
+  scionCount?: number;
+  // 2026-06-15: 数量体系重构 — 5 业务字段
+  motherLossCount?: number;
+  seedlingLossCount?: number;
+  transplantedCount?: number;
+  autoPlantedCount?: number;
+  harvestStockedCount?: number;
+  // 2026-06-15: 5 预估字段（仅 1:多 模式有）
+  propagationMultiple?: number;
+  customMultiple?: number;
+  theoreticalYield?: number;
+  targetSurvivalRate?: number;
+  targetSurvivalCount?: number;
   [key: string]: unknown;
 }
 
@@ -146,6 +163,25 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     varietyName: item.varietyName,
     subVarietyName: item.subVarietyName,
     varietyPath: varietyPath,
+    // 2026-06-15: 透传繁殖模式 — 修复列表"无论选什么都显示种子育苗"bug
+    propagationMode: (item.propagationMode as any) || 'one_to_one',  // 2026-06-15: 默认 1:1
+    motherPlantCount: item.motherPlantCount ?? 0,
+    expandedPlantCount: item.expandedPlantCount ?? 0,
+    scionCount: item.scionCount ?? 0,
+    // 2026-06-15: 透传负责人 — 修复编辑弹窗"负责人"显示空 bug
+    chargePerson: (item as any).chargePerson ?? '',
+    // 2026-06-15: 数量体系重构 — 透传 5 业务字段
+    motherLossCount: (item as any).motherLossCount ?? 0,
+    seedlingLossCount: (item as any).seedlingLossCount ?? 0,
+    transplantedCount: (item as any).transplantedCount ?? 0,
+    autoPlantedCount: (item as any).autoPlantedCount ?? 0,
+    harvestStockedCount: (item as any).harvestStockedCount ?? 0,
+    // 2026-06-15: 5 预估字段
+    propagationMultiple: (item as any).propagationMultiple ?? 0,
+    customMultiple: (item as any).customMultiple ?? 0,
+    theoreticalYield: (item as any).theoreticalYield ?? 0,
+    targetSurvivalRate: (item as any).targetSurvivalRate ?? 0,
+    targetSurvivalCount: (item as any).targetSurvivalCount ?? 0,
   };
 }
 
@@ -300,10 +336,22 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     external_seed_name: (s as any).externalSeedName,
     external_seed_quantity: (s as any).externalSeedQuantity,
     external_seed_note: (s as any).externalSeedNote,
-    propagation_mode: (s as any).propagationMode || 'seed',
+    propagation_mode: (s as any).propagationMode || 'one_to_one',  // 2026-06-15: 默认 1:1
     mother_plant_count: (s as any).motherPlantCount ?? 0,
     expanded_plant_count: (s as any).expandedPlantCount ?? 0,
     scion_count: (s as any).scionCount ?? 0,
+    // 2026-06-15: 负责人（编辑弹窗显示空 bug 修复）
+    charge_person: (s as any).chargePerson ?? null,
+    // 2026-06-15: 数量体系重构 — 5 业务字段
+    mother_loss_count: (s as any).motherLossCount ?? 0,
+    seedling_loss_count: (s as any).seedlingLossCount ?? 0,
+    transplanted_count: (s as any).transplantedCount ?? 0,
+    auto_planted_count: (s as any).autoPlantedCount ?? 0,
+    harvest_stocked_count: (s as any).harvestStockedCount ?? 0,
+    // 2026-06-15: 5 预估字段
+    propagation_multiple: (s as any).propagationMultiple ?? 0,
+    custom_multiple: (s as any).customMultiple ?? 0,
+    theoretical_yield: (s as any).theoreticalYield ?? 0,
   };
 }
 
@@ -355,6 +403,7 @@ export async function updateSeedling(id: string, updates: Partial<Seedling>): Pr
     lossCount: 'loss_count',
     lossRate: 'loss_rate',
     printCount: 'print_count',
+    chargePerson: 'charge_person',  // 2026-06-15: 负责人
   };
   const backendUpdates: Record<string, any> = {};
   for (const [k, v] of Object.entries(updates)) {
