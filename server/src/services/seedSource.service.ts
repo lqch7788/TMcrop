@@ -121,8 +121,10 @@ export class SeedSourceService {
    * @returns 完整创建结果
    */
   async create(data: CreateSeedSourceDTO) {
-    // 生成ID
-    const newId = data.id || `SS${Date.now()}`;
+    // 2026-06-15: 防止前端调试时塞入非法 id（含字母随机串如 SS1779322704298wou5as79w）
+    // 强制走"纯数字 SS"格式，否则忽略 data.id 由 generateCode 接管
+    const incomingId = typeof data.id === 'string' && /^SS\d+$/.test(data.id) ? data.id : null;
+    const newId = incomingId || `SS${Date.now()}`;
 
     // 设置默认值
     // 2026-06-04: status 字段已废弃，改为前端实时计算，后端不再设默认值
