@@ -501,7 +501,13 @@ export function initializeDatabase() {
       expanded_plant_count INTEGER DEFAULT 0,
       scion_count INTEGER DEFAULT 0,
       -- 2026-06-14: 记录创建时从种源扣减的数量（DELETE/PUT 反向补偿用）
-      source_deducted_quantity INTEGER DEFAULT 0
+      source_deducted_quantity INTEGER DEFAULT 0,
+      -- 2026-06-15: 数量体系重构 — 拆分损耗/定植/采收字段
+      mother_loss_count INTEGER DEFAULT 0,
+      seedling_loss_count INTEGER DEFAULT 0,
+      transplanted_count INTEGER DEFAULT 0,
+      auto_planted_count INTEGER DEFAULT 0,
+      harvest_stocked_count INTEGER DEFAULT 0
     )
   `);
 
