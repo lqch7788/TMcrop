@@ -370,8 +370,8 @@ export interface Seedling {
   lossRate: number;           // 损耗率
   isFinished: boolean;        // 是否已完成
   status: SeedlingStatus;     // 状态
-  // 2026-06-14: 繁殖模式（建档后锁定，决定数量字段语义）
-  propagationMode?: 'seed' | 'layering' | 'tissue_culture' | 'cutting' | 'division' | 'grafting';
+  // 2026-06-15: 数量体系重构 — 6 种模式合并为 2 种
+  propagationMode?: 'one_to_one' | 'one_to_many';
   motherPlantCount?: number;  // 母株存活数（layering/tissue_culture/cutting 专用）
   expandedPlantCount?: number; // 累计扩繁产出数（layering/tissue_culture/cutting 专用）
   scionCount?: number;        // 砧木数（grafting 专用）
