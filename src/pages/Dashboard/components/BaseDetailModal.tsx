@@ -39,7 +39,7 @@ function EnvParamCard({
       <div className="pl-10 text-center">
         <div className="text-sm font-medium text-gray-900">{label}</div>
         <div className="text-lg font-bold text-emerald-600">{value}{unit}</div>
-        <div className="text-xs text-gray-400">({range})</div>
+        <div className="text-xs text-gray-600">({range})</div>
       </div>
     </div>
   );

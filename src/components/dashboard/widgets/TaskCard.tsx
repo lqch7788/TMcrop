@@ -54,7 +54,7 @@ export function TaskCard({ task }: TaskCardProps) {
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1">{task.greenhouseName}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
               {task.dueDate}

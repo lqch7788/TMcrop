@@ -1,9 +1,13 @@
 import { useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Sprout, Activity, Calendar, CheckSquare } from 'lucide-react';
 import { useFarmTaskStore } from '../../../stores/farmTaskStore';
+import { CardSkeleton } from './CardSkeleton';
 
 export function TodayTasksCard() {
+  const navigate = useNavigate();
   const tasks = useFarmTaskStore((s) => s.tasks);
+  const isLoading = useFarmTaskStore((s) => s.isLoading);
   const fetchTasks = useFarmTaskStore((s) => s.fetchTasks);
 
   useEffect(() => {
@@ -42,7 +46,12 @@ export function TodayTasksCard() {
   }, [tasks]);
 
   return (
-    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <button
+      type="button"
+      onClick={() => navigate('/my-tasks')}
+      className="flex flex-col text-left w-full h-full bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 p-4 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+      aria-label={`今日待办 共 ${todayTasksBreakdown.total} 项：农事任务 ${todayTasksBreakdown.farming}、设备维护 ${todayTasksBreakdown.equipment}、采收处理 ${todayTasksBreakdown.harvest}、待办审批 ${todayTasksBreakdown.approval}，点击查看任务列表`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-blue-500 to-indigo-600">
@@ -82,6 +91,6 @@ export function TodayTasksCard() {
           <span className="font-medium">{todayTasksBreakdown.approval}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
