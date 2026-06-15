@@ -75,6 +75,12 @@ export function EditModal({
     propagationMultiple: (record as any).propagationMultiple || 0,
     customMultiple: (record as any).customMultiple || 0,
     theoreticalYield: (record as any).theoreticalYield || 0,
+    // 2026-06-15: 数量体系重构 — 5 业务字段（统一显示）
+    motherLossCount: (record as any).motherLossCount ?? 0,
+    seedlingLossCount: (record as any).seedlingLossCount ?? 0,
+    transplantedCount: (record as any).transplantedCount ?? 0,
+    autoPlantedCount: (record as any).autoPlantedCount ?? 0,
+    harvestStockedCount: (record as any).harvestStockedCount ?? 0,
   });
 
   // 方案2.7: combogrid种源选择器状态
@@ -150,6 +156,12 @@ export function EditModal({
       propagationMultiple: (record as any).propagationMultiple || 0,
       customMultiple: (record as any).customMultiple || 0,
       theoreticalYield: (record as any).theoreticalYield || 0,
+      // 2026-06-15: 数量体系重构 — 5 业务字段
+      motherLossCount: (record as any).motherLossCount ?? 0,
+      seedlingLossCount: (record as any).seedlingLossCount ?? 0,
+      transplantedCount: (record as any).transplantedCount ?? 0,
+      autoPlantedCount: (record as any).autoPlantedCount ?? 0,
+      harvestStockedCount: (record as any).harvestStockedCount ?? 0,
     });
   }, [record]);
 
