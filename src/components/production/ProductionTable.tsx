@@ -67,8 +67,19 @@ export function ProductionTable({
 
   const renderPlantingMode = (batch: CropBatch) => {
     const raw = batch.plantingMode;
-    if (!raw) return '-';
-    const labels = raw.split(',')
+    if (raw === null || raw === undefined || raw === '') return '-';
+    // 2026-06-15 防御:历史/异常数据可能把 plantingMode 存成数组或对象
+    // (类型声明是 string,但 SQL 旧记录 / 写入侧未规范化时会出现 array / object)
+    let parts: string[] = [];
+    if (Array.isArray(raw)) {
+      parts = raw.map(v => String(v));
+    } else if (typeof raw === 'object') {
+      // 例如 {0:0,1:0} 这种被 JSON 化的脏数据,无 value→label 信息,降级为 '-'
+      return '-';
+    } else {
+      parts = String(raw).split(',');
+    }
+    const labels = parts
       .map(v => v.trim())
       .filter(Boolean)
       .map(v => ALL_MODE_LABELS[v] || v);
