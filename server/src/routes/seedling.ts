@@ -199,15 +199,15 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
   const cropCode = crop_code ?? seedling.cropCode;
   // 2026-06-15: 负责人字段兼容 camelCase
   const chargePerson = (seedling as any).charge_person ?? (seedling as any).chargePerson ?? null;
-  const propagationMode = propagation_mode ?? 'seed';
-  // 模式校验
-  const validModes = ['seed', 'layering', 'tissue_culture', 'cutting', 'division', 'grafting'];
+  const propagationMode = propagation_mode ?? 'one_to_one';  // 2026-06-15: 默认 1:1
+  // 2026-06-15: 6 种模式 → 2 种模式
+  const validModes = ['one_to_one', 'one_to_many'];
   if (!validModes.includes(propagationMode)) {
     return res.status(400).json({ success: false, error: `不支持的繁殖模式: ${propagationMode}` });
   }
-  // 模式对应字段校验
-  if (['layering', 'tissue_culture', 'cutting'].includes(propagationMode) && (!mother_plant_count || mother_plant_count <= 0)) {
-    return res.status(400).json({ success: false, error: `${propagationMode} 模式必须填写母株数量 > 0` });
+  // 1:多 模式必须填写母株数量 > 0
+  if (propagationMode === 'one_to_many' && (!mother_plant_count || mother_plant_count <= 0)) {
+    return res.status(400).json({ success: false, error: `one_to_many 模式必须填写母株数量 > 0` });
   }
 
   // 步骤0：参数校验
@@ -703,14 +703,14 @@ router.post('/', (req: Request, res: Response) => {
     const externalSeedName = external_seed_name ?? req.body.externalSeedName;
     const externalSeedQuantity = external_seed_quantity ?? req.body.externalSeedQuantity;
     const externalSeedNote = external_seed_note ?? req.body.externalSeedNote;
-    // 2026-06-14: 繁殖模式
-    const propagationMode = propagation_mode ?? req.body.propagationMode ?? 'seed';
-    const validModes = ['seed', 'layering', 'tissue_culture', 'cutting', 'division', 'grafting'];
+    // 2026-06-15: 6 种模式 → 2 种
+    const propagationMode = propagation_mode ?? req.body.propagationMode ?? 'one_to_one';
+    const validModes = ['one_to_one', 'one_to_many'];
     if (!validModes.includes(propagationMode)) {
       return res.status(400).json({ success: false, error: `不支持的繁殖模式: ${propagationMode}` });
     }
-    if (['layering', 'tissue_culture', 'cutting'].includes(propagationMode) && (!mother_plant_count || mother_plant_count <= 0)) {
-      return res.status(400).json({ success: false, error: `${propagationMode} 模式必须填写母株数量 > 0` });
+    if (propagationMode === 'one_to_many' && (!mother_plant_count || mother_plant_count <= 0)) {
+      return res.status(400).json({ success: false, error: `one_to_many 模式必须填写母株数量 > 0` });
     }
     // 2026-06-15: 负责人字段（前端 chargePerson）
     const chargePerson = req.body.charge_person ?? req.body.chargePerson ?? null;
