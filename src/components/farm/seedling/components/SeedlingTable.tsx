@@ -515,16 +515,13 @@ export function SeedlingTable({
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                     {(() => {
-                      const mode = (record as any).propagationMode || 'seed';
+                      // 2026-06-15: 数量体系重构 — 6 模式 → 2 模式
+                      const mode = (record as any).propagationMode || 'one_to_one';
                       const map: Record<string, {label:string, color:string}> = {
-                        seed:        {label:'种子育苗', color:'bg-blue-100 text-blue-700'},
-                        layering:    {label:'匍匐茎', color:'bg-pink-100 text-pink-700'},
-                        tissue_culture:{label:'组培', color:'bg-purple-100 text-purple-700'},
-                        cutting:     {label:'扦插', color:'bg-orange-100 text-orange-700'},
-                        division:    {label:'分株', color:'bg-green-100 text-green-700'},
-                        grafting:    {label:'嫁接', color:'bg-yellow-100 text-yellow-700'},
+                        one_to_one:   {label:'1:1', color:'bg-blue-100 text-blue-700'},
+                        one_to_many:  {label:'1:多', color:'bg-pink-100 text-pink-700'},
                       };
-                      const m = map[mode] || map.seed;
+                      const m = map[mode] || map.one_to_one;
                       return <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${m.color}`}>{m.label}</span>;
                     })()}
                   </td>
