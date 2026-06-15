@@ -1,9 +1,13 @@
 import { useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { useDeviceStore } from '../../../stores/useDeviceStore';
+import { CardSkeleton } from './CardSkeleton';
 
 export function EquipmentStatusCard() {
+  const navigate = useNavigate();
   const devices = useDeviceStore((s) => s.devices);
+  const loading = useDeviceStore((s) => s.loading);
   const loadDevices = useDeviceStore((s) => s.loadDevices);
 
   useEffect(() => {
@@ -20,7 +24,12 @@ export function EquipmentStatusCard() {
   }), [devices]);
 
   return (
-    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <button
+      type="button"
+      onClick={() => navigate('/device-monitor')}
+      className="flex flex-col text-left w-full h-full bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 p-4 cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:outline-none"
+      aria-label={`设备状态：自动运行 ${equipmentStats.autoMode} 台、手动模式 ${equipmentStats.manualMode} 台、设备故障 ${equipmentStats.faults} 台、离线传感器 ${equipmentStats.offlineSensors} 个，点击查看设备监控`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-cyan-500 to-teal-600">
@@ -47,6 +56,6 @@ export function EquipmentStatusCard() {
           <span className="font-medium text-gray-600">{equipmentStats.offlineSensors}个</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

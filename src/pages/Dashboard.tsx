@@ -90,7 +90,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    // 2026-06-15 P0-5: 根节点加 tabular-nums，CSS 继承让所有子元素数字等宽（解决实时刷新抖动）
+    <div className="space-y-6 tabular-nums">
       {/* Page Header - 页面头部 */}
       <div className="bg-white rounded-xl p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -107,7 +108,8 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid - 统计卡片网格 */}
-      <div className="grid grid-cols-6 gap-4">
+      {/* 2026-06-15: 响应式断点 - 手机 2 列 / 平板 3 列 / 桌面 6 列 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <TodayTasksCard />
         <AlertsCard />
         <EquipmentStatusCard />

@@ -1,9 +1,13 @@
 import { useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
+import { CardSkeleton } from './CardSkeleton';
 
 export function ProductionProgressCard() {
+  const navigate = useNavigate();
   const batchStats = useDashboardStore((s) => s.batchStats);
+  const isLoading = useDashboardStore((s) => s.isLoading);
   const fetchBatchStats = useDashboardStore((s) => s.fetchBatchStats);
 
   useEffect(() => {
@@ -34,7 +38,12 @@ export function ProductionProgressCard() {
   }, [batchStats]);
 
   return (
-    <div className="bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md transition-shadow p-4">
+    <button
+      type="button"
+      onClick={() => navigate('/production')}
+      className="flex flex-col text-left w-full h-full bg-white rounded-xl shadow-none border border-gray-100 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 p-4 cursor-pointer focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:outline-none"
+      aria-label={`生产进度：${productionProgress.harvestReady} 个批次在 30 天内进入采收期，点击查看生产计划`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg p-2 bg-gradient-to-br from-violet-500 to-purple-600">
@@ -52,11 +61,11 @@ export function ProductionProgressCard() {
           {productionProgress.batches.map((batch, index) => (
             <div key={index} className="flex items-center justify-between text-sm">
               <span className="text-gray-600">{batch.name}</span>
-              <span className="text-xs text-gray-400">{batch.daysLeft}天后</span>
+              <span className="text-xs text-gray-600">{batch.daysLeft}天后</span>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

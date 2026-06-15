@@ -39,7 +39,29 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'seed_source→harvest': '种源→采收',
   'correction': '修正',
   'manual_correction': '手动修正',
+  'plan→seed_source': '计划→种源',
   'other': '其他',
+};
+
+// 2026-06-15: 流转类型配色 — 按业务环节分组用色系区分（同类相近，跨类高对比）
+// 起步链（种源）=蓝；生长链（育苗/种植）=绿/靛；产出链（采收）=橙；库存链=青；外部=紫；修正/其他=灰
+const FLOW_TYPE_COLOR: Record<string, string> = {
+  'seed_source→seedling': 'bg-blue-500',
+  'seed_source→planting': 'bg-indigo-500',
+  'seed_source→harvest':  'bg-blue-600',
+  'seedling→planting':    'bg-emerald-500',
+  'seedling→harvest':     'bg-emerald-600',
+  'planting→harvest':     'bg-orange-500',
+  'inventory→external':   'bg-red-500',
+  'inventory→planting':   'bg-cyan-500',
+  'inventory→seedling':   'bg-cyan-600',
+  'inventory→seed_source':'bg-cyan-700',
+  'external→planting':    'bg-purple-500',
+  'external→seedling':    'bg-purple-600',
+  'correction':           'bg-gray-500',
+  'manual_correction':    'bg-gray-500',
+  'plan→seed_source':     'bg-sky-500',
+  'other':                'bg-slate-500',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -72,20 +94,89 @@ const STOCK_CATEGORY_COLOR: Record<string, string> = {
   other: 'bg-gray-500',
 };
 
+// 2026-06-15: 起点/去向 code 旁边的"业务类型"小徽章
+// 优先用后端 sourceType/targetType 字段；其次按 code 前缀推断；都没有就显示纯 code
+const TYPE_LABELS: Record<string, string> = {
+  seed_source: '种源',
+  seedling: '育苗',
+  planting: '种植',
+  harvest: '采收',
+  plan: '计划',
+  inventory: '库存',
+  inventory_stock: '库存',
+  seed: '种源',
+  external_seed: '外部种',
+  external: '外部',
+  correction: '修正',
+};
+const CODE_PREFIX_TYPE: Record<string, string> = {
+  SS: '种源',
+  SD: '育苗',
+  PL: '种植',
+  HS: '采收',
+  YM: '育苗',
+  ZZ: '计划',
+  EXT: '外部',
+  STG: '阶段',
+  R: '区域', // R6/R6B
+  F: '农场', // F-P1A
+  P: '区域', // P1A/P1B
+  DEL: '删除', // 测试残留
+  D: '调试', // 兜底
+};
+const TYPE_BADGE_COLOR: Record<string, string> = {
+  种源: 'bg-blue-100 text-blue-700',
+  育苗: 'bg-emerald-100 text-emerald-700',
+  种植: 'bg-indigo-100 text-indigo-700',
+  采收: 'bg-orange-100 text-orange-700',
+  计划: 'bg-sky-100 text-sky-700',
+  库存: 'bg-cyan-100 text-cyan-700',
+  外部种: 'bg-purple-100 text-purple-700',
+  外部: 'bg-purple-100 text-purple-700',
+  阶段: 'bg-slate-100 text-slate-700',
+  区域: 'bg-slate-100 text-slate-700',
+  农场: 'bg-slate-100 text-slate-700',
+  删除: 'bg-rose-100 text-rose-700',
+  调试: 'bg-gray-200 text-gray-700',
+};
+const badgeOf = (type?: string | null, code?: string | null): { label: string | null; color: string } => {
+  let label: string | null = type ? TYPE_LABELS[type] || null : null;
+  if (!label && code) {
+    // 取 2-3 位大写字母前缀
+    const m = String(code).match(/^([A-Z]{2,3})/);
+    if (m) label = CODE_PREFIX_TYPE[m[1]] || null;
+  }
+  return { label, color: label ? (TYPE_BADGE_COLOR[label] || 'bg-gray-100 text-gray-600') : 'bg-gray-100 text-gray-500' };
+};
+
+// 在 code 前面加"业务类型"小徽章 + code 本身
+const CodeCell: React.FC<{ type?: string | null; code?: string | null; emptyLabel?: string }> = ({ type, code, emptyLabel = '-' }) => {
+  if (!code) return <span className="text-gray-400 text-xs">{emptyLabel}</span>;
+  const { label, color } = badgeOf(type, code);
+  return (
+    <span className="inline-flex items-center justify-center gap-1 whitespace-nowrap">
+      {label && <span className={`px-1.5 py-0.5 ${color} text-[10px] rounded font-medium`}>{label}</span>}
+      <span className="text-gray-600 font-mono text-xs">{code}</span>
+    </span>
+  );
+};
+
 type TabKey = 'logs' | 'trace' | 'seedling' | 'planting' | 'annual';
 
 // 2026-06-15: 标准表格壳 — 接收 colgroup + 全部居中
 function StdTableShell({
-  colSpan, children, colGroup,
+  colSpan, children, colGroup, tableFixed,
 }: {
   colSpan: number;
   children: React.ReactNode;
   colGroup?: React.ReactNode;
+  // 2026-06-15: stats 表格需要 table-fixed 让 colgroup 百分比列宽生效
+  tableFixed?: boolean;
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-auto max-h-[calc(100vh-280px)]">
-        <table className="w-full">{colGroup}{children}</table>
+        <table className={`w-full ${tableFixed ? 'table-fixed' : ''}`}>{colGroup}{children}</table>
       </div>
     </div>
   );
@@ -235,7 +326,20 @@ export default function MaterialFlowPage() {
     if (activeTab === 'logs') {
       loadLogs({ page, pageSize, flowType: flowType === 'all' ? undefined : flowType, cropName, startDate, endDate });
     } else if (activeTab === 'trace') {
-      // 等用户点查询
+      // 2026-06-15: 进入批次追溯 tab 时若尚未有数据，自动取最近一条 source_code 加载示例，避免空表
+      if (traceData.length === 0 && !traceCode) {
+        const seed = logs[0]?.sourceCode || logs[0]?.source_code;
+        if (seed) {
+          setTraceCode(seed);
+          loadTrace(seed);
+        } else {
+          // logs 还没拉过，临时拉第 1 条用作种子
+          loadLogs({ page: 1, pageSize: 1 }).then(() => {
+            const c = useMaterialFlowStore.getState().logs[0]?.sourceCode;
+            if (c) { setTraceCode(c); loadTrace(c); }
+          }).catch(() => {});
+        }
+      }
     } else if (activeTab === 'seedling') {
       loadCropStats(statYear);
     } else if (activeTab === 'planting') {
@@ -314,10 +418,10 @@ export default function MaterialFlowPage() {
     let headers: Record<string, string> = {};
     let title = '';
     if (activeTab === 'logs') {
-      headers = { createdAt: '时间', flowType: '流转类型', cropName: '作物', sourceCode: '上游', sourceQuantity: '消耗量', targetCode: '下游', targetQuantity: '产出量', sourceCategory: '来源' };
+      headers = { createdAt: '时间', flowType: '流转类型', cropName: '作物', sourceCode: '起点', sourceQuantity: '消耗量', targetCode: '去向', targetQuantity: '产出量', sourceCategory: '来源' };
       title = '物料流转记录';
     } else if (activeTab === 'trace') {
-      headers = { createdAt: '时间', flowType: '流转', sourceCode: '上游', sourceQuantity: '消耗', targetCode: '下游', sourceCategory: '来源' };
+      headers = { createdAt: '时间', flowType: '流转', sourceCode: '起点', sourceQuantity: '消耗', targetCode: '去向', sourceCategory: '来源' };
       title = '批次追溯';
     } else {
       const tk = activeTab as Exclude<TabKey, 'logs' | 'trace'>;
@@ -487,9 +591,9 @@ export default function MaterialFlowPage() {
             <StdTh>时间</StdTh>
             <StdTh>流转类型</StdTh>
             <StdTh>作物</StdTh>
-            <StdTh>上游</StdTh>
+            <StdTh>起点</StdTh>
             <StdTh>消耗量</StdTh>
-            <StdTh>下游</StdTh>
+            <StdTh>去向</StdTh>
             <StdTh>产出量</StdTh>
             <StdTh>来源</StdTh>
           </tr>
@@ -505,16 +609,16 @@ export default function MaterialFlowPage() {
                 )}
                 <StdTd className="text-gray-600 tabular-nums">{log.createdAt?.split('T')[0]}</StdTd>
                 <StdTd>
-                  <span className={`px-2 py-0.5 ${STOCK_CATEGORY_COLOR[log.sourceCategory] || 'bg-gray-500'} text-white text-xs rounded-full inline-block whitespace-nowrap`}>
+                  <span className={`px-2 py-0.5 ${FLOW_TYPE_COLOR[log.flowType] || 'bg-slate-500'} text-white text-xs rounded-full inline-block whitespace-nowrap`}>
                     {labelFlowType(log.flowType)}
                   </span>
                 </StdTd>
                 <StdTd className="text-gray-900">{log.cropName || '-'}</StdTd>
-                <StdTd className="text-gray-600 font-mono text-xs">{log.sourceCode || '-'}</StdTd>
+                <StdTd><CodeCell type={log.sourceType} code={log.sourceCode} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {log.sourceQuantity != null ? `${log.sourceQuantity} ${log.sourceUnit || ''}` : '-'}
                 </StdTd>
-                <StdTd className="text-gray-600 font-mono text-xs">{log.targetCode}</StdTd>
+                <StdTd><CodeCell type={log.targetType} code={log.targetCode} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {log.targetQuantity != null ? `${log.targetQuantity} ${log.targetUnit || ''}` : '-'}
                 </StdTd>
@@ -556,9 +660,9 @@ export default function MaterialFlowPage() {
             {effectiveHasActiveMode && <StdTh width="3rem"><Checkbox checked={allSelected} ref={(el) => { if (el) el.indeterminate = someSelected; }} onCheckedChange={toggleAll} className="border-white rounded" /></StdTh>}
             <StdTh>时间</StdTh>
             <StdTh>流转</StdTh>
-            <StdTh>上游</StdTh>
+            <StdTh>起点</StdTh>
             <StdTh>消耗</StdTh>
-            <StdTh>下游</StdTh>
+            <StdTh>去向</StdTh>
             <StdTh>来源</StdTh>
           </tr>
         </thead>
@@ -573,15 +677,15 @@ export default function MaterialFlowPage() {
                 )}
                 <StdTd className="text-gray-600 tabular-nums">{item.createdAt?.split('T')[0]}</StdTd>
                 <StdTd>
-                  <span className={`px-2 py-0.5 ${STOCK_CATEGORY_COLOR[item.sourceCategory] || 'bg-gray-500'} text-white text-xs rounded-full inline-block whitespace-nowrap`}>
+                  <span className={`px-2 py-0.5 ${FLOW_TYPE_COLOR[item.flowType] || 'bg-slate-500'} text-white text-xs rounded-full inline-block whitespace-nowrap`}>
                     {labelFlowType(item.flowType)}
                   </span>
                 </StdTd>
-                <StdTd className="text-gray-600 font-mono text-xs">{item.sourceCode || '-'}</StdTd>
+                <StdTd><CodeCell type={item.sourceType} code={item.sourceCode} /></StdTd>
                 <StdTd className="font-medium text-emerald-600 tabular-nums">
                   {item.sourceQuantity != null ? `${item.sourceQuantity} ${item.sourceUnit || ''}` : '-'}
                 </StdTd>
-                <StdTd className="text-gray-600 font-mono text-xs">{item.targetCode}</StdTd>
+                <StdTd><CodeCell type={item.targetType} code={item.targetCode} /></StdTd>
                 <StdTd>
                   <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full inline-block whitespace-nowrap">{labelCategory(item.sourceCategory)}</span>
                 </StdTd>
@@ -600,25 +704,24 @@ export default function MaterialFlowPage() {
     rowMapper: (item: any) => Record<string, any>,
   ) => {
     const totalCols = headers.length;
-    // 根据 tab 决定列宽
+    // 2026-06-15: 等分列宽铺满整个容器 + 显式声明 table-fixed 让 colgroup 生效
+    // 用百分比避免 w-20/w-28 这类固定宽度在窄屏溢出
+    const equalPct = `${(100 / totalCols).toFixed(4)}%`;
     const colGroup = (
       <colgroup>
-        <col className="w-20" />
-        <col className="w-28" />
-        <col className="w-28" />
-        <col className="w-24" />
-        <col className="w-20" />
-        {headers.length >= 5 && <col className="w-24" />}
+        {headers.map((h, i) => (
+          <col key={i} style={{ width: h.width || equalPct }} />
+        ))}
       </colgroup>
     );
     if (loading && statsData.length === 0) {
-      return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, '加载中...')}</StdTableShell>;
+      return <StdTableShell colSpan={totalCols} colGroup={colGroup} tableFixed>{emptyRow(totalCols, '加载中...')}</StdTableShell>;
     }
     if (statsData.length === 0) {
-      return <StdTableShell colSpan={totalCols} colGroup={colGroup}>{emptyRow(totalCols, '暂无数据')}</StdTableShell>;
+      return <StdTableShell colSpan={totalCols} colGroup={colGroup} tableFixed>{emptyRow(totalCols, '暂无数据')}</StdTableShell>;
     }
     return (
-      <StdTableShell colSpan={totalCols} colGroup={colGroup}>
+      <StdTableShell colSpan={totalCols} colGroup={colGroup} tableFixed>
         <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white sticky top-0 z-10">
           <tr>
             {headers.map(h => (
@@ -683,7 +786,7 @@ export default function MaterialFlowPage() {
             <TrendingUp className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">物料流转追溯</h1>
+            <h1 className="text-2xl font-bold text-gray-900">流转追溯</h1>
             <p className="text-gray-500 text-sm">全链路物料流转记录与统计分析</p>
           </div>
         </div>
