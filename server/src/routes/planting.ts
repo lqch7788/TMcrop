@@ -277,32 +277,34 @@ router.post('/', (req: Request, res: Response) => {
         flowType = 'seed_source→planting';
       } else if (lowerSourceType === 'seedling') {
         if (finalSourceId) {
-          // 2026-06-14: 按 propagation_mode 计算可定植量
-          // seed/division/grafting: 可定植量 = survival_quantity - planted_count
-          // layering/tissue_culture/cutting: 可定植量 = (mother_plant_count + expanded_plant_count) - planted_count
+          // 2026-06-15: 数量体系重构 — 统一可定植量公式（1:1 / 1:多 同公式）
+          // 可定植量 = mother_plant_count + expanded_plant_count - seedling_loss_count
+          //              - transplanted_count - auto_planted_count - harvest_stocked_count
           const chk = db.exec(
-            "SELECT propagation_mode, survival_quantity, mother_plant_count, expanded_plant_count, planted_count FROM seedlings WHERE id = ? AND deleted_at IS NULL",
+            "SELECT propagation_mode, mother_plant_count, expanded_plant_count, seedling_loss_count, transplanted_count, auto_planted_count, harvest_stocked_count FROM seedlings WHERE id = ? AND deleted_at IS NULL",
             [finalSourceId]
           );
           if (!chk[0]?.values?.[0]) {
             try { db.exec('ROLLBACK'); } catch {}
             return res.status(404).json({ success: false, error: '育苗记录不存在' });
           }
-          const mode = String(chk[0].values[0][0] || 'seed');
-          const survival = Number(chk[0].values[0][1] || 0);
-          const mother = Number(chk[0].values[0][2] || 0);
-          const expanded = Number(chk[0].values[0][3] || 0);
-          const planted = Number(chk[0].values[0][4] || 0);
-          const isMotherMode = ['layering', 'tissue_culture', 'cutting'].includes(mode);
-          const available = isMotherMode ? (mother + expanded - planted) : (survival - planted);
+          const mother = Number(chk[0].values[0][1] || 0);
+          const expanded = Number(chk[0].values[0][2] || 0);
+          const seedlingLoss = Number(chk[0].values[0][3] || 0);
+          const transplanted = Number(chk[0].values[0][4] || 0);
+          const autoPlanted = Number(chk[0].values[0][5] || 0);
+          const harvestStocked = Number(chk[0].values[0][6] || 0);
+          // 统一公式
+          const available = mother + expanded - seedlingLoss - transplanted - autoPlanted - harvestStocked;
           if (available < finalPlantingQuantity) {
             try { db.exec('ROLLBACK'); } catch {}
             return res.status(400).json({
               success: false,
-              error: `可定植余量不足：当前 ${available}（${isMotherMode ? '母株+扩繁-已定植' : '成活-已定植'}），需 ${finalPlantingQuantity}`
+              error: `可定植余量不足：当前 ${available}（母株+扩繁-损耗-已定植-自动定植-已采收），需 ${finalPlantingQuantity}`
             });
           }
-          db.run('UPDATE seedlings SET planted_count = planted_count + ? WHERE id = ?',
+          // 2026-06-15: 累加到 auto_planted_count（不再累加到 planted_count）
+          db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count + ? WHERE id = ?',
             [finalPlantingQuantity, finalSourceId]);
         }
         flowType = 'seedling→planting';
@@ -420,7 +422,7 @@ router.put('/:id', (req: Request, res: Response) => {
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity - ?, update_time = ? WHERE id = ?',
               [delta, now, oldSourceId]);
           } else if (oldSourceType === 'seedling' && oldSourceId) {
-            db.run('UPDATE seedlings SET planted_count = planted_count - ?, update_time = ? WHERE id = ?',
+            db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count - ?, update_time = ? WHERE id = ?',
               [delta, now, oldSourceId]);
           }
         }
@@ -571,8 +573,8 @@ router.delete('/:id', (req: Request, res: Response) => {
         const sid = row.source_id;
         if (qty > 0 && sid) {
           if (stype === 'seedling') {
-            // 育苗 → 回滚 seedlings.planted_count
-            db.run('UPDATE seedlings SET planted_count = planted_count - ? WHERE id = ?', [qty, sid]);
+            // 育苗 → 回滚 seedlings.auto_planted_count
+            db.run('UPDATE seedlings SET auto_planted_count = auto_planted_count - ? WHERE id = ?', [qty, sid]);
           } else if (stype === 'seed') {
             // 种源 → 回滚 seed_sources.remaining_quantity
             db.run('UPDATE seed_sources SET remaining_quantity = remaining_quantity + ? WHERE id = ?', [qty, sid]);
