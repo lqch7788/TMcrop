@@ -274,10 +274,10 @@ export function EditModal({
                     layering: '匍匐茎育苗',
                     tissue_culture: '组培育苗',
                     cutting: '扦插育苗',
-                    division: '分株育苗',
-                    grafting: '嫁接育苗',
+                    one_to_one: '1:1 育苗',
+                    one_to_many: '1:多 育苗',
                   };
-                  return map[(record as any).propagationMode || 'seed'] || '种子育苗';
+                  return map[(record as any).propagationMode || 'one_to_one'] || '1:1 育苗';
                 })()}
               </span>
               <span className="text-xs text-gray-500 ml-2">（建档后不可修改）</span>
@@ -447,7 +447,7 @@ export function EditModal({
         {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，不可手动改） */}
         <div>
           <Label className="text-gray-700">
-            {['layering','tissue_culture','cutting'].includes((record as any).propagationMode || 'seed') ? '母株数量' : '成活数量'}
+            {(record as any).propagationMode === 'one_to_many' ? '母株数量' : '成活数量'}
             <span className="text-xs text-gray-500 ml-1">（每日记录自动累加）</span>
           </Label>
           <Input

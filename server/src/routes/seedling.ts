@@ -950,7 +950,7 @@ router.delete('/:id', (req: Request, res: Response) => {
  * 1:多 模式（one_to_many）：母株存活 [0, initial]；expanded ≥ 0；planted+loss ≤ mother+expanded
  * @returns null 表示通过；string 表示错误消息
  */
-function validateDailyChange(id: string, changeData: any): string | null {
+export function validateDailyChange(id: string, changeData: any): string | null {
   const db = getDatabase();
   const stmt = db.prepare('SELECT propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count, expanded_plant_count, seedling_loss_count, transplanted_count FROM seedlings WHERE id = ?');
   stmt.bind([id]);
