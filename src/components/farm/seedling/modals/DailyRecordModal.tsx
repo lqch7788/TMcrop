@@ -104,37 +104,55 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       return;
     }
 
-    // 2026-06-14: 上限自检 — 新增成活量不能超过"剩余可用小苗"
-    // 剩余可用 = 现存小苗(survival - planted) + 本日损耗(本次录入)
-    // 但本日的损耗还没计入，所以更严格：剩余可用 = survival - planted (录入前)
-    const currentAvailable = (record.survivalCount || 0) - (record.plantedCount || 0);
-    const sc = formData.survivalCountChange || 0;
-    const ri = formData.runnerIncreaseCount || 0;
-    if (sc > 0 && sc > currentAvailable) {
-      await showAlert(`成活变化 +${sc} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
-      return;
-    }
-    if (ri > 0 && ri > currentAvailable) {
-      await showAlert(`扩繁小苗数量 +${ri} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
-      return;
+    // 2026-06-16: 数量体系重构 — 上限自检基于新 5 业务字段
+    // 小苗可用 = mother + expanded - seedling_loss - transplanted - auto_planted - harvest_stocked
+    const sc = formData.survivalCountChange || 0;  // 1:1=成活变化/小苗产出, 1:多=母株损耗
+    const ri = formData.runnerIncreaseCount || 0;   // 1:多=小苗产出
+    const lc = formData.lossCountChange || 0;
+    const tc = formData.plantedCountChange || 0;    // 人工定植
+    // 1:1 模式剩余可用 = mother（1:1 模式 mother=expanded=initial-loss）
+    // 1:多 模式剩余可用 = mother + expanded - loss - transplanted
+    const currentAvailable = isMotherMode
+      ? ((record.motherPlantCount || 0) + (record.expandedPlantCount || 0) - (record.seedlingLossCount || 0) - (record.transplantedCount || 0) - (record.autoPlantedCount || 0) - (record.harvestStockedCount || 0))
+      : ((record.motherPlantCount || 0) - (record.seedlingLossCount || 0) - (record.transplantedCount || 0) - (record.autoPlantedCount || 0) - (record.harvestStockedCount || 0));
+    if (isMotherMode) {
+      // 1:多：母株损耗正数 + 小苗产出正数之和不能超过剩余可用
+      if ((sc + ri + tc + lc) > currentAvailable) {
+        await showAlert(`1:多 模式总变化 ${sc + ri + tc + lc} 超过剩余可用 ${currentAvailable} 株，请调整`);
+        return;
+      }
+    } else {
+      // 1:1：成活变化正数不能超过初始投入（=初始母株）
+      if (sc > 0 && sc > currentAvailable) {
+        await showAlert(`成活变化 +${sc} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
+        return;
+      }
     }
     // 损耗不能为负
-    if ((formData.lossCountChange || 0) < 0) {
+    if (lc < 0) {
       await showAlert('损耗数量不能为负数');
       return;
     }
 
     try {
-      // 2026-06-05: 把业务字段打包成 data 对象（后端会 JSON.stringify 一次并存到 data 列，GET 时再 JSON.parse 还原）
-      const bizData = {
+      // 2026-06-16: 数量体系重构 — bizData 用 4 个新字段名（向后兼容旧字段名）
+      // 1:1 模式：survivalCountChange → expandedChange（小苗产出）
+      // 1:多 模式：survivalCountChange → motherLossChange（母株损耗）；runnerIncreaseCount → expandedChange（小苗产出）
+      const bizData: any = {
         temperature: formData.temperature,
         humidity: formData.humidity,
         watering: formData.watering,
         abnormality: formData.abnormality || undefined,
-        survivalCountChange: formData.survivalCountChange,
-        plantedCountChange: formData.plantedCountChange,
-        lossCountChange: formData.lossCountChange,
-        runnerIncreaseCount: formData.runnerIncreaseCount,
+        // 4 个新业务字段（按模式路由 — 对应 UI 4 字段）
+        motherLossChange: isMotherMode ? sc : 0,  // 1:多=母株损耗；1:1=0
+        seedlingLossChange: lc,                    // 两种模式=小苗损耗
+        expandedChange: ri,                        // 两种模式=小苗产出（1:1=成活变化，1:多=扩繁）
+        transplantedChange: tc,                   // 两种模式=人工定植
+        // 4 个旧字段名（兼容历史 data 读取）
+        survivalCountChange: sc,
+        plantedCountChange: tc,
+        lossCountChange: lc,
+        runnerIncreaseCount: ri,
         phValue: formData.phValue,
         ecValue: formData.ecValue,
         operator: formData.operator || undefined,
@@ -435,51 +453,98 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 <span className="ml-2 text-sm text-gray-600">{formData.watering ? '是' : '否'}</span>
               </div>
             </div>
-            {/* 第三行：成活变化 / 母株变化（按模式） */}
+            {/* 2026-06-16: 数量体系重构 — UI 字段明确"母株/小苗"，4 字段按模式显示 */}
+            {/* 母株损耗（1:多 模式才显示） */}
+            {isMotherMode && (
+              <div>
+                <Label className="text-gray-700">
+                  母株损耗
+                  <span className="text-xs text-gray-500 ml-1">（母株死亡/减少，存入"母株损耗"字段）</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.survivalCountChange ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '' || v === '-') {
+                      setFormData({ ...formData, survivalCountChange: undefined });
+                      return;
+                    }
+                    const n = Number(v);
+                    if (!isNaN(n) && n >= 0) {
+                      setFormData({ ...formData, survivalCountChange: n });
+                    }
+                  }}
+                  placeholder="今日母株死亡数（不可为负）"
+                  className={deepInputClass}
+                />
+              </div>
+            )}
+            {/* 小苗产出（1:1=成活变化/小苗产出；1:多=每日新增小苗） */}
             <div>
               <Label className="text-gray-700">
-                {isMotherMode ? '母株变化' : '成活变化'}
+                {isMotherMode ? '小苗产出' : '小苗产出（成活变化）'}
                 <span className="text-xs text-gray-500 ml-1">
-                  （{isMotherMode ? '母株成活数变化' : '成活苗数变化'}）
+                  （{isMotherMode ? '匍匐茎/组培/扦插/分株每日新增' : '1:1 模式 投入=产出'}，存入"小苗产出"字段）
                 </span>
               </Label>
               <Input
                 type="number"
-                value={formData.survivalCountChange ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  survivalCountChange: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="正数增加，负数减少"
-                className={deepInputClass}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                剩余可用小苗：{(record.survivalCount || 0) - (record.plantedCount || 0) + (record.lossCount || 0)} 株（不可超过）
-              </p>
-            </div>
-            {/* 第三行：定植变化 */}
+                min="0"
+                value={formData.runnerIncreaseCount ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || v === '-') {
+                    setFormData({ ...formData, runnerIncreaseCount: undefined });
+                      return;
+                    }
+                    const n = Number(v);
+                    if (!isNaN(n) && n >= 0) {
+                      setFormData({ ...formData, runnerIncreaseCount: n });
+                    }
+                  }}
+                  placeholder="今日新增小苗数（不可为负）"
+                  className={deepInputClass}
+                />
+              </div>
+            )}
+            {/* 人工定植 */}
             <div>
-              <Label className="text-gray-700">定植变化</Label>
+              <Label className="text-gray-700">
+                人工定植
+                <span className="text-xs text-gray-500 ml-1">（人工把小苗定植到种植区，存入"人工定植"字段）</span>
+              </Label>
               <Input
                 type="number"
+                min="0"
                 value={formData.plantedCountChange ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  plantedCountChange: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="正数增加，负数减少"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || v === '-') {
+                    setFormData({ ...formData, plantedCountChange: undefined });
+                    return;
+                  }
+                  const n = Number(v);
+                  if (!isNaN(n) && n >= 0) {
+                    setFormData({ ...formData, plantedCountChange: n });
+                  }
+                }}
+                placeholder="今日人工定植数（不可为负）"
                 className={deepInputClass}
               />
             </div>
-            {/* 第三行：损耗数量 */}
+            {/* 小苗损耗 */}
             <div>
-              <Label className="text-gray-700">损耗数量</Label>
+              <Label className="text-gray-700">
+                小苗损耗
+                <span className="text-xs text-gray-500 ml-1">（小苗死亡/淘汰，存入"小苗损耗"字段）</span>
+              </Label>
               <Input
                 type="number"
                 min="0"
                 value={formData.lossCountChange ?? ''}
                 onChange={(e) => {
-                  // 2026-06-14: 损耗只允许 ≥ 0（损耗不能减少）
                   const v = e.target.value;
                   if (v === '' || v === '-') {
                     setFormData({ ...formData, lossCountChange: undefined });
@@ -490,11 +555,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     setFormData({ ...formData, lossCountChange: n });
                   }
                 }}
-                placeholder="正数（不可为负）"
+                placeholder="今日小苗死亡数（不可为负）"
                 className={deepInputClass}
               />
             </div>
-            {/* 第四行：操作人员（占1列） + 异常情况 + 扩繁小苗数量 — 3 个一排 */}
+            {/* 操作人员 + 异常情况 — 2 个一排 */}
             <div>
               <Label className="text-gray-700">操作人员</Label>
               <Select
@@ -511,7 +576,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 </SelectContent>
               </Select>
             </div>
-            {/* 第四行：异常情况 */}
             <div>
               <Label className="text-gray-700">异常情况</Label>
               <Input
@@ -522,25 +586,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
-            {/* 第四行：扩繁小苗数量（仅母株类模式显示） */}
-            {isMotherMode && (
-            <div>
-              <Label className="text-gray-700">
-                扩繁小苗数量
-                <span className="text-xs text-gray-500 ml-1">（1:多 模式新出苗数：匍匐茎/组培/扦插/分株）</span>
-              </Label>
-              <Input
-                type="number"
-                value={formData.runnerIncreaseCount ?? ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  runnerIncreaseCount: e.target.value ? Number(e.target.value) : undefined
-                })}
-                placeholder="每日新增的小苗数量统计"
-                className={deepInputClass}
-              />
-            </div>
-            )}
             {/* 备注（单独一行，占3列） */}
             <div className="col-span-3">
               <Label className="text-gray-700">备注</Label>
