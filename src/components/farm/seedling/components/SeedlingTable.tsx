@@ -562,11 +562,15 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap">{(record.initialCount || 0).toLocaleString()}</td>
                   <td className="px-2 py-1.5 text-sm text-gray-500 text-center">{record.targetSurvivalRate ?? '-'}%</td>
                   <td className="px-2 py-1.5 text-sm text-gray-500 text-center">{(record.targetSurvivalCount ?? 0).toLocaleString()}</td>
-                  {/* 2026-06-14: 显示层兜底 — 每日记录累加可能产生负数（数据污染），UI 统一 max(0, val) 避免显示负值 */}
-                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center">{Math.max(0, record.survivalCount || 0).toLocaleString()}</td>
-                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center">{Math.max(0, record.lossCount || 0).toLocaleString()}</td>
+                  {/* 2026-06-16: 数量体系重构 — 改用新 5 业务字段（避免显示旧字段 0） */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center">
+                    {Math.max(0, (record as any).expandedPlantCount || 0).toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center">
+                    {Math.max(0, (record as any).seedlingLossCount || 0).toLocaleString()}
+                  </td>
                   <td className="px-2 py-1.5 text-sm text-purple-600 font-medium text-center">
-                    {Math.max(0, (record.survivalCount || 0) - (record.plantedCount || 0)).toLocaleString()}
+                    {Math.max(0, ((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0)).toLocaleString()}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (() => {
