@@ -1082,7 +1082,7 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     value={formData.initialCount || ''}
                     onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
                     className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder={formData.propagationMode === 'division' ? '分株出的苗数' : '请输入播种数量'}
+                    placeholder="请输入播种数量（1:1 模式）"
                   />
                   {initialCountExceeds && (
                     <p className="text-xs text-red-500 mt-1">

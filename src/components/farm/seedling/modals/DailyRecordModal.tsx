@@ -527,9 +527,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
             <div>
               <Label className="text-gray-700">
                 扩繁小苗数量
-                <span className="text-xs text-gray-500 ml-1">
-                  （{propagationMode === 'layering' ? '匍匐茎' : propagationMode === 'tissue_culture' ? '组培' : '扦插'}新出苗数）
-                </span>
+                <span className="text-xs text-gray-500 ml-1">（1:多 模式新出苗数：匍匐茎/组培/扦插/分株）</span>
               </Label>
               <Input
                 type="number"
