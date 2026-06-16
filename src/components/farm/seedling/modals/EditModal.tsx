@@ -474,6 +474,48 @@ export function EditModal({
           />
         </div>
 
+        {/* 2026-06-16: 5 业务字段只读显示（数量体系重构后字段，UI 渲染） */}
+        <div className="col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-semibold text-amber-900">数量统计（只读，自动累加）</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-700">母株累计损耗</Label>
+              <Input type="number" value={formData.motherLossCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            <div>
+              <Label className="text-gray-700">小苗累计产出</Label>
+              <Input type="number" value={formData.expandedPlantCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            <div>
+              <Label className="text-gray-700">小苗累计损耗</Label>
+              <Input type="number" value={formData.seedlingLossCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            <div>
+              <Label className="text-gray-700">人工定植</Label>
+              <Input type="number" value={formData.transplantedCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            <div>
+              <Label className="text-gray-700">自动定植（种植管理累加）</Label>
+              <Input type="number" value={formData.autoPlantedCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            <div>
+              <Label className="text-gray-700">采收入库</Label>
+              <Input type="number" value={formData.harvestStockedCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            剩余可定植 = 母株存活 + 小苗产出 - 小苗损耗 - 人工定植 - 自动定植 - 采收入库 = {((formData.motherPlantCount || 0) + (formData.expandedPlantCount || 0) - (formData.seedlingLossCount || 0) - (formData.transplantedCount || 0) - (formData.autoPlantedCount || 0) - (formData.harvestStockedCount || 0)).toLocaleString()} 株
+          </p>
+        </div>
+
         {/* 备注 - 占两列 */}
         <div className="col-span-2">
           <Label className="text-gray-900">备注</Label>
