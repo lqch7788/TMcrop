@@ -2024,6 +2024,16 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.info('  ✓ seedlings 1:1 模式 mother_plant_count 回填完成');
   } catch (e: any) { seedLog.error(`  ✗ 1:1 模式 mother_plant_count 回填失败: ${e.message}`); }
 
+  // 2026-06-16: 1:多 模式回填 — mother_plant_count=seedling_quantity, expanded_plant_count=COALESCE(survival_quantity, mother_plant_count)
+  // 兜底历史数据：1:多 模式 initial 字段 = 母株数，survival_quantity = 累计小苗产出
+  try {
+    db.run(`UPDATE seedlings
+            SET mother_plant_count = COALESCE(mother_plant_count, seedling_quantity, 0),
+                expanded_plant_count = COALESCE(NULLIF(expanded_plant_count, 0), survival_quantity, mother_plant_count, 0)
+            WHERE propagation_mode = 'one_to_many'`);
+    seedLog.info('  ✓ seedlings 1:多 模式回填完成');
+  } catch (e: any) { seedLog.error(`  ✗ 1:多 模式回填失败: ${e.message}`); }
+
   // 2026-06-15: 数据迁移 — 旧字段值迁移到新字段（保留历史已记录的数据）
   // planted_count → transplanted_count（已定植数）
   // loss_count → seedling_loss_count（已损耗苗数）

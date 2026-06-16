@@ -1008,12 +1008,16 @@ function normalizeChangeData(raw: any, propagationMode: string): any {
   if (!raw || typeof raw !== 'object') return raw || {};
   const is11 = (propagationMode || 'one_to_one') === 'one_to_one';
   const legacySc = Number(raw.survivalCountChange) || 0;
+  const legacyTc = Number(raw.plantedCountChange) || 0;
+  const legacyLc = Number(raw.lossCountChange) || 0;
+  const legacyRi = Number(raw.runnerIncreaseCount) || 0;
   return {
-    // 旧字段名 → 新字段名映射
-    motherLossChange: is11 ? 0 : legacySc,  // 1:1 模式无母株损耗概念；1:多 模式旧 SC = 母株损耗
-    seedlingLossChange: Number(raw.lossCountChange) || Number(raw.seedlingLossChange) || 0,
-    expandedChange: Number(raw.expandedChange) || Number(raw.runnerIncreaseCount) || (is11 ? legacySc : 0),
-    transplantedChange: Number(raw.transplantedChange) || Number(raw.plantedCountChange) || 0,
+    // 2026-06-16: 优先新字段名（前端已发新字段名），回退旧字段名
+    // 关键修复：旧字段值为 0 时不覆盖新字段值（用 || 短路判断）
+    motherLossChange: is11 ? 0 : (Number(raw.motherLossChange) || legacySc),
+    seedlingLossChange: Number(raw.seedlingLossChange) || legacyLc,
+    expandedChange: Number(raw.expandedChange) || legacyRi || (is11 ? legacySc : 0),
+    transplantedChange: Number(raw.transplantedChange) || legacyTc,
     // 保留旧字段名（用于 daily_record.data 写回时的兼容性）
     survivalCountChange: raw.survivalCountChange,
     plantedCountChange: raw.plantedCountChange,
