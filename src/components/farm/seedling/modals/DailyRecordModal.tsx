@@ -497,8 +497,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   const v = e.target.value;
                   if (v === '' || v === '-') {
                     setFormData({ ...formData, runnerIncreaseCount: undefined });
-                      return;
-                    }
+                  return;
+                  }
                     const n = Number(v);
                     if (!isNaN(n) && n >= 0) {
                       setFormData({ ...formData, runnerIncreaseCount: n });
@@ -508,7 +508,6 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   className={deepInputClass}
                 />
               </div>
-            )}
             {/* 人工定植 */}
             <div>
               <Label className="text-gray-700">
