@@ -139,9 +139,11 @@ export const useSeedlingStore = create<SeedlingState>()(
       try {
         const result = await seedlingService.increasePlantedCount(id, count);
         if (result) {
+          // 2026-06-16: 数量体系重构 — 后端 increase-planted 路由累加到 auto_planted_count
+          // 前端 store 同步更新 autoPlantedCount 避免数据分裂（UI 与 DB 一致）
           set((s) => ({
             items: s.items.map((i) =>
-              i.id === id ? { ...i, plantedCount: (i.plantedCount || 0) + count } : i
+              i.id === id ? { ...i, autoPlantedCount: ((i as any).autoPlantedCount || 0) + count } : i
             ),
           }));
         }
