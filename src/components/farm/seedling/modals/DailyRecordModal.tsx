@@ -88,6 +88,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     plantedCountChange: undefined as number | undefined,
     lossCountChange: undefined as number | undefined,
     runnerIncreaseCount: undefined as number | undefined,
+    replantChange: undefined as number | undefined,  // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
     remarks: '',
     phValue: undefined as number | undefined,
     ecValue: undefined as number | undefined,
@@ -104,27 +105,48 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       return;
     }
 
-    // 2026-06-16: 数量体系重构 — 上限自检基于新 5 业务字段
-    // 小苗可用 = mother + expanded - seedling_loss - transplanted - auto_planted - harvest_stocked
-    const sc = formData.survivalCountChange || 0;  // 1:1=成活变化/小苗产出, 1:多=母株损耗
-    const ri = formData.runnerIncreaseCount || 0;   // 1:多=小苗产出
+    // 2026-06-16: 数量体系重构 — 两池分离校验（母株池 + 小苗池 各自独立）
+    // 1:多 模式：sc=母株损耗, ri=小苗产出, rc=补苗（新增母株）
+    // 1:1 模式：sc/ri 都是死字段（强制 0），只校验 lc + tc + rc（补种子）
+    const sc = isMotherMode ? (formData.survivalCountChange || 0) : 0;  // 1:多=母株损耗；1:1=0（死字段）
+    const ri = isMotherMode ? (formData.runnerIncreaseCount || 0) : 0;  // 1:多=小苗产出；1:1=0（死字段）
     const lc = formData.lossCountChange || 0;
-    const tc = formData.plantedCountChange || 0;    // 人工定植
-    // 1:1 模式剩余可用 = mother（1:1 模式 mother=expanded=initial-loss）
-    // 1:多 模式剩余可用 = mother + expanded - loss - transplanted
-    const currentAvailable = isMotherMode
-      ? ((record.motherPlantCount || 0) + (record.expandedPlantCount || 0) - (record.seedlingLossCount || 0) - (record.transplantedCount || 0) - (record.autoPlantedCount || 0) - (record.harvestStockedCount || 0))
-      : ((record.motherPlantCount || 0) - (record.seedlingLossCount || 0) - (record.transplantedCount || 0) - (record.autoPlantedCount || 0) - (record.harvestStockedCount || 0));
+    const tc = formData.plantedCountChange || 0;                        // 人工定植
+    const rc = formData.replantChange || 0;                            // 2026-06-16: 补苗
+
+    // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并！）
+    // 母株池剩余可用 = 母株存活数 = 母株存活 - 母株损耗 + 补苗累计（1:1 = 母株存活 + 补苗）
+    const motherAvailable = Math.max(0,
+      ((record as any).motherPlantCount || 0) - ((record as any).motherLossCount || 0) + ((record as any).replantCount || 0)
+    );
+    // 小苗池剩余可用：必须考虑"本次产出/损耗/定植"（如果只算 DB 状态，剩余为 0 时任何损耗都被拒）
+    // 公式 = (DB 产出 + 本次产出) - (DB 损耗 + 本次损耗) - (DB 定植 + 本次定植) - DB 自动定植 - DB 采收入库
+    const seedlingAvailableAfter = Math.max(0,
+      ((record as any).expandedPlantCount || 0)
+      + ri    // 2026-06-16: 加入本次产出，否则剩余为 0 时无法填新损耗/定植
+      - (record.seedlingLossCount || 0)
+      - lc    // 2026-06-16: 加入本次损耗
+      - (record.transplantedCount || 0)
+      - tc    // 2026-06-16: 加入本次定植
+      - (record.autoPlantedCount || 0)
+      - (record.harvestStockedCount || 0)
+    );
+
     if (isMotherMode) {
-      // 1:多：母株损耗正数 + 小苗产出正数之和不能超过剩余可用
-      if ((sc + ri + tc + lc) > currentAvailable) {
-        await showAlert(`1:多 模式总变化 ${sc + ri + tc + lc} 超过剩余可用 ${currentAvailable} 株，请调整`);
+      // 1:多 模式：母株池校验 — 母株损耗不能超过母株剩余可用
+      if (sc > 0 && sc > motherAvailable) {
+        await showAlert(`1:多 模式：母株损耗 ${sc} 超过母株剩余可用 ${motherAvailable} 株，请调整（母株池：${motherAvailable} 株）`);
+        return;
+      }
+      // 1:多 模式：小苗池校验 — 小苗损耗 + 人工定植不能超过小苗剩余可用
+      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailableAfter) {
+        await showAlert(`1:多 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailableAfter} 株，请调整（小苗池：${seedlingAvailableAfter} 株）`);
         return;
       }
     } else {
-      // 1:1：成活变化正数不能超过初始投入（=初始母株）
-      if (sc > 0 && sc > currentAvailable) {
-        await showAlert(`成活变化 +${sc} 超过当前剩余可用小苗 ${currentAvailable} 株，请调整`);
+      // 1:1 模式：小苗池校验（母株池无损耗概念，无需校验）
+      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailableAfter) {
+        await showAlert(`1:1 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailableAfter} 株，请调整（小苗池：${seedlingAvailableAfter} 株）`);
         return;
       }
     }
@@ -135,19 +157,18 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     }
 
     try {
-      // 2026-06-16: 数量体系重构 — bizData 用 4 个新字段名（向后兼容旧字段名）
-      // 1:1 模式：survivalCountChange → expandedChange（小苗产出）
-      // 1:多 模式：survivalCountChange → motherLossChange（母株损耗）；runnerIncreaseCount → expandedChange（小苗产出）
+      // 2026-06-16: 数量体系重构 — bizData 用 5 个新字段名（损耗/产出/定植 + 补苗）
       const bizData: any = {
         temperature: formData.temperature,
         humidity: formData.humidity,
         watering: formData.watering,
         abnormality: formData.abnormality || undefined,
-        // 4 个新业务字段（按模式路由 — 对应 UI 4 字段）
-        motherLossChange: isMotherMode ? sc : 0,  // 1:多=母株损耗；1:1=0
-        seedlingLossChange: lc,                    // 两种模式=小苗损耗
-        expandedChange: ri,                        // 两种模式=小苗产出（1:1=成活变化，1:多=扩繁）
-        transplantedChange: tc,                   // 两种模式=人工定植
+        // 5 个新业务字段
+        motherLossChange: sc,      // 1:多=母株损耗；1:1=0
+        seedlingLossChange: lc,    // 两种模式=小苗损耗
+        expandedChange: ri,        // 1:多=小苗产出；1:1=0
+        transplantedChange: tc,    // 两种模式=人工定植
+        replantChange: rc,         // 2026-06-16: 补苗（两种模式都支持）
         // 4 个旧字段名（兼容历史 data 读取）
         survivalCountChange: sc,
         plantedCountChange: tc,
@@ -177,6 +198,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         plantedCountChange: undefined,
         lossCountChange: undefined,
         runnerIncreaseCount: undefined,
+        replantChange: undefined,  // 2026-06-16
         remarks: '',
         phValue: undefined,
         ecValue: undefined,
@@ -290,6 +312,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       '小苗产出': r.runnerIncreaseCount ?? '',
       '人工定植': r.plantedCountChange ?? '',
       '小苗损耗': r.lossCountChange ?? '',
+      '补苗': r.replantChange ?? '',
       '操作员': r.operator ?? '',
       '备注': r.remarks ?? ''
     }));
@@ -453,8 +476,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 <span className="ml-2 text-sm text-gray-600">{formData.watering ? '是' : '否'}</span>
               </div>
             </div>
-            {/* 2026-06-16: 数量体系重构 — UI 字段明确"母株/小苗"，4 字段按模式显示 */}
-            {/* 母株损耗（1:多 模式才显示） */}
+            {/* 2026-06-16: 数量体系重构 — 1:1 模式只显示 2 个输入框（损耗 + 定植） */}
+            {/* 1:多 模式：母株损耗（仅 1:多 模式） */}
             {isMotherMode && (
               <div>
                 <Label className="text-gray-700">
@@ -481,24 +504,23 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 />
               </div>
             )}
-            {/* 小苗产出（1:1=成活变化/小苗产出；1:多=每日新增小苗） */}
-            <div>
-              <Label className="text-gray-700">
-                {isMotherMode ? '小苗产出' : '小苗产出（成活变化）'}
-                <span className="text-xs text-gray-500 ml-1">
-                  （{isMotherMode ? '匍匐茎/组培/扦插/分株每日新增' : '1:1 模式 投入=产出'}，存入"小苗产出"字段）
-                </span>
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.runnerIncreaseCount ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '' || v === '-') {
-                    setFormData({ ...formData, runnerIncreaseCount: undefined });
-                  return;
-                  }
+            {/* 小苗产出（仅 1:多 模式 — 1:1 模式无"小苗产出"业务概念） */}
+            {isMotherMode && (
+              <div>
+                <Label className="text-gray-700">
+                  小苗产出
+                  <span className="text-xs text-gray-500 ml-1">（匍匐茎/组培/扦插/分株每日新增，存入"小苗产出"字段）</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.runnerIncreaseCount ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === '' || v === '-') {
+                      setFormData({ ...formData, runnerIncreaseCount: undefined });
+                      return;
+                    }
                     const n = Number(v);
                     if (!isNaN(n) && n >= 0) {
                       setFormData({ ...formData, runnerIncreaseCount: n });
@@ -508,7 +530,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   className={deepInputClass}
                 />
               </div>
-            {/* 人工定植 */}
+            )}
+            {/* 人工定植（两种模式都显示） */}
             <div>
               <Label className="text-gray-700">
                 人工定植
@@ -533,7 +556,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                 className={deepInputClass}
               />
             </div>
-            {/* 小苗损耗 */}
+            {/* 小苗损耗（两种模式都显示） */}
             <div>
               <Label className="text-gray-700">
                 小苗损耗
@@ -555,6 +578,33 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                   }
                 }}
                 placeholder="今日小苗死亡数（不可为负）"
+                className={deepInputClass}
+              />
+            </div>
+            {/* 2026-06-16: 补苗（两种模式都显示）— 1:1=补种子进入；1:多=补母株进入；补入"补苗累计"字段 */}
+            <div>
+              <Label className="text-gray-700">
+                补苗
+                <span className="text-xs text-gray-500 ml-1">
+                  （{isMotherMode ? '新增母株进入苗床，存入"补苗累计"字段' : '重新补种子进入苗床，存入"补苗累计"字段'}）
+                </span>
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                value={formData.replantChange ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || v === '-') {
+                    setFormData({ ...formData, replantChange: undefined });
+                    return;
+                  }
+                  const n = Number(v);
+                  if (!isNaN(n) && n >= 0) {
+                    setFormData({ ...formData, replantChange: n });
+                  }
+                }}
+                placeholder={isMotherMode ? '今日新增母株数（不可为负）' : '今日补种子数（不可为负）'}
                 className={deepInputClass}
               />
             </div>
@@ -629,11 +679,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold">pH</th>
                     <th className="px-2 py-2 text-left font-semibold">EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
-                    {/* 2026-06-16: 列名对齐 DB 字段 — 与 AddModal/DailyRecordModal 输入框 label 保持一致 */}
-                    <th className="px-2 py-2 text-left font-semibold">{isMotherMode ? '母株损耗' : '成活变化'}</th>
+                    {/* 2026-06-16: 列名对齐 DB 字段 — 1:1 模式无 sc 累加（死字段），隐藏"成活变化"列；1:多 模式显示"母株损耗"列 */}
+                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">母株损耗</th>}
                     {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
                     <th className="px-2 py-2 text-left font-semibold">人工定植</th>
                     <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>
+                    {/* 2026-06-16: 补苗列（两种模式都显示） */}
+                    <th className="px-2 py-2 text-left font-semibold">补苗</th>
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
                     <th className="px-2 py-2 text-left font-semibold">备注</th>
                     <th className="px-2 py-2 text-center font-semibold w-24">操作</th>
@@ -667,9 +719,12 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'watering', r.watering)}
                       </td>
-                      <td className="px-2 py-1.5">
-                        {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
-                      </td>
+                      {/* 2026-06-16: 1:多 模式才显示母株损耗列（1:1 模式 sc 是死字段） */}
+                      {isMotherMode && (
+                        <td className="px-2 py-1.5">
+                          {renderEditableCell(r, 'survivalCountChange', r.survivalCountChange)}
+                        </td>
+                      )}
                       {isMotherMode && (
                         <td className="px-2 py-1.5">
                           {renderEditableCell(r, 'runnerIncreaseCount', r.runnerIncreaseCount)}
@@ -680,6 +735,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                       </td>
                       <td className="px-2 py-1.5">
                         {renderEditableCell(r, 'lossCountChange', r.lossCountChange)}
+                      </td>
+                      {/* 2026-06-16: 补苗列 */}
+                      <td className="px-2 py-1.5">
+                        {renderEditableCell(r, 'replantChange', r.replantChange)}
                       </td>
                       <td className="px-2 py-1.5">{r.operator || '-'}</td>
                       <td className="px-2 py-1.5 text-gray-500 truncate max-w-[120px]">{r.remarks || '-'}</td>

@@ -268,6 +268,7 @@ export interface DailyRecord {
   plantedCountChange?: number;  // 定植数量变化
   lossCountChange?: number;    // 损耗数量
   runnerIncreaseCount?: number;  // 2026-06-05: 扩繁小苗数量（草莓匍匐茎育苗等无性繁殖场景，记录当天新增的小苗数）
+  replantChange?: number;     // 2026-06-16: 补苗数（1:1=补种子；1:多=补母株）
   remarks?: string;           // 备注
   // 水质参数（补充）
   phValue?: number;          // pH值
@@ -375,6 +376,7 @@ export interface Seedling {
   motherPlantCount?: number;  // 母株存活数（layering/tissue_culture/cutting 专用）
   expandedPlantCount?: number; // 累计扩繁产出数（layering/tissue_culture/cutting 专用）
   scionCount?: number;        // 砧木数（grafting 专用）
+  replantCount?: number;      // 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
   dailyRecords: DailyRecord[]; // 每日记录
   pictures: string[];         // 图片（Base64数组）
   qualityGrade?: string;      // 品质等级

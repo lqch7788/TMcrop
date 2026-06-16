@@ -11,6 +11,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { seedSourceService, BusinessError, SeedSourceErrorCode } from '../services/seedSource.service';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
+import { seedLog } from '../lib/seedLogger';
 
 const router = Router();
 
@@ -356,6 +357,117 @@ router.post('/with-deduct', asyncHandler(async (req: Request, res: Response) => 
     throw insertErr;
   }
 }));
+
+/**
+ * 2026-06-16: 按 ID 精准修复母株存活数 — 重置为初始数量（初始数量 = 建档时的母株投入数）
+ * POST /api/seedlings/:id/reset-mother-count
+ * 用法：用户希望"母株存活数 = 初始数量"（清零所有历史损耗），用于母株已枯废批次的修复
+ * 警告：会丢失历史母株损耗记录（但保留 mother_loss_count 字段值，前端"剩余可用"公式用 mother - motherLoss 计算）
+ */
+router.post('/:id/reset-mother-count', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+
+    const stmt = db.prepare('SELECT id, seedling_code, propagation_mode, seedling_quantity, mother_plant_count, mother_loss_count FROM seedlings WHERE id = ?');
+    stmt.bind([id]);
+    let row: any = null;
+    if (stmt.step()) row = stmt.getAsObject();
+    stmt.free();
+
+    if (!row) {
+      return res.status(404).json({ success: false, error: '育苗记录不存在' });
+    }
+
+    if (row.propagation_mode !== 'one_to_many') {
+      return res.status(400).json({ success: false, error: '仅 1:多 模式可重置母株存活数' });
+    }
+
+    const initialQty = Number(row.seedling_quantity) || 0;
+    const beforeMother = Number(row.mother_plant_count) || 0;
+    const motherLoss = Number(row.mother_loss_count) || 0;
+    const now = new Date().toISOString();
+
+    // 重置 mother_plant_count = seedling_quantity（即建档时的母株投入数）
+    db.run(
+      'UPDATE seedlings SET mother_plant_count = ?, update_time = ? WHERE id = ?',
+      [initialQty, now, id]
+    );
+    saveDatabase();
+
+    seedLog.info(`✓ 母株存活数重置：${row.seedling_code} ${beforeMother} → ${initialQty}（同时保留母株累计损耗 ${motherLoss}）`);
+
+    res.json({
+      success: true,
+      data: {
+        id,
+        seedlingCode: row.seedling_code,
+        beforeMother,
+        afterMother: initialQty,
+        motherLoss,
+        message: `母株存活数 ${beforeMother} → ${initialQty}（注意：母株累计损耗 ${motherLoss} 仍保留，前端"剩余可用"公式会从 mother - motherLoss = ${initialQty - motherLoss} 开始算）`,
+      },
+    });
+  } catch (error: any) {
+    console.error('重置母株存活数失败:', error);
+    res.status(500).json({ success: false, error: `重置失败: ${error.message}` });
+  }
+});
+
+/**
+ * 2026-06-16: 修复历史脏数据 — 母株损耗已累加但 mother_plant_count 未扣减
+ * POST /api/seedlings/fix-mother-loss
+ * 幂等：用 mother_loss_fixed 标记字段防重复修复
+ * 只对 1:多 模式 + mother_loss_count > 0 + mother_loss_fixed = 0 的记录修复
+ */
+router.post('/fix-mother-loss', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const beforeStmt = db.prepare(`SELECT id, seedling_code, mother_plant_count, mother_loss_count FROM seedlings WHERE propagation_mode = 'one_to_many' AND mother_loss_count > 0 AND (mother_loss_fixed IS NULL OR mother_loss_fixed = 0)`);
+    const records: Array<{ id: string; seedlingCode: string; beforeMother: number; afterMother: number; motherLoss: number }> = [];
+    const toUpdate: Array<{ id: string; newMother: number }> = [];
+    while (beforeStmt.step()) {
+      const row = beforeStmt.getAsObject() as any;
+      const beforeMother = Number(row.mother_plant_count) || 0;
+      const motherLoss = Number(row.mother_loss_count) || 0;
+      const afterMother = Math.max(0, beforeMother - motherLoss);
+      records.push({
+        id: row.id,
+        seedlingCode: row.seedling_code,
+        beforeMother,
+        afterMother,
+        motherLoss,
+      });
+      toUpdate.push({ id: row.id, newMother: afterMother });
+    }
+    beforeStmt.free();
+
+    const now = new Date().toISOString();
+    const stmt = db.prepare('UPDATE seedlings SET mother_plant_count = ?, mother_loss_fixed = 1, update_time = ? WHERE id = ?');
+    for (const { id, newMother } of toUpdate) {
+      stmt.run([newMother, now, id]);
+    }
+    stmt.free();
+    saveDatabase();
+
+    seedLog.info(`✓ 历史脏数据修复完成：${records.length} 条记录`);
+    for (const r of records) {
+      seedLog.info(`  - ${r.seedlingCode}: mother_plant_count ${r.beforeMother} → ${r.afterMother} (扣减母株损耗 ${r.motherLoss})`);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        fixedCount: records.length,
+        records,
+      },
+      message: `修复 ${records.length} 条记录`,
+    });
+  } catch (error: any) {
+    console.error('修复历史脏数据失败:', error);
+    res.status(500).json({ success: false, error: `修复失败: ${error.message}` });
+  }
+});
 
 /**
  * 重置育苗数据
@@ -968,29 +1080,41 @@ export function validateDailyChange(id: string, changeData: any): string | null 
   const slc = Number(changeData?.seedlingLossChange) || 0;
   const ec = Number(changeData?.expandedChange) || 0;
   const tc = Number(changeData?.transplantedChange) || 0;
+  // 2026-06-16: 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
+  const rc = Number(changeData?.replantChange) || 0;
+  if (rc < 0) return '补苗数不能为负';
 
-  const newMother = (Number(row.mother_plant_count) || 0) - mlc;
+  // 2026-06-16: 母株池 / 小苗池 严格分离校验
+  // 母株池：1:1 = 当前 + 补苗（无损耗）；1:多 = 当前 - 损耗 + 补苗
+  // 小苗池：1:1 = expanded（=母株同步）；1:多 = 当前产出 + 本次产出
+  const newMother = is11
+    ? (Number(row.mother_plant_count) || 0) + rc
+    : (Number(row.mother_plant_count) || 0) - mlc + rc;
   const newMotherLoss = (Number(row.mother_loss_count) || 0) + mlc;
   const newExpanded = is11 ? newMother : ((Number(row.expanded_plant_count) || 0) + ec);
   const newSeedlingLoss = (Number(row.seedling_loss_count) || 0) + slc;
   const newTransplanted = (Number(row.transplanted_count) || 0) + tc;
-  const smallAvailable = newMother + newExpanded;
+  const newAutoPlanted = Number(row.auto_planted_count) || 0;  // 此字段由其他路径累加（不在 daily_record.data 里）
+  const newHarvestStocked = Number(row.harvest_stocked_count) || 0;  // 此字段由其他路径累加
 
-  // 通用校验
-  if (newMother < 0 || newMother > initial) return `母株存活数 ${newMother} 越界 [0, ${initial}]`;
+  // 母株池校验
+  if (newMother < 0) return `母株存活数 ${newMother} 不能为负（母株池独立计算）`;
   if (newMotherLoss < 0) return '母株累计损耗不能为负';
+  if (mlc < 0) return '母株损耗不能为负';
+  if (rc < 0) return '补苗不能为负';
+
+  // 小苗池校验（与母株池严格分离）
   if (newExpanded < 0) return '小苗产出累计越界';
   if (newSeedlingLoss < 0) return '小苗累计损耗不能为负';
-  if (newSeedlingLoss > newExpanded) return `小苗损耗 ${newSeedlingLoss} 超过已产出 ${newExpanded}`;
-
-  // 1:1 模式额外校验
-  if (is11 && (newMother + newMotherLoss > initial)) {
-    return `母株存活+母株损耗 ${newMother + newMotherLoss} 超过初始 ${initial}`;
+  if (newTransplanted < 0) return '人工定植累计不能为负';
+  // 小苗池总消耗 = 小苗损耗 + 人工定植 + 自动定植 + 采收入库
+  // 小苗池剩余可用 = 小苗产出 - 小苗损耗 - 人工定植 - 自动定植 - 采收入库
+  const smallAvailable = newExpanded - newSeedlingLoss - newTransplanted - newAutoPlanted - newHarvestStocked;
+  if (smallAvailable < 0) {
+    return `小苗池消耗超过产出：累计产出 ${newExpanded}，累计消耗 ${newSeedlingLoss + newTransplanted + newAutoPlanted + newHarvestStocked}`;
   }
-
-  // 小苗消耗校验（不动 auto_planted/harvest_stocked：这两个由系统自动累加，校验在各自路径做）
-  if (newSeedlingLoss + newTransplanted > smallAvailable) {
-    return `小苗去向合计 ${newSeedlingLoss + newTransplanted} 超过可用 ${smallAvailable}`;
+  if (newSeedlingLoss > newExpanded) {
+    return `小苗损耗 ${newSeedlingLoss} 超过已产出 ${newExpanded}`;
   }
   return null;
 }
@@ -1011,6 +1135,7 @@ function normalizeChangeData(raw: any, propagationMode: string): any {
   const legacyTc = Number(raw.plantedCountChange) || 0;
   const legacyLc = Number(raw.lossCountChange) || 0;
   const legacyRi = Number(raw.runnerIncreaseCount) || 0;
+  const legacyRc = Number(raw.replantChange) || 0;
   return {
     // 2026-06-16: 优先新字段名（前端已发新字段名），回退旧字段名
     // 关键修复：旧字段值为 0 时不覆盖新字段值（用 || 短路判断）
@@ -1018,6 +1143,8 @@ function normalizeChangeData(raw: any, propagationMode: string): any {
     seedlingLossChange: Number(raw.seedlingLossChange) || legacyLc,
     expandedChange: Number(raw.expandedChange) || legacyRi || (is11 ? legacySc : 0),
     transplantedChange: Number(raw.transplantedChange) || legacyTc,
+    // 2026-06-16: 补苗（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
+    replantChange: Math.max(0, Number(raw.replantChange) || legacyRc),
     // 保留旧字段名（用于 daily_record.data 写回时的兼容性）
     survivalCountChange: raw.survivalCountChange,
     plantedCountChange: raw.plantedCountChange,
@@ -1053,6 +1180,8 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
   const slc = Number(changeData?.seedlingLossChange) || 0;
   const ec = Number(changeData?.expandedChange) || 0;
   const tc = Number(changeData?.transplantedChange) || 0;
+  // 2026-06-16: 补苗（replant）— 1:1=补种子计入母株池；1:多=补母株计入母株池
+  const rc = Number(changeData?.replantChange) || 0;
 
   // sign=+1 时校验；sign=-1 反向补偿跳过校验（铁律：能修复脏数据）
   if (sign > 0 && initial > 0) {
@@ -1073,11 +1202,16 @@ function applyDailyChangeToSeedling(id: string, changeData: any, sign: number): 
   safeAdd('mother_loss_count', mlc * sign);
   safeAdd('seedling_loss_count', slc * sign);
   safeAdd('transplanted_count', tc * sign);
+  safeAdd('replant_count', rc * sign);  // 2026-06-16: 补苗累计（两种模式都加）
+
   if (!is11) {
+    // 1:多 模式：母株损耗 mlc 同步扣减母株存活数；补苗 rc 同步累加母株存活数
+    safeAdd('mother_plant_count', -mlc * sign + rc * sign);
     safeAdd('expanded_plant_count', ec * sign);
-  }
-  // 1:1 模式：expanded_plant_count 由 mother_plant_count 派生，后端自动同步
-  if (is11) {
+  } else {
+    // 1:1 模式：补苗 rc 累加到母株池（1:1 没有"母株损耗"，只有补苗）
+    safeAdd('mother_plant_count', rc * sign);
+    // 1:1 模式：expanded_plant_count 由 mother_plant_count 派生（总投入数 = initial + replant）
     db.run('UPDATE seedlings SET expanded_plant_count = mother_plant_count WHERE id = ?', [id]);
   }
   return null;

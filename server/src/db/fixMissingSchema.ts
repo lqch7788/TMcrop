@@ -2007,6 +2007,10 @@ export async function fixMissingSchema(): Promise<void> {
   try { db.run("ALTER TABLE seedlings ADD COLUMN transplanted_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.transplanted_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.transplanted_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.transplanted_count 失败: ${e.message}`); }
   try { db.run("ALTER TABLE seedlings ADD COLUMN auto_planted_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.auto_planted_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.auto_planted_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.auto_planted_count 失败: ${e.message}`); }
   try { db.run("ALTER TABLE seedlings ADD COLUMN harvest_stocked_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.harvest_stocked_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.harvest_stocked_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.harvest_stocked_count 失败: ${e.message}`); }
+  // 2026-06-16: 母株损耗历史脏数据修复标记列（防重复修复）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN mother_loss_fixed INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.mother_loss_fixed 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.mother_loss_fixed 已存在，跳过'); else seedLog.error(`  ✗ seedlings.mother_loss_fixed 失败: ${e.message}`); }
+  // 2026-06-16: 补苗累计字段（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
+  try { db.run("ALTER TABLE seedlings ADD COLUMN replant_count INTEGER DEFAULT 0"); seedLog.info('  ✓ seedlings.replant_count 字段已添加'); } catch (e: any) { if (e.message?.includes('duplicate column')) seedLog.info('  - seedlings.replant_count 已存在，跳过'); else seedLog.error(`  ✗ seedlings.replant_count 失败: ${e.message}`); }
 
   // 2026-06-15: 数据迁移 — propagation_mode 6 种 → 2 种合并
   // 旧值: seed / layering / tissue_culture / cutting / division / grafting
@@ -2033,6 +2037,9 @@ export async function fixMissingSchema(): Promise<void> {
             WHERE propagation_mode = 'one_to_many'`);
     seedLog.info('  ✓ seedlings 1:多 模式回填完成');
   } catch (e: any) { seedLog.error(`  ✗ 1:多 模式回填失败: ${e.message}`); }
+
+  // 2026-06-16: 1:多 模式历史脏数据修复 — 见 POST /api/seedlings/fix-mother-loss
+  // 不在启动时自动跑（避免重复修复），需手动调一次 API
 
   // 2026-06-15: 数据迁移 — 旧字段值迁移到新字段（保留历史已记录的数据）
   // planted_count → transplanted_count（已定植数）

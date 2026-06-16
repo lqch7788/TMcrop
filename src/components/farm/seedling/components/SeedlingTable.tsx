@@ -434,8 +434,8 @@ export function SeedlingTable({
           <colgroup>
             {showCheckbox && <col className="w-10" />}
             <col className="w-32" />
-            <col className="w-24" />
-            <col className="w-36" />
+            <col className="w-20" />
+            <col className="w-32" />
             <col className="w-28" />
             <col className="w-24" />
             <col className="w-20" />
@@ -449,8 +449,14 @@ export function SeedlingTable({
             <col className="w-20" />
             <col className="w-20" />
             <col className="w-20" />
+            <col className="w-20" />
+            <col className="w-20" />
+            <col className="w-20" />
             <col className="w-24" />
+            {/* 操作列固定宽度 w-72 (288px ≈ 7 个 32px icon 按钮 + padding) */}
+            <col className="w-72" />
           </colgroup>
+          {/* thead 正常布局（不 sticky，避免和操作列 sticky 冲突） */}
           <thead className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
             <tr>
               {showCheckbox && (
@@ -466,23 +472,29 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">作物品种</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">品种路径</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">育苗区域</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">初始数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗率</th>
+              {/* ===== 母株池（4 列） — 蓝色半透明背景标识 ===== */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池初始数量（建档时投入）">初始数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池当前存活数">母株存活数</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计损耗">母株累计损耗</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-indigo-500/30" title="母株池累计补栽">补苗累计</th>
+              {/* ===== 小苗池（5 列） — 绿色半透明背景标识 ===== */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计产出">小苗累计产出</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池累计损耗">小苗累计损耗</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池剩余 = 产出 - 损耗 - 人工定植 - 自动定植 - 采收入库">小苗剩余数量</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池人工定植累计">人工定植累计</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-emerald-500/30" title="小苗池自动定植累计">自动定植累计</th>
+              {/* ===== 派生 ===== */}
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
-              {/* 2026-06-16: 数量体系重构 — 列名对齐 DB 字段语义 */}
-              {/* 1:1 模式：成活累计 = expandedPlantCount；1:多 模式：小苗累计产出 = expandedPlantCount */}
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="1:1模式=成活累计；1:多模式=小苗累计产出">成活/小苗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="小苗死亡/淘汰累计（seedlingLossCount）">小苗损耗</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="人工定植 + 自动定植 累计（transplantedCount + autoPlantedCount）">已定植</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">完成比例</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">状态</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">操作</th>
+              {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index，避免脱离 thead） */}
+              <th className="sticky right-0 px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)]">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <tr>
-                <td colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </td>
               </tr>
@@ -561,29 +573,67 @@ export function SeedlingTable({
                     })()}
                   </td>
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap">{record.siteName}</td>
-                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap">{(record.initialCount || 0).toLocaleString()}</td>
-                  <td className="px-2 py-1.5 text-sm text-gray-500 text-center">{record.targetSurvivalRate ?? '-'}%</td>
-                  <td className="px-2 py-1.5 text-sm text-gray-500 text-center">{(record.targetSurvivalCount ?? 0).toLocaleString()}</td>
-                  {/* 2026-06-16: 数量体系重构 — 改用新 5 业务字段（避免显示旧字段 0） */}
-                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center">
-                    {Math.max(0, (record as any).expandedPlantCount || 0).toLocaleString()}
+                  {/* ===== 母株池（4 列） — 与 thead bg-indigo-500/30 对应 ===== */}
+                  {/* 初始数量 = seedlingQuantity（建档时投入） */}
+                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">
+                    {(record.initialCount || 0).toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center">
-                    {Math.max(0, (record as any).seedlingLossCount || 0).toLocaleString()}
+                  {/* 母株存活数 = motherPlantCount */}
+                  <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">
+                    {((record as any).motherPlantCount || 0).toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 text-sm text-purple-600 font-medium text-center">
-                    {Math.max(0, ((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0)).toLocaleString()}
+                  {/* 母株累计损耗 = motherLossCount（1:1 模式恒 0） */}
+                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-indigo-50/30">
+                    {((record as any).motherLossCount || 0).toLocaleString()}
+                  </td>
+                  {/* 补苗累计 = replantCount */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-indigo-50/30">
+                    {((record as any).replantCount || 0).toLocaleString()}
+                  </td>
+                  {/* ===== 小苗池（5 列） — 与 thead bg-emerald-500/30 对应 ===== */}
+                  {/* 小苗累计产出 = expandedPlantCount */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
+                    {((record as any).expandedPlantCount || 0).toLocaleString()}
+                  </td>
+                  {/* 小苗累计损耗 = seedlingLossCount */}
+                  <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
+                    {((record as any).seedlingLossCount || 0).toLocaleString()}
+                  </td>
+                  {/* 小苗剩余数量 = expanded - loss - trans - auto - harvest（派生列） */}
+                  <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30">
+                    {(() => {
+                      const expanded = (record as any).expandedPlantCount || 0;
+                      const loss = (record as any).seedlingLossCount || 0;
+                      const trans = (record as any).transplantedCount || 0;
+                      const auto = (record as any).autoPlantedCount || 0;
+                      const harvest = (record as any).harvestStockedCount || 0;
+                      const remaining = Math.max(0, expanded - loss - trans - auto - harvest);
+                      return remaining.toLocaleString();
+                    })()}
+                  </td>
+                  {/* 人工定植累计 = transplantedCount */}
+                  <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
+                    {((record as any).transplantedCount || 0).toLocaleString()}
+                  </td>
+                  {/* 自动定植累计 = autoPlantedCount */}
+                  <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
+                    {((record as any).autoPlantedCount || 0).toLocaleString()}
+                  </td>
+                  {/* ===== 派生 ===== */}
+                  {/* 目标成苗数 = targetSurvivalCount */}
+                  <td className="px-2 py-1.5 text-sm text-gray-500 text-center">
+                    {(record.targetSurvivalCount ?? 0).toLocaleString()}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
+                    {/* 2026-06-16: 完成比例 = 小苗累计产出 / 目标成苗数（统一公式，不区分模式） */}
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (() => {
-                      // 2026-06-14: 兜底 — 负的 survivalCount 会算出负百分比
-                      const safeSurvival = Math.max(0, record.survivalCount || 0);
-                      const ratio = safeSurvival / record.targetSurvivalCount;
+                      const expanded = Math.max(0, (record as any).expandedPlantCount || 0);
+                      const ratio = expanded / record.targetSurvivalCount;
                       return (
                         <span className={`font-medium ${
                           ratio >= 0.8 ? 'text-green-600' : ratio >= 0.5 ? 'text-amber-600' : 'text-red-600'
                         }`}>
-                          {Math.round(Math.max(0, ratio) * 100)}%
+                          {Math.round(Math.max(0, Math.min(ratio, 9.99)) * 100)}%
                         </span>
                       );
                     })() : (
@@ -610,7 +660,8 @@ export function SeedlingTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-1.5 text-xs text-center">
+                  {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（不设 z-index） */}
+                  <td className="sticky right-0 px-2 py-1.5 text-xs text-center bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)]">
                     <div className="flex gap-1 justify-center">
                       <Button
                         variant="ghost"
