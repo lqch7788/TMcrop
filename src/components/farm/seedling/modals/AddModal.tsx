@@ -1013,28 +1013,26 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
               </div>
             </div>
           ) : (
-            /* 外部种源：手动录入 */
+            /* 外部种源：手动录入（2026-06-16: 移除'数量'字段避免与"数量与品质"区的初始/母株数量重叠） */
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-gray-900">外部种源批号</Label>
+                <Label className="text-gray-900">外部种源批号 <span className="text-red-500">*</span></Label>
                 <Input type="text" value={externalSeedCode} onChange={(e) => setExternalSeedCode(e.target.value)}
                   className={deepInputClass} placeholder="如：EXT-2026-001" />
               </div>
               <div>
-                <Label className="text-gray-900">种源名称</Label>
+                <Label className="text-gray-900">种源名称 <span className="text-red-500">*</span></Label>
                 <Input type="text" value={externalSeedName} onChange={(e) => setExternalSeedName(e.target.value)}
                   className={deepInputClass} placeholder="如：红富士自留种" />
               </div>
-              <div>
-                <Label className="text-gray-900">数量</Label>
-                <Input type="number" min={0} value={externalSeedQuantity || ''} onChange={(e) => setExternalSeedQuantity(Number(e.target.value))}
-                  className={deepInputClass} placeholder="外部种源数量" />
-              </div>
-              <div>
+              <div className="col-span-2">
                 <Label className="text-gray-900">来源说明</Label>
                 <Input type="text" value={externalSeedNote} onChange={(e) => setExternalSeedNote(e.target.value)}
                   className={deepInputClass} placeholder="如：本地农资店购买" />
               </div>
+              <p className="text-xs text-gray-500 col-span-2">
+                本次育苗的数量请在下方"数量与品质"区填写
+              </p>
             </div>
           )}
         </div>
