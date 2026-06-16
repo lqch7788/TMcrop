@@ -7,6 +7,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Seedling, SourceType, PlantingStatus } from '../../../../types/crop';
 import { useSeedlingStore } from '../../../../stores/useSeedlingStore';
 import { usePlantingStore } from '../../../../stores/usePlantingStore';
+import { enhancedApiClient } from '@/lib/apiClient';
 import { Input } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
@@ -93,8 +94,34 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
         createBy: localStorage.getItem('username') || '陆启闯'
       });
 
-      // 更新育苗的已定植数量（通过 Store）
+      // 2026-06-16: 数量体系重构 — 同时调 2 条路径：
+      //   路径 1：POST /:id/increase-planted → 累加 auto_planted_count
+      //   路径 2：POST /:id/transplant-records → 写 transplant_records 表 + 改 status='transplanted'
+      // 双路径冗余但避免数据分裂：auto_planted_count 用于"已定植"统计；transplant_records 用于"栽种履历/追溯链路"
+      const operatorName = localStorage.getItem('username') || '未知用户';
+
+      // 路径 1：累加 auto_planted_count
       await useSeedlingStore.getState().increasePlantedCount(String(record.id), formData.transplantCount);
+
+      // 路径 2：写 transplant_records 行（snake_case 字段名直发后端）
+      await enhancedApiClient.post(`/seedlings/${record.id}/transplant-records`, {
+        crop_name: record.cropName,
+        crop_variety: record.cropVariety,
+        greenhouse_name: record.siteName,
+        area_name: areaName,
+        from_location: 'nursery',
+        to_location: areaName,
+        transplant_date: formData.transplantDate,
+        transplant_quantity: formData.transplantCount,
+        survival_quantity: 0,
+        survival_rate: 0,
+        operator_id: operatorName,
+        operator_name: operatorName,
+        status: 'completed',
+        remarks: formData.remarks,
+        data: JSON.stringify({ soilPH: formData.soilPH, soilEC: formData.soilEC }),
+        create_by: operatorName,
+      });
     } catch (error) {
       // logger.error('定植操作失败:', error);
       await showAlert('定植操作失败，请重试');
@@ -159,7 +186,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
           <h4 className="text-sm font-semibold text-gray-900 mb-3">定植信息</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-gray-700">定植数量</Label>
+              <Label className="text-gray-700">自动定植数量</Label>
               <Input
                 type="number"
                 value={formData.transplantCount || ''}
@@ -167,7 +194,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
                 max={availableCount}
                 className={deepInputClass}
               />
-              <p className="text-xs text-gray-500 mt-1">最多可定植 {availableCount.toLocaleString()} 株</p>
+              <p className="text-xs text-gray-500 mt-1">本次操作累加到「自动定植累计」，最多可定植 {availableCount.toLocaleString()} 株</p>
             </div>
             <div>
               <Label className="text-gray-700">定植区域</Label>
