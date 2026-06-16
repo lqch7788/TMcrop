@@ -733,243 +733,6 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           </div>
         </div>
 
-        {/* ========== 数量与品质区（2026-06-16: 移到批次号上方） ========== */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="w-4 h-4 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-900">数量与品质</h3>
-          </div>
-
-          {/* 2026-06-16: 育苗计算模式取消 UI 选择（propagationMode 自动联动，避免前后矛盾）
-              字段保留在 state 中（calculateMode）以兼容 EditModal/apiSeedlingService/历史数据 */}
-
-          {/* 单株育苗模式 */}
-          {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
-            <div className="grid grid-cols-2 gap-4">
-              {/* 2026-06-15: 数量体系重构 — 1:多 模式显示母株数量输入框 */}
-              {formData.propagationMode === 'one_to_many' ? (
-                /* 1:多 模式：母株数量 */
-                <div>
-                  <Label className="text-gray-900">
-                    母株数量 <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 ml-2">（匍匐茎/组培/扦插/分株）</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.motherPlantCount || ''}
-                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
-                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder="请输入母株数量（>0）"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    子苗通过每日记录"新出苗数"累加；母株可继续产苗或一次性分出
-                  </p>
-                </div>
-              ) : (
-                /* 1:1 模式：初始数量 */
-                <div>
-                  <Label className="text-gray-900">
-                    初始数量 <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.initialCount || ''}
-                    onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
-                    className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder={formData.propagationMode === 'division' ? '分株出的苗数' : '请输入播种数量'}
-                  />
-                  {initialCountExceeds && (
-                    <p className="text-xs text-red-500 mt-1">
-                      超过种源可用数量（{sourceAvailableCount}）
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 目标成苗率 */}
-              <div>
-                <Label className="text-gray-900">
-                  目标成苗率（%）<span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.targetSurvivalRate || ''}
-                  onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
-                  onBlur={(e) => {
-                    const val = Number(e.target.value);
-                    if (!isNaN(val) && val > 0) {
-                      setFormData({ ...formData, targetSurvivalRate: Math.round(val * 100) / 100 });
-                    }
-                  }}
-                  className={deepInputClass}
-                  placeholder="0-100%"
-                  step="0.01"
-                />
-              </div>
-
-              {/* 目标成苗数（自动计算） */}
-              <div>
-                <Label className="text-gray-700">目标成苗数</Label>
-                <Input
-                  type="text"
-                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
-                  readOnly
-                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                />
-                <p className="text-xs text-gray-500 mt-1">初始数量 × 目标成苗率</p>
-              </div>
-
-              {/* 负责人（与目标成苗数配对，2 个一排） */}
-              <div>
-                <Label className="text-gray-900">负责人</Label>
-                <Select
-                  value={formData.chargePerson}
-                  onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
-                >
-                  <SelectTrigger className={deepInputClass}>
-                    <SelectValue placeholder="请选择" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPERATORS.map(op => (
-                      <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {/* 扩繁育苗模式 */}
-          {formData.calculateMode === SeedlingCalculateMode.PROPAGATION && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* 母株数量 */}
-                <div>
-                  <Label className="text-gray-900">
-                    母株数量 <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.motherPlantCount || ''}
-                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
-                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
-                    placeholder="投入的基础种苗数量"
-                  />
-                  {motherCountExceeds && (
-                    <p className="text-xs text-red-500 mt-1">
-                      超过种源可用数量（{sourceAvailableCount}）
-                    </p>
-                  )}
-                </div>
-
-                {/* 扩繁倍数 */}
-                <div>
-                  <Label className="text-gray-900">
-                    扩繁倍数 <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={String(formData.propagationMultiple)}
-                    onValueChange={(val) => handlePropagationMultipleChange(Number(val))}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择扩繁倍数" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {propagationMultiples.map(p => (
-                        <SelectItem key={p.value} value={String(p.value)}>{p.label} - {p.description}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* 自定义扩繁倍数输入（当选择"其他"时显示） */}
-              {formData.propagationMultiple === 0 && (
-                <div>
-                  <Label className="text-gray-900">
-                    自定义扩繁倍数 <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.customMultiple || ''}
-                    onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
-                    className={deepInputClass}
-                    placeholder="请输入扩繁倍数"
-                  />
-                </div>
-              )}
-
-              {/* 理论产量（自动计算） */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700">理论产量</Label>
-                  <Input
-                    type="text"
-                    value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
-                    readOnly
-                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
-                </div>
-
-                {/* 目标成苗率 */}
-                <div>
-                  <Label className="text-gray-900">
-                    目标成苗率（%）<span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.targetSurvivalRate || ''}
-                    onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
-                    className={deepInputClass}
-                    placeholder="0-100%"
-                  step="0.01"
-                  />
-                </div>
-              </div>
-
-              {/* 目标成苗数（自动计算） */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-700">目标成苗数</Label>
-                  <Input
-                    type="text"
-                    value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
-                    readOnly
-                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
-                </div>
-
-                {/* 负责人（与目标成苗数配对，2 个一排） */}
-                <div>
-                  <Label className="text-gray-900">负责人</Label>
-                  <Select
-                    value={formData.chargePerson}
-                    onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
-                  >
-                    <SelectTrigger className={deepInputClass}>
-                      <SelectValue placeholder="请选择" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPERATORS.map(op => (
-                        <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2026-06-16: 负责人已迁移到"数量与品质"区与目标成苗数配对 */}
-        </div>
 
         {/* ========== 育苗批次号（最顶层） ========== */}
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
@@ -1273,6 +1036,243 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
           )}
         </div>
 
+        {/* ========== 数量与品质区（2026-06-16: 移到批次号上方） ========== */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">数量与品质</h3>
+          </div>
+
+          {/* 2026-06-16: 育苗计算模式取消 UI 选择（propagationMode 自动联动，避免前后矛盾）
+              字段保留在 state 中（calculateMode）以兼容 EditModal/apiSeedlingService/历史数据 */}
+
+          {/* 单株育苗模式 */}
+          {formData.calculateMode === SeedlingCalculateMode.SINGLE && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* 2026-06-15: 数量体系重构 — 1:多 模式显示母株数量输入框 */}
+              {formData.propagationMode === 'one_to_many' ? (
+                /* 1:多 模式：母株数量 */
+                <div>
+                  <Label className="text-gray-900">
+                    母株数量 <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 ml-2">（匍匐茎/组培/扦插/分株）</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.motherPlantCount || ''}
+                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                    placeholder="请输入母株数量（>0）"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    子苗通过每日记录"新出苗数"累加；母株可继续产苗或一次性分出
+                  </p>
+                </div>
+              ) : (
+                /* 1:1 模式：初始数量 */
+                <div>
+                  <Label className="text-gray-900">
+                    初始数量 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.initialCount || ''}
+                    onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+                    className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                    placeholder={formData.propagationMode === 'division' ? '分株出的苗数' : '请输入播种数量'}
+                  />
+                  {initialCountExceeds && (
+                    <p className="text-xs text-red-500 mt-1">
+                      超过种源可用数量（{sourceAvailableCount}）
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 目标成苗率 */}
+              <div>
+                <Label className="text-gray-900">
+                  目标成苗率（%）<span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.targetSurvivalRate || ''}
+                  onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
+                  onBlur={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val) && val > 0) {
+                      setFormData({ ...formData, targetSurvivalRate: Math.round(val * 100) / 100 });
+                    }
+                  }}
+                  className={deepInputClass}
+                  placeholder="0-100%"
+                  step="0.01"
+                />
+              </div>
+
+              {/* 目标成苗数（自动计算） */}
+              <div>
+                <Label className="text-gray-700">目标成苗数</Label>
+                <Input
+                  type="text"
+                  value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
+                  readOnly
+                  className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
+                />
+                <p className="text-xs text-gray-500 mt-1">初始数量 × 目标成苗率</p>
+              </div>
+
+              {/* 负责人（与目标成苗数配对，2 个一排） */}
+              <div>
+                <Label className="text-gray-900">负责人</Label>
+                <Select
+                  value={formData.chargePerson}
+                  onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
+                >
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPERATORS.map(op => (
+                      <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* 扩繁育苗模式 */}
+          {formData.calculateMode === SeedlingCalculateMode.PROPAGATION && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* 母株数量 */}
+                <div>
+                  <Label className="text-gray-900">
+                    母株数量 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.motherPlantCount || ''}
+                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                    className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
+                    placeholder="投入的基础种苗数量"
+                  />
+                  {motherCountExceeds && (
+                    <p className="text-xs text-red-500 mt-1">
+                      超过种源可用数量（{sourceAvailableCount}）
+                    </p>
+                  )}
+                </div>
+
+                {/* 扩繁倍数 */}
+                <div>
+                  <Label className="text-gray-900">
+                    扩繁倍数 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={String(formData.propagationMultiple)}
+                    onValueChange={(val) => handlePropagationMultipleChange(Number(val))}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择扩繁倍数" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {propagationMultiples.map(p => (
+                        <SelectItem key={p.value} value={String(p.value)}>{p.label} - {p.description}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* 自定义扩繁倍数输入（当选择"其他"时显示） */}
+              {formData.propagationMultiple === 0 && (
+                <div>
+                  <Label className="text-gray-900">
+                    自定义扩繁倍数 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.customMultiple || ''}
+                    onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
+                    className={deepInputClass}
+                    placeholder="请输入扩繁倍数"
+                  />
+                </div>
+              )}
+
+              {/* 理论产量（自动计算） */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700">理论产量</Label>
+                  <Input
+                    type="text"
+                    value={theoreticalYield > 0 ? theoreticalYield.toLocaleString() : '—'}
+                    readOnly
+                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">母株数量 × 扩繁倍数</p>
+                </div>
+
+                {/* 目标成苗率 */}
+                <div>
+                  <Label className="text-gray-900">
+                    目标成苗率（%）<span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.targetSurvivalRate || ''}
+                    onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
+                    className={deepInputClass}
+                    placeholder="0-100%"
+                  step="0.01"
+                  />
+                </div>
+              </div>
+
+              {/* 目标成苗数（自动计算） */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-700">目标成苗数</Label>
+                  <Input
+                    type="text"
+                    value={targetSurvivalCount > 0 ? targetSurvivalCount.toLocaleString() : '—'}
+                    readOnly
+                    className={`${deepInputClass} bg-gray-100 text-gray-600 font-mono`}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">理论产量 × 目标成苗率</p>
+                </div>
+
+                {/* 负责人（与目标成苗数配对，2 个一排） */}
+                <div>
+                  <Label className="text-gray-900">负责人</Label>
+                  <Select
+                    value={formData.chargePerson}
+                    onValueChange={(val) => setFormData({ ...formData, chargePerson: val })}
+                  >
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {OPERATORS.map(op => (
+                        <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2026-06-16: 负责人已迁移到"数量与品质"区与目标成苗数配对 */}
+        </div>
         {/* ========== 场地与计划区 ========== */}
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
