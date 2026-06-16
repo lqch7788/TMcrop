@@ -439,8 +439,11 @@ export function AddModal({
       ? formData.motherPlantCount
       : formData.initialCount;
 
-    // 后端 mother_plant_count 字段（仅 1:多 模式才校验 > 0）
-    const motherCountForBackend = isOneToMany ? finalInitialCount : 0;
+    // 后端 mother_plant_count 字段（两种模式都存 finalInitialCount）
+    // - 1:多：母株数 = initial，作为后续"母株存活数 - 损耗 + 补苗"的基线
+    // - 1:1：母株数 = initial（与"种子/嫁接"投入的种子数等价），否则 daily record 派生 expanded 会丢 initial
+    // 2026-06-16 修复：1:1 模式此前写 0，导致补苗后 expanded_plant_count = 0 + 补苗，丢掉 initial
+    const motherCountForBackend = finalInitialCount;
 
     // 构建育苗数据
     const seedlingData: Record<string, unknown> = {
@@ -922,25 +925,46 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                             </Button>
                           </div>
                         ) : (
-                          filteredSeedSources.map(s => (
-                            <div
-                              key={s.id}
-                              onClick={() => {
-                                handleSourceChange(s.id);
-                                setSourcePopoverOpen(false);
-                                setSourceSearch('');
-                              }}
-                              className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 cursor-pointer hover:bg-emerald-50 transition-colors
-                                ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}
-                            >
-                              <div className="truncate font-medium text-gray-800">{s.cropName}</div>
-                              <div className="truncate text-emerald-700">{s.seedCode}</div>
-                              <div className="text-gray-600">{s.quantity} {s.unit}</div>
-                              <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
-                                {s.availableCount} {s.unit}
+                          filteredSeedSources.map(s => {
+                            // 2026-06-16: failed / 无可用余量的种源不可选（前端友好提示，避免后端 500）
+                            const isFailed = (s as any).propagationStatus === 'failed';
+                            const isUnavailable = s.availableCount <= 0;
+                            const isDisabled = isFailed || isUnavailable;
+                            const disabledReason = isFailed
+                              ? '该种源已标记为失败，不能用于育苗'
+                              : isUnavailable
+                                ? '该种源可用余量为 0'
+                                : '';
+                            return (
+                              <div
+                                key={s.id}
+                                onClick={() => {
+                                  if (isDisabled) {
+                                    showAlert(disabledReason);
+                                    return;
+                                  }
+                                  handleSourceChange(s.id);
+                                  setSourcePopoverOpen(false);
+                                  setSourceSearch('');
+                                }}
+                                className={`grid grid-cols-4 gap-2 px-3 py-2 text-sm border-b border-gray-100 transition-colors
+                                  ${isDisabled
+                                    ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                                    : `cursor-pointer hover:bg-emerald-50 ${formData.sourceId === s.id ? 'bg-emerald-100' : ''}`}`}
+                                title={disabledReason}
+                              >
+                                <div className={`truncate font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-800'}`}>
+                                  {s.cropName}
+                                  {isFailed && <span className="ml-1 text-xs text-red-500">[已失败]</span>}
+                                </div>
+                                <div className={`truncate ${isDisabled ? 'text-gray-400' : 'text-emerald-700'}`}>{s.seedCode}</div>
+                                <div className="text-gray-600">{s.quantity} {s.unit}</div>
+                                <div className={`font-medium ${s.availableCount <= 0 ? 'text-red-500' : s.availableCount < 10 ? 'text-amber-500' : 'text-gray-700'}`}>
+                                  {s.availableCount} {s.unit}
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                       {/* 底部提示 */}
@@ -974,14 +998,14 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 />
               </div>
 
-              {/* 作物品种：与种源列表"作物品种"列一致，仅显示最终品种名（由种源自动带入） */}
+              {/* 作物品种：与种源列表"作物品种"列一致；2026-06-16 兜底：种源未填 cropVariety 时回退到 cropName（品种名） */}
               <div>
                 <Label className="text-gray-900">
                   作物品种 <span className="text-red-500">*</span>
                 </Label>
                 <div className={`${deepInputClass} bg-gray-100 text-gray-600 flex items-center min-h-[46px]`}>
-                  {formData.cropVariety ? (
-                    <span>{formData.cropVariety}</span>
+                  {formData.cropVariety || formData.cropName ? (
+                    <span>{formData.cropVariety || formData.cropName}</span>
                   ) : (
                     <span className="text-gray-400">请先选择种源</span>
                   )}

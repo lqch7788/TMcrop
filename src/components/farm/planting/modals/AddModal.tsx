@@ -433,7 +433,7 @@ export function AddModal({
                   ) : (
                     seedlings.map(s => (
                       <SelectItem key={s.id} value={s.id}>
-                        {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {s.survivalCount - s.plantedCount}
+                        {s.seedlingCode} - {s.cropName} ({s.cropVariety}) - 可定植: {(s as any).availableTransplantCount ?? 0}
                       </SelectItem>
                     ))
                   )}

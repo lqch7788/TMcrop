@@ -115,19 +115,19 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     const rc = formData.replantChange || 0;                            // 2026-06-16: 补苗
 
     // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并！）
-    // 母株池剩余可用 = 母株存活数 = 母株存活 - 母株损耗 + 补苗累计（1:1 = 母株存活 + 补苗）
+    // 母株池剩余可用 = 母株存活 - 母株损耗 + 补苗累计（1:1 = 母株存活 + 补苗；1:多 = 母株存活 - 母株损耗 + 补苗）
     const motherAvailable = Math.max(0,
       ((record as any).motherPlantCount || 0) - ((record as any).motherLossCount || 0) + ((record as any).replantCount || 0)
     );
-    // 小苗池剩余可用：必须考虑"本次产出/损耗/定植"（如果只算 DB 状态，剩余为 0 时任何损耗都被拒）
-    // 公式 = (DB 产出 + 本次产出) - (DB 损耗 + 本次损耗) - (DB 定植 + 本次定植) - DB 自动定植 - DB 采收入库
-    const seedlingAvailableAfter = Math.max(0,
+    // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/定植/自动定植/采收入库）
+    // ⚠️ 注意：本次损耗 lc 和本次定植 tc 不参与"剩余可用"计算（避免双重扣减）
+    //   校验逻辑是 lc+tc ≤ seedlingAvailable（即：用户本次最多可扣减多少）
+    const seedlingAvailable = Math.max(0,
       ((record as any).expandedPlantCount || 0)
-      + ri    // 2026-06-16: 加入本次产出，否则剩余为 0 时无法填新损耗/定植
+      + ri                          // 本次产出
+      + (isMotherMode ? 0 : rc)     // 2026-06-16 修复：1:1 模式补苗计入小苗池（补种子）
       - (record.seedlingLossCount || 0)
-      - lc    // 2026-06-16: 加入本次损耗
       - (record.transplantedCount || 0)
-      - tc    // 2026-06-16: 加入本次定植
       - (record.autoPlantedCount || 0)
       - (record.harvestStockedCount || 0)
     );
@@ -139,14 +139,14 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         return;
       }
       // 1:多 模式：小苗池校验 — 小苗损耗 + 人工定植不能超过小苗剩余可用
-      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailableAfter) {
-        await showAlert(`1:多 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailableAfter} 株，请调整（小苗池：${seedlingAvailableAfter} 株）`);
+      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailable) {
+        await showAlert(`1:多 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
         return;
       }
     } else {
       // 1:1 模式：小苗池校验（母株池无损耗概念，无需校验）
-      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailableAfter) {
-        await showAlert(`1:1 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailableAfter} 株，请调整（小苗池：${seedlingAvailableAfter} 株）`);
+      if ((lc + tc) > 0 && (lc + tc) > seedlingAvailable) {
+        await showAlert(`1:1 模式：小苗消耗（损耗 ${lc} + 人工定植 ${tc} = ${lc + tc}）超过小苗剩余可用 ${seedlingAvailable} 株，请调整（小苗池：${seedlingAvailable} 株）`);
         return;
       }
     }

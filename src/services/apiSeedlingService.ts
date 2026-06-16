@@ -180,6 +180,15 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     harvestStockedCount: (item as any).harvestStockedCount ?? 0,
     // 2026-06-16: 透传补苗累计
     replantCount: (item as any).replantCount ?? 0,
+    // 2026-06-16: 派生字段 — 可定植数量 = expanded - 损耗 - 人工定植 - 自动定植 - 采收入库
+    // 种植管理"经育苗移栽"模式下拉取此值显示
+    availableTransplantCount: Math.max(0,
+      ((item as any).expandedPlantCount ?? 0)
+      - ((item as any).seedlingLossCount ?? 0)
+      - ((item as any).transplantedCount ?? 0)
+      - ((item as any).autoPlantedCount ?? 0)
+      - ((item as any).harvestStockedCount ?? 0)
+    ),
     // 2026-06-15: 5 预估字段
     propagationMultiple: (item as any).propagationMultiple ?? 0,
     customMultiple: (item as any).customMultiple ?? 0,
