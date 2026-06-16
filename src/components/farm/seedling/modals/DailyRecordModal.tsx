@@ -286,10 +286,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       'pH值': r.phValue ?? '',
       'EC值(mS/cm)': r.ecValue ?? '',
       '浇水': r.watering ? '是' : '否',
-      '成活变化': r.survivalCountChange ?? '',
-      '扩繁小苗数量': r.runnerIncreaseCount ?? '',
-      '定植变化': r.plantedCountChange ?? '',
-      '损耗变化': r.lossCountChange ?? '',
+      '母株损耗': r.survivalCountChange ?? '',
+      '小苗产出': r.runnerIncreaseCount ?? '',
+      '人工定植': r.plantedCountChange ?? '',
+      '小苗损耗': r.lossCountChange ?? '',
       '操作员': r.operator ?? '',
       '备注': r.remarks ?? ''
     }));
@@ -629,10 +629,11 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
                     <th className="px-2 py-2 text-left font-semibold">pH</th>
                     <th className="px-2 py-2 text-left font-semibold">EC</th>
                     <th className="px-2 py-2 text-left font-semibold">浇水</th>
-                    <th className="px-2 py-2 text-left font-semibold">{isMotherMode ? '母株变化' : '成活变化'}</th>
-                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">扩繁小苗数量</th>}
-                    <th className="px-2 py-2 text-left font-semibold">定植变化</th>
-                    <th className="px-2 py-2 text-left font-semibold">损耗变化</th>
+                    {/* 2026-06-16: 列名对齐 DB 字段 — 与 AddModal/DailyRecordModal 输入框 label 保持一致 */}
+                    <th className="px-2 py-2 text-left font-semibold">{isMotherMode ? '母株损耗' : '成活变化'}</th>
+                    {isMotherMode && <th className="px-2 py-2 text-left font-semibold">小苗产出</th>}
+                    <th className="px-2 py-2 text-left font-semibold">人工定植</th>
+                    <th className="px-2 py-2 text-left font-semibold">小苗损耗</th>
                     <th className="px-2 py-2 text-left font-semibold">操作员</th>
                     <th className="px-2 py-2 text-left font-semibold">备注</th>
                     <th className="px-2 py-2 text-center font-semibold w-24">操作</th>

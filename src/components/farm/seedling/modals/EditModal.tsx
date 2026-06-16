@@ -459,16 +459,16 @@ export function EditModal({
           />
         </div>
 
-        {/* 已定植数量（每日记录+种植管理自动累加，不可手动改） */}
+        {/* 已定植数量 = 人工定植 + 自动定植（每日记录+种植管理自动累加，不可手动改） */}
         <div>
           <Label className="text-gray-700">
-            已定植数量
-            <span className="text-xs text-gray-500 ml-1">（每日记录+种植管理自动累加）</span>
+            已定植数量（人工+自动）
+            <span className="text-xs text-gray-500 ml-1">（人工定植 + 自动定植 自动累加）</span>
           </Label>
           <Input
             type="number"
             min={0}
-            value={formData.plantedCount || ''}
+            value={((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0) || ''}
             readOnly
             className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
           />

@@ -469,9 +469,11 @@ export function SeedlingTable({
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">初始数量</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗率</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">目标成苗数</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">成活数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">损耗数量</th>
-              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">现存数量</th>
+              {/* 2026-06-16: 数量体系重构 — 列名对齐 DB 字段语义 */}
+              {/* 1:1 模式：成活累计 = expandedPlantCount；1:多 模式：小苗累计产出 = expandedPlantCount */}
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="1:1模式=成活累计；1:多模式=小苗累计产出">成活/小苗</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="小苗死亡/淘汰累计（seedlingLossCount）">小苗损耗</th>
+              <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap" title="人工定植 + 自动定植 累计（transplantedCount + autoPlantedCount）">已定植</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">完成比例</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">状态</th>
               <th className="px-2 py-2 text-center text-xs font-semibold text-white whitespace-nowrap">操作</th>
