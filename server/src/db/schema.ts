@@ -507,7 +507,11 @@ export function initializeDatabase() {
       seedling_loss_count INTEGER DEFAULT 0,
       transplanted_count INTEGER DEFAULT 0,
       auto_planted_count INTEGER DEFAULT 0,
-      harvest_stocked_count INTEGER DEFAULT 0
+      harvest_stocked_count INTEGER DEFAULT 0,
+      -- 2026-06-16: 标记母株损耗历史脏数据是否已修复（防重复修复）
+      mother_loss_fixed INTEGER DEFAULT 0,
+      -- 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株）— 严格区分母株/小苗池子
+      replant_count INTEGER DEFAULT 0
     )
   `);
 

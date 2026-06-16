@@ -81,6 +81,7 @@ export function EditModal({
     transplantedCount: (record as any).transplantedCount ?? 0,
     autoPlantedCount: (record as any).autoPlantedCount ?? 0,
     harvestStockedCount: (record as any).harvestStockedCount ?? 0,
+    replantCount: (record as any).replantCount ?? 0,  // 2026-06-16: 补苗累计
   });
 
   // 方案2.7: combogrid种源选择器状态
@@ -496,23 +497,42 @@ export function EditModal({
                 className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
             </div>
             <div>
-              <Label className="text-gray-700">人工定植</Label>
+              <Label className="text-gray-700">人工定植累计</Label>
               <Input type="number" value={formData.transplantedCount || ''} readOnly
                 className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
             </div>
             <div>
-              <Label className="text-gray-700">自动定植（种植管理累加）</Label>
+              <Label className="text-gray-700">自动定植累计</Label>
               <Input type="number" value={formData.autoPlantedCount || ''} readOnly
                 className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
             </div>
             <div>
-              <Label className="text-gray-700">采收入库</Label>
+              <Label className="text-gray-700">采收入库累计</Label>
               <Input type="number" value={formData.harvestStockedCount || ''} readOnly
+                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+            </div>
+            {/* 2026-06-16: 补苗累计（严格区分母株/小苗池子） */}
+            <div>
+              <Label className="text-gray-700">补苗累计</Label>
+              <Input type="number" value={formData.replantCount || ''} readOnly
                 className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            剩余可定植 = 母株存活 + 小苗产出 - 小苗损耗 - 人工定植 - 自动定植 - 采收入库 = {((formData.motherPlantCount || 0) + (formData.expandedPlantCount || 0) - (formData.seedlingLossCount || 0) - (formData.transplantedCount || 0) - (formData.autoPlantedCount || 0) - (formData.harvestStockedCount || 0)).toLocaleString()} 株
+            {/* 2026-06-16: 剩余可定植公式按模式分支（兼容历史脏数据：mother - motherLoss） */}
+            {/* 1:1 模式：expanded = mother（后端同步），只算一次：expanded - 各种 */}
+            {/* 1:多 模式：(母株存活 - 母株累计损耗) + 小苗累计产出 - 小苗累计损耗 - 人工定植累计 - 自动定植累计 - 采收入库累计 */}
+            {(() => {
+              const is11 = ((record as any).propagationMode || 'one_to_one') === 'one_to_one';
+              // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并）
+              const motherAvailable = ((record as any).motherPlantCount || 0) - ((record as any).motherLossCount || 0) + ((record as any).replantCount || 0);
+              const seedlingAvailable = ((record as any).expandedPlantCount || 0)
+                - (formData.seedlingLossCount || 0)
+                - (formData.transplantedCount || 0)
+                - (formData.autoPlantedCount || 0)
+                - (formData.harvestStockedCount || 0);
+              return `母株池剩余 = ${Math.max(0, motherAvailable).toLocaleString()} 株 | 小苗池剩余 = ${Math.max(0, seedlingAvailable).toLocaleString()} 株（两池独立，不合并）`;
+            })()}
           </p>
         </div>
 

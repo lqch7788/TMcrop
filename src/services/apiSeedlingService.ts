@@ -61,6 +61,8 @@ interface BackendSeedling {
   transplantedCount?: number;
   autoPlantedCount?: number;
   harvestStockedCount?: number;
+  // 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
+  replantCount?: number;
   // 2026-06-15: 5 预估字段（仅 1:多 模式有）
   propagationMultiple?: number;
   customMultiple?: number;
@@ -176,6 +178,8 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     transplantedCount: (item as any).transplantedCount ?? 0,
     autoPlantedCount: (item as any).autoPlantedCount ?? 0,
     harvestStockedCount: (item as any).harvestStockedCount ?? 0,
+    // 2026-06-16: 透传补苗累计
+    replantCount: (item as any).replantCount ?? 0,
     // 2026-06-15: 5 预估字段
     propagationMultiple: (item as any).propagationMultiple ?? 0,
     customMultiple: (item as any).customMultiple ?? 0,

@@ -196,21 +196,26 @@ export function DetailModal({
                 <span className="text-sm text-red-500 font-medium">{((record as any).seedlingLossCount || 0).toLocaleString()}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-32" title="人工把小苗定植到种植区累计，DB: transplanted_count">人工定植：</span>
+                <span className="text-sm text-gray-500 w-32" title="人工把小苗定植到种植区累计，DB: transplanted_count">人工定植累计：</span>
                 <span className="text-sm text-blue-600 font-medium">{((record as any).transplantedCount || 0).toLocaleString()}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-32" title="种植管理自动累加，DB: auto_planted_count">自动定植：</span>
+                <span className="text-sm text-gray-500 w-32" title="种植管理自动累加，DB: auto_planted_count">自动定植累计：</span>
                 <span className="text-sm text-blue-600 font-medium">{((record as any).autoPlantedCount || 0).toLocaleString()}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm text-gray-500 w-32" title="采收入库累计，DB: harvest_stocked_count">采收入库：</span>
+                <span className="text-sm text-gray-500 w-32" title="采收入库累计，DB: harvest_stocked_count">采收入库累计：</span>
                 <span className="text-sm text-purple-600 font-medium">{((record as any).harvestStockedCount || 0).toLocaleString()}</span>
+              </div>
+              {/* 2026-06-16: 补苗累计（严格区分母株/小苗池子） */}
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500 w-32" title="1:1=补种子；1:多=补母株；DB: replant_count">补苗累计：</span>
+                <span className="text-sm text-emerald-600 font-medium">{((record as any).replantCount || 0).toLocaleString()}</span>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              累计已定植 = 人工定植 + 自动定植 = {(((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0)).toLocaleString()} 株
-              ｜ 累计损耗 = 母株损耗 + 小苗损耗 = {(((record as any).motherLossCount || 0) + ((record as any).seedlingLossCount || 0)).toLocaleString()} 株
+              累计已定植 = 人工定植累计 + 自动定植累计 = {(((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0)).toLocaleString()} 株
+              ｜ 累计损耗 = 母株累计损耗 + 小苗累计损耗 = {(((record as any).motherLossCount || 0) + ((record as any).seedlingLossCount || 0)).toLocaleString()} 株
             </p>
           </div>
         </div>
