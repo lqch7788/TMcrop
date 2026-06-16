@@ -244,10 +244,13 @@ export function AddModal({
   const sourceAvailableCount = selectedSource?.availableCount ?? 0;
 
   // 数量上限校验：单株模式 initialCount / 扩繁模式 motherPlantCount 不能超过种源可用数量
-  const initialCountExceeds = formData.calculateMode === SeedlingCalculateMode.SINGLE
+  // 2026-06-16: 仅内部种源模式校验；外部种源用户自填数量不限制
+  const initialCountExceeds = sourceMode === 'internal'
+    && formData.calculateMode === SeedlingCalculateMode.SINGLE
     && formData.initialCount > 0
     && formData.initialCount > sourceAvailableCount;
-  const motherCountExceeds = formData.calculateMode === SeedlingCalculateMode.PROPAGATION
+  const motherCountExceeds = sourceMode === 'internal'
+    && formData.calculateMode === SeedlingCalculateMode.PROPAGATION
     && formData.motherPlantCount > 0
     && formData.motherPlantCount > sourceAvailableCount;
   const isCountExceeded = initialCountExceeds || motherCountExceeds;
