@@ -377,6 +377,9 @@ export interface Seedling {
   expandedPlantCount?: number; // 累计扩繁产出数（layering/tissue_culture/cutting 专用）
   scionCount?: number;        // 砧木数（grafting 专用）
   replantCount?: number;      // 2026-06-16: 补苗累计（1:1=补种子；1:多=补母株；严格区分母株/小苗池子）
+  // 2026-06-16: 派生字段 — 可定植数量 = expanded - 损耗 - 人工定植 - 自动定植 - 采收入库
+  // 种植管理"经育苗移栽"模式选育苗批次时取此字段显示
+  availableTransplantCount?: number;
   dailyRecords: DailyRecord[]; // 每日记录
   pictures: string[];         // 图片（Base64数组）
   qualityGrade?: string;      // 品质等级

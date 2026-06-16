@@ -470,6 +470,91 @@ router.post('/fix-mother-loss', (req: Request, res: Response) => {
 });
 
 /**
+ * 2026-06-16: 修复 1:1 模式历史脏数据 — mother_plant_count 漏存 initial
+ *
+ * 根因：早期 AddModal 1:1 模式 mother_plant_count 写 0，导致后续 daily record
+ *       派生 expanded_plant_count = 0 + 补苗，丢掉初始数量 initial
+ * 修复：1:1 模式 mother_plant_count = seedling_quantity + replant_count
+ *       expanded_plant_count = mother_plant_count
+ *
+ * POST /api/seedlings/fix-one-to-one-mother
+ * Body: { dryRun?: boolean }  缺省 false（直接修复）
+ * 幂等：修复后字段值不再变化，重复调用无副作用
+ */
+router.post('/fix-one-to-one-mother', (req: Request, res: Response) => {
+  try {
+    const dryRun = req.body?.dryRun === true;
+    const db = getDatabase();
+
+    // 找出 1:1 模式且 mother_plant_count 不等于 (initial + replant_count) 的脏数据
+    const beforeStmt = db.prepare(`
+      SELECT id, seedling_code, seedling_quantity, mother_plant_count, expanded_plant_count, replant_count
+      FROM seedlings
+      WHERE propagation_mode = 'one_to_one'
+        AND deleted_at IS NULL
+    `);
+    const dirty: Array<{
+      id: string;
+      seedlingCode: string;
+      beforeMother: number;
+      beforeExpanded: number;
+      afterMother: number;
+      afterExpanded: number;
+      initial: number;
+      replant: number;
+    }> = [];
+
+    while (beforeStmt.step()) {
+      const row = beforeStmt.getAsObject() as any;
+      const initial = Number(row.seedling_quantity) || 0;
+      const replant = Number(row.replant_count) || 0;
+      const beforeMother = Number(row.mother_plant_count) || 0;
+      const beforeExpanded = Number(row.expanded_plant_count) || 0;
+      const afterMother = initial + replant;
+      // 只在不一致时记为脏数据
+      if (beforeMother !== afterMother || beforeExpanded !== afterMother) {
+        dirty.push({
+          id: row.id,
+          seedlingCode: row.seedling_code,
+          beforeMother,
+          beforeExpanded,
+          afterMother,
+          afterExpanded: afterMother,
+          initial,
+          replant,
+        });
+      }
+    }
+    beforeStmt.free();
+
+    if (!dryRun && dirty.length > 0) {
+      const now = new Date().toISOString();
+      const stmt = db.prepare('UPDATE seedlings SET mother_plant_count = ?, expanded_plant_count = ?, update_time = ? WHERE id = ?');
+      for (const d of dirty) {
+        stmt.run([d.afterMother, d.afterExpanded, now, d.id]);
+      }
+      stmt.free();
+      saveDatabase();
+    }
+
+    res.json({
+      success: true,
+      data: {
+        dryRun,
+        dirtyCount: dirty.length,
+        records: dirty,
+      },
+      message: dryRun
+        ? `DryRun：发现 ${dirty.length} 条 1:1 模式脏数据`
+        : `修复 ${dirty.length} 条 1:1 模式脏数据`,
+    });
+  } catch (error: any) {
+    console.error('修复 1:1 模式脏数据失败:', error);
+    res.status(500).json({ success: false, error: `修复失败: ${error.message}` });
+  }
+});
+
+/**
  * 重置育苗数据
  * POST /api/seedlings/reset
  */

@@ -76,6 +76,11 @@ export function errorHandler(
     // Mongoose 类型转换错误
     statusCode = 400;
     message = 'Invalid data format';
+  } else if (err.name === 'BusinessError' || (err as any).httpStatus) {
+    // 2026-06-16: 业务错误（来自 seedSource.service.ts 的 BusinessError）
+    // 真实 message 必须透传给前端，httpStatus 是路由/服务层显式指定的状态码
+    statusCode = (err as any).httpStatus || 400;
+    message = err.message || '业务错误';
   }
 
   // 生产环境下隐藏内部错误详情

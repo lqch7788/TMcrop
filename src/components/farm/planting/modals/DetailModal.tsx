@@ -1,5 +1,6 @@
 /**
  * 种植详情弹窗
+ * 2026-06-16: 加"流转记录"Tab（material_flow_log 业务流水全链路）
  */
 
 import React, { useState } from 'react';
@@ -7,7 +8,8 @@ import { Button } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { PLANTING_STATUS_MAP } from '../../../../constants/cropConstants';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, History } from 'lucide-react';
+import { FlowLogTab } from '../../trace/FlowLogTab';
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -21,6 +23,7 @@ export function DetailModal({
   record
 }: DetailModalProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'flow'>('info');
 
   // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
   const statusMap = {
@@ -72,6 +75,36 @@ export function DetailModal({
       submitText="关闭"
       cancelText=""
     >
+      {/* Tab 切换 */}
+      <div className="flex border-b border-gray-200 mb-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setActiveTab('info')}
+          className={`border-b-2 -mb-px rounded-none flex items-center gap-1 ${
+            activeTab === 'info'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          基本信息
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setActiveTab('flow')}
+          className={`border-b-2 -mb-px rounded-none flex items-center gap-1 ${
+            activeTab === 'flow'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          流转记录
+        </Button>
+      </div>
+
+      {activeTab === 'info' ? (
       <div className="space-y-6">
         {/* 基本信息 */}
         <div>
@@ -211,6 +244,10 @@ export function DetailModal({
           </div>
         )}
       </div>
+      ) : (
+        /* 流转记录 Tab */
+        <FlowLogTab code={record.plantCode} businessId={record.id} />
+      )}
 
       {/* 图片放大查看器 */}
       {selectedImageIndex !== null && images.length > 0 && (

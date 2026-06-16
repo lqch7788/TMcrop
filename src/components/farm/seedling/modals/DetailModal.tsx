@@ -7,6 +7,7 @@ import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus, TransplantRecordStatus } from '../../../../types/crop';
 import TraceChain from '../../trace/TraceChain';
+import { FlowLogTab } from '../../trace/FlowLogTab';
 import { History } from 'lucide-react';
 import { SEEDLING_STATUS_MAP, TRANSPLANT_STATUS_MAP } from '../../../../constants/cropConstants';
 
@@ -21,7 +22,7 @@ export function DetailModal({
   onClose,
   record
 }: DetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'trace'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'trace' | 'flow'>('info');
 
   // TODO: 颜色值与共享常量 SEEDLING_STATUS_MAP 不同，暂保留本地定义
   const statusMap = {
@@ -82,6 +83,19 @@ export function DetailModal({
         >
           <History className="w-4 h-4" />
           追溯链路
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setActiveTab('flow')}
+          className={`border-b-2 -mb-px rounded-none flex items-center gap-1 ${
+            activeTab === 'flow'
+              ? 'border-emerald-500 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          流转记录
         </Button>
       </div>
 
@@ -292,7 +306,7 @@ export function DetailModal({
           </div>
         </div>
       </div>
-      ) : (
+      ) : activeTab === 'trace' ? (
       /* 追溯链路标签页 */
       <div className="py-2">
         {record.instanceId ? (
@@ -308,6 +322,9 @@ export function DetailModal({
           </div>
         )}
       </div>
+      ) : (
+        /* 流转记录标签页（2026-06-16: 业务流水全链路，不依赖库存实例） */
+        <FlowLogTab code={record.seedlingCode} businessId={record.id} />
       )}
     </UnifiedModal>
   );
