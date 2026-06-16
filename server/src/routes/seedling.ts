@@ -1670,14 +1670,14 @@ router.post('/:id/increase-planted', (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
-    // 2026-06-13: 修复 — seedlings 表列名是 planted_count
-    const currentPlanted = item.planted_count || 0;
-    const newPlanted = currentPlanted + count;
+    // 2026-06-16: 数量体系重构 — 累加到 auto_planted_count（与 planting.ts 一致），停止写旧字段 planted_count
+    const currentAutoPlanted = item.auto_planted_count || 0;
+    const newAutoPlanted = currentAutoPlanted + count;
 
-    db.run('UPDATE seedlings SET planted_count = ?, update_time = ? WHERE id = ?', [newPlanted, now, id]);
+    db.run('UPDATE seedlings SET auto_planted_count = ?, update_time = ? WHERE id = ?', [newAutoPlanted, now, id]);
     saveDatabase();
 
-    res.json({ success: true, data: { planted_count: newPlanted } });
+    res.json({ success: true, data: { auto_planted_count: newAutoPlanted } });
   } catch (error) {
     res.status(500).json({ success: false, error: '增加已定植数量失败' });
   }
