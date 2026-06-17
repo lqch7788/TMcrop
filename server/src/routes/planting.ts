@@ -215,6 +215,237 @@ router.get('/:id/harvest-records', (req, res) => {
   }
 });
 
+/**
+ * 编辑 1 条采收记录（事务原子：反向补偿 + 正向重放）
+ * PUT /api/plantings/:id/harvest-records/:recordId
+ */
+router.put('/:id/harvest-records/:recordId', async (req, res) => {
+  try {
+    const { id, recordId } = req.params;
+    const { recordDate, destination, subType, warehouseId, warehouseName, quantity, unit, notes } = req.body || {};
+    const db = getDatabase();
+    const now = formatLocalDateISO();
+
+    // 校验 planting 未锁定
+    const pStmt = db.prepare('SELECT is_harvest_locked, source_id FROM plantings WHERE id = ?');
+    pStmt.bind([id]);
+    const planting = pStmt.step() ? pStmt.getAsObject() : null;
+    pStmt.free();
+    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' });
+    if (planting.is_harvest_locked) {
+      return res.status(400).json({ success: false, error: '种植已结束，无法编辑采收记录' });
+    }
+
+    // 校验记录存在
+    const oldStmt = db.prepare('SELECT * FROM planting_harvest_records WHERE id = ? AND planting_id = ?');
+    oldStmt.bind([recordId, id]);
+    const old = oldStmt.step() ? oldStmt.getAsObject() : null;
+    oldStmt.free();
+    if (!old) return res.status(404).json({ success: false, error: '采收记录不存在' });
+
+    // 字段校验
+    if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' });
+    if ((destination === 'harvest' || destination === 'circulate_to_inventory') && !warehouseId) {
+      return res.status(400).json({ success: false, error: '必须选择仓库' });
+    }
+    if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
+      return res.status(400).json({ success: false, error: '数量必须大于 0' });
+    }
+
+    // === 反向补偿：删除旧的下游副作用 ===
+    if (old.harvest_record_id) {
+      db.run('DELETE FROM harvest_records WHERE id = ?', [old.harvest_record_id]);
+    }
+    if (old.inventory_stock_id) {
+      db.run('DELETE FROM inventory_stock WHERE id = ?', [old.inventory_stock_id]);
+    }
+    if (old.circulation_record_id) {
+      db.run('DELETE FROM crop_circulation_records WHERE id = ?', [old.circulation_record_id]);
+    }
+
+    // === 正向重放：写新下游副作用（与 POST 路由同逻辑） ===
+    let generatedHarvestId: string | null = null;
+    let generatedStockId: string | null = null;
+    let generatedCircId: string | null = null;
+
+    if (destination === 'harvest') {
+      // 同 POST 路由 harvest 分支（行 950-1008）
+      const whRow = db.prepare('SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1').get([warehouseId, warehouseId]) as any;
+      const realWarehouseName = whRow?.name || warehouseName || warehouseId;
+      const dateStr = recordDate || now.split('T')[0];
+      generatedHarvestId = `HV${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`;
+      generatedStockId = `STK${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      const harvestUnit = unit || old.unit || 'g';
+
+      const hvStmt = db.prepare(`
+        INSERT INTO harvest_records (
+          id, harvest_code, source_id, source_name, crop_name, crop_variety,
+          greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
+          total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
+          remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
+          harvester_ids, harvester_names, inbound_type, batch_code,
+          create_by_id, planting_mode, target_yield, harvest_area, products, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      hvStmt.run([
+        generatedHarvestId, harvestCode, id, old.planting_code,
+        old.crop_name || '', old.crop_variety || '',
+        null, null, dateStr, quantity, harvestUnit, 0,
+        0, null, null, null, null, 'completed',
+        notes || '', old.create_by || 'system', now, now, warehouseId, null,
+        null, null, 'planting_harvest', old.planting_code,
+        null, null, 0, 0, null, null,
+      ]);
+      hvStmt.free();
+
+      const stockStmt = db.prepare(`
+        INSERT INTO inventory_stock (
+          id, instance_id, stock_type, business_id, business_type, business_code,
+          crop_id, crop_name, variety_id, variety_name,
+          current_quantity, frozen_quantity, available_quantity, unit,
+          warehouse_id, warehouse_name, inbound_date, source_type,
+          production_plan_code, source_instance_id, status, version,
+          create_time, update_time,
+          crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
+          supplier_id, supplier_name, unit_price, total_amount, purchase_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      stockStmt.run([
+        generatedStockId, `IPR${dateStr}-${String(Date.now()).slice(-4)}`, 'harvest',
+        generatedHarvestId, 'harvest', harvestCode,
+        null, old.crop_name || '', null, old.crop_variety || '',
+        quantity, 0, quantity, harvestUnit,
+        warehouseId, realWarehouseName, dateStr, 'self_produced',
+        null, null, 'in_stock', 1,
+        now, now,
+        null, null, 0, null, null, notes || '', null,
+        null, null, 0, 0, null,
+      ]);
+      stockStmt.free();
+    } else if (destination === 'dispose') {
+      // DISPOSAL 不走 executeCirculation（与 POST 路由一致）
+      const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      try {
+        db.run(
+          `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
+          [circId, id, Number(quantity) || 0, unit || '', recordDate || now.split('T')[0], notes || '']
+        );
+        generatedCircId = circId;
+      } catch (e) {
+        console.error('[harvest-records PUT/dispose] write circulation failed:', e);
+      }
+    } else if (destination === 'circulate' || destination === 'circulate_to_inventory' || destination === 'self_seed') {
+      if (!planting.source_id) {
+        return res.status(400).json({ success: false, error: '该种植记录无种源，无法回流' });
+      }
+      if (destination === 'circulate_to_inventory' && !warehouseId) {
+        return res.status(400).json({ success: false, error: '残株入库存必须选择仓库' });
+      }
+      // 自交种子强制 seed_saving；QUANTITY 类型不需要 subType
+      let finalSubType: string | undefined;
+      if (destination === 'self_seed') {
+        finalSubType = 'seed_saving';
+      } else if (subType === 'quantity_refill' || subType === 'quantity_inbound') {
+        finalSubType = undefined;
+      } else {
+        finalSubType = subType;
+      }
+      const circType = (subType === 'quantity_refill' || subType === 'quantity_inbound') ? 'QUANTITY' : 'PROPAGATION';
+      const dest = destination === 'circulate_to_inventory' ? 'inventory_stock' : 'seed_source';
+      // 动态 require 避免循环依赖（与 POST 路由一致）
+      const { executeCirculation } = require('../services/circulation.service');
+      const result = executeCirculation({
+        circulationType: circType,
+        sourceModule: 'planting',
+        sourceId: id,
+        parentSourceId: planting.source_id,
+        subType: finalSubType,
+        destination: dest,
+        warehouseId: dest === 'inventory_stock' ? warehouseId : undefined,
+        quantity, unit, notes,
+      });
+      if (result?.circulationId) generatedCircId = result.circulationId;
+    }
+
+    // UPDATE planting_harvest_records
+    db.run(
+      `UPDATE planting_harvest_records SET
+        record_date = ?, destination = ?, sub_type = ?, warehouse_id = ?, warehouse_name = ?,
+        quantity = ?, unit = ?, notes = ?, update_time = ?,
+        harvest_record_id = ?, inventory_stock_id = ?, circulation_record_id = ?
+       WHERE id = ? AND planting_id = ?`,
+      [
+        recordDate || now.split('T')[0], destination, subType || null, warehouseId || null, warehouseName || null,
+        quantity, unit || 'g', notes || null, now,
+        generatedHarvestId, generatedStockId, generatedCircId,
+        recordId, id,
+      ]
+    );
+
+    saveDatabase();
+    res.json({ success: true, data: { id: recordId } });
+  } catch (e: any) {
+    console.error('编辑采收记录失败:', e);
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+/**
+ * 删除 1 条采收记录（事务原子：反向补偿）
+ * DELETE /api/plantings/:id/harvest-records/:recordId
+ */
+router.delete('/:id/harvest-records/:recordId', (req, res) => {
+  try {
+    const { id, recordId } = req.params;
+    const db = getDatabase();
+    const now = formatLocalDateISO();
+
+    // 校验 planting 未锁定
+    const pStmt = db.prepare('SELECT is_harvest_locked FROM plantings WHERE id = ?');
+    pStmt.bind([id]);
+    const p = pStmt.step() ? pStmt.getAsObject() : null;
+    pStmt.free();
+    if (!p) return res.status(404).json({ success: false, error: '种植记录不存在' });
+    if (p.is_harvest_locked) {
+      return res.status(400).json({ success: false, error: '种植已结束，无法删除' });
+    }
+
+    // 读旧记录以反向补偿
+    const oldStmt = db.prepare('SELECT harvest_record_id, inventory_stock_id, circulation_record_id FROM planting_harvest_records WHERE id = ? AND planting_id = ?');
+    oldStmt.bind([recordId, id]);
+    const old = oldStmt.step() ? oldStmt.getAsObject() : null;
+    oldStmt.free();
+    if (!old) return res.status(404).json({ success: false, error: '采收记录不存在' });
+
+    // 反向补偿：删除下游副作用
+    if (old.harvest_record_id) {
+      db.run('DELETE FROM harvest_records WHERE id = ?', [old.harvest_record_id]);
+    }
+    if (old.inventory_stock_id) {
+      db.run('DELETE FROM inventory_stock WHERE id = ?', [old.inventory_stock_id]);
+    }
+    if (old.circulation_record_id) {
+      db.run('DELETE FROM crop_circulation_records WHERE id = ?', [old.circulation_record_id]);
+    }
+
+    // DELETE planting_harvest_records
+    db.run('DELETE FROM planting_harvest_records WHERE id = ?', [recordId]);
+
+    // 如果该 planting 没有任何采收记录了，status 回退到 growing
+    const cnt = execCount(db, 'SELECT COUNT(*) FROM planting_harvest_records WHERE planting_id = ?', [id]);
+    if (cnt === 0) {
+      db.run('UPDATE plantings SET status = ?, update_time = ? WHERE id = ?', ['growing', now, id]);
+    }
+
+    saveDatabase();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('删除采收记录失败:', error);
+    res.status(500).json({ success: false, error: '删除失败' });
+  }
+});
+
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const { id } = req.params;
