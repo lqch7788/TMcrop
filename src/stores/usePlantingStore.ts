@@ -3,13 +3,19 @@
  * 数据流：enhancedApiClient → Store → 页面组件
  */
 import { create } from 'zustand';
-import { Planting } from '../types/crop';
+import { Planting, PlantingHarvestRecord } from '../types/crop';
 import * as plantingService from '../services/apiPlantingService';
+import type { AddHarvestRecordInput } from '../services/apiPlantingService';
 
 interface PlantingState {
   items: Planting[];
   isLoading: boolean;
   error: string | null;
+
+  // 2026-06-17: 采收记录状态
+  /** plantingId → 该种植的采收记录列表 */
+  harvestRecords: Record<string, PlantingHarvestRecord[]>;
+  harvestLoading: boolean;
 
   /** 手动清空 error 状态（由页面在 toast 后调用） */
   clearError: () => void;
@@ -20,7 +26,22 @@ interface PlantingState {
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
   harvestPlanting: (id: string, harvestDate: string, harvestCount?: number) => Promise<boolean>;
-  endPlanting: (id: string, input: plantingService.EndPlantingInput) => Promise<{ id: string; status: string; endType: string } | null>;
+
+  // 2026-06-17: 采收记录 actions
+  loadHarvestRecords: (plantingId: string) => Promise<void>;
+  addHarvestRecord: (plantingId: string, input: AddHarvestRecordInput) => Promise<PlantingHarvestRecord | null>;
+  updateHarvestRecord: (plantingId: string, recordId: string, input: AddHarvestRecordInput) => Promise<PlantingHarvestRecord | null>;
+  deleteHarvestRecord: (plantingId: string, recordId: string) => Promise<boolean>;
+
+  // 2026-06-17: 总结束（软锁）— 调 PUT /:id
+  endPlanting: (
+    id: string,
+    options: {
+      status: 'ended' | 'cancelled';
+      endType: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose';
+      notes?: string;
+    }
+  ) => Promise<boolean>;
 }
 
 export const usePlantingStore = create<PlantingState>()(
@@ -28,6 +49,8 @@ export const usePlantingStore = create<PlantingState>()(
     items: [],
     isLoading: false,
     error: null,
+    harvestRecords: {},
+    harvestLoading: false,
 
     clearError: () => set({ error: null }),
 
@@ -105,20 +128,93 @@ export const usePlantingStore = create<PlantingState>()(
       }
     },
 
-    endPlanting: async (id, input) => {
-      // 错误向上抛，让 UI 展示真实错误（不再吞错）
-      const result = await plantingService.endPlanting(id, input);
-      if (result) {
-        // 乐观更新状态字段；endType/endTime 由调用方 onSuccess 触发 loadItems() 重新拉取
+    // 2026-06-17: 采收记录
+    loadHarvestRecords: async (plantingId) => {
+      set({ harvestLoading: true });
+      try {
+        const records = await plantingService.getPlantingHarvestRecords(plantingId);
+        set((s) => ({
+          harvestRecords: { ...s.harvestRecords, [plantingId]: records },
+          harvestLoading: false,
+        }));
+      } catch (error) {
+        // logger.error('[usePlantingStore] 加载采收记录失败:', error);
+        set({ harvestLoading: false });
+      }
+    },
+
+    addHarvestRecord: async (plantingId, input) => {
+      try {
+        const record = await plantingService.addPlantingHarvestRecord(plantingId, input);
+        if (record) {
+          set((s) => ({
+            harvestRecords: {
+              ...s.harvestRecords,
+              [plantingId]: [record, ...(s.harvestRecords[plantingId] || [])],
+            },
+          }));
+        }
+        return record;
+      } catch (error) {
+        // logger.error('[usePlantingStore] 添加采收记录失败:', error);
+        return null;
+      }
+    },
+
+    updateHarvestRecord: async (plantingId, recordId, input) => {
+      try {
+        const record = await plantingService.updatePlantingHarvestRecord(plantingId, recordId, input);
+        if (record) {
+          set((s) => ({
+            harvestRecords: {
+              ...s.harvestRecords,
+              [plantingId]: (s.harvestRecords[plantingId] || []).map((r) => r.id === recordId ? record : r),
+            },
+          }));
+        }
+        return record;
+      } catch (error) {
+        // logger.error('[usePlantingStore] 更新采收记录失败:', error);
+        return null;
+      }
+    },
+
+    deleteHarvestRecord: async (plantingId, recordId) => {
+      try {
+        await plantingService.deletePlantingHarvestRecord(plantingId, recordId);
+        set((s) => ({
+          harvestRecords: {
+            ...s.harvestRecords,
+            [plantingId]: (s.harvestRecords[plantingId] || []).filter((r) => r.id !== recordId),
+          },
+        }));
+        return true;
+      } catch (error) {
+        // logger.error('[usePlantingStore] 删除采收记录失败:', error);
+        return false;
+      }
+    },
+
+    // 2026-06-17: 总结束（软锁）— 调 PUT /:id
+    endPlanting: async (id, options) => {
+      try {
+        await plantingService.endPlanting(id, {
+          endType: options.endType,
+          notes: options.notes,
+        });
+        // 乐观更新：status 字符串不强行映射到 enum，依赖下次 loadItems() 重新拉取并由 service normalize
         set((s) => ({
           items: s.items.map((i) =>
             i.id === id
-              ? { ...i, status: result.status as Planting['status'] }
+              ? { ...i, status: options.status as unknown as Planting['status'], isHarvestLocked: true }
               : i
           ),
         }));
+        return true;
+      } catch (error) {
+        // logger.error('[usePlantingStore] 结束种植失败:', error);
+        return false;
       }
-      return result;
     },
   })
 );
