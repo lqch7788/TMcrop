@@ -427,6 +427,30 @@ export interface Seedling {
 // ========== 种植类型 ==========
 
 /**
+ * 种植采收记录（V2 — Phase 1: 2026-06-17）
+ * 仿照 DailyRecord 结构，记录每次采收的去向/数量/单位
+ */
+export interface PlantingHarvestRecord {
+  id: string
+  recordDate: string                 // 采收日期 YYYY-MM-DD
+  destination: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose'
+  subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
+  warehouseId?: string
+  warehouseName?: string
+  quantity: number
+  unit: string
+  notes?: string
+  operatorName?: string
+  createBy?: string
+  createById?: string
+  createTime: string
+  // 下游副作用关联 ID
+  harvestRecordId?: string
+  inventoryStockId?: string
+  circulationRecordId?: string
+}
+
+/**
  * 种植记录
  */
 export interface Planting {
@@ -476,6 +500,12 @@ export interface Planting {
   harvestQuantity?: number;        // 已采收数量
   targetYield?: number;            // 目标产量（来自关联生产计划）
   unit?: string;                   // 数量单位
+  // 2026-06-17: 种植采收记录 (Phase 1)
+  isHarvestLocked?: boolean            // 软锁标志
+  harvestToInventoryQty?: number       // 采收入库累计
+  residualToSourceQty?: number         // 残株回种源累计
+  residualToInventoryQty?: number      // 残株入库存累计
+  selfSeedToSourceQty?: number         // 自交种子入种源累计
 }
 
 // ========== 筛选状态类型 ==========
