@@ -102,10 +102,17 @@ router.get('/', (req: Request, res: Response) => {
       -- 2026-06-05: 强结分支字段（与 fixMissingSchema ALTER TABLE 同步）
       p.end_type AS endType,
       p.end_time AS endTime,
+      p.is_harvest_locked AS isHarvestLocked,
       p.create_by AS createBy,
       p.create_time AS createTime,
-      p.update_time AS updateTime
+      p.update_time AS updateTime,
+      -- 2026-06-17: 4 列聚合（LEFT JOIN + SUM(CASE WHEN destination=...) GROUP BY p.id）
+      COALESCE(SUM(CASE WHEN phr.destination = 'harvest' THEN phr.quantity END), 0) AS harvestToInventoryQty,
+      COALESCE(SUM(CASE WHEN phr.destination = 'circulate' THEN phr.quantity END), 0) AS residualToSourceQty,
+      COALESCE(SUM(CASE WHEN phr.destination = 'circulate_to_inventory' THEN phr.quantity END), 0) AS residualToInventoryQty,
+      COALESCE(SUM(CASE WHEN phr.destination = 'self_seed' THEN phr.quantity END), 0) AS selfSeedToSourceQty
     FROM plantings p
+    LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
     WHERE p.deleted_at IS NULL`;
     const params: any[] = [];
 
@@ -120,10 +127,13 @@ router.get('/', (req: Request, res: Response) => {
     }
 
     // COUNT 查询用同样的 WHERE 条件
+    // 注意：countSql 不能加 LEFT JOIN，否则 1 个 planting + N 条 harvest records 会被算 N 次
     const countSql = `SELECT COUNT(*) FROM plantings p WHERE p.deleted_at IS NULL` +
       (crop_name ? ' AND p.crop_name LIKE ?' : '') +
       (status ? ' AND p.status = ?' : '');
 
+    // 2026-06-17: GROUP BY p.id 让每个 planting 只出现一次，且 SUM 聚合能正确计算
+    baseSql += ' GROUP BY p.id';
     baseSql += ' ORDER BY p.create_time DESC';
 
     // 获取总数
@@ -181,6 +191,27 @@ router.get('/generate-code', (req: Request, res: Response) => {
     res.json({ success: true, data: code });
   } catch (error) {
     res.status(500).json({ success: false, error: '生成种植批号失败' });
+  }
+});
+
+/**
+ * 获取某 planting 的所有采收记录（按日期降序）
+ * GET /api/plantings/:id/harvest-records
+ * 注意：必须放在 GET /:id 之前，否则 :id 会吞掉 "harvest-records" 路径段
+ */
+router.get('/:id/harvest-records', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const items = queryToObjects(
+      db,
+      `SELECT * FROM planting_harvest_records WHERE planting_id = ? ORDER BY record_date DESC, create_time DESC`,
+      [id],
+    );
+    res.json({ success: true, data: items, meta: { total: items.length } });
+  } catch (error) {
+    console.error('获取采收记录失败:', error);
+    res.status(500).json({ success: false, error: '获取采收记录失败' });
   }
 });
 
