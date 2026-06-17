@@ -6,7 +6,7 @@
  */
 
 import { enhancedApiClient } from '../lib/apiClient';
-import { Planting, PlantingStatus, SourceType } from '../types/crop';
+import { Planting, PlantingStatus, SourceType, PlantingHarvestRecord } from '../types/crop';
 
 // 后端返回的原始数据字段类型（已经过 queryToObjects 转换为驼峰命名）
 interface BackendPlanting {
@@ -134,6 +134,12 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     // 2026-06-17: 种植结束字段（5 种结束方式标记）
     endType: (item.endType as Planting['endType']) || undefined,
     endTime: item.endTime || undefined,
+    // 2026-06-17: 采收记录相关字段
+    isHarvestLocked: Boolean(item.isHarvestLocked),
+    harvestToInventoryQty: Number(item.harvestToInventoryQty) || 0,
+    residualToSourceQty: Number(item.residualToSourceQty) || 0,
+    residualToInventoryQty: Number(item.residualToInventoryQty) || 0,
+    selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
   };
 }
 
@@ -265,9 +271,29 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
 }
 
 /**
- * 种植结束（V2）
+ * 添加采收记录的入参
+ */
+export interface AddHarvestRecordInput {
+  recordDate: string
+  destination: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose'
+  subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
+  warehouseId?: string
+  warehouseName?: string
+  quantity: number
+  unit?: string
+  notes?: string
+  operatorName?: string
+  createBy?: string
+  createById?: string
+}
+
+/**
+ * 种植结束（V2 软锁改造）
  * 5 种结束方式：harvest | circulate | circulate_to_inventory | self_seed | dispose
  * 数据流：API → SQLite DB
+ *
+ * 2026-06-17: 改造为 PUT /:id 设 is_harvest_locked=1
+ * 之前是 POST /:id/end（专用路由），现在改用通用 PUT 走白名单列更新
  */
 export interface EndPlantingInput {
   endType: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose';
@@ -279,8 +305,43 @@ export interface EndPlantingInput {
 }
 
 export async function endPlanting(id: string, input: EndPlantingInput): Promise<{ id: string; status: string; endType: string }> {
-  const data = await enhancedApiClient.post<{ id: string; status: string; endType: string }>(`/plantings/${id}/end`, input);
-  return data;
+  // 软锁：直接 PUT 设 is_harvest_locked=1，status=ended/cancelled
+  // 后端白名单列包含 is_harvest_locked, status, end_time, end_type
+  const updates: Record<string, any> = {
+    is_harvest_locked: 1,
+    status: 'ended',
+    end_time: new Date().toISOString(),
+    end_type: input.endType,
+  };
+  const data = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, updates);
+  return { id: data.id, status: 'ended', endType: input.endType };
+}
+
+// ============================================
+// 2026-06-17: 种植采收记录 API (Phase 1)
+// ============================================
+
+/** 获取种植的采收记录列表 */
+export async function getPlantingHarvestRecords(plantingId: string): Promise<PlantingHarvestRecord[]> {
+  const data = await enhancedApiClient.get<PlantingHarvestRecord[]>(`/plantings/${plantingId}/harvest-records`)
+  return data
+}
+
+/** 添加 1 条采收记录 */
+export async function addPlantingHarvestRecord(plantingId: string, input: AddHarvestRecordInput): Promise<PlantingHarvestRecord> {
+  const data = await enhancedApiClient.post<PlantingHarvestRecord>(`/plantings/${plantingId}/harvest-records`, input)
+  return data
+}
+
+/** 编辑 1 条采收记录 */
+export async function updatePlantingHarvestRecord(plantingId: string, recordId: string, input: AddHarvestRecordInput): Promise<PlantingHarvestRecord> {
+  const data = await enhancedApiClient.put<PlantingHarvestRecord>(`/plantings/${plantingId}/harvest-records/${recordId}`, input)
+  return data
+}
+
+/** 删除 1 条采收记录 */
+export async function deletePlantingHarvestRecord(plantingId: string, recordId: string): Promise<void> {
+  await enhancedApiClient.delete(`/plantings/${plantingId}/harvest-records/${recordId}`)
 }
 
 /**
