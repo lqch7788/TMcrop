@@ -2096,6 +2096,62 @@ export async function fixMissingSchema(): Promise<void> {
     } else { seedLog.error(`  ✗ material_flow_log.business_code 失败: ${e.message}`); }
   }
 
+  // 2026-06-17: 种植采收记录功能（Phase 1）— 4 个改动
+  // 1. plantings 表加 is_harvest_locked 列（软锁：标 1 后不允许新增采收记录）
+  try {
+    db.run('ALTER TABLE plantings ADD COLUMN is_harvest_locked INTEGER DEFAULT 0');
+    seedLog.info('  ✓ plantings.is_harvest_locked 字段已添加');
+  } catch (e: any) {
+    if (e.message?.includes('duplicate column')) {
+      seedLog.info('  - plantings.is_harvest_locked 已存在，跳过');
+    } else { seedLog.error(`  ✗ plantings.is_harvest_locked 失败: ${e.message}`); }
+  }
+
+  // 2. 建 planting_harvest_records 表（采收/淘汰/损耗/分级 多记录明细）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS planting_harvest_records (
+      id TEXT PRIMARY KEY,
+      oid TEXT,
+      record_type TEXT DEFAULT 'planting',
+      record_date TEXT NOT NULL,
+      planting_id TEXT NOT NULL,
+      planting_code TEXT,
+      destination TEXT NOT NULL,
+      sub_type TEXT,
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT DEFAULT 'g',
+      notes TEXT,
+      operator_name TEXT,
+      create_by TEXT,
+      create_by_id TEXT,
+      create_time TEXT NOT NULL,
+      update_time TEXT NOT NULL,
+      harvest_record_id TEXT,
+      inventory_stock_id TEXT,
+      circulation_record_id TEXT,
+      FOREIGN KEY (planting_id) REFERENCES plantings(id)
+    )
+  `);
+  seedLog.info('  ✓ planting_harvest_records 表结构确认');
+
+  // 3. 索引：加速 GET /plantings 列表的 4 列聚合（harvest_total / cull_total / loss_total / grade_total）
+  db.run(`CREATE INDEX IF NOT EXISTS idx_phr_planting_dest ON planting_harvest_records (planting_id, destination)`);
+  seedLog.info('  ✓ idx_phr_planting_dest 索引确认');
+
+  // 4. 历史数据迁移：旧已结束记录自动标锁定（一次性，幂等 — 已锁的不会重复执行）
+  const lockStmt = db.prepare(`
+    UPDATE plantings
+    SET is_harvest_locked = 1
+    WHERE deleted_at IS NULL
+      AND is_harvest_locked = 0
+      AND (end_time IS NOT NULL OR status IN ('ended', 'cancelled'))
+  `);
+  lockStmt.run();
+  lockStmt.free();
+  seedLog.info('  ✓ 历史已结束种植记录已自动锁定（is_harvest_locked=1）');
+
   saveDatabase();
 }
 
