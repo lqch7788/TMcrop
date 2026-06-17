@@ -373,6 +373,46 @@ export function PlantingTable({
         )
       },
       {
+        title: '采收入库量',
+        dataIndex: 'harvestToInventoryQty',
+        width: 110,
+        render: (qty: number, record: Planting) => (
+          <span className={qty > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}>
+            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '残株回种源量',
+        dataIndex: 'residualToSourceQty',
+        width: 110,
+        render: (qty: number, record: Planting) => (
+          <span className={qty > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '残株入库存量',
+        dataIndex: 'residualToInventoryQty',
+        width: 110,
+        render: (qty: number, record: Planting) => (
+          <span className={qty > 0 ? 'text-purple-600 font-medium' : 'text-gray-400'}>
+            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '自交种子入种源量',
+        dataIndex: 'selfSeedToSourceQty',
+        width: 120,
+        render: (qty: number, record: Planting) => (
+          <span className={qty > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
         title: '完成比例',
         dataIndex: 'targetYield',
         width: 100,
@@ -423,12 +463,12 @@ export function PlantingTable({
                 <Image className="w-4 h-4" />
               </Button>
             )}
-            {!record.endTime && onEndV2 && (
+            {!record.endTime && !record.isHarvestLocked && onEndV2 && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onEndV2(record)}
-                title="种植结束 (V2: 采收/回流/废弃)"
+                title="采收与结束"
               >
                 <Recycle className="w-4 h-4 text-emerald-600" />
               </Button>
@@ -760,6 +800,10 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">土壤EC</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">损耗率</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采收入库量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">残株回种源量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">残株入库存量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">自交种子入种源量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
@@ -768,7 +812,7 @@ export function PlantingTable({
           <TableBody className="divide-y divide-gray-300">
             {currentData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={showCheckbox ? 18 : 17} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={showCheckbox ? 22 : 21} className="px-4 py-8 text-center text-gray-500">
                   暂无数据
                 </TableCell>
               </TableRow>
@@ -846,6 +890,26 @@ export function PlantingTable({
                     {(record.harvestQuantity || 0).toLocaleString()}{record.unit || ''}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    <span className={(record.harvestToInventoryQty || 0) > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}>
+                      {record.harvestToInventoryQty ? `${record.harvestToInventoryQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    <span className={(record.residualToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                      {record.residualToSourceQty ? `${record.residualToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    <span className={(record.residualToInventoryQty || 0) > 0 ? 'text-purple-600 font-medium' : 'text-gray-400'}>
+                      {record.residualToInventoryQty ? `${record.residualToInventoryQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
+                    <span className={(record.selfSeedToSourceQty || 0) > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     {(() => {
                       const harvestQty = record.harvestQuantity || 0;
                       const target = record.targetYield;
@@ -892,12 +956,12 @@ export function PlantingTable({
                           <Image className="w-4 h-4" />
                         </Button>
                       )}
-                      {!record.endTime && onEndV2 && (
+                      {!record.endTime && !record.isHarvestLocked && onEndV2 && (
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => onEndV2(record)}
-                          title="种植结束 (V2: 采收/回流/废弃)"
+                          title="采收与结束"
                         >
                           <Recycle className="w-4 h-4 text-emerald-600" />
                         </Button>
