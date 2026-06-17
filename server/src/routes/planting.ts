@@ -836,6 +836,164 @@ router.delete('/daily-records/:id', (req: Request, res: Response) => {
 //   - dispose(直接废弃) → status='cancelled'
 // 公共收尾: UPDATE plantings SET status, end_type, end_time, update_time
 // ============================================================
+// ============================================
+// 2026-06-17: 种植采收记录 V2 路由 (Phase 1)
+// 4 个路由：CRUD + 副作用路由（搬运 /end 路由 5 个分支代码）
+// ============================================
+router.post('/:id/harvest-records', async (req, res) => {
+  try {
+    const { id } = req.params
+    const {
+      recordDate, destination, subType, warehouseId, warehouseName,
+      quantity, unit, notes, operatorName, createBy, createById
+    } = req.body || {}
+
+    if (!destination) return res.status(400).json({ success: false, error: '缺少 destination' })
+
+    const db = getDatabase()
+    // sql.js 标准模式：bind + step + getAsObject（与 /end 路由一致）
+    const stmt = db.prepare('SELECT * FROM plantings WHERE id = ?')
+    stmt.bind([id])
+    const planting = stmt.step() ? stmt.getAsObject() : null
+    stmt.free()
+    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' })
+    if (planting.is_harvest_locked) {
+      return res.status(400).json({ success: false, error: '种植已结束，无法添加采收记录' })
+    }
+
+    // destination 必填字段校验（与设计文档 §4.1 对齐）
+    if ((destination === 'harvest' || destination === 'circulate_to_inventory') && !warehouseId) {
+      return res.status(400).json({ success: false, error: '必须选择仓库' })
+    }
+    if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
+      return res.status(400).json({ success: false, error: '数量必须大于 0' })
+    }
+
+    const now = formatLocalDateISO()
+    const harvestRecordId = `PHR${Date.now()}`
+    const plantingId = id
+    let generatedHarvestId: string | null = null
+    let generatedStockId: string | null = null
+    let generatedCircId: string | null = null
+
+    db.exec('BEGIN')
+    try {
+      // === 副作用路由：harvest 分支（1:1 搬运行 862-961 /end 路由） ===
+      if (destination === 'harvest') {
+        const whRow = db.prepare(`SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1`).get([warehouseId, warehouseId]) as any
+        const realWarehouseName = whRow?.name || warehouseName || warehouseId
+        const dateStr = recordDate || now.split('T')[0]
+
+        generatedHarvestId = `HV${Date.now()}`
+        const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`
+        generatedStockId = `STK${Date.now()}`
+        const harvestUnit = unit || planting.unit || 'g'
+
+        // 1) 写 harvest_records（34 列：与 schema 对齐）
+        const hvStmt = db.prepare(`
+          INSERT INTO harvest_records (
+            id, harvest_code, source_id, source_name, crop_name, crop_variety,
+            greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
+            total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
+            remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
+            harvester_ids, harvester_names, inbound_type, batch_code,
+            create_by_id, planting_mode, target_yield, harvest_area, products, deleted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        hvStmt.run([
+          generatedHarvestId, harvestCode, planting.id, planting.planting_code,
+          planting.crop_name, planting.crop_variety,
+          null, planting.greenhouse_name, dateStr, quantity, harvestUnit, 0,
+          0, null, null, null, null, 'completed',
+          notes || '', createBy || 'system', now, now, warehouseId, null,
+          null, null, 'planting_harvest', planting.planting_code,
+          createById || null, null, 0, 0, null, null,
+        ])
+        hvStmt.free()
+
+        // 2) 写 inventory_stock（36 列：与 schema 对齐）
+        const stockStmt = db.prepare(`
+          INSERT INTO inventory_stock (
+            id, instance_id, stock_type, business_id, business_type, business_code,
+            crop_id, crop_name, variety_id, variety_name,
+            current_quantity, frozen_quantity, available_quantity, unit,
+            warehouse_id, warehouse_name, inbound_date, source_type,
+            production_plan_code, source_instance_id, status, version,
+            create_time, update_time,
+            crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
+            supplier_id, supplier_name, unit_price, total_amount, purchase_date
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        stockStmt.run([
+          generatedStockId, `IPR${dateStr}-${String(Date.now()).slice(-4)}`, 'harvest',
+          generatedHarvestId, 'harvest', harvestCode,
+          null, planting.crop_name, null, planting.crop_variety,
+          quantity, 0, quantity, harvestUnit,
+          warehouseId, realWarehouseName, dateStr, 'self_produced',
+          planting.production_plan_code || null, null, 'in_stock', 1,
+          now, now,
+          planting.crop_code || null, null, 0, null, null, notes || '', planting.greenhouse_name || null,
+          null, null, 0, 0, null,
+        ])
+        stockStmt.free()
+      }
+      // 其他 4 个 destination（circulate / circulate_to_inventory / self_seed / dispose）在任务 3 添加
+
+      // INSERT planting_harvest_records（副作用审计记录）
+      db.run(`
+        INSERT INTO planting_harvest_records (
+          id, record_type, record_date, planting_id, planting_code,
+          destination, sub_type, warehouse_id, warehouse_name,
+          quantity, unit, notes, operator_name, create_by, create_by_id,
+          create_time, update_time,
+          harvest_record_id, inventory_stock_id, circulation_record_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        harvestRecordId, 'planting', recordDate || now.split('T')[0], plantingId, planting.planting_code,
+        destination, subType || null, warehouseId || null, warehouseName || null,
+        quantity, unit || 'g', notes || null, operatorName || null, createBy || null, createById || null,
+        now, now,
+        generatedHarvestId, generatedStockId, generatedCircId,
+      ])
+
+      // UPDATE planting.status（标记为采收中，但未结束）
+      if (planting.status !== 'ended' && planting.status !== 'cancelled' && planting.status !== 'harvesting') {
+        db.run('UPDATE plantings SET status = ?, update_time = ? WHERE id = ?', ['harvesting', now, plantingId])
+      }
+
+      db.exec('COMMIT')
+    } catch (txErr) {
+      try { db.exec('ROLLBACK') } catch {}
+      throw txErr
+    }
+
+    saveDatabase()
+    res.status(201).json({
+      success: true,
+      data: {
+        id: harvestRecordId,
+        plantingId,
+        destination,
+        subType: subType || null,
+        warehouseId: warehouseId || null,
+        warehouseName: warehouseName || null,
+        quantity,
+        unit: unit || 'g',
+        notes: notes || null,
+        operatorName: operatorName || null,
+        createBy: createBy || null,
+        recordDate: recordDate || now.split('T')[0],
+        createTime: now,
+        harvestRecordId: generatedHarvestId,
+        inventoryStockId: generatedStockId,
+        circulationRecordId: generatedCircId,
+      }
+    })
+  } catch (e: any) {
+    res.status(400).json({ success: false, error: e.message })
+  }
+})
+
 import { executeCirculation } from '../services/circulation.service'
 import { formatLocalDateISO } from '../utils/dateUtil'
 import { HarvestService } from '../services/harvest.service'
