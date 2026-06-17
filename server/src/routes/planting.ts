@@ -876,6 +876,44 @@ router.post('/:id/harvest-records', async (req, res) => {
     let generatedStockId: string | null = null
     let generatedCircId: string | null = null
 
+    // === 副作用前置：3 个回流类 destination 必须先调 executeCirculation ===
+    // (executeCirculation 内部调 saveDatabase()，与外层 BEGIN/COMMIT 冲突会破坏 sql.js 事务状态 — 与 /end 路由保持一致: 不在外层事务中)
+    if (destination === 'circulate' || destination === 'circulate_to_inventory' || destination === 'self_seed') {
+      // 必须有种源才能回流
+      if (!planting.source_id) {
+        return res.status(400).json({ success: false, error: '该种植记录无种源，无法回流' })
+      }
+      // 残株入库存必须填仓库
+      if (destination === 'circulate_to_inventory' && !warehouseId) {
+        return res.status(400).json({ success: false, error: '残株入库存必须选择仓库' })
+      }
+      // 自交种子强制 seed_saving；QUANTITY 类型不需要 subType；其余按入参
+      let finalSubType: string | undefined
+      if (destination === 'self_seed') {
+        finalSubType = 'seed_saving'
+      } else if (subType === 'quantity_refill' || subType === 'quantity_inbound') {
+        finalSubType = undefined
+      } else {
+        finalSubType = subType
+      }
+
+      const circType = (subType === 'quantity_refill' || subType === 'quantity_inbound') ? 'QUANTITY' : 'PROPAGATION'
+      const dest = destination === 'circulate_to_inventory' ? 'inventory_stock' : 'seed_source'
+      // 动态 require 避免循环依赖
+      const { executeCirculation } = require('../services/circulation.service')
+      const result = executeCirculation({
+        circulationType: circType,
+        sourceModule: 'planting',
+        sourceId: plantingId,
+        parentSourceId: planting.source_id,
+        subType: finalSubType,
+        destination: dest,
+        warehouseId: dest === 'inventory_stock' ? warehouseId : undefined,
+        quantity, unit, notes,
+      })
+      if (result?.circulationId) generatedCircId = result.circulationId
+    }
+
     db.exec('BEGIN')
     try {
       // === 副作用路由：harvest 分支（1:1 搬运行 862-961 /end 路由） ===
@@ -937,7 +975,22 @@ router.post('/:id/harvest-records', async (req, res) => {
         ])
         stockStmt.free()
       }
-      // 其他 4 个 destination（circulate / circulate_to_inventory / self_seed / dispose）在任务 3 添加
+      // === 副作用路由：dispose 分支（1:1 搬运行 1122-1140 /end 路由，Phase 1 不结束种植） ===
+      // DISPOSAL 不走 executeCirculation（Zod parentSourceId 必填），用 raw SQL 写记录
+      else if (destination === 'dispose') {
+        const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        try {
+          db.run(
+            `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
+            [circId, plantingId, Number(quantity) || 0, unit || '', recordDate || now.split('T')[0], notes || '']
+          )
+          generatedCircId = circId
+        } catch (e) {
+          // 写 circulation 失败不阻断主流程
+          console.error('[harvest-records/dispose] write circulation record failed:', e)
+        }
+      }
+      // 注: circulate / circulate_to_inventory / self_seed 已在 BEGIN 之前完成 executeCirculation (避免与外层事务冲突)
 
       // INSERT planting_harvest_records（副作用审计记录）
       db.run(`
