@@ -8,6 +8,11 @@
  * - 软删除支持 (is_revoked/revoked_at/revoked_by)
  * - 残株合并 2 列 (residue_type, disposition)
  *
+ * P1 修复 (2026-06-17): parent_source_id 和 source_id 改为 nullable
+ *   - DISPOSAL 类型销毁没有"父种源"概念，dispose 分支写 NULL 是业务正确语义
+ *   - PROPAGATION/QUANTITY 在业务代码里仍强制填非空值（CirculationInputSchema 校验）
+ *   - FK 约束保留 (允许 NULL 时 FK 不触发)
+ *
  * 由 fixMissingSchema.ts 在启动时调用, 配合 try-catch 实现幂等
  */
 
@@ -27,8 +32,8 @@ export function runCreateCropCirculationRecordsMigration(db: Database): void {
         CHECK(circulation_type IN ('PROPAGATION','QUANTITY','DISPOSAL')),
       source_module TEXT NOT NULL
         CHECK(source_module IN ('planting','harvest','seedling')),
-      source_id TEXT NOT NULL,
-      parent_source_id TEXT NOT NULL,
+      source_id TEXT,
+      parent_source_id TEXT,
       new_source_id TEXT,
       quantity REAL,
       unit TEXT,

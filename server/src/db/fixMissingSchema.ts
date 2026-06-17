@@ -2152,6 +2152,74 @@ export async function fixMissingSchema(): Promise<void> {
   lockStmt.free();
   seedLog.info('  ✓ 历史已结束种植记录已自动锁定（is_harvest_locked=1）');
 
+  // ============================================================
+  // P1 修复 (2026-06-17): crop_circulation_records.parent_source_id NOT NULL 约束
+  // 根因: dispose 分支(planting.ts:980-991 和 1175-1192)写 circulation 记录时
+  //   parent_source_id 传 NULL, 但 schema 是 NOT NULL, 导致 dispose 调用必失败
+  // 修复: 重建表让 parent_source_id 和 source_id 变为 nullable (12 步法)
+  //   - DISPOSAL 类型销毁无"父种源", NULL 是业务正确语义
+  //   - PROPAGATION/QUANTITY 业务代码仍强制填非空值(CirculationInputSchema)
+  //   - FK 约束保留(SQLite FK 允许 NULL, 且项目 fk pragma=0 不强制检查)
+  // 幂等: 用 PRAGMA table_info 检查现状, 已 nullable 则跳过
+  // ============================================================
+  try {
+    const circInfo = db.exec("PRAGMA table_info(crop_circulation_records)");
+    const cols = (circInfo[0]?.values || []) as Array<[number, string, string, number, unknown, number]>;
+    const parentNotNull = cols.find(c => c[1] === 'parent_source_id')?.[3] === 1;
+    const sourceNotNull = cols.find(c => c[1] === 'source_id')?.[3] === 1;
+    if (parentNotNull || sourceNotNull) {
+      seedLog.info('  [P1-fix] crop_circulation_records parent_source_id/source_id NOT NULL 检测到, 开始重建表...');
+      db.run(`
+        CREATE TABLE crop_circulation_records_new (
+          id TEXT PRIMARY KEY,
+          circulation_type TEXT NOT NULL
+            CHECK(circulation_type IN ('PROPAGATION','QUANTITY','DISPOSAL')),
+          source_module TEXT NOT NULL
+            CHECK(source_module IN ('planting','harvest','seedling')),
+          source_id TEXT,
+          parent_source_id TEXT,
+          new_source_id TEXT,
+          quantity REAL,
+          unit TEXT,
+          circulation_date TEXT NOT NULL,
+          operator_id TEXT,
+          notes TEXT,
+          residue_type TEXT
+            CHECK(residue_type IS NULL OR residue_type IN ('STEM','ROOT','BRANCH','OTHER')),
+          disposition TEXT
+            CHECK(disposition IS NULL OR disposition IN ('CIRCULATE','DISPOSAL','SALES')),
+          is_revoked INTEGER DEFAULT 0,
+          revoked_at TEXT,
+          revoked_by TEXT,
+          created_at TEXT DEFAULT (datetime('now','localtime')),
+          FOREIGN KEY (parent_source_id) REFERENCES seed_sources(id),
+          FOREIGN KEY (new_source_id) REFERENCES seed_sources(id)
+        )
+      `);
+      const copyStmt = db.prepare(`INSERT INTO crop_circulation_records_new SELECT * FROM crop_circulation_records`);
+      copyStmt.run();
+      copyStmt.free();
+      db.run('DROP TABLE crop_circulation_records');
+      db.run('ALTER TABLE crop_circulation_records_new RENAME TO crop_circulation_records');
+      db.run('CREATE INDEX idx_circ_parent ON crop_circulation_records(parent_source_id)');
+      db.run('CREATE INDEX idx_circ_source ON crop_circulation_records(source_module, source_id)');
+      db.run('CREATE INDEX idx_circ_revoked ON crop_circulation_records(is_revoked) WHERE is_revoked = 0');
+      const afterInfo = db.exec("PRAGMA table_info(crop_circulation_records)");
+      const afterCols = (afterInfo[0]?.values || []) as Array<[number, string, string, number, unknown, number]>;
+      const parentOk = afterCols.find(c => c[1] === 'parent_source_id')?.[3] === 0;
+      const sourceOk = afterCols.find(c => c[1] === 'source_id')?.[3] === 0;
+      if (parentOk && sourceOk) {
+        seedLog.info('  [P1-fix] ✓ crop_circulation_records 重建成功 (parent_source_id/source_id nullable)');
+      } else {
+        seedLog.error(`  [P1-fix] ✗ 重建后字段未变 nullable, parentOk=${parentOk} sourceOk=${sourceOk}`);
+      }
+    } else {
+      seedLog.skip('  [P1-fix] crop_circulation_records.parent_source_id/source_id 已 nullable, 跳过重建');
+    }
+  } catch (e: any) {
+    seedLog.error(`  [P1-fix] ✗ crop_circulation_records 重建失败: ${e.message}`);
+  }
+
   saveDatabase();
 }
 
