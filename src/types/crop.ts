@@ -468,8 +468,8 @@ export interface Planting {
   // 来源信息（V3.0 追溯用）
   sourceInstanceId?: string;   // 来源库存实例ID
   seedlingInstanceId?: string; // 育苗实例ID（如果来源是种苗）
-  // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
-  endType?: 'normal' | 'abnormal'; // 结束类型
+  // 结束标记（2026-06-05：强结分支；2026-06-17：扩展 5 种 endType）
+  endType?: 'normal' | 'abnormal' | 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'disposal';
   endTime?: string;                // 结束时间（ISO）
   // V2 改造 (2026-06-11): 补充表格展示字段
   originPath?: 'direct_from_seed' | 'via_seedling'; // 来源路径

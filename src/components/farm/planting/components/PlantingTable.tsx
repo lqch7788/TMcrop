@@ -225,12 +225,14 @@ export function PlantingTable({
   // 判断是否需要显示复选框列（编辑模式、删除模式、导出模式、打印模式）
   const showCheckbox = operationMode === 'edit' || operationMode === 'delete' || exportMode || printMode;
 
-  // TODO: 颜色值与共享常量 PLANTING_STATUS_MAP 不同（amber/green vs emerald/purple），暂保留本地定义
-  const statusMap = {
+  // 状态映射（PLANTING_STATUS 枚举值 → 标签 + 颜色）
+  const statusMap: Record<string, { label: string; color: string }> = {
     [PlantingStatus.PLANTED]: { label: '已定植', color: 'text-blue-600 bg-blue-50' },
     [PlantingStatus.GROWING]: { label: '生长期', color: 'text-amber-600 bg-amber-50' },
+    [PlantingStatus.HARVESTING]: { label: '采收中', color: 'text-amber-700 bg-amber-50' },
     [PlantingStatus.HARVESTED]: { label: '已采收', color: 'text-green-600 bg-green-50' },
-    [PlantingStatus.CANCELLED]: { label: '已取消', color: 'text-gray-600 bg-gray-50' }
+    [PlantingStatus.ENDED]: { label: '已结束', color: 'text-gray-600 bg-gray-100' },
+    [PlantingStatus.CANCELLED]: { label: '已取消', color: 'text-red-600 bg-red-50' },
   };
 
   // 根据showCheckbox动态生成列

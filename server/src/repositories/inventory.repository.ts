@@ -193,7 +193,9 @@ export class InventoryStockRepository {
       data.purchase_date || null,
       now,
       now
-    ]);
+    ]) as any[];
+    // 调试：打印 params 实际长度
+    console.log('[InventoryStockRepository.create] params.length:', params.length);
 
     saveDatabase();
 

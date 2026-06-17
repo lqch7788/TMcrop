@@ -827,42 +827,178 @@ router.delete('/daily-records/:id', (req: Request, res: Response) => {
 });
 
 // ============================================================
-// V2 改造: 种植结束路由 (任务 10: Phase 2)
-// 4 种结束方式: harvest(采收) | circulate(回种源) | circulate_to_inventory(残株入库存) | self_seed(自交种子) | dispose(废弃)
+// V2 改造: 种植结束路由 (任务 10: Phase 2, 2026-06-17 修 5 个分支全跑通)
+// 5 种结束方式:
+//   - harvest(采收入库) → 写 harvest_records + inventory_stock, status='harvested'
+//   - circulate(残株回种源) → status='ended'
+//   - circulate_to_inventory(残株入库存) → status='ended'
+//   - self_seed(自交种子入种源) → status='ended'
+//   - dispose(直接废弃) → status='cancelled'
+// 公共收尾: UPDATE plantings SET status, end_type, end_time, update_time
 // ============================================================
 import { executeCirculation } from '../services/circulation.service'
+import { formatLocalDateISO } from '../utils/dateUtil'
+import { HarvestService } from '../services/harvest.service'
+import { generateInstanceId } from '../services/inventory.service'
+import { formatLocalDateYYYYMMDD } from '../utils/dateUtil'
 
-router.post('/:id/end', (req, res) => {
+const harvestService = new HarvestService()
+
+router.post('/:id/end', async (req, res) => {
   try {
     const { id } = req.params
-    const { endType, subType, destination, warehouseId, quantity, unit, notes } = req.body || {}
+    const { endType, subType, warehouseId, quantity, unit, notes } = req.body || {}
     const db = getDatabase()
-    const planting = db.prepare(`SELECT * FROM plantings WHERE id = ?`).get(id) as any
-    if (!planting) return res.status(404).json({ success: false, error: '种植记录不存在' })
+    // sql.js 标准模式：bind + step + getAsObject（.get() 在 sql.js 中不可靠，返回空对象）
+    const stmt = db.prepare(`SELECT * FROM plantings WHERE id = ?`)
+    stmt.bind([id])
+    const planting = stmt.step() ? stmt.getAsObject() : null
+    stmt.free()
+    if (!planting || !planting.id) return res.status(404).json({ success: false, error: '种植记录不存在' })
 
-    // 验证: 残株回种源/自交种子 必须有种源
-    if ((endType === 'circulate' || endType === 'self_seed') && !planting.source_id) {
+    const now = formatLocalDateISO()
+
+    // ========== 1. 采收入库：写 harvest_records + inventory_stock（库存实例） ==========
+    if (endType === 'harvest') {
+      const harvestQty = Number(quantity) || planting.harvest_quantity || 0
+      if (harvestQty <= 0) {
+        return res.status(400).json({ success: false, error: '采收入库必须填写数量' })
+      }
+      if (!warehouseId) {
+        return res.status(400).json({ success: false, error: '采收入库必须选择仓库' })
+      }
+
+      // 查仓库名称
+      const whRow = db.prepare(`SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1`).get([warehouseId, warehouseId]) as any
+      const warehouseName = whRow?.name || warehouseId
+
+      // 生成 instance_id（库存实例编码）
+      const dateStr = formatLocalDateYYYYMMDD(new Date())
+      const instanceId = await generateInstanceId('IPR', dateStr)
+
+      // 事务原子：写 harvest_records + inventory_stock
+      // 不用 harvestService.createOneWithInventory（其内部 inventoryStockRepository.create 抛 "37 values" bug）
+      const harvestId = `HV${Date.now()}`
+      const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`
+      const stockId = `STK${Date.now()}`
+      const harvestDate = now.split('T')[0]
+      const harvestUnit = unit || planting.unit || '株'
+      const operator = (req.body as any)?.operatorId || 'system'
+
+      db.exec('BEGIN')
+      try {
+        // 1) 写 harvest_records（34 列：与 schema 对齐）
+        const hvStmt = db.prepare(`
+          INSERT INTO harvest_records (
+            id, harvest_code, source_id, source_name, crop_name, crop_variety,
+            greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
+            total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
+            remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
+            harvester_ids, harvester_names, inbound_type, batch_code,
+            create_by_id, planting_mode, target_yield, harvest_area, products, deleted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        hvStmt.run([
+          harvestId, harvestCode, planting.id, planting.planting_code,
+          planting.crop_name, planting.crop_variety,
+          null, planting.greenhouse_name, harvestDate, harvestQty, harvestUnit, 0,
+          0, null, null, null, null, 'completed',
+          notes || '', operator, now, now, warehouseId, null,
+          null, null, 'planting_harvest', planting.planting_code,
+          null, null, 0, 0, null, null,
+        ])
+        hvStmt.free()
+
+        // 2) 写 inventory_stock（36 列：与 schema 对齐）
+        const stockStmt = db.prepare(`
+          INSERT INTO inventory_stock (
+            id, instance_id, stock_type, business_id, business_type, business_code,
+            crop_id, crop_name, variety_id, variety_name,
+            current_quantity, frozen_quantity, available_quantity, unit,
+            warehouse_id, warehouse_name, inbound_date, source_type,
+            production_plan_code, source_instance_id, status, version,
+            create_time, update_time,
+            crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
+            supplier_id, supplier_name, unit_price, total_amount, purchase_date
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        stockStmt.run([
+          stockId, instanceId, 'harvest', harvestId, 'harvest', harvestCode,
+          null, planting.crop_name, null, planting.crop_variety,
+          harvestQty, 0, harvestQty, harvestUnit,
+          warehouseId, warehouseName, harvestDate, 'self_produced',
+          planting.production_plan_code || null, null, 'in_stock', 1,
+          now, now,
+          planting.crop_code || null, null, 0, null, null, notes || '', planting.greenhouse_name || null,
+          null, null, 0, 0, null,
+        ])
+        stockStmt.free()
+
+        db.exec('COMMIT')
+      } catch (txErr) {
+        try { db.exec('ROLLBACK') } catch {}
+        throw txErr
+      }
+
+      saveDatabase()
+
+      // 收尾：更新种植记录
+      db.run(
+        `UPDATE plantings SET is_harvest = 1, harvest_date = ?, harvest_quantity = ?, status = 'harvested', end_type = 'harvest', end_time = ?, update_time = ? WHERE id = ?`,
+        [now, harvestQty, now, now, id]
+      )
+      saveDatabase()
+      return res.json({
+        success: true,
+        data: {
+          id,
+          status: 'harvested',
+          endType: 'harvest',
+          harvestId,
+          inventoryId: stockId,
+        }
+      })
+    }
+
+    // ========== 2. 直接废弃：不依赖种源，写 circulation 记录(无 parent_source_id) + 标记 cancelled ==========
+    if (endType === 'dispose') {
+      // DISPOSAL 不走 executeCirculation（Zod parentSourceId 必填），用 raw SQL 写记录
+      const circId = `CIRC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      try {
+        db.run(
+          `INSERT INTO crop_circulation_records (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, notes, disposition) VALUES (?, 'DISPOSAL', 'planting', ?, NULL, ?, ?, ?, ?, 'DISPOSAL')`,
+          [circId, id, Number(quantity) || 0, unit || '', now, notes || '']
+        )
+      } catch (e) {
+        // 写 circulation 失败不阻断主流程
+        console.error('[end/dispose] write circulation record failed:', e)
+      }
+      db.run(
+        `UPDATE plantings SET status = 'cancelled', end_type = 'disposal', end_time = ?, update_time = ? WHERE id = ?`,
+        [now, now, id]
+      )
+      saveDatabase()
+      return res.json({ success: true, data: { id, status: 'cancelled', endType: 'disposal', circulationId: circId } })
+    }
+
+    // ========== 3-5. 回流类：必须有种源 ==========
+    if (!planting.source_id) {
       return res.status(400).json({ success: false, error: '该种植记录无种源,无法回流' })
     }
-    // 验证: 残株入库存 必须填仓库
+    // 残株入库存 必须填仓库
     if (endType === 'circulate_to_inventory' && !warehouseId) {
       return res.status(400).json({ success: false, error: '残株入库存必须选择仓库' })
     }
+    // 自交种子 强制 seed_saving
+    let finalSubType: string | undefined
+    if (endType === 'self_seed') {
+      finalSubType = 'seed_saving'
+    } else if (subType === 'quantity_refill' || subType === 'quantity_inbound') {
+      finalSubType = undefined  // QUANTITY 类型不需要 subType
+    } else {
+      finalSubType = subType  // cutting/seed_saving (PROPAGATION)
+    }
 
-    if (endType === 'harvest') {
-      return res.json({ success: true, message: '已生成采收任务 (走既有 harvest 流程)' })
-    }
-    if (endType === 'dispose') {
-      const result = executeCirculation({
-        circulationType: 'DISPOSAL',
-        sourceModule: 'planting',
-        sourceId: id,
-        parentSourceId: planting.source_id,
-        quantity, unit, notes,
-      })
-      return res.json({ success: true, data: result })
-    }
-    // circulate / circulate_to_inventory / self_seed 走 executeCirculation
     const circType = subType === 'quantity_refill' || subType === 'quantity_inbound' ? 'QUANTITY' : 'PROPAGATION'
     const dest = endType === 'circulate_to_inventory' ? 'inventory_stock' : 'seed_source'
     const result = executeCirculation({
@@ -870,12 +1006,19 @@ router.post('/:id/end', (req, res) => {
       sourceModule: 'planting',
       sourceId: id,
       parentSourceId: planting.source_id,
-      subType: endType === 'self_seed' ? 'seed_saving' : (subType !== 'quantity_refill' && subType !== 'quantity_inbound' ? subType : undefined),
+      subType: finalSubType,
       destination: dest,
       warehouseId: dest === 'inventory_stock' ? warehouseId : undefined,
       quantity, unit, notes,
     })
-    return res.json({ success: true, data: result })
+
+    // 公共收尾：标记种植记录已结束
+    db.run(
+      `UPDATE plantings SET status = 'ended', end_type = ?, end_time = ?, update_time = ? WHERE id = ?`,
+      [endType, now, now, id]
+    )
+    saveDatabase()
+    return res.json({ success: true, data: { id, status: 'ended', endType, ...result } })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })
   }

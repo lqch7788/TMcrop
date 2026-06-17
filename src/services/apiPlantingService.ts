@@ -74,8 +74,12 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
   let status: PlantingStatus = PlantingStatus.PLANTED;
   if (item.status === 'growing') {
     status = PlantingStatus.GROWING;
+  } else if (item.status === 'harvesting') {
+    status = PlantingStatus.HARVESTING;
   } else if (item.status === 'harvested') {
     status = PlantingStatus.HARVESTED;
+  } else if (item.status === 'ended') {
+    status = PlantingStatus.ENDED;
   } else if (item.status === 'cancelled') {
     status = PlantingStatus.CANCELLED;
   }
@@ -127,6 +131,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     targetYield: item.targetYield || 0,
     unit: item.unit || '',
     originPath: (item.originPath as 'direct_from_seed' | 'via_seedling') || undefined,
+    // 2026-06-17: 种植结束字段（5 种结束方式标记）
+    endType: (item.endType as Planting['endType']) || undefined,
+    endTime: item.endTime || undefined,
   };
 }
 
@@ -255,6 +262,25 @@ export async function getUnharvestedPlantings(): Promise<Planting[]> {
 export async function getHarvestedPlantings(): Promise<Planting[]> {
   const data = await enhancedApiClient.get<BackendPlanting[]>('/plantings/harvested');
   return transformPlantingFromBackend(data) as Planting[];
+}
+
+/**
+ * 种植结束（V2）
+ * 5 种结束方式：harvest | circulate | circulate_to_inventory | self_seed | dispose
+ * 数据流：API → SQLite DB
+ */
+export interface EndPlantingInput {
+  endType: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose';
+  subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound';
+  warehouseId?: string;
+  quantity?: number;
+  unit?: string;
+  notes?: string;
+}
+
+export async function endPlanting(id: string, input: EndPlantingInput): Promise<{ id: string; status: string; endType: string }> {
+  const data = await enhancedApiClient.post<{ id: string; status: string; endType: string }>(`/plantings/${id}/end`, input);
+  return data;
 }
 
 /**
