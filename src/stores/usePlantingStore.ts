@@ -20,6 +20,7 @@ interface PlantingState {
   deleteItem: (id: string) => Promise<boolean>;
   deleteItems: (ids: string[]) => Promise<boolean>;
   harvestPlanting: (id: string, harvestDate: string, harvestCount?: number) => Promise<boolean>;
+  endPlanting: (id: string, input: plantingService.EndPlantingInput) => Promise<{ id: string; status: string; endType: string } | null>;
 }
 
 export const usePlantingStore = create<PlantingState>()(
@@ -102,6 +103,22 @@ export const usePlantingStore = create<PlantingState>()(
         // logger.error('[usePlantingStore] 采收种植失败:', error);
         return false;
       }
+    },
+
+    endPlanting: async (id, input) => {
+      // 错误向上抛，让 UI 展示真实错误（不再吞错）
+      const result = await plantingService.endPlanting(id, input);
+      if (result) {
+        // 乐观更新状态字段；endType/endTime 由调用方 onSuccess 触发 loadItems() 重新拉取
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.id === id
+              ? { ...i, status: result.status as Planting['status'] }
+              : i
+          ),
+        }));
+      }
+      return result;
     },
   })
 );

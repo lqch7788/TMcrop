@@ -11,18 +11,22 @@
  * 种植状态
  */
 export const PLANTING_STATUS = {
+  PLANTED: 'planted',       // 已定植
   GROWING: 'growing',       // 生长期
   HARVESTING: 'harvesting', // 采收中
   HARVESTED: 'harvested',   // 已采收
+  ENDED: 'ended',           // 已结束（回流/废弃）
   CANCELLED: 'cancelled',   // 已取消
 } as const;
 
 export type PlantingStatus = typeof PLANTING_STATUS[keyof typeof PLANTING_STATUS];
 
 export const PLANTING_STATUS_LABELS: Record<string, string> = {
+  [PLANTING_STATUS.PLANTED]: '已定植',
   [PLANTING_STATUS.GROWING]: '生长期',
   [PLANTING_STATUS.HARVESTING]: '采收中',
   [PLANTING_STATUS.HARVESTED]: '已采收',
+  [PLANTING_STATUS.ENDED]: '已结束',
   [PLANTING_STATUS.CANCELLED]: '已取消',
 };
 

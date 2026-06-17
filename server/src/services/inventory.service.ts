@@ -18,7 +18,7 @@ import { formatLocalDateYYYYMMDD, formatLocalDateISO } from '../utils/dateUtil';
 
 const MAX_RETRY = 5;
 
-async function generateInstanceId(prefix: string, dateStr: string): Promise<string> {
+export async function generateInstanceId(prefix: string, dateStr: string): Promise<string> {
   for (let i = 0; i < MAX_RETRY; i++) {
     const max = await inventoryStockRepository.getInstanceIdMaxSerial(prefix, dateStr);
     const serial = max + 1;
