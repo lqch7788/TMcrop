@@ -10,7 +10,7 @@ import { PlantingTable } from './components/PlantingTable';
 import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
-import { EndPlantingModal } from './modals/EndPlantingModal';
+import { HarvestRecordModal } from './modals/HarvestRecordModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
@@ -123,7 +123,7 @@ export default function PlantingPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   // V2 改造 (任务 16): 种植结束弹窗状态 (5 种结束方式 + 4 层嵌套)
-  const [endV2ModalOpen, setEndV2ModalOpen] = useState(false);
+  const [harvestModalOpen, setHarvestModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Planting | null>(null);
@@ -201,7 +201,7 @@ export default function PlantingPage() {
   // V2 改造 (任务 16): 触发种植结束弹窗
   const handleEndV2 = (record: Planting) => {
     setCurrentRecord(record);
-    setEndV2ModalOpen(true);
+    setHarvestModalOpen(true);
   };
 
   const handleImageClick = (images: string[]) => {
@@ -550,9 +550,9 @@ export default function PlantingPage() {
 
       {/* V2 改造 (任务 16): 种植结束弹窗挂接 */}
       {currentRecord && (
-        <EndPlantingModal
-          isOpen={endV2ModalOpen}
-          onClose={() => setEndV2ModalOpen(false)}
+        <HarvestRecordModal
+          isOpen={harvestModalOpen}
+          onClose={() => setHarvestModalOpen(false)}
           onSuccess={loadItems}
           record={currentRecord}
         />
