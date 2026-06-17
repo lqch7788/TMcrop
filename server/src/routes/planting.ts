@@ -21,6 +21,7 @@ const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'status', 'end_type', 'end_time', 'is_harvest', 'is_deleted',
   'remarks', 'operator_id', 'operator_name', 'production_plan_id', 'production_plan_code',
   'soil_ph', 'soil_ec', 'attrition_rate',
+  'is_harvest_locked',  // 2026-06-17: 软锁标志
   'update_time',
 ]);
 
