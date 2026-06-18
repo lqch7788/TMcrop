@@ -25,7 +25,7 @@ const PLANTING_ALLOWED_UPDATE_COLUMNS = new Set<string>([
   'planting_code', 'plan_type', 'crop_category', 'crop_name', 'crop_variety',
   'greenhouse_id', 'greenhouse_name', 'area_id', 'area_name', 'planting_area', 'planting_area_unit',
   'planting_date', 'expected_harvest_date', 'actual_harvest_date',
-  'target_yield', 'actual_yield', 'planting_quantity', 'harvest_quantity', 'unit',
+  'target_yield', 'target_yield_unit', 'actual_yield', 'planting_quantity', 'harvest_quantity', 'unit',
   'status', 'end_type', 'end_time', 'is_harvest', 'is_deleted',
   'remarks', 'operator_id', 'operator_name', 'production_plan_id', 'production_plan_code',
   'soil_ph', 'soil_ec', 'attrition_rate',
@@ -105,6 +105,7 @@ router.get('/', (req: Request, res: Response) => {
       p.actual_harvest_date AS actualHarvestDate,
       p.harvest_quantity AS harvestQuantity,
       p.target_yield AS targetYield,
+      p.target_yield_unit AS targetYieldUnit,
       p.unit,
       p.status,
       p.remarks,
@@ -545,6 +546,7 @@ router.post('/', (req: Request, res: Response) => {
     const finalAttritionRate = body.attrition_rate || body.attritionRate || 0;
     // 2026-06-18: 目标产量（完成比例 = harvestToInventoryQty / target_yield）
     const finalTargetYield = body.target_yield || body.targetYield || 0;
+    const finalTargetYieldUnit = body.target_yield_unit || body.targetYieldUnit || '克';
     const finalTransplantCount = body.transplant_count || body.transplantCount || 0;
     const finalTransplantDate = body.transplant_date || body.transplantDate || '';
     const finalIsHarvest = body.is_harvest ?? (body.isHarvest ? 1 : 0);
@@ -621,9 +623,9 @@ router.post('/', (req: Request, res: Response) => {
           id, planting_code, source_type, source_id, source_name, crop_name, crop_variety, crop_code,
           area_id, area_name, root_name, greenhouse_name, planting_date, planting_quantity, planted_quantity,
           survival_quantity, survival_rate, growth_status, expected_harvest_date, status, remarks, create_by, create_time, update_time,
-          soil_ph, soil_ec, attrition_rate, target_yield, transplant_count, transplant_date, is_harvest, harvest_date,
+          soil_ph, soil_ec, attrition_rate, target_yield, target_yield_unit, transplant_count, transplant_date, is_harvest, harvest_date,
           harvest_quantity, print_count, traceability_code, pictures, production_plan_id, production_plan_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         newId, finalPlantCode, finalSourceType, finalSourceId, finalSourceName,
         finalCropName, finalCropVariety, finalCropCode,
@@ -631,7 +633,7 @@ router.post('/', (req: Request, res: Response) => {
         finalPlantingQuantity, finalPlantedQuantity,
         finalSurvivalQuantity, finalSurvivalRate, finalGrowthStatus, finalExpectedHarvestDate,
         finalStatus, finalRemarks, finalCreateBy, now, now,
-        finalSoilPh, finalSoilEc, finalAttritionRate, finalTargetYield, finalTransplantCount, finalTransplantDate,
+        finalSoilPh, finalSoilEc, finalAttritionRate, finalTargetYield, finalTargetYieldUnit, finalTransplantCount, finalTransplantDate,
         finalIsHarvest, finalHarvestDate, finalHarvestQuantity, finalPrintCount, finalTraceabilityCode,
         finalPictures, finalProductionPlanId, finalProductionPlanCode
       ]);

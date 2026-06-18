@@ -129,6 +129,7 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     // V2 改造 (2026-06-11): 补充表格展示字段
     harvestQuantity: item.harvestQuantity || 0,
     targetYield: item.targetYield || 0,
+    targetYieldUnit: item.targetYieldUnit || '克',
     unit: item.unit || '',
     originPath: (item.originPath as 'direct_from_seed' | 'via_seedling') || undefined,
     // 2026-06-17: 种植结束字段（5 种结束方式标记）

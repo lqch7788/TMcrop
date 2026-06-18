@@ -500,7 +500,8 @@ export interface Planting {
   // V2 改造 (2026-06-11): 补充表格展示字段
   originPath?: 'direct_from_seed' | 'via_seedling'; // 来源路径
   harvestQuantity?: number;        // 已采收数量
-  targetYield?: number;            // 目标产量（来自关联生产计划）
+  targetYield?: number;            // 目标产量（用于完成比例 = 采收入库量 / 目标产量）
+  targetYieldUnit?: string;        // 目标产量单位（从数据词典 unit 选）
   unit?: string;                   // 数量单位
   // 2026-06-17: 种植采收记录 (Phase 1)
   isHarvestLocked?: boolean            // 软锁标志

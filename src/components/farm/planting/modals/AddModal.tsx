@@ -59,6 +59,7 @@ export function AddModal({
     // 2026-06-18: 损耗率 + 目标产量（完成比例 = harvestToInventoryQty / target_yield）
     attritionRate: 0,
     targetYield: 0,
+    targetYieldUnit: '克',
     remarks: '',
     productionPlanId: '',     // 关联生产计划ID
     productionPlanCode: ''   // 关联生产计划批次号
@@ -211,6 +212,7 @@ export function AddModal({
         // 2026-06-18: 损耗率 + 目标产量（用户可填）
         attritionRate: formData.attritionRate,
         targetYield: formData.targetYield,
+        targetYieldUnit: formData.targetYieldUnit,
         printCount: 0,
         traceabilityCode,
         pictures: pictures,
@@ -599,14 +601,25 @@ export function AddModal({
         {/* 目标产量 */}
         <div>
           <Label className="text-gray-900">目标产量</Label>
-          <Input
-            type="number"
-            min={0}
-            value={formData.targetYield || ''}
-            onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) })}
-            placeholder="如：500（用于完成比例 = 采收入库量 / 目标产量）"
-            className={deepInputClass}
-          />
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min={0}
+              value={formData.targetYield || ''}
+              onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) })}
+              placeholder="如：500"
+              className={`${deepInputClass} flex-1`}
+            />
+            {/* 2026-06-18: 目标产量单位（从数据词典 unit 选） */}
+            <div style={{ minWidth: '120px' }}>
+              <DictSelect
+                category="unit"
+                value={formData.targetYieldUnit}
+                onChange={(value) => setFormData({ ...formData, targetYieldUnit: value })}
+                placeholder="单位"
+              />
+            </div>
+          </div>
         </div>
 
         {/* 备注 - 占两列 */}
