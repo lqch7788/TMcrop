@@ -76,6 +76,7 @@ export const useInventoryInboundStore = create<InventoryInboundStore>((set, get)
   },
 
   submitInbound: async (input) => {
+    // 2026-06-18: 失败时 throw 让 modal 拿到真实错误消息（不再吞错返回 null）
     try {
       const result = await inbound(input)
       // 失效该 source 的缓存 + 时间戳，强制下一次 loadRecords 重拉
@@ -85,15 +86,14 @@ export const useInventoryInboundStore = create<InventoryInboundStore>((set, get)
         const nextLastFetch = { ...s.lastFetch }
         delete nextRecords[cacheKey]
         delete nextLastFetch[cacheKey]
-        return { recordsBySource: nextRecords, lastFetch: nextLastFetch }
+        return { recordsBySource: nextRecords, lastFetch: nextLastFetch, error: null }
       })
       return result
     } catch (e) {
       console.error('[useInventoryInboundStore.submitInbound]', e)
-      set({
-        error: e instanceof Error ? e.message : '入库失败',
-      })
-      return null
+      const msg = e instanceof Error ? e.message : '入库失败'
+      set({ error: msg })
+      throw e  // 抛出给调用方（modal 的 catch 块）显示真实错误
     }
   },
 
