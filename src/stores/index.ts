@@ -324,3 +324,7 @@ export type { PestDiseaseDict } from './usePestDiseaseDictStore';
 // V12.0: 肥料库管理 Store
 export { useFertilizerLibraryStore } from './useFertilizerLibraryStore';
 export type { FertilizerLibrary, FertilizerSpec } from './useFertilizerLibraryStore';
+
+// 2026-06-18: 库存入库审计 Store（按模块下沉入库）
+export { useInventoryInboundStore } from './useInventoryInboundStore';
+export type { InventoryInboundRecord, InventoryInboundInput, InboundSourceRecord, InboundRecordsQuery } from '../types/inventoryInbound';
