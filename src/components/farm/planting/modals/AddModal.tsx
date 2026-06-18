@@ -56,6 +56,9 @@ export function AddModal({
     plantingDate: todayLocal(),
     soilPH: 6.5,
     soilEC: 1.0,
+    // 2026-06-18: 损耗率 + 目标产量（完成比例 = harvestToInventoryQty / target_yield）
+    attritionRate: 0,
+    targetYield: 0,
     remarks: '',
     productionPlanId: '',     // 关联生产计划ID
     productionPlanCode: ''   // 关联生产计划批次号
@@ -205,7 +208,9 @@ export function AddModal({
         transplantCount: 0,
         transplantDate: '',
         isHarvest: false,
-        attritionRate: 0,
+        // 2026-06-18: 损耗率 + 目标产量（用户可填）
+        attritionRate: formData.attritionRate,
+        targetYield: formData.targetYield,
         printCount: 0,
         traceabilityCode,
         pictures: pictures,
@@ -572,6 +577,34 @@ export function AddModal({
             value={formData.soilEC || ''}
             onChange={(e) => setFormData({ ...formData, soilEC: Number(e.target.value) })}
             placeholder="如：1.2"
+            className={deepInputClass}
+          />
+        </div>
+
+        {/* 损耗率 */}
+        <div>
+          <Label className="text-gray-900">损耗率（%）</Label>
+          <Input
+            type="number"
+            step="0.1"
+            min={0}
+            max={100}
+            value={formData.attritionRate || ''}
+            onChange={(e) => setFormData({ ...formData, attritionRate: Number(e.target.value) })}
+            placeholder="如：5（默认 0）"
+            className={deepInputClass}
+          />
+        </div>
+
+        {/* 目标产量 */}
+        <div>
+          <Label className="text-gray-900">目标产量</Label>
+          <Input
+            type="number"
+            min={0}
+            value={formData.targetYield || ''}
+            onChange={(e) => setFormData({ ...formData, targetYield: Number(e.target.value) })}
+            placeholder="如：500（用于完成比例 = 采收入库量 / 目标产量）"
             className={deepInputClass}
           />
         </div>
