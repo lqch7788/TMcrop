@@ -19,7 +19,7 @@ export type PropagationSubType = 'cutting' | 'seed_saving' | 'g0_g1' | 'quantity
 
 export type CirculationDestination = 'seed_source' | 'inventory_stock'
 
-export type EndType = 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose'
+export type EndType = 'harvest' | 'circulate' | 'self_seed' | 'dispose'
 
 export interface CirculationInput {
   circulationType: CirculationType

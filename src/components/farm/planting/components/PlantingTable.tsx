@@ -393,21 +393,21 @@ export function PlantingTable({
         )
       },
       {
-        title: '残株入库存量',
-        dataIndex: 'residualToInventoryQty',
-        width: 110,
-        render: (qty: number, record: Planting) => (
-          <span className={qty > 0 ? 'text-purple-600 font-medium' : 'text-gray-400'}>
-            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
-          </span>
-        )
-      },
-      {
         title: '自交种子入种源量',
         dataIndex: 'selfSeedToSourceQty',
         width: 120,
         render: (qty: number, record: Planting) => (
           <span className={qty > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+            {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
+          </span>
+        )
+      },
+      {
+        title: '废弃量',
+        dataIndex: 'disposeQty',
+        width: 100,
+        render: (qty: number, record: Planting) => (
+          <span className={qty > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
             {qty ? `${qty.toLocaleString()}${record.unit || ''}` : '-'}
           </span>
         )
@@ -802,8 +802,8 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">已采收</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采收入库量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">残株回种源量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">残株入库存量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">自交种子入种源量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">废弃量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
               {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
@@ -901,13 +901,13 @@ export function PlantingTable({
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    <span className={(record.residualToInventoryQty || 0) > 0 ? 'text-purple-600 font-medium' : 'text-gray-400'}>
-                      {record.residualToInventoryQty ? `${record.residualToInventoryQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    <span className={(record.selfSeedToSourceQty || 0) > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
+                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
-                    <span className={(record.selfSeedToSourceQty || 0) > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
-                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
+                    <span className={(record.disposeQty || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
+                      {record.disposeQty ? `${record.disposeQty.toLocaleString()}${record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">

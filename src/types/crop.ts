@@ -62,7 +62,9 @@ export enum SeedlingCalculateMode {
 export enum PlantingStatus {
   PLANTED = 'planted',      // 已定植
   GROWING = 'growing',      // 生长期
+  HARVESTING = 'harvesting',// 采收中（可多次采收，未总结束）
   HARVESTED = 'harvested',  // 已采收
+  ENDED = 'ended',          // 已结束（总结束，软锁）
   CANCELLED = 'cancelled'   // 已取消
 }
 
@@ -433,7 +435,7 @@ export interface Seedling {
 export interface PlantingHarvestRecord {
   id: string
   recordDate: string                 // 采收日期 YYYY-MM-DD
-  destination: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose'
+  destination: 'harvest' | 'circulate' | 'self_seed' | 'dispose'
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
   warehouseId?: string
   warehouseName?: string
@@ -493,7 +495,7 @@ export interface Planting {
   sourceInstanceId?: string;   // 来源库存实例ID
   seedlingInstanceId?: string; // 育苗实例ID（如果来源是种苗）
   // 结束标记（2026-06-05：强结分支；2026-06-17：扩展 5 种 endType）
-  endType?: 'normal' | 'abnormal' | 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'disposal';
+  endType?: 'normal' | 'abnormal' | 'harvest' | 'circulate' | 'self_seed' | 'disposal';
   endTime?: string;                // 结束时间（ISO）
   // V2 改造 (2026-06-11): 补充表格展示字段
   originPath?: 'direct_from_seed' | 'via_seedling'; // 来源路径
@@ -504,8 +506,8 @@ export interface Planting {
   isHarvestLocked?: boolean            // 软锁标志
   harvestToInventoryQty?: number       // 采收入库累计
   residualToSourceQty?: number         // 残株回种源累计
-  residualToInventoryQty?: number      // 残株入库存累计
   selfSeedToSourceQty?: number         // 自交种子入种源累计
+  disposeQty?: number                  // 直接废弃累计（2026-06-18 加；circulate_to_inventory 已去掉）
 }
 
 // ========== 筛选状态类型 ==========

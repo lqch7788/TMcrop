@@ -50,7 +50,6 @@ function getDestinationLabel(dest: string): string {
   const map: Record<string, string> = {
     harvest: '采收入库',
     circulate: '残株回种源',
-    circulate_to_inventory: '残株入库存',
     self_seed: '自交种子入种源',
     dispose: '直接废弃',
   }
@@ -124,14 +123,16 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const activeWarehouses = warehouses.filter((w: any) => !w.status || w.status === 'active')
 
   const hasSeedSource = !!record.sourceId
-  const requiresWarehouse = destination === 'harvest' || destination === 'circulate_to_inventory'
-  const requiresCirculation = destination === 'circulate' || destination === 'circulate_to_inventory' || destination === 'self_seed'
+  const requiresWarehouse = destination === 'harvest'
+  const requiresCirculation = destination === 'circulate' || destination === 'self_seed'
 
-  // 残株入库存 只支持 quantity_inbound
-  const isInvalidInventorySubType = destination === 'circulate_to_inventory' && subType !== 'quantity_inbound'
   // 数量类型（必填 > 0）；PROPAGATION（cutting/seed_saving）不需
-  const isQuantityType = subType === 'quantity_refill' || subType === 'quantity_inbound'
+  const isQuantityType = subType === 'quantity_refill'
   const isPropagationType = subType === 'cutting' || subType === 'seed_saving'
+
+  // 2026-06-18: dispose 剩余可处理植株数 = 种植数量 − 已废弃
+  const remainingDispose = Math.max(0, (record.plantingCount || 0) - (record.disposeQty || 0))
+  const disposeOverLimit = destination === 'dispose' && Number(quantity) > remainingDispose
 
   const resetForm = () => {
     setDestination(null)
@@ -150,12 +151,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('该种植记录无种源,无法回流')
       return
     }
-    if (isInvalidInventorySubType) {
-      showAlert('残株入库存只支持"数量入库存"方式')
-      return
-    }
     if (requiresWarehouse && !warehouseId) {
-      showAlert(destination === 'harvest' ? '采收入库必须选择仓库' : '残株入库存必须选择仓库')
+      showAlert('采收入库必须选择仓库')
       return
     }
 
@@ -163,6 +160,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     const qtyNum = Number(quantity) || 0
     if (destination && qtyNum <= 0) {
       showAlert('请填写数量（> 0）')
+      return
+    }
+    // 2026-06-18: dispose 上限硬拦截（前端先挡，后端也会再挡）
+    if (destination === 'dispose' && qtyNum > remainingDispose) {
+      showAlert(`直接废弃数量 ${qtyNum} 超过剩余可废弃 ${remainingDispose}（种植 ${record.plantingCount} - 已废弃 ${record.disposeQty || 0}）`)
       return
     }
     if (destination && !unit) {
@@ -294,9 +296,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   <SelectItem value="circulate" disabled={!hasSeedSource}>
                     <span className="flex items-center gap-1.5"><Recycle className="w-3.5 h-3.5" /> 残株回种源</span>
                   </SelectItem>
-                  <SelectItem value="circulate_to_inventory" disabled={!hasSeedSource}>
-                    <span className="flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> 残株入库存</span>
-                  </SelectItem>
                   <SelectItem value="self_seed" disabled={!hasSeedSource}>
                     <span className="flex items-center gap-1.5"><Sprout className="w-3.5 h-3.5" /> 自交种子入种源</span>
                   </SelectItem>
@@ -319,9 +318,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {destination === 'circulate_to_inventory' ? (
-                      <SelectItem value="quantity_inbound">数量入库存</SelectItem>
-                    ) : destination === 'circulate' ? (
+                    {destination === 'circulate' ? (
                       <>
                         <SelectItem value="cutting">扦插繁殖（建新种源）</SelectItem>
                         <SelectItem value="seed_saving">留种（建新种源）</SelectItem>
@@ -332,9 +329,6 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     )}
                   </SelectContent>
                 </Select>
-                {destination === 'circulate_to_inventory' && (
-                  <p className="mt-1 text-xs text-gray-500">残株入库存只支持"数量入库存"方式</p>
-                )}
               </div>
             )}
             {requiresWarehouse && (
@@ -376,9 +370,18 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
                     min={0}
-                    className={deepInputClass}
+                    className={`${deepInputClass} ${disposeOverLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
                     placeholder="0"
                   />
+                  {/* 2026-06-18: dispose 选定时显示剩余可废弃上限（防超限） */}
+                  {destination === 'dispose' && (
+                    <p className={`mt-1 text-xs flex items-center gap-1 ${disposeOverLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                      <AlertTriangle className={`w-3 h-3 ${disposeOverLimit ? 'text-red-600' : 'text-gray-400'}`} />
+                      剩余可废弃: <span className="font-semibold">{remainingDispose}</span> 株
+                      （种植 {record.plantingCount} - 已废弃 {record.disposeQty || 0}）
+                      {disposeOverLimit ? `，已超出 ${Number(quantity) - remainingDispose}` : ''}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>单位 *</Label>
@@ -496,15 +499,15 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
               </span>
             </div>
             <div>
-              <span className="text-gray-600">残株入库存：</span>
-              <span className="font-bold text-purple-600">
-                {(record.residualToInventoryQty || 0).toLocaleString()} {record.unit || ''}
-              </span>
-            </div>
-            <div>
               <span className="text-gray-600">自交种子：</span>
               <span className="font-bold text-amber-600">
                 {(record.selfSeedToSourceQty || 0).toLocaleString()} {record.unit || ''}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">直接废弃：</span>
+              <span className="font-bold text-red-600">
+                {(record.disposeQty || 0).toLocaleString()} {record.unit || ''}
               </span>
             </div>
           </div>
