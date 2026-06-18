@@ -66,19 +66,34 @@ const InboundSchema = z.object({
 /**
  * 辅助函数：按 sourceModule 查源记录（sql.js 标准 prepare/bind/step/getAsObject/free 模式）
  * 返回 null 表示源记录不存在
+ * 2026-06-18: 扩展拉取 crop_code（种源）、greenhouse_name（育苗/种植）、planting_mode（种植）
+ *   让 inventory_stock 能全量继承源数据，避免大部分列为空
  */
 function fetchSourceRow(
   db: any,
   sourceModule: string,
   sourceId: string,
-): { code: string; cropName: string; cropVariety: string; cropCode: string; productionPlanId: string | null; productionPlanCode: string | null; unit: string | null } | null {
+): {
+  code: string
+  cropName: string
+  cropVariety: string
+  cropCode: string
+  cropId: string | null
+  productionPlanId: string | null
+  productionPlanCode: string | null
+  unit: string | null
+  greenhouseName: string | null
+  plantingMode: string | null
+} | null {
+  // ⚠️ 列名差异：种源没有 crop_id/greenhouse_name；种植没有 crop_id/planting_mode
+  // 按表分别 SELECT 实际存在的列
   let sql = ''
   if (sourceModule === 'seed_source') {
-    sql = 'SELECT source_code, crop_name, crop_variety, production_plan_code, unit FROM seed_sources WHERE id = ? AND deleted_at IS NULL'
+    sql = 'SELECT source_code, crop_code, crop_name, crop_variety, production_plan_code, unit FROM seed_sources WHERE id = ? AND deleted_at IS NULL'
   } else if (sourceModule === 'seedling') {
-    sql = 'SELECT seedling_code, crop_name, crop_variety, crop_code, production_plan_code, unit FROM seedlings WHERE id = ? AND deleted_at IS NULL'
+    sql = 'SELECT seedling_code, crop_id, crop_code, crop_name, crop_variety, production_plan_code, unit, greenhouse_name FROM seedlings WHERE id = ? AND deleted_at IS NULL'
   } else {
-    sql = 'SELECT planting_code, crop_name, crop_variety, production_plan_id, production_plan_code, unit FROM plantings WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)'
+    sql = 'SELECT planting_code, crop_code, crop_name, crop_variety, production_plan_id, production_plan_code, unit, greenhouse_name FROM plantings WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)'
   }
   const stmt = db.prepare(sql)
   stmt.bind([sourceId])
@@ -96,9 +111,12 @@ function fetchSourceRow(
     cropName: row.crop_name || '',
     cropVariety: row.crop_variety || '',
     cropCode: row.crop_code || '',
-    productionPlanId: row.production_plan_id || null,
+    cropId: row.crop_id || null,                  // 只育苗有
+    productionPlanId: row.production_plan_id || null,  // 只种植有
     productionPlanCode: row.production_plan_code || null,
     unit: row.unit || null,
+    greenhouseName: row.greenhouse_name || null,  // 育苗/种植有
+    plantingMode: null,                            // 种源/育苗/种植都没有此列（harvest_records 才有）
   }
 }
 
@@ -143,25 +161,51 @@ router.post('/inbound-record', (req: Request, res: Response) => {
     const recordId = `INB-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
     // 2. 写 inventory_stock
+    // 2026-06-18: 修复大部分列为空的 bug
+    // 原来只写 16 个字段，inventory_stock 实际 39 列，导致 crop_name/variety/crop_code/quality_grade 等都 NULL
+    // 现在全量继承 source + 填齐 inventory_stock 关键字段
     db.run(`
       INSERT INTO inventory_stock
-      (id, instance_id, stock_type, business_id, business_type, business_code,
+      (id, instance_id, stock_type,
+       business_id, business_type, business_code,
        source_module, source_id, source_type,
+       crop_id, crop_code, crop_name, variety_name,
        current_quantity, available_quantity, unit,
        warehouse_id, warehouse_name,
-       quality_grade, supplier_id, supplier_name,
+       quality_grade, grade,
+       supplier_id, supplier_name,
        unit_price, total_amount,
+       purchase_date, inbound_date,
        production_plan_id, production_plan_code,
+       planting_mode, greenhouse_name,
        notes, status, version, create_time, update_time)
-      VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
+      VALUES (?, ?, ?,
+              ?, 'inbound', ?,
+              ?, ?, ?,
+              ?, ?, ?, ?,
+              ?, ?, ?,
+              ?, ?,
+              ?, ?,
+              ?, ?,
+              ?, ?,
+              ?, ?,
+              ?, ?,
+              ?, ?,
+              ?,
+              'active', 1, ?, ?)
     `, [
-      stockId, instanceId, input.stockType, input.businessId || stockId, input.businessId || stockId,
+      stockId, instanceId, input.stockType,
+      input.businessId || stockId, input.businessId || stockId,
       input.sourceModule, input.sourceId, input.sourceType,
+      source.cropId || null, source.cropCode || null, source.cropName || null, source.cropVariety || null,
       input.quantity, input.quantity, input.unit,
       input.warehouseId, input.warehouseName || null,
-      input.qualityGrade || null, input.supplierId || null, input.supplierName || null,
+      input.qualityGrade || null, input.qualityGrade || null,  // quality_grade + grade 同时填
+      input.supplierId || null, input.supplierName || null,
       input.unitPrice || 0, input.totalAmount || 0,
+      recordDate, recordDate,  // purchase_date + inbound_date
       productionPlanId, productionPlanCode,
+      source.plantingMode || null, source.greenhouseName || null,
       input.notes || null, now, now,
     ])
 
