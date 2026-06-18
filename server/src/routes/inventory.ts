@@ -23,6 +23,252 @@ const router = Router();
 router.post('/inbound', inventoryController.inbound.bind(inventoryController));
 
 // ============================================================
+// 2026-06-18: 库存入库按模块下沉 (方向 A + 选项 B)
+// 设计文档：docs/superpowers/specs/2026-06-18-inventory-inbound-per-module-design.md
+// ============================================================
+// 路径说明：避免与 inventoryController.inbound 冲突（已在上面 line 23 注册 /inbound），
+//          新版入库走 /inbound-record（单数），GET 列表 /inbound-records（复数）。
+//          必须在 /:id 之前注册（line 190），否则会被通配截胡
+import { z } from 'zod';
+import { UNIT_ENUM } from './planting';
+
+/**
+ * 入库请求 Zod Schema
+ * - sourceModule: 'seed_source' | 'seedling' | 'planting'
+ * - stockType: 锁死，UI 层根据 sourceModule 传入
+ * - sourceType: 6 种入库原因
+ * - qualityGrade: 5 档品级
+ */
+const InboundSchema = z.object({
+  sourceModule: z.enum(['seed_source', 'seedling', 'planting']),
+  sourceId: z.string().min(1, { message: '源记录 ID 必填' }),
+  stockType: z.enum(['seed', 'seedling', 'product']),
+  sourceType: z.enum([
+    'external_purchased', 'gift', 'commissioned', 'transfer', 'manual', 'self_produced',
+  ]),
+  warehouseId: z.string().min(1, { message: '仓库 ID 必填' }),
+  quantity: z.number().positive({ message: '数量必须 > 0' }),
+  unit: UNIT_ENUM,
+  unitPrice: z.number().nonnegative().optional(),
+  totalAmount: z.number().nonnegative().optional(),
+  qualityGrade: z.enum(['special', 'excellent', 'good', 'qualified', 'unqualified']).optional(),
+  supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
+  productionPlanId: z.string().optional(),
+  productionPlanCode: z.string().optional(),
+  businessId: z.string().optional(),
+  notes: z.string().optional(),
+  operatorName: z.string().optional(),
+  recordDate: z.string().optional(),  // YYYY-MM-DD；默认今天
+  warehouseName: z.string().optional(),
+});
+
+/**
+ * 辅助函数：按 sourceModule 查源记录（sql.js 标准 prepare/bind/step/getAsObject/free 模式）
+ * 返回 null 表示源记录不存在
+ */
+function fetchSourceRow(
+  db: any,
+  sourceModule: string,
+  sourceId: string,
+): { code: string; cropName: string; cropVariety: string; cropCode: string; productionPlanId: string | null; productionPlanCode: string | null; unit: string | null } | null {
+  let sql = ''
+  if (sourceModule === 'seed_source') {
+    sql = 'SELECT source_code, crop_name, crop_variety, production_plan_code, unit FROM seed_sources WHERE id = ? AND deleted_at IS NULL'
+  } else if (sourceModule === 'seedling') {
+    sql = 'SELECT seedling_code, crop_name, crop_variety, crop_code, production_plan_code, unit FROM seedlings WHERE id = ? AND deleted_at IS NULL'
+  } else {
+    sql = 'SELECT planting_code, crop_name, crop_variety, production_plan_id, production_plan_code, unit FROM plantings WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)'
+  }
+  const stmt = db.prepare(sql)
+  stmt.bind([sourceId])
+  if (!stmt.step()) {
+    stmt.free()
+    return null
+  }
+  const row = stmt.getAsObject() as any
+  stmt.free()
+
+  // 统一字段名
+  const code = row.source_code || row.seedling_code || row.planting_code || ''
+  return {
+    code,
+    cropName: row.crop_name || '',
+    cropVariety: row.crop_variety || '',
+    cropCode: row.crop_code || '',
+    productionPlanId: row.production_plan_id || null,
+    productionPlanCode: row.production_plan_code || null,
+    unit: row.unit || null,
+  }
+}
+
+/**
+ * POST /api/inventory/inbound-record
+ * 库存入库（按模块下沉版）
+ * 1. 校验 source 存在（按 sourceModule 分别查种源/育苗/种植）
+ * 2. 写 inventory_stock（business_type='inbound', source_module/source_id 关联）
+ * 3. 写 inventory_inbound_records（审计）
+ * 4. 补仓库名（如未传）
+ * 5. 返回 { stockId, recordId }
+ */
+router.post('/inbound-record', (req: Request, res: Response) => {
+  try {
+    const parsed = InboundSchema.safeParse(req.body)
+    if (!parsed.success) {
+      // Zod 4 错误在 issues 字段，Zod 3 在 errors 字段；用 ?. 兼容两版本
+      const issues: any[] = (parsed.error as any)?.issues || (parsed.error as any)?.errors || []
+      const firstMsg = issues[0]?.message || '参数校验失败'
+      const firstPath = Array.isArray(issues[0]?.path) ? issues[0].path.join('.') : ''
+      return res.status(400).json({
+        success: false,
+        error: firstPath ? `${firstPath}: ${firstMsg}` : firstMsg,
+        issues,
+      })
+    }
+    const input = parsed.data
+    const db = getDatabase()
+
+    // 1. 校验 source 存在 + 取源数据
+    const source = fetchSourceRow(db, input.sourceModule, input.sourceId)
+    if (!source) {
+      return res.status(404).json({ success: false, error: '源记录不存在或已删除' })
+    }
+
+    const productionPlanId = input.productionPlanId || source.productionPlanId || null
+    const productionPlanCode = input.productionPlanCode || source.productionPlanCode || null
+    const now = new Date().toISOString()
+    const recordDate = input.recordDate || now.slice(0, 10)
+    const stockId = `STK-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const instanceId = `INST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const recordId = `INB-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+
+    // 2. 写 inventory_stock
+    db.run(`
+      INSERT INTO inventory_stock
+      (id, instance_id, stock_type, business_id, business_type, business_code,
+       source_module, source_id, source_type,
+       current_quantity, available_quantity, unit,
+       warehouse_id, warehouse_name,
+       quality_grade, supplier_id, supplier_name,
+       unit_price, total_amount,
+       production_plan_id, production_plan_code,
+       notes, status, version, create_time, update_time)
+      VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, ?)
+    `, [
+      stockId, instanceId, input.stockType, input.businessId || stockId, input.businessId || stockId,
+      input.sourceModule, input.sourceId, input.sourceType,
+      input.quantity, input.quantity, input.unit,
+      input.warehouseId, input.warehouseName || null,
+      input.qualityGrade || null, input.supplierId || null, input.supplierName || null,
+      input.unitPrice || 0, input.totalAmount || 0,
+      productionPlanId, productionPlanCode,
+      input.notes || null, now, now,
+    ])
+
+    // 3. 写 inventory_inbound_records
+    db.run(`
+      INSERT INTO inventory_inbound_records
+      (id, record_type, record_date, source_module, source_id, source_code,
+       stock_type, source_type, warehouse_id, warehouse_name,
+       crop_code, crop_name, variety_name,
+       quantity, unit, unit_price, total_amount, quality_grade,
+       supplier_id, supplier_name,
+       production_plan_id, production_plan_code,
+       business_id, notes, operator_name, create_by, create_time, update_time)
+      VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      recordId, recordDate,
+      input.sourceModule, input.sourceId, source.code,
+      input.stockType, input.sourceType,
+      input.warehouseId, input.warehouseName || null,
+      source.cropCode, source.cropName, source.cropVariety,
+      input.quantity, input.unit, input.unitPrice || 0, input.totalAmount || 0,
+      input.qualityGrade || null,
+      input.supplierId || null, input.supplierName || null,
+      productionPlanId, productionPlanCode,
+      input.businessId || stockId, input.notes || null,
+      input.operatorName || 'system', input.operatorName || 'system', now, now,
+    ])
+
+    // 4. 补仓库名（如未传且 warehouses 表能查到）
+    if (!input.warehouseName) {
+      try {
+        const wstmt = db.prepare('SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1')
+        wstmt.bind([input.warehouseId, input.warehouseId])
+        if (wstmt.step()) {
+          const wname = (wstmt.getAsObject() as any).name as string | undefined
+          if (wname) {
+            db.run('UPDATE inventory_inbound_records SET warehouse_name = ? WHERE id = ?', [wname, recordId])
+            db.run('UPDATE inventory_stock SET warehouse_name = ? WHERE id = ?', [wname, stockId])
+          }
+        }
+        wstmt.free()
+      } catch (_e) {
+        // 仓库名补全失败不阻断主流程
+      }
+    }
+
+    saveDatabase()
+    res.json({ success: true, data: { stockId, recordId } })
+  } catch (e: any) {
+    console.error('[POST /inventory/inbound-record]', e)
+    res.status(500).json({ success: false, error: e?.message || '入库失败' })
+  }
+})
+
+/**
+ * GET /api/inventory/inbound-records
+ * 查询入库记录
+ * 查询参数：sourceModule, sourceId, stockType, warehouseId, startDate, endDate, page, limit
+ */
+router.get('/inbound-records', (req: Request, res: Response) => {
+  try {
+    const {
+      sourceModule, sourceId, stockType, warehouseId, startDate, endDate,
+      page = '1', limit = '20',
+    } = req.query as any
+
+    const db = getDatabase()
+    const conditions: string[] = []
+    const params: any[] = []
+    if (sourceModule) { conditions.push('source_module = ?'); params.push(sourceModule) }
+    if (sourceId) { conditions.push('source_id = ?'); params.push(sourceId) }
+    if (stockType) { conditions.push('stock_type = ?'); params.push(stockType) }
+    if (warehouseId) { conditions.push('warehouse_id = ?'); params.push(warehouseId) }
+    if (startDate) { conditions.push('record_date >= ?'); params.push(startDate) }
+    if (endDate) { conditions.push('record_date <= ?'); params.push(endDate) }
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
+
+    const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20))
+    const offset = (pageNum - 1) * limitNum
+
+    // 计数
+    const countResult = db.exec(`SELECT COUNT(*) FROM inventory_inbound_records ${where}`, params)
+    const total = Number(countResult[0]?.values?.[0]?.[0]) || 0
+
+    // 列表
+    const listSql = `SELECT * FROM inventory_inbound_records ${where} ORDER BY create_time DESC LIMIT ? OFFSET ?`
+    const stmt = db.prepare(listSql)
+    stmt.bind([...params, limitNum, offset])
+    const records: any[] = []
+    while (stmt.step()) {
+      records.push(stmt.getAsObject())
+    }
+    stmt.free()
+
+    res.json({
+      success: true,
+      data: records,
+      meta: { total, page: pageNum, limit: limitNum },
+    })
+  } catch (e: any) {
+    console.error('[GET /inventory/inbound-records]', e)
+    res.status(500).json({ success: false, error: e?.message || '查询入库记录失败' })
+  }
+})
+
+// ============================================================
 // V2 改造: 库存来源追溯路由 (任务 11: Phase 2) - 必须在 /:id 之前
 // ============================================================
 import { traceInventorySource } from '../services/inventory.service'

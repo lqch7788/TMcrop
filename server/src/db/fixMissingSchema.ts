@@ -2457,6 +2457,84 @@ function fixApprovedProductionPlanStatus(): void {
   remainStmt.free();
   saveDatabase();
   seedLog.info(`发布时间补全完成（仍有 ${remaining} 条未补,需要手工核对）`);
+
+  // ========== 2026-06-18: 库存入库按模块下沉 (方向 A + 选项 B) ==========
+  // 1) inventory_stock 缺失列：unit_price / total_amount / quality_grade /
+  //    supplier_id / supplier_name / source_id / source_module / notes / source_type / production_plan_id
+  // 2) 新表 inventory_inbound_records：入库审计
+  // 3) 3 个索引加速 source / stock_type+date / warehouse 查询
+  try {
+    // 列补全（duplicate column 自动跳过）
+    const stockColumns = [
+      { name: 'unit_price', sql: 'ALTER TABLE inventory_stock ADD COLUMN unit_price REAL DEFAULT 0' },
+      { name: 'total_amount', sql: 'ALTER TABLE inventory_stock ADD COLUMN total_amount REAL DEFAULT 0' },
+      { name: 'quality_grade', sql: 'ALTER TABLE inventory_stock ADD COLUMN quality_grade TEXT' },
+      { name: 'supplier_id', sql: 'ALTER TABLE inventory_stock ADD COLUMN supplier_id TEXT' },
+      { name: 'supplier_name', sql: 'ALTER TABLE inventory_stock ADD COLUMN supplier_name TEXT' },
+      { name: 'source_module', sql: "ALTER TABLE inventory_stock ADD COLUMN source_module TEXT" },
+      { name: 'source_id', sql: 'ALTER TABLE inventory_stock ADD COLUMN source_id TEXT' },
+      { name: 'notes', sql: 'ALTER TABLE inventory_stock ADD COLUMN notes TEXT' },
+      { name: 'source_type', sql: "ALTER TABLE inventory_stock ADD COLUMN source_type TEXT" },
+      { name: 'production_plan_id', sql: 'ALTER TABLE inventory_stock ADD COLUMN production_plan_id TEXT' },
+    ];
+    for (const c of stockColumns) {
+      try {
+        db.run(c.sql);
+        seedLog.info(`  ✓ inventory_stock.${c.name} 字段已添加`);
+      } catch (e: any) {
+        if (e.message?.includes('duplicate column')) {
+          seedLog.info(`  - inventory_stock.${c.name} 已存在，跳过`);
+        } else {
+          seedLog.error(`  ✗ inventory_stock.${c.name} 失败: ${e.message}`);
+        }
+      }
+    }
+  } catch (e: any) {
+    seedLog.error('inventory_stock 补列失败:', e.message);
+  }
+
+  // inventory_inbound_records 表 + 3 索引
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS inventory_inbound_records (
+        id TEXT PRIMARY KEY,
+        record_type TEXT DEFAULT 'inbound',
+        record_date TEXT NOT NULL,
+        source_module TEXT NOT NULL,
+        source_id TEXT NOT NULL,
+        source_code TEXT,
+        stock_type TEXT NOT NULL,
+        source_type TEXT NOT NULL,
+        warehouse_id TEXT,
+        warehouse_name TEXT,
+        crop_id TEXT,
+        crop_code TEXT,
+        crop_name TEXT,
+        variety_name TEXT,
+        quantity REAL NOT NULL DEFAULT 0,
+        unit TEXT NOT NULL,
+        unit_price REAL DEFAULT 0,
+        total_amount REAL DEFAULT 0,
+        quality_grade TEXT,
+        supplier_id TEXT,
+        supplier_name TEXT,
+        production_plan_id TEXT,
+        production_plan_code TEXT,
+        business_id TEXT,
+        notes TEXT,
+        operator_name TEXT,
+        create_by TEXT,
+        create_time TEXT,
+        update_time TEXT
+      )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_inbound_source ON inventory_inbound_records (source_module, source_id)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_inbound_stock_type ON inventory_inbound_records (stock_type, record_date)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_inbound_warehouse ON inventory_inbound_records (warehouse_id)');
+    seedLog.info('  ✓ inventory_inbound_records 表 + 3 索引就绪');
+  } catch (e: any) {
+    seedLog.error('inventory_inbound_records 创建失败:', e.message);
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

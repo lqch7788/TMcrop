@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag, X } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Download, Plus, Calendar, Truck, CheckCircle, XCircle, Tag, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Seedling, SeedlingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -38,6 +38,8 @@ interface SeedlingTableProps {
   onImageClick: (images: string[]) => void;
   // 结束相关回调
   onEnd: (record: Seedling, endType: 'normal' | 'abnormal') => void;
+  // 2026-06-18: 任务 5 — 出圃入库回调
+  onInbound?: (record: Seedling) => void;
   // 模式状态
   operationMode: SeedlingOperationMode;
   onOperationModeChange: (mode: SeedlingOperationMode) => void;
@@ -75,6 +77,7 @@ export function SeedlingTable({
   onLabelManage,
   onImageClick,
   onEnd,
+  onInbound,
   operationMode,
   onOperationModeChange,
   exportMode,
@@ -707,6 +710,18 @@ export function SeedlingTable({
                           title="查看图片"
                         >
                           <Image className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {/* 2026-06-18: 任务 5 — 出圃入库按钮 */}
+                      {onInbound && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onInbound(record)}
+                          className="text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                          title="出圃入库"
+                        >
+                          <Package className="w-4 h-4" />
                         </Button>
                       )}
                       {!record.endTime && (

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList } from 'lucide-react';
+import { Edit2, Trash2, Printer, Eye, Image, Package, ClipboardList, Download } from 'lucide-react';
 import { SeedSourceFilter } from './components/SeedSourceFilter';
 import { SeedSourceTable } from './components/SeedSourceTable';
 import { AddModal } from './modals/AddModal';
@@ -34,6 +34,9 @@ import { computeStockStatus } from '../../../lib/stockStatus';
 import * as XLSX from 'xlsx';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
+import { useInventoryInboundStore } from '@/stores/useInventoryInboundStore';
+import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
+import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
 export default function SeedSourcePage() {
@@ -146,6 +149,19 @@ export default function SeedSourcePage() {
   // Phase 4: 回流记录弹窗状态
   const [circulationModalOpen, setCirculationModalOpen] = useState(false);
   const [circulationRecord, setCirculationRecord] = useState<SeedSource | null>(null);
+
+  // 2026-06-18: 任务 4 — 入库登记弹窗状态 + 入库记录子表数据
+  const [inboundModal, setInboundModal] = useState<{ open: boolean; record: SeedSource | null }>({
+    open: false,
+    record: null,
+  });
+  const inboundRecordsMap = useInventoryInboundStore((s) => s.recordsBySource);
+  const loadInboundRecords = useInventoryInboundStore((s) => s.loadRecords);
+
+  // 把 recordsBySource flat 成数组（按 createTime 倒序）
+  const allInboundRecords: InventoryInboundRecord[] = Object.values(inboundRecordsMap)
+    .flat()
+    .sort((a, b) => (b.createTime || '').localeCompare(a.createTime || ''));
 
   // 留种初始化数据（从种植页面跳转来）
   const [seedSavingInit, setSeedSavingInit] = useState<{
@@ -400,6 +416,57 @@ export default function SeedSourcePage() {
     setCirculationModalOpen(true);
   };
 
+  // 2026-06-18: 任务 4 — 入库登记入口 + 加载/导出辅助
+  const handleInbound = (record: SeedSource) => {
+    setInboundModal({ open: true, record });
+    // 打开弹窗时拉取该种源的入库记录（key 与 store 保持一致）
+    void loadInboundRecords(`seed_source:${record.id}`, {
+      sourceModule: 'seed_source',
+      sourceId: record.id,
+      limit: 100,
+    });
+  };
+
+  // 弹窗提交成功后刷新该种源的入库记录
+  const handleInboundSuccess = () => {
+    const rec = inboundModal.record;
+    if (!rec) return;
+    void loadInboundRecords(`seed_source:${rec.id}`, {
+      sourceModule: 'seed_source',
+      sourceId: rec.id,
+      limit: 100,
+    });
+    toast.success('入库成功');
+  };
+
+  // CSV 导出（UTF-8 BOM 防 Excel 乱码）
+  const exportInboundCSV = () => {
+    if (allInboundRecords.length === 0) {
+      showAlert('没有入库记录可导出');
+      return
+    }
+    const headers = ['入库日期', '来源编码', '来源模块', '仓库', '数量', '单位', '品质', '操作员', '备注']
+    const rows = allInboundRecords.map((r) => [
+      r.recordDate,
+      r.sourceCode || r.sourceId,
+      r.sourceModule,
+      r.warehouseName || r.warehouseId || '',
+      r.quantity.toString(),
+      r.unit,
+      r.qualityGrade || '',
+      r.operatorName || r.createBy || '',
+      r.notes || '',
+    ])
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `种源入库记录_${todayLocal()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // 处理繁殖阶段推进
   const handlePropagationStage = (record: SeedSource) => {
     setPropagationRecord(record);
@@ -591,6 +658,7 @@ export default function SeedSourcePage() {
         onPropagationRecord={handlePropagationRecord}
         onPropagationStage={handlePropagationStage}
         onCirculation={handleCirculation}
+        onInbound={handleInbound}
       />
 
       {/* 弹窗 */}
@@ -668,6 +736,73 @@ export default function SeedSourcePage() {
           seedCode={circulationRecord.seedCode}
         />
       )}
+
+      {/* 2026-06-18: 任务 4 — 入库登记弹窗（按 plan 接入 InventoryInboundModal） */}
+      {inboundModal.record && (
+        <InventoryInboundModal
+          isOpen={inboundModal.open}
+          onClose={() => setInboundModal({ open: false, record: null })}
+          onSuccess={handleInboundSuccess}
+          stockType="seed"
+          sourceRecord={{
+            module: 'seed_source',
+            id: inboundModal.record.id,
+            code: inboundModal.record.seedCode,
+            cropName: inboundModal.record.cropName || '',
+            cropVariety: inboundModal.record.cropVariety || '',
+            cropCode: inboundModal.record.cropCode || '',
+            unit: inboundModal.record.unit,
+            productionPlanId: inboundModal.record.productionPlanId,
+            productionPlanCode: inboundModal.record.productionPlanCode,
+          }}
+        />
+      )}
+
+      {/* 2026-06-18: 任务 4 — 入库记录子表（折叠区） */}
+      <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <summary className="cursor-pointer text-sm font-semibold p-3 bg-gray-50 hover:bg-gray-100">
+          入库记录 (共 {allInboundRecords.length} 条)
+        </summary>
+        <div className="p-3">
+          {allInboundRecords.length === 0 ? (
+            <div className="text-center py-6 text-gray-500 text-sm">暂无入库记录</div>
+          ) : (
+            <>
+              <div className="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-500 text-white sticky top-0">
+                    <tr>
+                      <th className="px-2 py-2 text-left">入库日期</th>
+                      <th className="px-2 py-2 text-left">来源编码</th>
+                      <th className="px-2 py-2 text-left">仓库</th>
+                      <th className="px-2 py-2 text-left">数量</th>
+                      <th className="px-2 py-2 text-left">单位</th>
+                      <th className="px-2 py-2 text-left">品质</th>
+                      <th className="px-2 py-2 text-left">操作员</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allInboundRecords.slice(0, 20).map((r) => (
+                      <tr key={r.id} className="hover:bg-gray-50">
+                        <td className="px-2 py-1.5">{r.recordDate}</td>
+                        <td className="px-2 py-1.5">{r.sourceCode || r.sourceId}</td>
+                        <td className="px-2 py-1.5">{r.warehouseName || r.warehouseId || '-'}</td>
+                        <td className="px-2 py-1.5">{r.quantity}</td>
+                        <td className="px-2 py-1.5">{r.unit}</td>
+                        <td className="px-2 py-1.5">{r.qualityGrade || '-'}</td>
+                        <td className="px-2 py-1.5">{r.operatorName || r.createBy || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Button onClick={exportInboundCSV} className="mt-3" size="sm" variant="outline">
+                <Download className="w-4 h-4 mr-1" /> 导出 CSV
+              </Button>
+            </>
+          )}
+        </div>
+      </details>
 
       {/* 2026-06-09 删除警告弹窗（统一为 DeleteConfirmModal，与技术方案一致） */}
       <DeleteConfirmModal
