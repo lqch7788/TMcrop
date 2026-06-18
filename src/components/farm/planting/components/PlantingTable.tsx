@@ -323,8 +323,8 @@ export function PlantingTable({
         title: '种植数量',
         dataIndex: 'plantingCount',
         width: 100,
-        render: (count: number) => (
-          <span className="text-emerald-600 font-medium">{count.toLocaleString()}</span>
+        render: (count: number, record: Planting) => (
+          <span className="text-emerald-600 font-medium">{(count || 0).toLocaleString()}{record.unit || ''}</span>
         )
       },
       {
@@ -873,7 +873,7 @@ export function PlantingTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{record.areaName}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-emerald-600 font-medium whitespace-nowrap">
-                    {(record.plantingCount || 0).toLocaleString()}
+                    {(record.plantingCount || 0).toLocaleString()}{record.unit || ''}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.plantingDate}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">

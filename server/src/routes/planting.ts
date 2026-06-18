@@ -104,6 +104,7 @@ router.get('/', (req: Request, res: Response) => {
       p.expected_harvest_date AS expectedHarvestDate,
       p.actual_harvest_date AS actualHarvestDate,
       p.harvest_quantity AS harvestQuantity,
+      p.unit,
       p.status,
       p.remarks,
       p.production_plan_id AS productionPlanId,
