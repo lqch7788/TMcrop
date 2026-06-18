@@ -3,7 +3,7 @@
  * 仿照 DailyRecordModal 结构
  * 5 种 destination + 历史记录表 + 4 列累计 + 总结束按钮
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Label } from '@/components/ui'
 import { UnifiedModal } from '@/components/ui'
 import { Input, TextArea } from '@/components/ui'
@@ -17,6 +17,7 @@ import type { AddHarvestRecordInput } from '@/services/apiPlantingService'
 import { showAlert, showConfirm } from '@/lib/dialogService'
 import { usePlantingStore } from '@/stores/usePlantingStore'
 import { useWarehouseStore } from '@/stores/useWarehouseStore'
+import { useDictionaryStore, getDictItems, getDictItemName } from '@/stores/useDictionaryStore'
 import { todayLocal } from '@/lib/dateUtils'
 
 interface HarvestRecordModalProps {
@@ -72,7 +73,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [destination, setDestination] = useState<EndType | null>(null)
   const [subType, setSubType] = useState<SubType>('cutting')
   const [quantity, setQuantity] = useState<number | string>(0)
-  const [unit, setUnit] = useState<string>('g')
+  // 2026-06-18: 单位默认值从字典选取，旧 'g' 兼容映射为 '克'
+  const [unit, setUnit] = useState<string>('克')
   const [warehouseId, setWarehouseId] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
   const [recordDate, setRecordDate] = useState<string>(todayLocal())
@@ -87,15 +89,36 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const warehouses = useWarehouseStore((s) => s.warehouses)
   const loadWarehouses = useWarehouseStore((s) => s.loadWarehouses)
 
+  // 2026-06-18: 单位字典（袋/株/粒/千克/克/吨/亩）
+  const dictionaries = useDictionaryStore((s) => s.dictionaries)
+  const loadDictionaries = useDictionaryStore((s) => s.loadDictionaries)
+  const unitOptions = useMemo(
+    () => getDictItems('unit').map((d) => d.dictCode).filter(Boolean),
+    [dictionaries]
+  )
+
   // 弹窗打开时加载数据
   useEffect(() => {
     if (isOpen) {
       if (warehouses.length === 0) {
         void loadWarehouses()
       }
+      if (dictionaries.length === 0) {
+        void loadDictionaries()
+      }
       void loadHarvestRecords(record.id)
     }
-  }, [isOpen, warehouses.length, loadWarehouses, loadHarvestRecords, record.id])
+    // 字典加载完成后，若 unit 仍为旧的 'g' 占位，尝试对齐到 '克'
+    if (dictionaries.length > 0 && unit === '克' && record.unit && record.unit !== '克') {
+      // 仅在 record.unit 已是字典值时切换
+      if (unitOptions.includes(record.unit)) {
+        setUnit(record.unit)
+      } else if (record.unit === 'g' && unitOptions.includes('克')) {
+        // 兼容旧数据 'g' 已是 '克'（默认占位），无需切换
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, warehouses.length, loadWarehouses, loadHarvestRecords, record.id, dictionaries.length, loadDictionaries])
 
   const harvestRecords: PlantingHarvestRecord[] = harvestRecordsMap[record.id] || []
   const activeWarehouses = warehouses.filter((w: any) => !w.status || w.status === 'active')
@@ -136,22 +159,18 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       return
     }
 
-    // 数量校验
+    // 数量 + 单位校验（5 个去向统一必填 — 2026-06-18）
     const qtyNum = Number(quantity) || 0
-    if (destination === 'harvest' && qtyNum <= 0) {
-      showAlert('采收入库必须填写数量')
-      return
-    }
-    if (destination === 'circulate_to_inventory' && qtyNum <= 0) {
-      showAlert('残株入库存必须填写数量')
-      return
-    }
-    if (isQuantityType && qtyNum <= 0) {
-      showAlert('请填写数量（>0）')
-      return
-    }
-    if (destination !== 'dispose' && !isPropagationType && qtyNum <= 0) {
+    if (destination && qtyNum <= 0) {
       showAlert('请填写数量（> 0）')
+      return
+    }
+    if (destination && !unit) {
+      showAlert('请选择单位')
+      return
+    }
+    if (destination && unitOptions.length > 0 && !unitOptions.includes(unit)) {
+      showAlert('单位无效，请从下拉选择')
       return
     }
 
@@ -222,7 +241,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       getDestinationLabel(r.destination),
       getSubTypeLabel(r.subType),
       r.quantity.toString(),
-      r.unit,
+      getDictItemName('unit', r.unit) || r.unit,
       r.warehouseName || r.warehouseId || '',
       r.operatorName || r.createBy || '',
       r.notes || '',
@@ -349,13 +368,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                 )}
               </div>
             )}
-            {destination && (destination === 'harvest' || destination === 'circulate_to_inventory' || isQuantityType || destination === 'dispose') && (
+            {destination && (
               <>
                 <div>
-                  <Label>
-                    数量
-                    {destination === 'harvest' || destination === 'circulate_to_inventory' || isQuantityType ? ' *' : ''}
-                  </Label>
+                  <Label>数量 *</Label>
                   <NumberInput
                     value={quantity}
                     onChange={(v) => setQuantity(v)}
@@ -365,18 +381,23 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                   />
                 </div>
                 <div>
-                  <Label>单位</Label>
-                  <Input
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
-                    className={deepInputClass}
-                    placeholder="g / kg / 株"
-                  />
+                  <Label>单位 *</Label>
+                  <Select value={unit} onValueChange={setUnit}>
+                    <SelectTrigger className={deepInputClass}>
+                      <SelectValue placeholder="请选择单位" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unitOptions.length === 0 ? (
+                        <SelectItem value="克" disabled>字典加载中…</SelectItem>
+                      ) : (
+                        unitOptions.map((u) => (
+                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
-            )}
-            {requiresCirculation && isPropagationType && (
-              <p className="col-span-3 text-xs text-gray-500">代际型回流不需要填写数量，会在种源中建新记录</p>
             )}
             {destination && (
               <div className="col-span-3">

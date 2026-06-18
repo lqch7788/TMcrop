@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import initSqlJs from 'sql.js'
 import type { Database } from 'sql.js'
+import { UNIT_ENUM } from '../routes/planting'
 
 let db: Database
 
@@ -458,5 +459,29 @@ describe('planting_harvest_records 单元测试', () => {
     expect(notNullCols).toContain('quantity')
     expect(notNullCols).toContain('create_time')
     expect(notNullCols).toContain('update_time')
+  })
+
+  // ========== 2026-06-18: 单位字典白名单（UNIT_ENUM）测试 ==========
+  describe('UNIT_ENUM 单位字典白名单', () => {
+    it('11. 7 个合法单位全部通过', () => {
+      for (const u of ['袋', '株', '粒', '千克', '克', '吨', '亩']) {
+        const r = UNIT_ENUM.safeParse(u)
+        expect(r.success, `单位 "${u}" 应合法`).toBe(true)
+      }
+    })
+
+    it('12. 非法单位被拒绝', () => {
+      const r = UNIT_ENUM.safeParse('invalid_unit')
+      expect(r.success).toBe(false)
+    })
+
+    it('13. 空字符串被拒绝', () => {
+      const r = UNIT_ENUM.safeParse('')
+      expect(r.success).toBe(false)
+    })
+
+    it('14. 选项数量为 7', () => {
+      expect(UNIT_ENUM.options.length).toBe(7)
+    })
   })
 })

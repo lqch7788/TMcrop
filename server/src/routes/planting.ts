@@ -3,11 +3,19 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 
 const router = Router();
+
+/**
+ * 2026-06-18: 单位字典白名单
+ * 与 server/src/db/seedBasicData.ts 的 categoryCode='unit' 字典保持一致
+ * 用 zod enum 暴露，safeParse 校验写入值
+ */
+export const UNIT_ENUM = z.enum(['袋', '株', '粒', '千克', '克', '吨', '亩'])
 
 /**
  * C 阶段 ZP-1：plantings 表允许更新的列白名单
@@ -251,6 +259,11 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
     }
     if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' });
+    }
+    // 2026-06-18: 单位字典白名单校验
+    const unitParse = UNIT_ENUM.safeParse(unit);
+    if (!unitParse.success) {
+      return res.status(400).json({ success: false, error: '单位必须是字典中的值（袋/株/粒/千克/克/吨/亩）' });
     }
 
     // === 反向补偿：删除旧的下游副作用 ===
@@ -1131,6 +1144,9 @@ router.post('/:id/harvest-records', async (req, res) => {
     if (destination !== 'dispose' && (!quantity || quantity <= 0)) {
       return res.status(400).json({ success: false, error: '数量必须大于 0' })
     }
+    // 2026-06-18: 单位字典白名单校验
+    const postUnitParse = UNIT_ENUM.safeParse(unit)
+    if (!postUnitParse.success) return res.status(400).json({ success: false, error: '单位必须是字典中的值（袋/株/粒/千克/克/吨/亩）' })
 
     const now = formatLocalDateISO()
     const harvestRecordId = `PHR${Date.now()}`
