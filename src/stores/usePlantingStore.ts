@@ -38,7 +38,7 @@ interface PlantingState {
     id: string,
     options: {
       status: 'ended' | 'cancelled';
-      endType: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose';
+      endType: 'harvest' | 'circulate' | 'self_seed' | 'dispose';
       notes?: string;
     }
   ) => Promise<boolean>;

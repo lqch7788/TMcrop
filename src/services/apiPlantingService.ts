@@ -138,8 +138,9 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     isHarvestLocked: Boolean(item.isHarvestLocked),
     harvestToInventoryQty: Number(item.harvestToInventoryQty) || 0,
     residualToSourceQty: Number(item.residualToSourceQty) || 0,
-    residualToInventoryQty: Number(item.residualToInventoryQty) || 0,
     selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
+    // 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
+    disposeQty: Number(item.disposeQty) || 0,
   };
 }
 
@@ -275,7 +276,7 @@ export async function getHarvestedPlantings(): Promise<Planting[]> {
  */
 export interface AddHarvestRecordInput {
   recordDate: string
-  destination: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose'
+  destination: 'harvest' | 'circulate' | 'self_seed' | 'dispose'
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound'
   warehouseId?: string
   warehouseName?: string
@@ -289,14 +290,15 @@ export interface AddHarvestRecordInput {
 
 /**
  * 种植结束（V2 软锁改造）
- * 5 种结束方式：harvest | circulate | circulate_to_inventory | self_seed | dispose
+ * 4 种结束方式：harvest | circulate | self_seed | dispose
  * 数据流：API → SQLite DB
  *
  * 2026-06-17: 改造为 PUT /:id 设 is_harvest_locked=1
  * 之前是 POST /:id/end（专用路由），现在改用通用 PUT 走白名单列更新
+ * 2026-06-18: 去掉 circulate_to_inventory（5 个 → 4 个）
  */
 export interface EndPlantingInput {
-  endType: 'harvest' | 'circulate' | 'circulate_to_inventory' | 'self_seed' | 'dispose';
+  endType: 'harvest' | 'circulate' | 'self_seed' | 'dispose';
   subType?: 'cutting' | 'seed_saving' | 'quantity_refill' | 'quantity_inbound';
   warehouseId?: string;
   quantity?: number;

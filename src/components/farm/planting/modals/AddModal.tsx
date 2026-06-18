@@ -78,26 +78,6 @@ export function AddModal({
     );
   }, [storePlans]);
 
-  // 2026-06-18: 计算当前所选来源的可定植数量（种源: availableCount, 育苗: availableTransplantCount）
-  // 供"种植数量"输入框下方实时显示余量警告
-  // null = 外部来源或未选（不显示警告）
-  const availableAmount = useMemo<number | null>(() => {
-    if (sourceMode === 'external') return null  // 外部来源无数限制
-    if (!formData.sourceId) return null
-    if (formData.sourceType === SourceType.SEED) {
-      const s = seedSources.find(x => x.id === formData.sourceId)
-      return s ? s.availableCount : null
-    }
-    if (formData.sourceType === SourceType.SEEDLING) {
-      const s = seedlings.find(x => x.id === formData.sourceId)
-      return s ? ((s as any).availableTransplantCount ?? 0) : null
-    }
-    return null
-  }, [sourceMode, formData.sourceId, formData.sourceType, seedSources, seedlings])
-
-  // 2026-06-18: 数量超限标记（用于提交拦截 + 红框提示）
-  const overLimit = availableAmount !== null && formData.plantingCount > availableAmount
-
   // 种植批号 (参照种源批号生成模式)
   const [plantCode, setPlantCode] = useState('');
 
@@ -123,6 +103,27 @@ export function AddModal({
   // 种源列表和育苗列表状态
   const [seedSources, setSeedSources] = useState<SeedSource[]>([]);
   const [seedlings, setSeedlings] = useState<Seedling[]>([]);
+
+  // 2026-06-18: 计算当前所选来源的可定植数量（种源: availableCount, 育苗: availableTransplantCount）
+  // 供"种植数量"输入框下方实时显示余量警告
+  // null = 外部来源或未选（不显示警告）
+  // 必须在 seedSources/seedlings useState 声明之后（避免 TDZ ReferenceError）
+  const availableAmount = useMemo<number | null>(() => {
+    if (sourceMode === 'external') return null  // 外部来源无数限制
+    if (!formData.sourceId) return null
+    if (formData.sourceType === SourceType.SEED) {
+      const s = seedSources.find(x => x.id === formData.sourceId)
+      return s ? s.availableCount : null
+    }
+    if (formData.sourceType === SourceType.SEEDLING) {
+      const s = seedlings.find(x => x.id === formData.sourceId)
+      return s ? ((s as any).availableTransplantCount ?? 0) : null
+    }
+    return null
+  }, [sourceMode, formData.sourceId, formData.sourceType, seedSources, seedlings])
+
+  // 2026-06-18: 数量超限标记（用于提交拦截 + 红框提示）
+  const overLimit = availableAmount !== null && formData.plantingCount > availableAmount
 
   // 加载种源列表和育苗列表
   useEffect(() => {
