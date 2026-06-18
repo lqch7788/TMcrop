@@ -125,12 +125,15 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
   const newSourceId = generateId('SRC')
   const newOrigin = deriveOriginFromContext(input)
   const circulationDate = formatLocalDateISO()
+  // 2026-06-18: PROPAGATION 也把 quantity 写入新种源 remaining_quantity
+  // 让 cutting/seed_saving/self_seed 实际可用数量反映填入的数量
+  const seedQuantity = input.quantity ?? 0
 
   db.run(`
     INSERT INTO seed_sources
     (id, source_code, source_type, source_origin, parent_source_id, remaining_quantity, status, create_time)
-    VALUES (?, ?, 'seed', ?, ?, 0, 'active', datetime('now','localtime'))
-  `, [newSourceId, `SRC-${Date.now()}`, newOrigin, input.parentSourceId])
+    VALUES (?, ?, 'seed', ?, ?, ?, 'active', datetime('now','localtime'))
+  `, [newSourceId, `SRC-${Date.now()}`, newOrigin, input.parentSourceId, seedQuantity])
 
   db.run(`
     INSERT INTO crop_circulation_records
