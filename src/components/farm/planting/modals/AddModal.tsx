@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { UnifiedModal } from '@/components/ui';
-import { X, Upload, RefreshCw } from 'lucide-react';
+import { X, Upload, RefreshCw, AlertTriangle } from 'lucide-react';
 import { SourceType, PlantingStatus, SeedSource, Seedling } from '../../../../types/crop';
 import { getSeedSources } from '../../../../services/apiSeedSourceService';
 import { getSeedlings } from '../../../../services/apiSeedlingService';
@@ -78,6 +78,26 @@ export function AddModal({
     );
   }, [storePlans]);
 
+  // 2026-06-18: 计算当前所选来源的可定植数量（种源: availableCount, 育苗: availableTransplantCount）
+  // 供"种植数量"输入框下方实时显示余量警告
+  // null = 外部来源或未选（不显示警告）
+  const availableAmount = useMemo<number | null>(() => {
+    if (sourceMode === 'external') return null  // 外部来源无数限制
+    if (!formData.sourceId) return null
+    if (formData.sourceType === SourceType.SEED) {
+      const s = seedSources.find(x => x.id === formData.sourceId)
+      return s ? s.availableCount : null
+    }
+    if (formData.sourceType === SourceType.SEEDLING) {
+      const s = seedlings.find(x => x.id === formData.sourceId)
+      return s ? ((s as any).availableTransplantCount ?? 0) : null
+    }
+    return null
+  }, [sourceMode, formData.sourceId, formData.sourceType, seedSources, seedlings])
+
+  // 2026-06-18: 数量超限标记（用于提交拦截 + 红框提示）
+  const overLimit = availableAmount !== null && formData.plantingCount > availableAmount
+
   // 种植批号 (参照种源批号生成模式)
   const [plantCode, setPlantCode] = useState('');
 
@@ -129,6 +149,11 @@ export function AddModal({
     if (!formData.cropName || !formData.areaId || !formData.plantingCount) {
       await showAlert('请填写完整信息');
       return;
+    }
+    // 2026-06-18: 数量超限硬拦截（防止保存失败但用户不知道）
+    if (overLimit) {
+      await showAlert(`种植数量 ${formData.plantingCount} 超过可定植数量 ${availableAmount}，请调整后重试`)
+      return
     }
 
     // 外部来源验证
@@ -503,8 +528,16 @@ export function AddModal({
             type="number"
             value={formData.plantingCount || ''}
             onChange={(e) => setFormData({ ...formData, plantingCount: Number(e.target.value) })}
-            className={deepInputClass}
+            className={`${deepInputClass} ${overLimit ? 'border-red-500 ring-1 ring-red-200' : ''}`}
           />
+          {/* 2026-06-18: 实时显示可定植余量 + 超限警告（参照 2026-06-18 用户反馈） */}
+          {availableAmount !== null && (
+            <p className={`mt-1 text-xs flex items-center gap-1 ${overLimit ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+              <AlertTriangle className={`w-3 h-3 ${overLimit ? 'text-red-600' : 'text-gray-400'}`} />
+              可定植数量: <span className="font-semibold">{availableAmount}</span>
+              {overLimit ? `，已超出 ${formData.plantingCount - availableAmount} 株` : ''}
+            </p>
+          )}
         </div>
 
         {/* 种植日期 */}
