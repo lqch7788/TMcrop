@@ -1409,6 +1409,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'soil_ph', sql: 'ALTER TABLE plantings ADD COLUMN soil_ph REAL' },
     { name: 'soil_ec', sql: 'ALTER TABLE plantings ADD COLUMN soil_ec REAL' },
     { name: 'attrition_rate', sql: 'ALTER TABLE plantings ADD COLUMN attrition_rate REAL' },
+    // 2026-06-18: 种植目标产量（完成比例 = harvestToInventoryQty / target_yield）
+    { name: 'target_yield', sql: 'ALTER TABLE plantings ADD COLUMN target_yield REAL DEFAULT 0' },
     { name: 'transplant_count', sql: 'ALTER TABLE plantings ADD COLUMN transplant_count INTEGER DEFAULT 0' },
     { name: 'transplant_date', sql: 'ALTER TABLE plantings ADD COLUMN transplant_date TEXT' },
     { name: 'is_harvest', sql: 'ALTER TABLE plantings ADD COLUMN is_harvest INTEGER DEFAULT 0' },
