@@ -129,11 +129,75 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
   // 让 cutting/seed_saving/self_seed 实际可用数量反映填入的数量
   const seedQuantity = input.quantity ?? 0
 
+  // 2026-06-18: 读 planting 拿 crop 信息 + plantingCode
+  // planting.source_id 可能是种源（SS前缀）也可能是育苗（SD前缀）
+  let planting: any = null
+  let sourcePlantingCode: string | null = null
+  if (input.sourceModule === 'planting' && input.sourceId) {
+    const pStmt = db.prepare('SELECT id, planting_code, crop_name, crop_variety, crop_code, source_id, source_type, production_plan_id, production_plan_code FROM plantings WHERE id = ?')
+    pStmt.bind([input.sourceId])
+    planting = pStmt.step() ? pStmt.getAsObject() : null
+    pStmt.free()
+    sourcePlantingCode = (planting as any)?.planting_code || null
+  }
+
+  // 2026-06-18: 读 parent（种源 OR 育苗）继承 crop_category/type_name/variety_name/supplier 等字段
+  // planting.source_id 指向种源或育苗，按表分别查询
+  let parent: any = null
+  const parentSourceId = planting?.source_id || input.parentSourceId
+  if (parentSourceId) {
+    // 先查种源
+    const ssStmt = db.prepare('SELECT id, crop_name, crop_variety, crop_code, crop_category, type_name, variety_name, supplier_id, supplier_name, production_plan_code, unit FROM seed_sources WHERE id = ?')
+    ssStmt.bind([parentSourceId])
+    parent = ssStmt.step() ? ssStmt.getAsObject() : null
+    ssStmt.free()
+    // 没找到就查育苗
+    if (!parent) {
+      const sdStmt = db.prepare('SELECT id, crop_name, crop_variety, crop_code FROM seedlings WHERE id = ?')
+      sdStmt.bind([parentSourceId])
+      parent = sdStmt.step() ? sdStmt.getAsObject() : null
+      sdStmt.free()
+    }
+  }
+
+  // 2026-06-18: propagation_method 映射 subType
+  const propagationMethod = input.subType === 'cutting' ? 'cutting'
+    : input.subType === 'seed_saving' ? 'seed_saving'
+    : input.subType === 'g0_g1' ? 'g0_g1'
+    : null
+
+  // 2026-06-18: 全量继承 parent + 新追溯字段
   db.run(`
-    INSERT INTO seed_sources
-    (id, source_code, source_type, source_origin, parent_source_id, remaining_quantity, status, create_time)
-    VALUES (?, ?, 'seed', ?, ?, ?, 'active', datetime('now','localtime'))
-  `, [newSourceId, `SRC-${Date.now()}`, newOrigin, input.parentSourceId, seedQuantity])
+    INSERT INTO seed_sources (
+      id, source_code, source_name, source_type, source_origin, parent_source_id,
+      crop_name, crop_variety, crop_code, crop_category, type_name, variety_name,
+      supplier_id, supplier_name, production_plan_code,
+      quantity, unit, purchase_date, used_quantity, remaining_quantity,
+      status, create_by, create_by_id, create_time, update_time,
+      propagation_type, propagation_status, propagation_method,
+      linked_planting_id, linked_planting_code,
+      generation
+    ) VALUES (
+      ?, ?, ?, 'seed', ?, ?,
+      ?, ?, ?, ?, ?, ?,
+      ?, ?, ?,
+      ?, ?, ?, 0, ?,
+      'active', ?, ?, ?, ?,
+      'asexual', 'in_stock', ?,
+      ?, ?,
+      ?
+    )
+  `, [
+    newSourceId, `SRC-${Date.now()}`, parent?.source_name || null, newOrigin, input.parentSourceId,
+    parent?.crop_name || planting?.crop_name || null, parent?.crop_variety || planting?.crop_variety || null, parent?.crop_code || planting?.crop_code || null,
+    parent?.crop_category || null, parent?.type_name || null, parent?.variety_name || null,
+    parent?.supplier_id || null, parent?.supplier_name || null, parent?.production_plan_code || planting?.production_plan_code || null,
+    seedQuantity, input.unit || parent?.unit || null, circulationDate.split('T')[0], seedQuantity,
+    input.operatorId || 'system', input.operatorId || null, circulationDate, circulationDate,
+    propagationMethod,
+    input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
+    input.subType === 'seed_saving' ? 'F1' : (input.subType === 'cutting' ? '无性' : null),
+  ])
 
   db.run(`
     INSERT INTO crop_circulation_records
