@@ -1411,6 +1411,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'attrition_rate', sql: 'ALTER TABLE plantings ADD COLUMN attrition_rate REAL' },
     // 2026-06-18: 种植目标产量（完成比例 = harvestToInventoryQty / target_yield）
     { name: 'target_yield', sql: 'ALTER TABLE plantings ADD COLUMN target_yield REAL DEFAULT 0' },
+    // 2026-06-18: 目标产量单位（从数据词典 unit 选，默认 '克'）
+    { name: 'target_yield_unit', sql: 'ALTER TABLE plantings ADD COLUMN target_yield_unit TEXT DEFAULT \'克\'' },
     { name: 'transplant_count', sql: 'ALTER TABLE plantings ADD COLUMN transplant_count INTEGER DEFAULT 0' },
     { name: 'transplant_date', sql: 'ALTER TABLE plantings ADD COLUMN transplant_date TEXT' },
     { name: 'is_harvest', sql: 'ALTER TABLE plantings ADD COLUMN is_harvest INTEGER DEFAULT 0' },
