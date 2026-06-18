@@ -527,7 +527,11 @@ router.post('/', (req: Request, res: Response) => {
     const finalHarvestQuantity = body.harvest_quantity || 0;
     const finalPrintCount = body.print_count || 0;
     const finalTraceabilityCode = body.traceability_code || body.traceabilityCode || '';
-    const finalPictures = body.pictures || '[]';
+    // 2026-06-18: 强制 stringify — 前端可能传 数组/对象/string
+    // sql.js TEXT 列只能绑定 string，array/object 会触发 "unknown type ([object Object])" 报错
+    const finalPictures = typeof body.pictures === 'string'
+      ? body.pictures
+      : JSON.stringify(body.pictures || []);
     const finalProductionPlanId = body.production_plan_id || body.productionPlanId || '';
     const finalProductionPlanCode = body.production_plan_code || body.productionPlanCode || '';
 

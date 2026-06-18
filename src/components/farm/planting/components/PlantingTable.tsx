@@ -806,7 +806,8 @@ export function PlantingTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">自交种子入种源量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">完成比例</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">状态</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
+              {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
+              <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
@@ -944,7 +945,8 @@ export function PlantingTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
+                  {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
+                  <TableCell className="sticky right-0 px-4 py-3 bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
                       {record.pictures && record.pictures.length > 0 && (
                         <Button
