@@ -394,9 +394,10 @@ export function SeedSourceTable({
                   <span className="cursor-help border-b border-dotted border-white/50">状态<span className="text-[10px] opacity-70 ml-0.5 align-super">?</span></span>
                 </Tooltip>
               </TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">操作</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">备注</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">创建人</TableHead>
+              {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
+              <TableHead className="sticky right-0 px-4 py-3 text-white text-sm font-semibold whitespace-nowrap bg-blue-700 shadow-[-2px_0_4px_rgba(0,0,0,0.15)] z-20">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-300">
@@ -515,7 +516,10 @@ export function SeedSourceTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</TableCell>
+                  {/* 操作列 sticky right-0 — 水平滚动时始终吸右可见（参照育苗列表） */}
+                  <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
                       {/* 2026-06-05: 删除操作列的「查看详情」按钮（与点击种源批号重复） */}
                       {/* 繁殖途径操作按钮（非外购 + 未完成时显示；2026-06-06 失败时仅保留"过程记录"追溯，其余隐藏） */}
@@ -604,8 +608,6 @@ export function SeedSourceTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{record.remarks || '-'}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.createBy}</TableCell>
                 </TableRow>
               ))
             )}
