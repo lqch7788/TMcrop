@@ -13,13 +13,14 @@
 import { enhancedApiClient } from '@/lib/apiClient'
 import type { InventoryInboundInput, InventoryInboundRecord } from '@/types/inventoryInbound'
 
-/** POST /api/inventory/inbound-record — 创建一条入库记录（含写库存） */
+/** POST /api/inventory/inbound-record — 创建一条入库记录（含写库存）
+ *  ⚠️ enhancedApiClient 的 baseURL 已含 /api 前缀，service 不要再加 /api
+ */
 export async function inbound(
   input: InventoryInboundInput
 ): Promise<{ stockId: string; recordId: string }> {
-  // enhancedApiClient 自动解包 {success, data} → 直接返回内层 data
   return await enhancedApiClient.post<{ stockId: string; recordId: string }>(
-    '/api/inventory/inbound-record',
+    '/inventory/inbound-record',
     input
   )
 }
@@ -36,17 +37,16 @@ export interface InboundRecordsQuery {
   limit?: number
 }
 
-/** GET /api/inventory/inbound-records — 分页查询入库记录 */
+/** GET /api/inventory/inbound-records — 分页查询入库记录
+ *  ⚠️ enhancedApiClient 的 baseURL 已含 /api 前缀，service 不要再加 /api
+ */
 export async function listInboundRecords(
   q: InboundRecordsQuery
 ): Promise<{ data: InventoryInboundRecord[]; total: number }> {
-  // enhancedApiClient 自动解包：{success, data, meta} → 内层 data 是数组，meta 在同层
-  // 但根据 api-client-response-unwrapping 记忆，response 是 {data, meta?}，不是 {data, meta:{total}}
-  // 所以解包后是 { data: [...] , meta: { total, page, limit } }
   const res = await enhancedApiClient.get<{
     data: InventoryInboundRecord[]
     meta: { total: number; page: number; limit: number }
-  }>('/api/inventory/inbound-records', { params: q as Record<string, unknown> })
+  }>('/inventory/inbound-records', { params: q as Record<string, unknown> })
 
   return {
     data: res?.data ?? [],
