@@ -136,7 +136,7 @@ function fetchSourceRow(
  * 4. 补仓库名（如未传）
  * 5. 返回 { stockId, recordId }
  */
-router.post('/inbound-record', (req: Request, res: Response) => {
+router.post('/inbound-record', async (req: Request, res: Response) => {
   try {
     const parsed = InboundSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -164,7 +164,12 @@ router.post('/inbound-record', (req: Request, res: Response) => {
     const now = new Date().toISOString()
     const recordDate = input.recordDate || now.slice(0, 10)
     const stockId = `STK-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-    const instanceId = `INST-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    // 2026-06-19: 库存实例 ID 统一格式 ${prefix}-${YYYYMMDD}-${NNNN}（17 字符）
+    // 与采收入库（inventoryInboundFromSource.service.ts）保持一致
+    const dateStrInst = formatLocalDateYYYYMMDD()
+    const prefixInst = input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR'
+    const maxInst = await inventoryStockRepository.getInstanceIdMaxSerial(prefixInst, dateStrInst)
+    const instanceId = `${prefixInst}-${dateStrInst}-${String(maxInst + 1).padStart(4, '0')}`
     const recordId = `INB-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
     // 2. 写 inventory_stock
