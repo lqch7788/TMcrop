@@ -27,10 +27,11 @@ import {
   NumberInput,
   Button,
 } from '@/components/ui'
-import { Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, Package } from 'lucide-react'
+import { Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, Package, X, ChevronDown } from 'lucide-react'
 import { useWarehouseStore, useInventoryStore } from '@/stores'
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useUserStore, getActiveUsers } from '@/stores/useUserStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert } from '@/lib/dialogService'
 import {
@@ -134,6 +135,10 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // 2026-06-19: 审核员 → 操作员，默认值 = 系统登录人员姓名（realName）
   const currentUser = useAuthStore((s) => s.currentUser)
   const [operator, setOperator] = useState<string>(currentUser?.realName || '')
+  // 2026-06-19: 采收员 — 用户列表 + 多选下拉
+  const users = useUserStore((s) => s.users)
+  const loadUsers = useUserStore((s) => s.loadUsers)
+  const [harvesterPopoverOpen, setHarvesterPopoverOpen] = useState(false)
   const [remarks, setRemarks] = useState<string>('')
   const [saleType, setSaleType] = useState<SaleType>(
     stockType === 'product' ? 'external_sale' : 'self_use'
@@ -173,8 +178,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
     if (isOpen) {
       loadWarehouses?.()
       loadDictionaries?.()
+      loadUsers?.()
     }
-  }, [isOpen, loadWarehouses, loadDictionaries])
+  }, [isOpen, loadWarehouses, loadDictionaries, loadUsers])
 
   // ---- 重置表单 ----
   useEffect(() => {
@@ -389,16 +395,75 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             />
           </FormField>
           <FormField label="采收员">
-            <Input
-              value={harvesterNames.join(',')}
-              onChange={(e) => {
-                const names = e.target.value.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
-                setHarvesterNames(names)
-                setHarvesterIds(names.map((_, i) => `H${i}`))
-              }}
-              placeholder="多个采收员用逗号分隔"
-              className={deepInputClass}
-            />
+            <div className="relative">
+              {/* 触发按钮：显示已选 chip 列表 + 下拉箭头 */}
+              <button
+                type="button"
+                onClick={() => setHarvesterPopoverOpen(!harvesterPopoverOpen)}
+                className={`${deepInputClass} w-full text-left flex items-center justify-between min-h-[44px] ${harvesterPopoverOpen ? 'border-emerald-500 ring-2 ring-emerald-200' : ''}`}
+              >
+                <div className="flex-1 flex flex-wrap gap-1">
+                  {harvesterNames.length === 0 ? (
+                    <span className="text-gray-400">点击选择采收员（可多选）</span>
+                  ) : (
+                    harvesterNames.map((name, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded"
+                      >
+                        {name}
+                        <X
+                          className="w-3 h-3 cursor-pointer hover:text-emerald-950"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setHarvesterNames((prev) => prev.filter((_, i) => i !== idx))
+                            setHarvesterIds((prev) => prev.filter((_, i) => i !== idx))
+                          }}
+                        />
+                      </span>
+                    ))
+                  )}
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-500 ml-2 shrink-0" />
+              </button>
+              {/* 多选下拉列表 */}
+              {harvesterPopoverOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {users.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">用户列表加载中…</div>
+                  ) : (
+                    users.map((u: any) => {
+                      const name = u.realName || u.real_name || u.username
+                      const checked = harvesterNames.includes(name)
+                      return (
+                        <label
+                          key={u.oid || u.id}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-emerald-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              if (checked) {
+                                setHarvesterNames((prev) => prev.filter((n) => n !== name))
+                                setHarvesterIds((prev) => prev.filter((_, i) => harvesterNames[i] !== name))
+                              } else {
+                                setHarvesterNames((prev) => [...prev, name])
+                                setHarvesterIds((prev) => [...prev, u.oid || u.id || `H${prev.length}`])
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{name}</span>
+                          {u.username && u.username !== name && (
+                            <span className="text-xs text-gray-400">@{u.username}</span>
+                          )}
+                        </label>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           </FormField>
           <FormField label="操作员">
             <Input
