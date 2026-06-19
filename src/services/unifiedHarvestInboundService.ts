@@ -84,6 +84,10 @@ export function validateUnifiedInboundInput(input: UnifiedInboundInput): { ok: t
   if (input.isSupplementary && !input.supplementaryReason) {
     return { ok: false, error: '补录时必须填写补录原因' }
   }
+  // 2026-06-19: 种源行入库时种源形态必填
+  if (input.sourceModule === 'seed_source' && !input.propagationForm) {
+    return { ok: false, error: '种源行入库必须填写种源形态（种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）' }
+  }
   // 采收日期 ≤ 今天
   const today = new Date().toISOString().slice(0, 10)
   if (input.harvestDate > today) {

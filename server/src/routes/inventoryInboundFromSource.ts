@@ -43,6 +43,9 @@ const ProductSchema = z.object({
   grade: z.string().optional(),
   auditor: z.string().optional(),
   remarks: z.string().optional(),
+  // 2026-06-19: 形态/类型字段
+  productForm: z.string().optional(),  // 采收形态（果实/籽/枝条等）
+  sourceForm: z.string().optional(),   // 育苗/种植产物类型
 });
 
 const InboundFromSourceSchema = z.object({
@@ -66,6 +69,8 @@ const InboundFromSourceSchema = z.object({
   warehouseName: z.string().optional(),
   products: z.array(ProductSchema).min(1, { message: '至少需要 1 条产品明细' }),
   operatorName: z.string().optional(),
+  // 2026-06-19: 种源形态（仅种源行入库必填）
+  propagationForm: z.string().optional(),
 });
 
 /**
@@ -106,6 +111,14 @@ router.post('/', async (req: Request, res: Response) => {
     // 3. isSupplementary 时 supplementaryReason 必填
     if (input.isSupplementary && !input.supplementaryReason) {
       return res.status(400).json({ success: false, error: 'isSupplementary=true 时 supplementaryReason 必填' });
+    }
+
+    // 3.5 种源行入库时 propagationForm 必填（种源形态：种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）
+    if (input.sourceModule === 'seed_source' && !input.propagationForm) {
+      return res.status(400).json({
+        success: false,
+        error: '种源行入库必须填写种源形态（propagationForm）：种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根',
+      });
     }
 
     // 4. harvestDate 不能晚于今天
