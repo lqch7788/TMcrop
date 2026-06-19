@@ -1891,6 +1891,10 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'unit_price', sql: "ALTER TABLE inventory_stock ADD COLUMN unit_price REAL DEFAULT 0" },
     { name: 'total_amount', sql: "ALTER TABLE inventory_stock ADD COLUMN total_amount REAL DEFAULT 0" },
     { name: 'purchase_date', sql: "ALTER TABLE inventory_stock ADD COLUMN purchase_date TEXT" },
+    // 2026-06-19 unify-harvest-inbound-into-source-operations: 形态/类型字段
+    { name: 'product_form', sql: "ALTER TABLE inventory_stock ADD COLUMN product_form TEXT" },        // 采收形态（果实/籽/枝条等）
+    { name: 'propagation_form', sql: "ALTER TABLE inventory_stock ADD COLUMN propagation_form TEXT" }, // 种源形态（种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）
+    { name: 'source_form', sql: "ALTER TABLE inventory_stock ADD COLUMN source_form TEXT" },          // 育苗/种植产物类型
   ];
   for (const col of inventoryStockExtColumns) {
     try {

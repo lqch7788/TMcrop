@@ -62,6 +62,35 @@ const QUALITY_GRADES = [
   { value: 'unqualified', label: '不合格' },
 ]
 
+// 2026-06-19: 种源形态（种源行入库必填）
+const PROPAGATION_FORMS = [
+  { value: '种子', label: '种子' },
+  { value: '种苗', label: '种苗' },
+  { value: '实生苗', label: '实生苗' },
+  { value: '扦插苗', label: '扦插苗' },
+  { value: '嫁接苗', label: '嫁接苗' },
+  { value: '组培苗', label: '组培苗' },
+  { value: '分株苗', label: '分株苗' },
+  { value: '种球', label: '种球' },
+  { value: '球根', label: '球根' },
+]
+
+// 2026-06-19: 采收形态（每条 product 必填，区分果实/籽/枝条等）
+const SOURCE_FORMS = [
+  { value: '果实', label: '果实' },
+  { value: '种子', label: '种子' },
+  { value: '种苗', label: '种苗' },
+  { value: '穗条', label: '穗条' },
+  { value: '枝条', label: '枝条' },
+  { value: '块根', label: '块根' },
+  { value: '块茎', label: '块茎' },
+  { value: '鳞茎', label: '鳞茎' },
+  { value: '叶片', label: '叶片' },
+  { value: '花朵', label: '花朵' },
+  { value: '整株', label: '整株' },
+  { value: '其他', label: '其他' },
+]
+
 const deepInputClass =
   'px-4 py-3 border border-gray-400 rounded-lg text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-inner'
 
@@ -95,7 +124,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   sourceRecord,
 }) => {
   // ---- 表单 state ----
-  const [harvestDate, setHarvestDate] = useState<string>(todayLocal())
+  // harvestDate 用 Date 对象（DatePicker 接受 Date），提交时用 toISOString().slice(0,10) 转 string
+  const [harvestDate, setHarvestDate] = useState<Date>(new Date(todayLocal() + 'T00:00:00'))
   const [warehouseId, setWarehouseId] = useState<string>('')
   const [warehouseName, setWarehouseName] = useState<string>('')
   const [harvesterIds, setHarvesterIds] = useState<string[]>([])
@@ -109,6 +139,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [supplementaryReason, setSupplementaryReason] = useState<string>('')
   const [unitPrice, setUnitPrice] = useState<number | string>(0)
   const [unit, setUnit] = useState<string>(sourceRecord.unit || '克')
+  // 2026-06-19: 种源形态（仅种源行入库必填）
+  const [propagationForm, setPropagationForm] = useState<string>('')
 
   // products: 种源/育苗 lock 1 条，种植允许多条
   const [products, setProducts] = useState<InboundProduct[]>([
@@ -120,6 +152,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       harvestQuantity: 0,
       unit: sourceRecord.unit || '克',
       grade: '',
+      sourceForm: '',  // 采收形态（果实/籽/枝条等）
     },
   ])
 
@@ -143,7 +176,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // ---- 重置表单 ----
   useEffect(() => {
     if (isOpen) {
-      setHarvestDate(todayLocal())
+      setHarvestDate(new Date(todayLocal() + 'T00:00:00'))
       setWarehouseId('')
       setWarehouseName('')
       setHarvesterIds([])
@@ -155,6 +188,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setSupplementaryReason('')
       setUnitPrice(0)
       setUnit(sourceRecord.unit || '克')
+      setPropagationForm('')  // 重置种源形态
       setProducts([
         {
           cropCode: sourceRecord.cropCode || '',
@@ -164,6 +198,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           harvestQuantity: 0,
           unit: sourceRecord.unit || '克',
           grade: '',
+          sourceForm: '',  // 采收形态
         },
       ])
       setError(null)
@@ -203,6 +238,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         harvestQuantity: 0,
         unit: sourceRecord.unit || '克',
         grade: '',
+        sourceForm: '',  // 采收形态
       },
     ])
   }
@@ -302,7 +338,11 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         {/* 基础字段 2 列 */}
         <div className="grid grid-cols-2 gap-4">
           <FormField label="采收日期" required>
-            <DatePicker value={harvestDate} onChange={(v) => setHarvestDate(v)} className={deepInputClass} />
+            <DatePicker
+              selected={harvestDate}
+              onChange={(d) => d && setHarvestDate(d)}
+              className={deepInputClass}
+            />
           </FormField>
           <FormField label="目标仓库" required>
             <Select value={warehouseId} onValueChange={(v) => {
@@ -364,6 +404,22 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
             />
           </FormField>
         </div>
+
+        {/* 2026-06-19: 种源形态（仅种源行入库必填） */}
+        {sourceModule === 'seed_source' && (
+          <FormField label="种源形态" required>
+            <Select value={propagationForm} onValueChange={setPropagationForm}>
+              <SelectTrigger className={deepInputClass}>
+                <SelectValue placeholder="选择种源形态（必填）" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROPAGATION_FORMS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
 
         {/* 补录 */}
         <div className="flex items-center gap-3 border-t pt-3">
@@ -433,6 +489,22 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                       onChange={(e) => updateProduct(idx, { unit: e.target.value })}
                       className={deepInputClass}
                     />
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-xs text-gray-500 mb-1">采收形态</div>
+                    <Select
+                      value={p.sourceForm || ''}
+                      onValueChange={(v) => updateProduct(idx, { sourceForm: v })}
+                    >
+                      <SelectTrigger className={deepInputClass}>
+                        <SelectValue placeholder="选形态" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SOURCE_FORMS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 mb-1">品质</div>

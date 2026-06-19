@@ -31,6 +31,9 @@ export interface InboundProduct {
   grade?: string;
   auditor?: string;
   remarks?: string;
+  // 2026-06-19: 形态/类型字段
+  productForm?: string;  // 采收形态（果实/籽/枝条等）
+  sourceForm?: string;   // 育苗/种植产物类型（果实/籽/枝条等）
 }
 
 export interface InboundFromSourceInput {
@@ -55,6 +58,8 @@ export interface InboundFromSourceInput {
   warehouseName?: string;
   products: InboundProduct[];
   operatorName?: string;
+  // 2026-06-19: 种源形态（仅种源行入库时必填）
+  propagationForm?: string;  // 种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根
 }
 
 export interface InboundFromSourceResult {
@@ -202,8 +207,9 @@ export async function executeInboundFromSource(
 
     // 步骤 2-4：为每条 product 写 inventory_stock + inventory_inbound_records + inventory_transaction
     for (const product of input.products) {
-      const stockId = `STK-${now.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 6)}-${writtenStockIds.length}`;
-      const instanceId = `INST-${input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR'}-${dateStr}-${String(writtenStockIds.length + 1).padStart(4, '0')}`;
+      const tsSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const stockId = `STK-${tsSuffix}-${writtenStockIds.length}`;
+      const instanceId = `INST-${input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR'}-${dateStr}-${tsSuffix}`;
 
       // 步骤 2：写 inventory_stock
       const stockRecord: any = {
@@ -230,6 +236,10 @@ export async function executeInboundFromSource(
         unit_price: input.unitPrice || 0,
         planting_mode: product.plantingMode || null,
         greenhouse_name: input.greenhouseNames?.[0] || null,
+        // 2026-06-19: 形态/类型字段
+        product_form: product.productForm || null,        // 采收形态
+        propagation_form: input.propagationForm || null,  // 种源形态（仅种源行）
+        source_form: product.sourceForm || null,          // 育苗/种植产物类型
         status: 'in_stock',
         version: 1,
         create_time: now,
@@ -245,8 +255,9 @@ export async function executeInboundFromSource(
           warehouse_id, warehouse_name, inbound_date,
           quality_grade, grade, unit_price,
           planting_mode, greenhouse_name,
+          product_form, propagation_form, source_form,
           status, version, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         stockRecord.id, stockRecord.instance_id, stockRecord.stock_type,
         stockRecord.business_id, stockRecord.business_type, stockRecord.business_code,
@@ -256,6 +267,7 @@ export async function executeInboundFromSource(
         stockRecord.warehouse_id, stockRecord.warehouse_name, stockRecord.inbound_date,
         stockRecord.quality_grade, stockRecord.grade, stockRecord.unit_price,
         stockRecord.planting_mode, stockRecord.greenhouse_name,
+        stockRecord.product_form, stockRecord.propagation_form, stockRecord.source_form,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
       writtenStockIds.push(stockId);
