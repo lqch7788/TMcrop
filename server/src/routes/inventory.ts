@@ -32,6 +32,13 @@ router.post('/inbound', inventoryController.inbound.bind(inventoryController));
 import { z } from 'zod';
 import { UNIT_ENUM } from './planting';
 
+// ============================================================
+// Phase 2：行级采收入库（unify-harvest-inbound-into-source-operations）
+// 必须在 /:id 之前注册，否则被通配截胡
+// ============================================================
+import inventoryInboundFromSourceRouter from './inventoryInboundFromSource';
+router.use('/inbound-from-source', inventoryInboundFromSourceRouter);
+
 /**
  * 入库请求 Zod Schema
  * - sourceModule: 'seed_source' | 'seedling' | 'planting'
@@ -341,6 +348,61 @@ router.get('/trace/downstream/:instanceId', inventoryController.traceDownstream.
 router.get('/available/:instanceId', inventoryController.getAvailableQuantity.bind(inventoryController));
 router.get('/by-business/:businessId', inventoryController.getByBusinessId.bind(inventoryController));
 router.get('/transaction/:instanceId', inventoryController.getTransactions.bind(inventoryController));
+
+// ========== Phase 13.1 修复：冻结记录端点（之前未注册，永远返回 0） ==========
+// 必须在 /:id 之前注册，否则被通配截胡
+router.get('/freezes/:instanceId', (req: Request, res: Response) => {
+  try {
+    const { instanceId } = req.params;
+    const db = getDatabase();
+    // 查 inventory_freeze 表（如存在），同时查 inventory_transaction 中 freeze/unfreeze 类型
+    let freezes: any[] = [];
+    try {
+      const stmt = db.prepare(`
+        SELECT id, instance_id, quantity, reason, operator_id, operator_name,
+               freeze_date, unfreeze_date, status
+        FROM inventory_freeze
+        WHERE instance_id = ?
+        ORDER BY freeze_date DESC
+      `);
+      stmt.bind([instanceId]);
+      while (stmt.step()) freezes.push(stmt.getAsObject());
+      stmt.free();
+    } catch (_e) {
+      // inventory_freeze 表可能不存在，从 transaction 流水兜底
+      try {
+        const txStmt = db.prepare(`
+          SELECT id, instance_id, transaction_type, quantity, business_code, operator_name, operate_date, remarks
+          FROM inventory_transaction
+          WHERE instance_id = ? AND transaction_type IN ('freeze', 'unfreeze')
+          ORDER BY operate_date DESC
+        `);
+        txStmt.bind([instanceId]);
+        while (txStmt.step()) {
+          const tx = txStmt.getAsObject();
+          freezes.push({
+            id: tx.id,
+            instance_id: tx.instance_id,
+            quantity: tx.quantity,
+            reason: tx.remarks || '',
+            operator_name: tx.operator_name,
+            freeze_date: tx.transaction_type === 'freeze' ? tx.operate_date : null,
+            unfreeze_date: tx.transaction_type === 'unfreeze' ? tx.operate_date : null,
+            status: tx.transaction_type,
+            business_code: tx.business_code,
+          });
+        }
+        txStmt.free();
+      } catch (_) {
+        freezes = [];
+      }
+    }
+    res.json({ success: true, data: freezes, meta: { total: freezes.length } });
+  } catch (e: any) {
+    console.error('[GET /inventory/freezes/:instanceId]', e);
+    res.status(500).json({ success: false, error: e?.message || '查询冻结记录失败' });
+  }
+});
 
 // ========== V3.1 出库流水 3 端点（出库记录独立页） ==========
 // 设计文档：docs/superpowers/specs/2026-06-04-outbound-records-design.md §4

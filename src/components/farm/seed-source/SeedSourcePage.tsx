@@ -36,6 +36,7 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 import { useFilteredSeedSources } from '@/hooks/useFilteredSeedSources';
 import { useInventoryInboundStore } from '@/stores/useInventoryInboundStore';
 import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
+import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 // 2026-06-04: 移除 RefreshCw import（重算按钮已删除）
 
@@ -737,23 +738,21 @@ export default function SeedSourcePage() {
         />
       )}
 
-      {/* 2026-06-18: 任务 4 — 入库登记弹窗（按 plan 接入 InventoryInboundModal） */}
+      {/* 2026-06-19: 任务 4 — 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
       {inboundModal.record && (
-        <InventoryInboundModal
+        <UnifiedRowHarvestInboundModal
           isOpen={inboundModal.open}
           onClose={() => setInboundModal({ open: false, record: null })}
           onSuccess={handleInboundSuccess}
           stockType="seed"
+          sourceModule="seed_source"
           sourceRecord={{
-            module: 'seed_source',
             id: inboundModal.record.id,
             code: inboundModal.record.seedCode,
             cropName: inboundModal.record.cropName || '',
             cropVariety: inboundModal.record.cropVariety || '',
             cropCode: inboundModal.record.cropCode || '',
             unit: inboundModal.record.unit,
-            productionPlanId: inboundModal.record.productionPlanId,
-            productionPlanCode: inboundModal.record.productionPlanCode,
           }}
         />
       )}
