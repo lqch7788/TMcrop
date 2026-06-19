@@ -909,22 +909,22 @@ export function PlantingTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     <span className={(record.harvestToInventoryQty || 0) > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}>
-                      {record.harvestToInventoryQty ? `${record.harvestToInventoryQty.toLocaleString()}${record.unit || ''}` : '-'}
+                      {record.harvestToInventoryQty ? `${record.harvestToInventoryQty.toLocaleString()}${record.harvestToInventoryUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     <span className={(record.residualToSourceQty || 0) > 0 ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
-                      {record.residualToSourceQty ? `${record.residualToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
+                      {record.residualToSourceQty ? `${record.residualToSourceQty.toLocaleString()}${record.residualToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     <span className={(record.selfSeedToSourceQty || 0) > 0 ? 'text-amber-600 font-medium' : 'text-gray-400'}>
-                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.unit || ''}` : '-'}
+                      {record.selfSeedToSourceQty ? `${record.selfSeedToSourceQty.toLocaleString()}${record.selfSeedToSourceUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">
                     <span className={(record.disposeQty || 0) > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
-                      {record.disposeQty ? `${record.disposeQty.toLocaleString()}${record.unit || ''}` : '-'}
+                      {record.disposeQty ? `${record.disposeQty.toLocaleString()}${record.disposeUnit || record.unit || ''}` : '-'}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm whitespace-nowrap">

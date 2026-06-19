@@ -123,7 +123,22 @@ router.get('/', (req: Request, res: Response) => {
       COALESCE(SUM(CASE WHEN phr.destination = 'circulate' THEN phr.quantity END), 0) AS residualToSourceQty,
       COALESCE(SUM(CASE WHEN phr.destination = 'self_seed' THEN phr.quantity END), 0) AS selfSeedToSourceQty,
       -- 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
-      COALESCE(SUM(CASE WHEN phr.destination = 'dispose' THEN phr.quantity END), 0) AS disposeQty
+      COALESCE(SUM(CASE WHEN phr.destination = 'dispose' THEN phr.quantity END), 0) AS disposeQty,
+      -- 2026-06-19: 最近一次"采收入库"记录的单位（用户实际入库时选择的单位）
+      -- 解决"列表显示单位与入库单位不一致"的 bug（如入库 kg 但显示 株）
+      (SELECT unit FROM planting_harvest_records
+        WHERE planting_id = p.id AND destination = 'harvest'
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS harvestToInventoryUnit,
+      -- 2026-06-19: 同样为"残株回种源/自交种子/直接废弃"3 列返回最近单位
+      (SELECT unit FROM planting_harvest_records
+        WHERE planting_id = p.id AND destination = 'circulate'
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS residualToSourceUnit,
+      (SELECT unit FROM planting_harvest_records
+        WHERE planting_id = p.id AND destination = 'self_seed'
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS selfSeedToSourceUnit,
+      (SELECT unit FROM planting_harvest_records
+        WHERE planting_id = p.id AND destination = 'dispose'
+        ORDER BY record_date DESC, create_time DESC LIMIT 1) AS disposeUnit
       -- 2026-06-18: 去掉 circulate_to_inventory（4 个去向变 4 个：harvest/circulate/self_seed/dispose）
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
@@ -590,6 +605,24 @@ router.get('/:id', (req: Request, res: Response) => {
 
     if (!item || Object.keys(item).length === 0) {
       return res.status(404).json({ success: false, error: '种植记录不存在' });
+    }
+
+    // 2026-06-19: 附加最近一次"采收入库/残株回种源/自交种子/直接废弃"记录的单位（与列表接口一致）
+    const unitRows = queryToObjects<any>(db,
+      `SELECT destination, unit FROM planting_harvest_records
+       WHERE planting_id = ?
+       ORDER BY record_date DESC, create_time DESC`,
+      [id],
+    );
+    const seen = new Set<string>();
+    for (const row of unitRows) {
+      const dest = row.destination;
+      if (!dest || seen.has(dest)) continue;
+      if (dest === 'harvest') item.harvestToInventoryUnit = row.unit || '';
+      else if (dest === 'circulate') item.residualToSourceUnit = row.unit || '';
+      else if (dest === 'self_seed') item.selfSeedToSourceUnit = row.unit || '';
+      else if (dest === 'dispose') item.disposeUnit = row.unit || '';
+      seen.add(dest);
     }
 
     res.json({ success: true, data: item });

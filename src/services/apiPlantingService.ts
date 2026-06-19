@@ -138,10 +138,14 @@ function transformSinglePlanting(item: BackendPlanting): Planting {
     // 2026-06-17: 采收记录相关字段
     isHarvestLocked: Boolean(item.isHarvestLocked),
     harvestToInventoryQty: Number(item.harvestToInventoryQty) || 0,
+    harvestToInventoryUnit: String(item.harvestToInventoryUnit || ''),
     residualToSourceQty: Number(item.residualToSourceQty) || 0,
+    residualToSourceUnit: String(item.residualToSourceUnit || ''),
     selfSeedToSourceQty: Number(item.selfSeedToSourceQty) || 0,
+    selfSeedToSourceUnit: String(item.selfSeedToSourceUnit || ''),
     // 2026-06-18: 加 dispose 聚合（之前漏了，列表里看不到废弃量）
     disposeQty: Number(item.disposeQty) || 0,
+    disposeUnit: String(item.disposeUnit || ''),
   };
 }
 

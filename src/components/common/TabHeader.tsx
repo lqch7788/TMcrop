@@ -1,11 +1,15 @@
 /**
  * 统一Tab切换组件 - 用于聚合页面内的功能切换
- * 样式参考：生产领料页面 MaterialReceivingHeader
+ *
+ * 2026-06-19: 重构为 V1.1 Tabs 风格（Radix 胶囊式）
+ * - 浅灰底圆角容器 (bg-gray-100/80 rounded-xl) + 白卡选中 (bg-white shadow-sm)
+ * - 替代之前的"下划线"风格
+ * - 保持 title/subtitle/icon 头部的现有逻辑不变
  */
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui';
 
 export interface TabItem {
   key: string;
@@ -46,29 +50,18 @@ export function TabHeader({
         </div>
       </div>
 
-      {/* Tab切换区域 */}
+      {/* Tab 切换区域 — 2026-06-19: 改用 V1.1 Tabs 胶囊式风格（与 src/components/ui/tabs.tsx 一致） */}
       <div className="mt-6">
-        <div className="flex gap-8 border-b border-gray-200">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.key}
-              variant="ghost"
-              size="default"
-              onClick={() => onTabChange(tab.key)}
-              className={`flex items-center gap-2 pb-3 text-base font-semibold transition-all relative rounded-none ${
-                activeTab === tab.key
-                  ? 'text-emerald-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.icon && <tab.icon className="w-4 h-4" />}
-              {tab.label}
-              {activeTab === tab.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
-              )}
-            </Button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={onTabChange}>
+          <TabsList>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key} className="flex items-center gap-2">
+                {tab.icon && <tab.icon className="w-4 h-4" />}
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   );
