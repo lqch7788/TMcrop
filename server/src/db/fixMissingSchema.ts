@@ -2565,6 +2565,32 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('inventory_inbound_records 创建失败:', e.message);
   }
+
+  // 2026-06-19: 种植移入/移出履历表（整批级别，不依赖 plant_labels 单株粒度）
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS planting_move_records (
+        id TEXT PRIMARY KEY,
+        planting_id TEXT NOT NULL,
+        planting_code TEXT,
+        operation_type TEXT NOT NULL CHECK(operation_type IN ('move_in','move_out')),
+        from_area_id TEXT,
+        from_area_name TEXT,
+        to_area_id TEXT,
+        to_area_name TEXT,
+        quantity INTEGER DEFAULT 0,
+        operation_date TEXT,
+        operator_name TEXT,
+        remarks TEXT,
+        create_time TEXT
+      )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_move_planting ON planting_move_records (planting_id, operation_date)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_move_type ON planting_move_records (operation_type)');
+    seedLog.info('  ✓ planting_move_records 表 + 2 索引就绪');
+  } catch (e: any) {
+    seedLog.error('planting_move_records 创建失败:', e.message);
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

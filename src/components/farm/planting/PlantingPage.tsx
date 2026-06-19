@@ -20,6 +20,7 @@ import { useDictionaryStore, getDictItems, usePlantingStore, usePlantLabelStore,
 import type { PlantLabel, PlantMark } from '../../../stores/usePlantLabelStore';
 import PlantingLabelDetailModal from './modals/PlantingLabelDetailModal';
 import PlantingMoveModal from './modals/PlantingMoveModal';
+import PlantingMoveRecordsModal from './modals/PlantingMoveRecordsModal';
 import PlantingMarkModal from './modals/PlantingMarkModal';
 import { Planting, PlantingFilters, PlantingStatus, SourceType } from '../../../types/crop';
 import { useAuthPermission } from '../../../hooks/usePermission';
@@ -27,6 +28,8 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { movePlanting } from '@/services/apiPlantingService';
 
 export default function PlantingPage() {
 
@@ -258,11 +261,18 @@ export default function PlantingPage() {
     setLabelDetailOpen(true);
   };
 
-  // 移入/移出 - 打开弹窗
+  // 移入/移出 - 打开弹窗（整批级别，不依赖标签）
   const handleMove = (record: Planting) => {
     setCurrentRecord(record);
     setMoveModalOpen(true);
   };
+
+  // 2026-06-19: 移入/移出记录查看
+  const [moveRecordsOpen, setMoveRecordsOpen] = useState(false)
+  const handleViewMoveRecords = (record: Planting) => {
+    setCurrentRecord(record)
+    setMoveRecordsOpen(true)
+  }
 
   // 标记管理 - 加载标签和标记后打开弹窗
   const handleMark = async (record: Planting) => {
@@ -272,21 +282,29 @@ export default function PlantingPage() {
     setMarkModalOpen(true);
   };
 
-  const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; labelNumber: string; targetArea: string; operationDate: string; remarks: string }) => {
-    // 从 store 读取最新标签列表（避免闭包陷阱）
-    const freshLabels = usePlantLabelStore.getState().labels;
-    const label = freshLabels.find(l => l.label_number === data.labelNumber);
-    if (!label) {
-      await showAlert('未找到对应标签，请检查标签编号');
-      return false;
+  // 2026-06-19: 整批级别移入/移出（不再依赖 plant_labels 表）
+  const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; toAreaId: string; toAreaName: string; quantity: number; operationDate: string; remarks: string }) => {
+    if (!currentRecord) {
+      await showAlert('未选择种植记录');
+      return false
     }
-    const ok = await submitMove(label.id, data);
-    if (ok) {
-      await showAlert('移动操作成功');
-    } else {
-      await showAlert('移动操作失败');
+    try {
+      const result = await movePlanting(currentRecord.id, {
+        operationType: data.operationType,
+        toAreaId: data.toAreaId,
+        toAreaName: data.toAreaName,
+        quantity: data.quantity,
+        operationDate: data.operationDate,
+        remarks: data.remarks,
+      })
+      await showAlert(`${data.operationType === 'move_in' ? '移入' : '移出'}成功：${data.toAreaName}（${data.quantity} 株）`)
+      // 刷新种植列表（更新 areaId/areaName 显示）
+      await loadItems()
+      return true
+    } catch (e: any) {
+      await showAlert(`操作失败：${e?.message || '未知错误'}`)
+      return false
     }
-    return ok;
   };
 
   const handleMarkSubmit = async (markId: number, labelIds: number[]) => {
@@ -513,6 +531,7 @@ export default function PlantingPage() {
         onLabelDetail={handleLabelDetail}
         onMove={handleMove}
         onMark={handleMark}
+        onViewMoveRecords={handleViewMoveRecords}
         operationMode={operationMode}
         onOperationModeChange={setOperationMode}
         exportMode={exportMode}
@@ -629,14 +648,25 @@ export default function PlantingPage() {
         resumeMap={resumeMap}
       />
 
-      {/* 移入/移出弹窗 */}
+      {/* 移入/移出弹窗（整批级别） */}
       {currentRecord && (
         <PlantingMoveModal
           isOpen={moveModalOpen}
           onClose={() => setMoveModalOpen(false)}
           areaOptions={areas}
           isHarvested={currentRecord.isHarvest}
+          maxQuantity={currentRecord.plantingCount}
+          currentOperator={useAuthStore.getState().currentUser?.realName}
           onSubmit={handleMoveSubmit}
+        />
+      )}
+
+      {/* 2026-06-19: 移入/移出记录弹窗 */}
+      {currentRecord && (
+        <PlantingMoveRecordsModal
+          isOpen={moveRecordsOpen}
+          onClose={() => setMoveRecordsOpen(false)}
+          planting={currentRecord}
         />
       )}
 

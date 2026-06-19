@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
+import { Bookmark, Download, Edit2, History, Image, MoveRight, Package, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -52,6 +52,8 @@ interface PlantingTableProps {
   onLabelDetail?: (record: Planting) => void;
   onMove?: (record: Planting) => void;
   onMark?: (record: Planting) => void;
+  // 2026-06-19: 移入/移出记录查看回调
+  onViewMoveRecords?: (record: Planting) => void;
   // 权限控制
   canCreate?: boolean;
   canEdit?: boolean;
@@ -92,6 +94,7 @@ export function PlantingTable({
   onLabelDetail,
   onMove,
   onMark,
+  onViewMoveRecords,
 }: PlantingTableProps) {
   // 品种数据缓存
   const [varietyCache, setVarietyCache] = useState<Map<string, CropVariety>>(new Map());
