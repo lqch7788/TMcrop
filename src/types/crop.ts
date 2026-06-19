@@ -506,9 +506,13 @@ export interface Planting {
   // 2026-06-17: 种植采收记录 (Phase 1)
   isHarvestLocked?: boolean            // 软锁标志
   harvestToInventoryQty?: number       // 采收入库累计
+  harvestToInventoryUnit?: string      // 2026-06-19: 最近一次采收入库的单位（用户实际选择的单位，可能与 record.unit 不同）
   residualToSourceQty?: number         // 残株回种源累计
+  residualToSourceUnit?: string        // 2026-06-19: 残株回种源最近单位
   selfSeedToSourceQty?: number         // 自交种子入种源累计
+  selfSeedToSourceUnit?: string        // 2026-06-19: 自交种子最近单位
   disposeQty?: number                  // 直接废弃累计（2026-06-18 加；circulate_to_inventory 已去掉）
+  disposeUnit?: string                 // 2026-06-19: 直接废弃最近单位
 }
 
 // ========== 筛选状态类型 ==========
