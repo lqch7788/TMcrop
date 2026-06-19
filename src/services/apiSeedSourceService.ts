@@ -332,6 +332,10 @@ export interface DeletableReference {
   cropVariety?: string;
   date?: string;
   status?: string;
+  // 2026-06-19: 回流记录追溯链 — 关联的种植/育苗/采收 ID + code，便于用户跳转定位
+  targetModule?: string;
+  targetId?: string;
+  targetCode?: string;
 }
 
 export interface CheckDeletableResult {
