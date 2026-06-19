@@ -30,6 +30,7 @@ import {
 import { Sprout, Leaf, Wheat, Plus, Trash2, AlertCircle, Package } from 'lucide-react'
 import { useWarehouseStore, useInventoryStore } from '@/stores'
 import { useDictionaryStore, getDictItems } from '@/stores/useDictionaryStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { todayLocal } from '@/lib/dateUtils'
 import { showAlert } from '@/lib/dialogService'
 import {
@@ -130,7 +131,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const [warehouseName, setWarehouseName] = useState<string>('')
   const [harvesterIds, setHarvesterIds] = useState<string[]>([])
   const [harvesterNames, setHarvesterNames] = useState<string[]>([])
-  const [auditor, setAuditor] = useState<string>('')
+  // 2026-06-19: 审核员 → 操作员，默认值 = 系统登录人员姓名（realName）
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const [operator, setOperator] = useState<string>(currentUser?.realName || '')
   const [remarks, setRemarks] = useState<string>('')
   const [saleType, setSaleType] = useState<SaleType>(
     stockType === 'product' ? 'external_sale' : 'self_use'
@@ -181,7 +184,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       setWarehouseName('')
       setHarvesterIds([])
       setHarvesterNames([])
-      setAuditor('')
+      // 2026-06-19: 重置时同步当前登录用户姓名
+      setOperator(currentUser?.realName || '')
       setRemarks('')
       setSaleType(stockType === 'product' ? 'external_sale' : 'self_use')
       setIsSupplementary(false)
@@ -261,7 +265,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       greenhouseNames: [],
       harvesterIds,
       harvesterNames,
-      auditor: auditor || undefined,
+      operator: operator || undefined,
       remarks: remarks || undefined,
       saleType,
       isSupplementary: isSupplementary || undefined,
@@ -396,10 +400,11 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
               className={deepInputClass}
             />
           </FormField>
-          <FormField label="审核员">
+          <FormField label="操作员">
             <Input
-              value={auditor}
-              onChange={(e) => setAuditor(e.target.value)}
+              value={operator}
+              onChange={(e) => setOperator(e.target.value)}
+              placeholder="默认当前登录人员"
               className={deepInputClass}
             />
           </FormField>

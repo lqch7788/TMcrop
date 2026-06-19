@@ -58,7 +58,7 @@ const InboundFromSourceSchema = z.object({
   greenhouseNames: z.array(z.string()).optional(),
   harvesterIds: z.array(z.string()).optional(),
   harvesterNames: z.array(z.string()).optional(),
-  auditor: z.string().optional(),
+  operator: z.string().optional(),
   remarks: z.string().optional(),
   saleType: z.enum(['self_use', 'external_sale']).optional(),
   isSupplementary: z.boolean().optional(),
