@@ -12,7 +12,7 @@
  * 弹窗 → submitUnifiedInbound → POST /api/inventory/inbound-from-source
  */
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Modal,
   FormField,
@@ -183,14 +183,16 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   }, [isOpen, loadWarehouses, loadDictionaries, loadUsers])
 
   // ---- 重置表单 ----
+  // 2026-06-19 修复：只从 false→true 切换时重置（用 ref 标记上一次 isOpen 状态），
+  // 避免父组件 re-render 触发 sourceRecord 引用变化误重置已填字段
+  const prevIsOpen = useRef(isOpen)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpen.current) {
       setHarvestDate(todayLocal())
       setWarehouseId('')
       setWarehouseName('')
       setHarvesterIds([])
       setHarvesterNames([])
-      // 2026-06-19: 重置时同步当前登录用户姓名
       setOperator(currentUser?.realName || '')
       setRemarks('')
       setSaleType(stockType === 'product' ? 'external_sale' : 'self_use')
@@ -213,7 +215,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       ])
       setError(null)
     }
-  }, [isOpen, stockType, sourceRecord])
+    prevIsOpen.current = isOpen
+  }, [isOpen, stockType, sourceRecord, currentUser])
 
   // ---- 字典项 ----
   const unitOptions = useMemo(() => {
@@ -321,7 +324,22 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   const titleText = `采收入库（${meta.label}）`
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={titleText} size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={titleText}
+      size="lg"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            取消
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? '提交中...' : '确认入库'}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         {/* 顶部源记录只读信息 */}
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-3">
@@ -572,6 +590,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* 2026-06-19: 种源形态已表达入库类型，产品内"采收形态"仅种植行（product）显示
+                      避免与"种源形态"字段语义重复 */}
+                  {sourceModule !== 'seed_source' && (
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 mb-1">采收形态</div>
                     <Select
@@ -588,6 +609,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 mb-1">品质</div>
                     <Select
@@ -627,15 +649,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
           />
         </FormField>
 
-        {/* 底部按钮 */}
-        <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? '提交中...' : '确认入库'}
-          </Button>
-        </div>
+        {/* 底部按钮已移到 Modal footer prop（避免双"取消"按钮） */}
       </div>
     </Modal>
   )
