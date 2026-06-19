@@ -1369,64 +1369,13 @@ router.post('/:id/harvest-records', async (req, res) => {
 
     db.exec('BEGIN')
     try {
-      // === 副作用路由：harvest 分支（1:1 搬运行 862-961 /end 路由） ===
+      // === 副作用路由：harvest 分支 ===
+      // 2026-06-19: 修复双写库存 bug
+      // 主链路 submitUnifiedInbound → POST /api/inventory/inbound-from-source 已写完 4 张表
+      // (harvest_records + inventory_stock + inventory_inbound_records + inventory_transaction)
+      // 这里只需写 planting_harvest_records 审计记录，不再重复写库
       if (destination === 'harvest') {
-        const whRow = db.prepare(`SELECT name FROM warehouses WHERE id = ? OR oid = ? LIMIT 1`).get([warehouseId, warehouseId]) as any
-        const realWarehouseName = whRow?.name || warehouseName || warehouseId
-        const dateStr = recordDate || now.split('T')[0]
-
-        generatedHarvestId = `HV${Date.now()}`
-        const harvestCode = `HV${dateStr}-${String(Date.now()).slice(-4)}`
-        generatedStockId = `STK${Date.now()}`
-        const harvestUnit = unit || planting.unit || 'g'
-
-        // 1) 写 harvest_records（34 列：与 schema 对齐）
-        const hvStmt = db.prepare(`
-          INSERT INTO harvest_records (
-            id, harvest_code, source_id, source_name, crop_name, crop_variety,
-            greenhouse_id, greenhouse_name, harvest_date, harvest_quantity, unit, unit_price,
-            total_amount, quality_grade, buyer_id, buyer_name, sales_channel, status,
-            remarks, create_by, create_time, update_time, warehouse_id, auditor_id,
-            harvester_ids, harvester_names, inbound_type, batch_code,
-            create_by_id, planting_mode, target_yield, harvest_area, products, deleted_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-        hvStmt.run([
-          generatedHarvestId, harvestCode, planting.id, planting.planting_code,
-          planting.crop_name, planting.crop_variety,
-          null, planting.greenhouse_name, dateStr, quantity, harvestUnit, 0,
-          0, null, null, null, null, 'completed',
-          notes || '', createBy || 'system', now, now, warehouseId, null,
-          null, null, 'planting_harvest', planting.planting_code,
-          createById || null, null, 0, 0, null, null,
-        ])
-        hvStmt.free()
-
-        // 2) 写 inventory_stock（36 列：与 schema 对齐）
-        const stockStmt = db.prepare(`
-          INSERT INTO inventory_stock (
-            id, instance_id, stock_type, business_id, business_type, business_code,
-            crop_id, crop_name, variety_id, variety_name,
-            current_quantity, frozen_quantity, available_quantity, unit,
-            warehouse_id, warehouse_name, inbound_date, source_type,
-            production_plan_code, source_instance_id, status, version,
-            create_time, update_time,
-            crop_code, planting_mode, target_yield, grade, auditor, remarks, greenhouse_name,
-            supplier_id, supplier_name, unit_price, total_amount, purchase_date
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `)
-        stockStmt.run([
-          generatedStockId, `IPR${dateStr}-${String(Date.now()).slice(-4)}`, 'harvest',
-          generatedHarvestId, 'harvest', harvestCode,
-          null, planting.crop_name, null, planting.crop_variety,
-          quantity, 0, quantity, harvestUnit,
-          warehouseId, realWarehouseName, dateStr, 'self_produced',
-          planting.production_plan_code || null, null, 'in_stock', 1,
-          now, now,
-          planting.crop_code || null, null, 0, null, null, notes || '', planting.greenhouse_name || null,
-          null, null, 0, 0, null,
-        ])
-        stockStmt.free()
+        // 占位：保留分支结构对齐 dispose；实际不写下游表
       }
       // === 副作用路由：dispose 分支（1:1 搬运行 1122-1140 /end 路由，Phase 1 不结束种植） ===
       // DISPOSAL 不走 executeCirculation（Zod parentSourceId 必填），用 raw SQL 写记录
