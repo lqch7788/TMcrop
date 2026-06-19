@@ -101,6 +101,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [notes, setNotes] = useState<string>('')
   const [recordDate, setRecordDate] = useState<string>(todayLocal())
   const [submitting, setSubmitting] = useState(false)
+  // 2026-06-19: 采收形态（仅 destination='harvest' 必填）— 区分果实/种子/种苗/枝条等
+  const [sourceForm, setSourceForm] = useState<string>('')
 
   const addHarvestRecord = usePlantingStore((s) => s.addHarvestRecord)
   const harvestRecordsMap = usePlantingStore((s) => s.harvestRecords)
@@ -198,6 +200,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       showAlert('单位无效，请从下拉选择')
       return
     }
+    // 2026-06-19: destination='harvest' 必须选采收形态（区分果实/种子/种苗/枝条等）
+    if (destination === 'harvest' && !sourceForm) {
+      showAlert('请选择采收形态（果实/种子/种苗/枝条等）')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -214,6 +221,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         notes,
         createBy: 'system',
         operatorName: 'system',
+        // 2026-06-19: 采收形态（仅 harvest）
+        sourceForm: destination === 'harvest' ? sourceForm : undefined,
       }
       const result = await addHarvestRecord(record.id, input)
       if (result) {
@@ -383,6 +392,31 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     </SelectContent>
                   </Select>
                 )}
+              </div>
+            )}
+            {/* 2026-06-19: 采收形态（仅 destination='harvest' 显示且必填）— 区分果实/种子/种苗/枝条等 */}
+            {destination === 'harvest' && (
+              <div>
+                <Label>采收形态 *</Label>
+                <Select value={sourceForm} onValueChange={setSourceForm}>
+                  <SelectTrigger className={deepInputClass}>
+                    <SelectValue placeholder="选采收形态（果实/种子/种苗/枝条等）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="果实">果实</SelectItem>
+                    <SelectItem value="种子">种子</SelectItem>
+                    <SelectItem value="种苗">种苗</SelectItem>
+                    <SelectItem value="穗条">穗条</SelectItem>
+                    <SelectItem value="枝条">枝条</SelectItem>
+                    <SelectItem value="块根">块根</SelectItem>
+                    <SelectItem value="块茎">块茎</SelectItem>
+                    <SelectItem value="鳞茎">鳞茎</SelectItem>
+                    <SelectItem value="叶片">叶片</SelectItem>
+                    <SelectItem value="花朵">花朵</SelectItem>
+                    <SelectItem value="整株">整株</SelectItem>
+                    <SelectItem value="其他">其他</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             {destination && (
