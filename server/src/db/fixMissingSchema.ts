@@ -2141,10 +2141,30 @@ export async function fixMissingSchema(): Promise<void> {
       harvest_record_id TEXT,
       inventory_stock_id TEXT,
       circulation_record_id TEXT,
+      -- 2026-06-19 unify-harvest-inbound-into-source-operations: 采收形态
+      source_form TEXT,  -- 果实/种子/种苗/穗条/枝条/块根/块茎/鳞茎/叶片/花朵/整株/其他
       FOREIGN KEY (planting_id) REFERENCES plantings(id)
     )
   `);
   seedLog.info('  ✓ planting_harvest_records 表结构确认');
+
+  // 2.5 ALTER TABLE 补列（已存在的表）
+  const plantingHarvestColumnsToAdd = [
+    // 2026-06-19 unify-harvest-inbound-into-source-operations: 采收形态
+    { name: 'source_form', sql: "ALTER TABLE planting_harvest_records ADD COLUMN source_form TEXT" },
+  ]
+  for (const col of plantingHarvestColumnsToAdd) {
+    try {
+      db.run(col.sql)
+      seedLog.info(`✓ planting_harvest_records 表添加 ${col.name} 列`)
+    } catch (e: any) {
+      if (e.message.includes('duplicate column')) {
+        seedLog.skip(`• planting_harvest_records.${col.name} 列已存在`)
+      } else {
+        seedLog.skip(`• planting_harvest_records.${col.name}: ${e.message}`)
+      }
+    }
+  }
 
   // 3. 索引：加速 GET /plantings 列表的 4 列聚合（harvest_total / cull_total / loss_total / grade_total）
   db.run(`CREATE INDEX IF NOT EXISTS idx_phr_planting_dest ON planting_harvest_records (planting_id, destination)`);
