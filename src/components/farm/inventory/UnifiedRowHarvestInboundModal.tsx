@@ -328,7 +328,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       isOpen={isOpen}
       onClose={onClose}
       title={titleText}
-      size="lg"
+      size="xxl"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
