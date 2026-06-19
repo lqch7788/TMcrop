@@ -489,11 +489,23 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
                   </div>
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 mb-1">单位</div>
-                    <Input
+                    <Select
                       value={p.unit}
-                      onChange={(e) => updateProduct(idx, { unit: e.target.value })}
-                      className={deepInputClass}
-                    />
+                      onValueChange={(v) => updateProduct(idx, { unit: v })}
+                    >
+                      <SelectTrigger className={deepInputClass}>
+                        <SelectValue placeholder="选单位" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitOptions.length === 0 ? (
+                          <SelectItem value="克" disabled>字典加载中…</SelectItem>
+                        ) : (
+                          unitOptions.map((u) => (
+                            <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="col-span-2">
                     <div className="text-xs text-gray-500 mb-1">采收形态</div>
