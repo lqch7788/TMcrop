@@ -1202,6 +1202,8 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'harvest_area', sql: 'ALTER TABLE harvest_records ADD COLUMN harvest_area REAL DEFAULT 0' },   // 采收面积（FIELD_MAP 第 39 行）
     // V3.1 1:N 产品明细：1 条主单 + products JSON 数组存 N 个产品（修复"主单被拆成 N 条"bug）
     { name: 'products', sql: 'ALTER TABLE harvest_records ADD COLUMN products TEXT' },                 // 产品明细 JSON 数组字符串
+    // 2026-06-19 unify-harvest-inbound-into-source-operations: 溯源字段
+    { name: 'source_module', sql: "ALTER TABLE harvest_records ADD COLUMN source_module TEXT" },        // 来源模块 'seed_source'|'seedling'|'planting'
     // 2026-06-04: 软删除列 — 修复"用户删除后重启被 seed 复活"bug。删除时只标 deleted_at，物理行保留
     { name: 'deleted_at', sql: 'ALTER TABLE harvest_records ADD COLUMN deleted_at TEXT' },
   ];

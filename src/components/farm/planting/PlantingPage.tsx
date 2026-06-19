@@ -11,6 +11,7 @@ import { AddModal } from './modals/AddModal';
 import { EditModal } from './modals/EditModal';
 import { DetailModal } from './modals/DetailModal';
 import { HarvestRecordModal } from './modals/HarvestRecordModal';
+import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import { PrintLabelModal } from './modals/PrintLabelModal';
 import { todayLocal } from '@/lib/dateUtils';
 import { ImageLightboxModal } from './modals/ImageLightboxModal';
@@ -125,6 +126,9 @@ export default function PlantingPage() {
   // V2 改造 (任务 16): 种植结束弹窗状态 (5 种结束方式 + 4 层嵌套)
   const [harvestModalOpen, setHarvestModalOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  // 2026-06-19: 行级采收入库弹窗状态（unify-harvest-inbound-into-source-operations）
+  const [inboundUnifiedOpen, setInboundUnifiedOpen] = useState(false);
+  const [inboundUnifiedRecord, setInboundUnifiedRecord] = useState<any>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Planting | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
@@ -491,6 +495,10 @@ export default function PlantingPage() {
       <PlantingTable
         data={filteredData}
         onEndV2={handleEndV2}
+        onInbound={(record) => {
+          setInboundUnifiedRecord(record)
+          setInboundUnifiedOpen(true)
+        }}
         pagination={pagination}
         onChange={setPagination}
         onPageSizeChange={(pageSize) => setPagination(p => ({ ...p, pageSize }))}
@@ -555,6 +563,29 @@ export default function PlantingPage() {
           onClose={() => setHarvestModalOpen(false)}
           onSuccess={loadItems}
           record={currentRecord}
+        />
+      )}
+
+      {/* 2026-06-19: 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
+      {inboundUnifiedRecord && (
+        <UnifiedRowHarvestInboundModal
+          isOpen={inboundUnifiedOpen}
+          onClose={() => {
+            setInboundUnifiedOpen(false)
+            setInboundUnifiedRecord(null)
+          }}
+          onSuccess={loadItems}
+          stockType="product"
+          sourceModule="planting"
+          sourceRecord={{
+            id: inboundUnifiedRecord.id,
+            code: inboundUnifiedRecord.plantingCode,
+            cropName: inboundUnifiedRecord.cropName || '',
+            cropVariety: inboundUnifiedRecord.cropVariety || '',
+            cropCode: inboundUnifiedRecord.cropCode || '',
+            unit: inboundUnifiedRecord.unit,
+            plantingMode: inboundUnifiedRecord.plantingMode,
+          }}
         />
       )}
 

@@ -2,6 +2,29 @@
  * 种植采收记录 + 总结束 弹窗 (Phase 1: 2026-06-17)
  * 仿照 DailyRecordModal 结构
  * 5 种 destination + 历史记录表 + 4 列累计 + 总结束按钮
+ *
+ * ============================================================================
+ * 2026-06-19 重要说明 (unify-harvest-inbound-into-source-operations change)：
+ * ============================================================================
+ * 本弹窗存在两套并行的"采收"语义，请勿混淆：
+ *
+ * 1. 本弹窗的"harvest"去向 = 写入 `planting_harvest_records` 表（种植内部采收审计）
+ *    - 不写入 inventory_stock
+ *    - 不触发跨页库存刷新
+ *    - 仅在种植内部记录"什么时候结束了、怎么结束的"
+ *
+ * 2. 行级"采收入库"操作列（Package 图标）= 走 `UnifiedRowHarvestInboundModal`
+ *    - 调 `POST /api/inventory/inbound-from-source`
+ *    - 写入 harvest_records（审计归档表）+ inventory_stock + inventory_inbound_records + inventory_transaction
+ *    - 触发 useInventoryStore.notifyChange() 跨页刷新
+ *    - 是入库主流程
+ *
+ * 用户操作建议：
+ * - 想让种植产物"入库" → 用行级"采收入库"按钮
+ * - 想记录"种植结束但不入库"（内部循环/转种源/销毁/切分）→ 用本弹窗
+ *
+ * D6 决策：暂不合并两套链路，两套并存。
+ * ============================================================================
  */
 import React, { useState, useEffect, useMemo } from 'react'
 import { Label } from '@/components/ui'

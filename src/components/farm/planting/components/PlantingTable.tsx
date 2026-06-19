@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bookmark, Download, Edit2, Image, MoveRight, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
+import { Bookmark, Download, Edit2, Image, MoveRight, Package, Plus, Printer, Recycle, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Planting, PlantingStatus } from '../../../../types/crop';
 import { CropVariety } from '../../../../types/crop';
@@ -33,6 +33,8 @@ interface PlantingTableProps {
   onImageClick: (images: string[]) => void;
   // V2 改造 (任务 16): 种植结束弹窗
   onEndV2?: (record: Planting) => void;
+  // 2026-06-19: 行级采收入库回调（unify-harvest-inbound-into-source-operations）
+  onInbound?: (record: Planting) => void;
   // 模式状态
   operationMode?: PlantingOperationMode;
   onOperationModeChange?: (mode: PlantingOperationMode) => void;
@@ -86,6 +88,7 @@ export function PlantingTable({
   canExport = true,
   canPrint = true,
   onEndV2,
+  onInbound,
   onLabelDetail,
   onMove,
   onMark,
@@ -471,6 +474,17 @@ export function PlantingTable({
                 title="采收与结束"
               >
                 <Recycle className="w-4 h-4 text-emerald-600" />
+              </Button>
+            )}
+            {/* 2026-06-19: 行级采收入库按钮（unify-harvest-inbound-into-source-operations） */}
+            {!record.endTime && !record.isHarvestLocked && onInbound && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onInbound(record)}
+                title="采收入库（行级）"
+              >
+                <Package className="w-4 h-4 text-emerald-700" />
               </Button>
             )}
             {onLabelDetail && (

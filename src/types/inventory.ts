@@ -298,6 +298,9 @@ export interface TraceResult {
   quantity: number;
   inboundDate: string;
   sourceInstanceId?: string;
+  // Phase 13.1.5: BFS 深度 + 父节点（前端画树用）
+  depth?: number;
+  parentInstanceId?: string | null;
 }
 
 /** 下游追溯结果 */
@@ -309,6 +312,9 @@ export interface DownstreamTraceResult {
   outboundQuantity: number;
   outboundDate: string;
   targetInstanceId?: string;
+  // Phase 13.1.5: BFS 深度 + 父节点
+  depth?: number;
+  parentInstanceId?: string | null;
 }
 
 /** 库存统计结果 */

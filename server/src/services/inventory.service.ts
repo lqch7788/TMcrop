@@ -405,6 +405,7 @@ export class InventoryService {
 
   /**
    * 上游追溯（沿 source_instance_id 链向上）
+   * Phase 13.1.5：补 depth + parentInstanceId 字段
    */
   async traceUpstream(instanceId: string, maxDepth: number = 10): Promise<Array<{
     instanceId: string;
@@ -416,13 +417,17 @@ export class InventoryService {
     quantity: number;
     inboundDate: string;
     sourceInstanceId?: string;
+    depth: number;            // Phase 13.1.5: BFS 深度，0 = 自己
+    parentInstanceId: string | null;  // Phase 13.1.5: 父节点 instanceId
   }>> {
     const results: any[] = [];
     const visited = new Set<string>();
-    const queue: { id: string; depth: number }[] = [{ id: instanceId, depth: 0 }];
+    const queue: { id: string; depth: number; parentId: string | null }[] = [
+      { id: instanceId, depth: 0, parentId: null }
+    ];
 
     while (queue.length > 0) {
-      const { id, depth } = queue.shift()!;
+      const { id, depth, parentId } = queue.shift()!;
       if (visited.has(id) || depth > maxDepth) continue;
       visited.add(id);
 
@@ -439,10 +444,12 @@ export class InventoryService {
         quantity: stock.currentQuantity,
         inboundDate: stock.inboundDate,
         sourceInstanceId: stock.sourceInstanceId,
+        depth,
+        parentInstanceId: parentId,
       });
 
       if (stock.sourceInstanceId && !visited.has(stock.sourceInstanceId)) {
-        queue.push({ id: stock.sourceInstanceId, depth: depth + 1 });
+        queue.push({ id: stock.sourceInstanceId, depth: depth + 1, parentId: stock.instanceId ?? null });
       }
     }
 
@@ -451,6 +458,8 @@ export class InventoryService {
 
   /**
    * 下游追溯（沿 source_instance_id 反向链）
+   * Phase 13.1.4：修复 outboundQuantity 从 inventory_transaction.quantity 读取
+   * Phase 13.1.5：补 depth + parentInstanceId 字段
    */
   async traceDownstream(instanceId: string, maxDepth: number = 10): Promise<Array<{
     instanceId: string;
@@ -459,34 +468,47 @@ export class InventoryService {
     businessId: string;
     outboundQuantity: number;
     outboundDate: string;
+    depth: number;            // Phase 13.1.5: BFS 深度
+    parentInstanceId: string | null;  // Phase 13.1.5: 父节点
   }>> {
     const results: any[] = [];
     const visited = new Set<string>();
-    const queue: { id: string; depth: number }[] = [{ id: instanceId, depth: 0 }];
+    const queue: { id: string; depth: number; parentId: string | null }[] = [
+      { id: instanceId, depth: 0, parentId: null }
+    ];
 
     while (queue.length > 0) {
-      const { id, depth } = queue.shift()!;
+      const { id, depth, parentId } = queue.shift()!;
       if (visited.has(id) || depth > maxDepth) continue;
       visited.add(id);
 
       // 查找所有以当前 instance 为 source 的下游库存
       const children = await inventoryStockRepository.findBySourceInstanceId(id);
       for (const child of children) {
-        // 找对应的入库流水作为出库日期
+        // Phase 13.1.4 修复：outboundQuantity 从 inventory_transaction 的 outbound 流水取（绝对值）
+        // 之前 bug：误用 child.current_quantity（当前库存量 ≠ 出库量）
         const txs = await inventoryTransactionRepository.findByInstanceId(child.instance_id!);
         const inboundTx = txs.find(t => t.transaction_type === 'inbound');
+        const outboundTxs = txs.filter(t => t.transaction_type === 'outbound');
+        // 出库量 = 所有 outbound 流水 quantity 绝对值之和
+        const outboundQuantity = outboundTxs.reduce(
+          (sum, t) => sum + Math.abs(t.quantity ?? 0),
+          0
+        );
 
         results.push({
           instanceId: child.instance_id,
           stockType: child.stock_type,
           businessType: child.business_type,
           businessId: child.business_id,
-          outboundQuantity: child.current_quantity ?? 0,
+          outboundQuantity,
           outboundDate: inboundTx?.operate_date ?? child.create_time ?? '',
+          depth: depth + 1,
+          parentInstanceId: child.instance_id ? id : null,  // 当前节点 = 父
         });
 
         if (child.instance_id && !visited.has(child.instance_id)) {
-          queue.push({ id: child.instance_id, depth: depth + 1 });
+          queue.push({ id: child.instance_id, depth: depth + 1, parentId: id });
         }
       }
     }

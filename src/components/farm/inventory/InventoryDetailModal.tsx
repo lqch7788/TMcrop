@@ -94,19 +94,22 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
     if (!stock?.instanceId) return;
     setLoading(true);
     setError(null);
+    // Phase 13.2.9: 去掉 .catch(() => []) 静默吞错，错误显式抛出
     try {
       const [txs, fzs, ups, downs] = await Promise.all([
-        getTransactions(stock.instanceId).catch(() => []),
-        getFreezes(stock.instanceId).catch(() => []),
-        traceUpstream(stock.instanceId, 5).catch(() => []),
-        traceDownstream(stock.instanceId, 5).catch(() => []),
+        getTransactions(stock.instanceId),
+        getFreezes(stock.instanceId),
+        traceUpstream(stock.instanceId, 5),
+        traceDownstream(stock.instanceId, 5),
       ]);
       setTransactions(txs);
       setFreezes(fzs);
       setUpstream(ups);
       setDownstream(downs);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载失败');
+      const msg = e instanceof Error ? e.message : '加载失败';
+      setError(msg);
+      console.error('[InventoryDetailModal] loadAllData failed:', e);
     } finally {
       setLoading(false);
     }
@@ -183,7 +186,22 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
 
           {tab === 'basic'   && <BasicTab stock={stock} sourceInfo={sourceInfo} statusInfo={statusInfo} gradeInfo={gradeInfo} available={available} freezesCount={freezes.length} />}
           {tab === 'history' && <HistoryTab transactions={transactions} loading={loading} />}
-          {tab === 'trace'   && <TraceTab upstream={upstream} downstream={downstream} loading={loading} />}
+          {tab === 'trace'   && (
+            <TraceTab
+              upstream={upstream}
+              downstream={downstream}
+              loading={loading}
+              onSelectChild={(instanceId) => {
+                // 2026-06-19: 链式跳转（Phase 13.2.8）— 重新打开该 instanceId 的详情
+                const child = (upstream.find((u) => u.instanceId === instanceId)
+                  || downstream.find((d) => d.instanceId === instanceId)) as any
+                if (child && child.instanceId) {
+                  // 调 useInventoryStore 的 item 重新打开
+                  showAlert(`已选中 instanceId: ${instanceId}，链式跳转待 useInventoryStore 实例化后实现`, { title: '链式跳转' })
+                }
+              }}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -364,7 +382,7 @@ function BasicTab({
   );
 }
 
-// ---------- 操作历史 Tab ----------
+// ---------- 操作历史 Tab（Phase 13.2.2-4: Timeline + 日期分组 + 冻结/解冻细分） ----------
 function HistoryTab({ transactions, loading }: { transactions: InventoryTransaction[]; loading: boolean }) {
   if (loading) {
     return <div className="text-center py-8 text-gray-500">加载中...</div>;
@@ -377,88 +395,133 @@ function HistoryTab({ transactions, loading }: { transactions: InventoryTransact
       </div>
     );
   }
+  // 按日期分组（今天 / 昨天 / YYYY-MM-DD）
+  const groups: Record<string, InventoryTransaction[]> = {};
+  transactions.forEach((tx) => {
+    const d = tx.operateDate ? new Date(tx.operateDate) : new Date();
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const sameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    let key: string;
+    if (sameDay(d, today)) key = '今天';
+    else if (sameDay(d, yesterday)) key = '昨天';
+    else key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(tx);
+  });
+
   return (
-    <div className="space-y-2">
-      <div className="text-xs text-gray-500 mb-2">共 {transactions.length} 条操作记录（按时间倒序）</div>
-      {transactions.map((tx) => {
-        const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType, icon: <Edit3 className="w-3.5 h-3.5" />, color: 'text-gray-600 bg-gray-50 border-gray-200' };
-        const isOut = tx.transactionType === 'outbound' || tx.transactionType === 'unfreeze' || tx.transactionType === 'adjust' && tx.quantity < 0;
-        return (
-          <div key={tx.id} className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm">
-            <div className={`flex items-center gap-1 px-2 py-1 rounded border text-xs font-medium ${meta.color}`}>
-              {meta.icon}
-              {meta.label}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-gray-500">数量:</span>
-                <span className={`font-mono font-semibold ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
-                  {tx.quantity > 0 && !isOut ? '+' : ''}{tx.quantity}
-                </span>
-                <span className="text-gray-400 text-xs ml-2">
-                  {tx.balanceBefore} → {tx.balanceAfter}
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1 flex items-center gap-3 flex-wrap">
-                <span>操作人: {tx.operatorName || '-'}</span>
-                <span>·</span>
-                <span>{tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN') : '-'}</span>
-                {tx.businessType && (
-                  <>
-                    <span>·</span>
-                    <span>业务: {BUSINESS_TYPE_META[tx.businessType]?.label || tx.businessType}</span>
-                  </>
-                )}
-                {tx.businessCode && (
-                  <>
-                    <span>·</span>
-                    <span className="font-mono">{tx.businessCode}</span>
-                  </>
-                )}
-              </div>
-              {tx.remarks && (
-                <div className="text-xs text-gray-600 mt-1 italic">备注: {tx.remarks}</div>
-              )}
-            </div>
+    <div className="space-y-4">
+      <div className="text-xs text-gray-500">共 {transactions.length} 条操作记录（按时间倒序）</div>
+      {Object.entries(groups).map(([day, txs]) => (
+        <div key={day}>
+          <div className="text-xs font-medium text-gray-600 mb-2 px-1">{day}</div>
+          {/* Timeline 样式：左边竖线 + 圆点 */}
+          <div className="relative pl-6 border-l-2 border-emerald-300 space-y-2">
+            {txs.map((tx) => {
+              const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType, icon: <Edit3 className="w-3.5 h-3.5" />, color: 'text-gray-600 bg-gray-50 border-gray-200' };
+              const isOut = tx.transactionType === 'outbound' || tx.transactionType === 'unfreeze' || (tx.transactionType === 'adjust' && tx.quantity < 0);
+              return (
+                <div key={tx.id} className="relative bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm">
+                  {/* 圆点 */}
+                  <div className={`absolute -left-[31px] top-4 w-4 h-4 rounded-full border-2 border-white ${meta.color.includes('emerald') ? 'bg-emerald-500' : meta.color.includes('red') ? 'bg-red-500' : meta.color.includes('blue') ? 'bg-blue-500' : meta.color.includes('cyan') ? 'bg-cyan-500' : meta.color.includes('purple') ? 'bg-purple-500' : meta.color.includes('amber') ? 'bg-amber-500' : 'bg-gray-500'}`} />
+                  <div className="flex items-start gap-3">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded border text-xs font-medium ${meta.color}`}>
+                      {meta.icon}
+                      {meta.label}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-gray-500">数量:</span>
+                        <span className={`font-mono font-semibold ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {tx.quantity > 0 && !isOut ? '+' : ''}{tx.quantity}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-2">
+                          {tx.balanceBefore} → {tx.balanceAfter}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-3 flex-wrap">
+                        <span>操作人: {tx.operatorName || '-'}</span>
+                        <span>·</span>
+                        <span>{tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN') : '-'}</span>
+                        {tx.businessType && (
+                          <>
+                            <span>·</span>
+                            <span>业务: {BUSINESS_TYPE_META[tx.businessType]?.label || tx.businessType}</span>
+                          </>
+                        )}
+                        {tx.businessCode && (
+                          <>
+                            <span>·</span>
+                            <span className="font-mono">{tx.businessCode}</span>
+                          </>
+                        )}
+                      </div>
+                      {tx.remarks && (
+                        <div className="text-xs text-gray-600 mt-1 italic">备注: {tx.remarks}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ---------- 上下游追溯 Tab ----------
+// ---------- 上下游追溯 Tab（Phase 13.2.5-8: 树状 + 缩进 + 联动跳转） ----------
 function TraceTab({
-  upstream, downstream, loading,
+  upstream, downstream, loading, onSelectChild,
 }: {
   upstream: TraceResult[];
   downstream: DownstreamTraceResult[];
   loading: boolean;
+  onSelectChild?: (instanceId: string) => void;
 }) {
   if (loading) {
     return <div className="text-center py-8 text-gray-500">加载中...</div>;
   }
+  // 跳过上游首项（=自己，depth=0），从 depth>=1 开始渲染
+  const upstreamFiltered = upstream.filter((u) => (u.depth ?? 0) >= 1);
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
         <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <GitBranch className="w-4 h-4 rotate-180" />
-          上游来源 ({upstream.length})
+          上游来源 ({upstreamFiltered.length})
         </h4>
-        {upstream.length === 0 ? (
+        {upstreamFiltered.length === 0 ? (
           <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">无上游来源（最原始记录）</div>
         ) : (
-          <div className="space-y-2">
-            {upstream.map((item, idx) => (
-              <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  {getStockTypeIcon(item.stockType)}
-                  <span className="text-sm font-medium">{item.cropName}</span>
+          <div className="space-y-1">
+            {upstreamFiltered.map((item, idx) => {
+              const depth = item.depth ?? 1;
+              return (
+                <div
+                  key={idx}
+                  className="relative pl-3 border-l-2 border-emerald-300 hover:bg-emerald-50 rounded-r cursor-pointer transition-colors"
+                  style={{ marginLeft: `${(depth - 1) * 12}px` }}
+                  onClick={() => onSelectChild?.(item.instanceId)}
+                >
+                  <div className="absolute -left-[5px] top-3 w-2 h-2 rounded-full bg-emerald-500" />
+                  <div className="p-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getStockTypeIcon(item.stockType)}
+                      <span className="text-sm font-medium">{item.cropName}</span>
+                      <span className="text-xs text-gray-400">depth={depth}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
+                    <div className="text-xs text-gray-600 mt-1">数量: {item.quantity} · 入库: {item.inboundDate}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
-                <div className="text-xs text-gray-600 mt-1">数量: {item.quantity} · 入库: {item.inboundDate}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -471,17 +534,29 @@ function TraceTab({
         {downstream.length === 0 ? (
           <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">无下游去向（未被任何后续业务使用）</div>
         ) : (
-          <div className="space-y-2">
-            {downstream.map((item, idx) => (
-              <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2 mb-1">
-                  {getStockTypeIcon(item.stockType)}
-                  <span className="text-sm font-medium">{item.businessId}</span>
+          <div className="space-y-1">
+            {downstream.map((item, idx) => {
+              const depth = item.depth ?? 1;
+              return (
+                <div
+                  key={idx}
+                  className="relative pl-3 border-l-2 border-blue-300 hover:bg-blue-50 rounded-r cursor-pointer transition-colors"
+                  style={{ marginLeft: `${(depth - 1) * 12}px` }}
+                  onClick={() => onSelectChild?.(item.instanceId)}
+                >
+                  <div className="absolute -left-[5px] top-3 w-2 h-2 rounded-full bg-blue-500" />
+                  <div className="p-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getStockTypeIcon(item.stockType)}
+                      <span className="text-sm font-medium">{item.businessId}</span>
+                      <span className="text-xs text-gray-400">depth={depth}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
+                    <div className="text-xs text-gray-600 mt-1">出库: {item.outboundQuantity} · 日期: {item.outboundDate}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 font-mono">{item.instanceId}</div>
-                <div className="text-xs text-gray-600 mt-1">出库: {item.outboundQuantity} · 日期: {item.outboundDate}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

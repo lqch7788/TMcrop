@@ -26,6 +26,7 @@ import { showAlert, showConfirm } from '@/lib/dialogService';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
+import { UnifiedRowHarvestInboundModal } from '../inventory/UnifiedRowHarvestInboundModal';
 import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 
 export default function SeedlingPage() {
@@ -770,23 +771,21 @@ export default function SeedlingPage() {
         />
       )}
 
-      {/* 2026-06-18: 任务 5 — 出圃入库弹窗 */}
+      {/* 2026-06-19: 任务 5 — 行级采收入库弹窗（unify-harvest-inbound-into-source-operations） */}
       {inboundModal.record && (
-        <InventoryInboundModal
+        <UnifiedRowHarvestInboundModal
           isOpen={inboundModal.open}
           onClose={() => setInboundModal({ open: false, record: null })}
           onSuccess={handleInboundSuccess}
           stockType="seedling"
+          sourceModule="seedling"
           sourceRecord={{
-            module: 'seedling',
             id: inboundModal.record.id,
             code: inboundModal.record.seedlingCode,
             cropName: inboundModal.record.cropName || '',
             cropVariety: inboundModal.record.cropVariety || '',
             cropCode: inboundModal.record.cropCode || '',
             unit: undefined,
-            productionPlanId: inboundModal.record.productionPlanId,
-            productionPlanCode: inboundModal.record.productionPlanCode,
           }}
         />
       )}
