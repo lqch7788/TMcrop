@@ -44,6 +44,7 @@ import { useWarehouseStore } from '@/stores/useWarehouseStore'
 import { useDictionaryStore, getDictItems, getDictItemName } from '@/stores/useDictionaryStore'
 import { useUserStore } from '@/stores/useUserStore'
 import { useInventoryStore } from '@/stores/useInventoryStore'
+import { useSeedSourceStore } from '@/stores/useSeedSourceStore'
 import { todayLocal } from '@/lib/dateUtils'
 // 2026-06-19: 采收入库（destination='harvest'）走库存主链路
 // 字段集参照行级采收入库弹窗 UnifiedRowHarvestInboundModal（种源/育苗/种植 3 页面共用一致）
@@ -122,8 +123,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [products, setProducts] = useState<InboundProduct[]>([
     {
       cropCode: record.cropCode || '',
-      cropName: record.cropName || '',
-      cropVariety: record.cropVariety || '',
+      // 2026-06-19: 修复品种/作物品种绑定反的 bug
+      // 数据库 crop_name 实际存"品种"（如"红富士"），crop_variety 实际存"类型"（如"苹果"）
+      // 与字段名意图相反 — 前端绑定时交换，让"品种"列显示类型名、"作物品种"列显示品种名
+      cropName: record.cropVariety || '',
+      cropVariety: record.cropName || '',
       plantingMode: '',
       harvestQuantity: 0,
       unit: record.unit || '克',
@@ -213,8 +217,9 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
     setUnitPrice(0)
     setProducts([{
       cropCode: record.cropCode || '',
-      cropName: record.cropName || '',
-      cropVariety: record.cropVariety || '',
+      // 同上：交换品种/作物品种绑定（数据库语义与字段名反）
+      cropName: record.cropVariety || '',
+      cropVariety: record.cropName || '',
       plantingMode: '',
       harvestQuantity: 0,
       unit: record.unit || '克',
@@ -324,6 +329,7 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           sourceRecordId: record.id,
           sourceRecordCode: record.plantCode,
           harvestDate: recordDate,
+          // 2026-06-19: greenhouse_name / planting_mode 由后端反查 plantings 表兜底（前端不传避免依赖 record 上的运行时字段）
           greenhouseIds: [],
           greenhouseNames: [],
           harvesterIds,
@@ -393,6 +399,11 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
       const result = await addHarvestRecord(record.id, input)
       if (result) {
         showAlert('采收记录添加成功')
+        // 2026-06-19: 残株回种源 / 自交种子入种源 后，跨页通知种源列表刷新
+        // 否则新种源不会在 SeedSourcePage 立即出现（用户需要手动刷新）
+        if (requiresCirculation) {
+          try { await useSeedSourceStore.getState().loadItems() } catch (_) {}
+        }
         resetForm()
         onSuccess?.()
       } else {
@@ -525,6 +536,17 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
                     )}
                   </SelectContent>
                 </Select>
+                {/* 2026-06-19: 回流方式简易说明（根据当前 subType 动态切换） */}
+                {requiresCirculation && (
+                  <p className="mt-1 text-xs text-gray-500 flex items-start gap-1">
+                    <span className="text-emerald-600">💡</span>
+                    <span>
+                      {subType === 'cutting' && '用植株枝条扦插出新的种源（无性繁殖，基因与母本一致）'}
+                      {subType === 'seed_saving' && '从植株上采收种子留作下一季用种（有性繁殖，标记 F1 代）'}
+                      {subType === 'quantity_refill' && '不建新种源记录，把数量直接加到原种源（用于数据修正/盘点补差）'}
+                    </span>
+                  </p>
+                )}
               </div>
             )}
             {requiresWarehouse && (

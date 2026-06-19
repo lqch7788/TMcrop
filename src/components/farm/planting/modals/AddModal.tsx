@@ -42,7 +42,10 @@ export function AddModal({
   areas,
 }: AddModalProps) {
   const [formData, setFormData] = useState({
-    sourceType: SourceType.SEEDLING,
+    // 2026-06-19: 修复初始 sourceType 与 originPath 不一致 bug
+    // originPath='direct_from_seed'（直接播种）应配 sourceType=SEED（种源），下拉显示"选择种源"
+    // 之前默认 SEEDLING，下拉显示"选择育苗批次"与"直接播种"语义冲突
+    sourceType: SourceType.SEED,
     originPath: 'direct_from_seed' as 'direct_from_seed' | 'via_seedling',  // V2 改造 (任务 15): 来源路径二选一
     sourceId: '',
     sourceCode: '',
