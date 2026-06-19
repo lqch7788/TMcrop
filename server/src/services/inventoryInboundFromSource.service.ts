@@ -16,6 +16,7 @@ import { getDatabase, saveDatabase } from '../db';
 import { inventoryStockRepository } from '../repositories/inventory.repository';
 import { inventoryTransactionRepository } from '../repositories/inventoryTransaction.repository';
 import { harvestRepository } from '../repositories/harvest.repository';
+import { generateInstanceId } from './inventory.service';
 
 export type StockType = 'seed' | 'seedling' | 'product';
 export type SourceModule = 'seed_source' | 'seedling' | 'planting';
@@ -149,6 +150,35 @@ export async function executeInboundFromSource(
   // 反查源 crop_instance_id（用于 source_instance_id 关联，库存追溯依赖）
   const sourceInstanceId = findSourceInstanceId(db, input.sourceModule, input.sourceRecordId);
 
+  // 2026-06-19: 反查源种植/种源/育苗记录，自动补 greenhouse_name（采收区域）和 planting_mode（种植模式）
+  // - 种植行：拼 plantings.area_name + plantings.root_name 作种植模式；从 plantings.greenhouse_name 取采收区域
+  // - 其他源（种源/育苗）暂时不补，保留前端传入或 NULL
+  let autoGreenhouseName: string | null = null;
+  let autoPlantingMode: string | null = null;
+  let autoAreaName: string | null = null;
+  if (input.sourceModule === 'planting') {
+    const pStmt = db.prepare('SELECT greenhouse_name, area_name, root_name FROM plantings WHERE id = ?');
+    pStmt.bind([input.sourceRecordId]);
+    const prow = pStmt.step() ? pStmt.getAsObject() as any : null;
+    pStmt.free();
+    if (prow) {
+      autoGreenhouseName = prow.greenhouse_name || null;
+      autoAreaName = prow.area_name || null;
+      // 2026-06-19: 修正映射 — planting_mode 应是 root_name（种植模式/大棚号），不是 area_name
+      autoPlantingMode = prow.root_name || null;
+    }
+  } else if (input.sourceModule === 'seedling') {
+    // 2026-06-19: 育苗行入库 — 反查 seedlings 拿 greenhouse_name / area_name
+    const sStmt = db.prepare('SELECT greenhouse_name, area_name FROM seedlings WHERE id = ?');
+    sStmt.bind([input.sourceRecordId]);
+    const srow = sStmt.step() ? sStmt.getAsObject() as any : null;
+    sStmt.free();
+    if (srow) {
+      autoGreenhouseName = srow.greenhouse_name || null;
+      autoAreaName = srow.area_name || null;
+    }
+  }
+
   // 记录所有写入的 id，用于回滚
   const writtenStockIds: string[] = [];
   const writtenTransactionIds: string[] = [];
@@ -164,7 +194,7 @@ export async function executeInboundFromSource(
       source_name: input.sourceRecordCode,
       harvest_date: input.harvestDate,
       greenhouse_id: input.greenhouseIds?.[0] || null,
-      greenhouse_name: input.greenhouseNames?.[0] || null,
+      greenhouse_name: input.greenhouseNames?.[0] || autoGreenhouseName,
       harvester_ids: input.harvesterIds ? JSON.stringify(input.harvesterIds) : null,
       harvester_names: input.harvesterNames ? JSON.stringify(input.harvesterNames) : null,
       auditor_id: input.operator || null,
@@ -207,9 +237,12 @@ export async function executeInboundFromSource(
 
     // 步骤 2-4：为每条 product 写 inventory_stock + inventory_inbound_records + inventory_transaction
     for (const product of input.products) {
+      // 2026-06-19: 库存实例 ID 统一格式 ${prefix}-${YYYYMMDD}-${NNNN}（17 字符）
+      // 与 /end 路由（旧采收入库）保持一致；不再使用 INST- 前缀 + Date.now+random
+      const prefix = input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR';
+      const instanceId = await generateInstanceId(prefix, dateStr);
       const tsSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const stockId = `STK-${tsSuffix}-${writtenStockIds.length}`;
-      const instanceId = `INST-${input.stockType === 'seed' ? 'INS' : input.stockType === 'seedling' ? 'ISE' : 'IPR'}-${dateStr}-${tsSuffix}`;
 
       // 步骤 2：写 inventory_stock
       const stockRecord: any = {
@@ -234,8 +267,9 @@ export async function executeInboundFromSource(
         quality_grade: product.grade || null,
         grade: product.grade || null,
         unit_price: input.unitPrice || 0,
-        planting_mode: product.plantingMode || null,
-        greenhouse_name: input.greenhouseNames?.[0] || null,
+        planting_mode: product.plantingMode || autoPlantingMode,
+        greenhouse_name: input.greenhouseNames?.[0] || autoGreenhouseName,
+        area_name: autoAreaName,
         // 2026-06-19: 形态/类型字段
         product_form: product.productForm || null,        // 采收形态
         propagation_form: input.propagationForm || null,  // 种源形态（仅种源行）
@@ -256,8 +290,9 @@ export async function executeInboundFromSource(
           quality_grade, grade, unit_price,
           planting_mode, greenhouse_name,
           product_form, propagation_form, source_form,
+          area_name,
           status, version, create_time, update_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         stockRecord.id, stockRecord.instance_id, stockRecord.stock_type,
         stockRecord.business_id, stockRecord.business_type, stockRecord.business_code,
@@ -268,6 +303,7 @@ export async function executeInboundFromSource(
         stockRecord.quality_grade, stockRecord.grade, stockRecord.unit_price,
         stockRecord.planting_mode, stockRecord.greenhouse_name,
         stockRecord.product_form, stockRecord.propagation_form, stockRecord.source_form,
+        stockRecord.area_name,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
       writtenStockIds.push(stockId);
