@@ -347,6 +347,35 @@ export async function deletePlantingHarvestRecord(plantingId: string, recordId: 
   await enhancedApiClient.delete(`/plantings/${plantingId}/harvest-records/${recordId}`)
 }
 
+// ============================================
+// 2026-06-19: 种植移入/移出（整批级别，不依赖 plant_labels）
+// ============================================
+
+/** 移入/移出入参 */
+export interface MovePlantingInput {
+  operationType: 'move_in' | 'move_out'
+  toAreaId?: string
+  toAreaName: string
+  quantity?: number
+  operationDate?: string
+  remarks?: string
+}
+
+/** 提交移入/移出 */
+export async function movePlanting(plantingId: string, input: MovePlantingInput): Promise<{ id: string; plantingId: string; toAreaName: string }> {
+  const data = await enhancedApiClient.post<{ id: string; plantingId: string; toAreaName: string }>(
+    `/plantings/${plantingId}/move`,
+    input,
+  )
+  return data
+}
+
+/** 获取移入/移出履历 */
+export async function getPlantingMoveRecords(plantingId: string): Promise<any[]> {
+  const data = await enhancedApiClient.get<any[]>(`/plantings/${plantingId}/move-records`)
+  return data
+}
+
 /**
  * 生成种植单号
  * 数据流：API → SQLite DB

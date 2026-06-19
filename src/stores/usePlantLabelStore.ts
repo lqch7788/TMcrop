@@ -165,11 +165,16 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** 执行移入/移出操作 */
   submitMove: async (labelId, data) => {
     try {
+      // 2026-06-19: 操作员 = 当前登录人员（从 authStore 取），不再误用 remarks
+      const { useAuthStore } = await import('@/stores/useAuthStore')
+      const currentUser = useAuthStore.getState().currentUser
+      const operatorName = currentUser?.realName || currentUser?.username || 'system'
       const res = await enhancedApiClient.post(`/plant-labels/${labelId}/resumes`, {
         operation_type: data.operationType,
         to_area_name: data.targetArea,
         operation_date: data.operationDate,
-        operator_name: data.remarks || null,
+        operator_name: operatorName,
+        remarks: data.remarks || null,  // 单独传备注（之前混在 operator_name 里）
       });
       if (res.success) {
         // 刷新标签列表和履历

@@ -230,6 +230,98 @@ router.get('/:id/harvest-records', (req, res) => {
 });
 
 /**
+ * 2026-06-19: 种植移入/移出（整批级别，不依赖 plant_labels 单株粒度）
+ * POST /api/plantings/:id/move
+ * Body: { operationType, toAreaId, toAreaName, quantity, operationDate, remarks }
+ * 行为：写入 planting_move_records 履历 + 更新 plantings.areaId/areaName
+ */
+router.post('/:id/move', (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      operationType,
+      toAreaId,
+      toAreaName,
+      quantity = 0,
+      operationDate,
+      remarks = '',
+    } = req.body || {};
+
+    if (!operationType || !['move_in', 'move_out'].includes(operationType)) {
+      return res.status(400).json({ success: false, error: '操作类型无效' });
+    }
+    if (!toAreaName) {
+      return res.status(400).json({ success: false, error: '请选择目标区域' });
+    }
+
+    const db = getDatabase();
+    // 查询原区域
+    const current = queryToObjects<any>(db, `SELECT id, planting_code, area_id, area_name FROM plantings WHERE id = ?`, [id]);
+    if (current.length === 0) {
+      return res.status(404).json({ success: false, error: '种植记录不存在' });
+    }
+    const cur = current[0];
+
+    // 1. 写入 planting_move_records
+    const moveId = `MOV_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date().toISOString();
+    db.run(
+      `INSERT INTO planting_move_records (id, planting_id, planting_code, operation_type, from_area_id, from_area_name, to_area_id, to_area_name, quantity, operation_date, operator_name, remarks, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        moveId,
+        id,
+        cur.planting_code,
+        operationType,
+        cur.area_id,
+        cur.area_name,
+        toAreaId || '',
+        toAreaName,
+        Number(quantity) || 0,
+        operationDate || now.slice(0, 10),
+        // 2026-06-19: 操作员从 req.user 取（中间件注入），缺省 system
+        (req as any).user?.realName || (req as any).user?.username || 'system',
+        remarks,
+        now,
+      ],
+    );
+
+    // 2. 更新 plantings.areaId/areaName
+    db.run(`UPDATE plantings SET area_id = ?, area_name = ?, update_time = ? WHERE id = ?`, [
+      toAreaId || '',
+      toAreaName,
+      now,
+      id,
+    ]);
+
+    saveDatabase();
+    res.json({ success: true, data: { id: moveId, plantingId: id, toAreaName } });
+  } catch (error: any) {
+    console.error('移入/移出失败:', error);
+    res.status(500).json({ success: false, error: error?.message || '移入/移出失败' });
+  }
+});
+
+/**
+ * 2026-06-19: 查询种植移入/移出履历
+ * GET /api/plantings/:id/move-records
+ */
+router.get('/:id/move-records', (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDatabase();
+    const items = queryToObjects(
+      db,
+      `SELECT * FROM planting_move_records WHERE planting_id = ? ORDER BY operation_date DESC, create_time DESC`,
+      [id],
+    );
+    res.json({ success: true, data: items, meta: { total: items.length } });
+  } catch (error) {
+    console.error('获取移入/移出履历失败:', error);
+    res.status(500).json({ success: false, error: '获取移入/移出履历失败' });
+  }
+});
+
+/**
  * 编辑 1 条采收记录（事务原子：反向补偿 + 正向重放）
  * PUT /api/plantings/:id/harvest-records/:recordId
  */
