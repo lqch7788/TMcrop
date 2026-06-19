@@ -484,7 +484,7 @@ export function PlantingTable({
                 onClick={() => onInbound(record)}
                 title="采收入库（行级）"
               >
-                <Package className="w-4 h-4 text-emerald-700" />
+                <Package className="w-4 h-4" />
               </Button>
             )}
             {onLabelDetail && (
