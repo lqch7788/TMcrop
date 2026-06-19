@@ -124,8 +124,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   sourceRecord,
 }) => {
   // ---- 表单 state ----
-  // harvestDate 用 Date 对象（DatePicker 接受 Date），提交时用 toISOString().slice(0,10) 转 string
-  const [harvestDate, setHarvestDate] = useState<Date>(new Date(todayLocal() + 'T00:00:00'))
+  // 2026-06-19: harvestDate 用 YYYY-MM-DD string 存储（与 AddModal 采购日期字段同模式）
+  const [harvestDate, setHarvestDate] = useState<string>(todayLocal())
   const [warehouseId, setWarehouseId] = useState<string>('')
   const [warehouseName, setWarehouseName] = useState<string>('')
   const [harvesterIds, setHarvesterIds] = useState<string[]>([])
@@ -176,7 +176,7 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // ---- 重置表单 ----
   useEffect(() => {
     if (isOpen) {
-      setHarvestDate(new Date(todayLocal() + 'T00:00:00'))
+      setHarvestDate(todayLocal())
       setWarehouseId('')
       setWarehouseName('')
       setHarvesterIds([])
@@ -339,9 +339,9 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
         <div className="grid grid-cols-2 gap-4">
           <FormField label="采收日期" required>
             <DatePicker
-              selected={harvestDate}
-              onChange={(d) => d && setHarvestDate(d)}
-              className={deepInputClass}
+              className="w-full"
+              selected={harvestDate ? new Date(harvestDate) : undefined}
+              onChange={(date) => setHarvestDate(todayLocal(date))}
             />
           </FormField>
           <FormField label="目标仓库" required>

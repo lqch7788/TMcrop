@@ -29,7 +29,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Label } from '@/components/ui'
 import { UnifiedModal } from '@/components/ui'
-import { Input, TextArea } from '@/components/ui'
+import { Input, TextArea, DatePicker } from '@/components/ui'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
 import { NumberInput } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -308,11 +308,10 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>采收日期 *</Label>
-              <Input
-                type="date"
-                value={recordDate}
-                onChange={(e) => setRecordDate(e.target.value)}
-                className={deepInputClass}
+              <DatePicker
+                className="w-full"
+                selected={recordDate ? new Date(recordDate) : undefined}
+                onChange={(date) => setRecordDate(todayLocal(date))}
               />
             </div>
             <div>
