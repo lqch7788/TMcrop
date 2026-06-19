@@ -800,30 +800,45 @@ export class SeedSourceRepository {
       }
 
       // 引用方5：回流记录（V2 crop_circulation_records.parent_source_id）
+      // 2026-06-19: 附带追溯链 — 关联的种植 ID/批号 + 作物 + planting_harvest_records 子记录
       for (const row of queryRows(
-        `SELECT id, circulation_type, circulation_date, is_revoked
-         FROM crop_circulation_records WHERE parent_source_id = ? AND is_revoked = 0
-         ORDER BY created_at DESC LIMIT 100`, id)) {
+        `SELECT cr.id, cr.circulation_type, cr.circulation_date, cr.is_revoked,
+                cr.source_module, cr.source_id,
+                p.planting_code, p.crop_name, p.crop_variety,
+                cr.notes
+         FROM crop_circulation_records cr
+         LEFT JOIN plantings p ON cr.source_module = 'planting' AND cr.source_id = p.id
+         WHERE cr.parent_source_id = ? AND cr.is_revoked = 0
+         ORDER BY cr.created_at DESC LIMIT 100`, id)) {
+        const sourceModule = row[4] as string;
+        const sourceId = row[5] as string;
+        const plantingCode = row[6] as string;
+        const cropName = row[7] as string;
+        const cropVariety = row[8] as string;
+        // 构造 status：含来源模块 + ID + 备注
+        const moduleLabel = sourceModule === 'planting' ? '种植管理' : sourceModule === 'seedling' ? '育苗管理' : sourceModule === 'harvest' ? '采收管理' : sourceModule;
+        const traceParts: string[] = [];
+        if (plantingCode) traceParts.push(`种植批号 ${plantingCode}`);
+        else if (sourceId) traceParts.push(`${moduleLabel} ID ${sourceId}`);
+        if (row[1]) traceParts.push(String(row[1]));
         references.push({
           module: '回流记录(父种源)', moduleCode: 'circulation',
           id: row[0] as string, code: row[0] as string,
+          cropName: cropName || undefined,
+          cropVariety: cropVariety || undefined,
           date: row[2] as string,
-          status: `${row[1] || ''} ${row[3] ? '(有效)' : ''}`,
-        });
+          status: traceParts.join(' / ') || `${row[1] || ''} ${row[3] ? '(有效)' : ''}`,
+          // 跳转目标
+          targetModule: sourceModule,
+          targetId: sourceId,
+          targetCode: plantingCode,
+        } as any);
       }
 
       // 引用方6：回流记录（V2 crop_circulation_records.new_source_id）
-      for (const row of queryRows(
-        `SELECT id, circulation_type, circulation_date, is_revoked
-         FROM crop_circulation_records WHERE new_source_id = ? AND is_revoked = 0
-         ORDER BY created_at DESC LIMIT 100`, id)) {
-        references.push({
-          module: '回流记录(子种源)', moduleCode: 'circulation',
-          id: row[0] as string, code: row[0] as string,
-          date: row[2] as string,
-          status: `${row[1] || ''} ${row[3] ? '(有效)' : ''}`,
-        });
-      }
+      // 2026-06-19: 这条回流记录是"创建该种源"的源记录（出生证明），
+      // 不应反过来阻塞删除。删除该种源时由调用方联动清理（new_source_id 置 NULL）。
+      // 因此此处不再 push 到 references。
 
       db.exec('COMMIT');
     } catch (err) {

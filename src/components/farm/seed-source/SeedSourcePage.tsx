@@ -266,17 +266,36 @@ export default function SeedSourcePage() {
       try {
         const res = await checkDeletable(id);
         if (!res.deletable && res.references.length) {
-          const lines = res.references.slice(0, 10).map((r) => {
-            const parts = [r.module, `「${r.code}」`];
-            if (r.cropName) parts.push(r.cropName);
-            if (r.cropVariety) parts.push(r.cropVariety);
-            if (r.date) parts.push(r.date);
-            if (r.status) parts.push(`状态:${r.status}`);
-            return '  • ' + parts.join(' · ');
+          // 2026-06-19: 按模块分组展示，便于用户快速定位"哪个页面引用了"
+          const groupedByModule: Record<string, typeof res.references> = {};
+          res.references.forEach((r) => {
+            if (!groupedByModule[r.module]) groupedByModule[r.module] = [];
+            groupedByModule[r.module].push(r);
           });
-          const more = res.references.length > 10 ? `\n  …及其他 ${res.references.length - 10} 条` : '';
+
+          const sections: string[] = [];
+          Object.entries(groupedByModule).forEach(([moduleName, refs]) => {
+            sections.push(`【${moduleName}】共 ${refs.length} 条：`);
+            refs.slice(0, 5).forEach((r) => {
+              const parts: string[] = [];
+              // 优先显示 targetCode（种植批号），其次 code（CIRC 内部 ID）
+              const target = (r as any).targetCode || (r as any).targetId;
+              if (target) {
+                parts.push(`「${target}」`);
+              } else {
+                parts.push(`「${r.code}」`);
+              }
+              if (r.cropName) parts.push(r.cropName);
+              if (r.cropVariety && r.cropVariety !== r.cropName) parts.push(r.cropVariety);
+              if (r.date) parts.push(r.date);
+              if (r.status) parts.push(r.status);
+              sections.push('  • ' + parts.join(' · '));
+            });
+            if (refs.length > 5) sections.push(`  …及其他 ${refs.length - 5} 条`);
+          });
+
           await showAlert(
-            `该种源被 ${res.references.length} 条关联记录引用，无法删除：\n\n${lines.join('\n')}${more}\n\n请先到对应模块处理关联后再删除。`
+            `该种源被 ${res.references.length} 条关联记录引用，无法删除：\n\n${sections.join('\n')}\n\n请先到对应模块（如种植管理 / 育苗管理）处理关联后再删除。`
           );
           return;
         }
