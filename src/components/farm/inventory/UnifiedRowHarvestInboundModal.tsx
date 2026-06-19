@@ -283,6 +283,8 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       unit,
       warehouseId,
       warehouseName: warehouseName || undefined,
+      // 2026-06-19: 种源形态（仅种源行入库必填）
+      propagationForm: propagationForm || undefined,
       products: products.map((p) => ({
         ...p,
         harvestQuantity: Number(p.harvestQuantity) || 0,
