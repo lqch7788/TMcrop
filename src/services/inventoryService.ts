@@ -430,6 +430,7 @@ function toCamelStock(row: any): InventoryStock {
     auditor: row.auditor ?? row.auditor,
     remarks: row.remarks ?? row.remarks,
     greenhouseName: row.greenhouse_name ?? row.greenhouseName,
+    areaName: row.area_name ?? row.areaName,
     // 采购信息（外购入库财务字段）
     unitPrice: Number(row.unit_price ?? row.unitPrice ?? 0),
     totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0),

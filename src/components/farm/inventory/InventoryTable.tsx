@@ -260,8 +260,8 @@ export function InventoryTable({
                         );
                       })() : <span className="text-gray-400">-</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName}>
-                      {stock.greenhouseName || '-'}
+                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap truncate max-w-xs" title={stock.greenhouseName || stock.areaName}>
+                      {stock.greenhouseName || stock.areaName || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {getPlantingModeLabel(stock.plantingMode) || '-'}
