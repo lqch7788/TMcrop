@@ -178,6 +178,8 @@ export interface InventoryStock {
   remarks?: string;
   /** 采收区域（多个时用、分隔） */
   greenhouseName?: string;
+  /** 种植区域（plantings.area_name） */
+  areaName?: string;
   // 采购信息（外购入库财务字段）
   unitPrice?: number;
   totalAmount?: number;

@@ -46,6 +46,11 @@ export const SOURCE_ORIGIN_MAP: Record<SourceOrigin | string, { label: string; b
   cutting:             { label: '扦插繁殖',     bg: 'bg-lime-100',    text: 'text-lime-700' },
   direct_seedling:     { label: '直接育苗',     bg: 'bg-teal-100',    text: 'text-teal-700' },
   direct_planting:     { label: '直接种植',     bg: 'bg-teal-100',    text: 'text-teal-700' },
+  // 2026-06-19: source_module 类（行级采收入库/库存写入时 sourceType 落入 source_module 值）
+  planting:            { label: '种植采收',     bg: 'bg-orange-100',  text: 'text-orange-700' },
+  seedling:            { label: '育苗',         bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  seed_source:         { label: '种源',         bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  harvest:             { label: '采收入库',     bg: 'bg-orange-100',  text: 'text-orange-700' },
 };
 
 /** 兼容旧用法：仅返回 label（避免破坏老代码） */
@@ -253,6 +258,8 @@ export const PROPAGATION_STATUS_LABELS: Record<string, string> = {
   in_progress: '进行中',
   harvested: '已采收',
   quality_checked: '已质检',
+  // 2026-06-19: 补 in_stock 映射（circulation.service 写入的硬编码值）
+  in_stock: '已入库',
   completed: '已入库',
   failed: '失败',
 };

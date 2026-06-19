@@ -1895,6 +1895,7 @@ export async function fixMissingSchema(): Promise<void> {
     { name: 'product_form', sql: "ALTER TABLE inventory_stock ADD COLUMN product_form TEXT" },        // 采收形态（果实/籽/枝条等）
     { name: 'propagation_form', sql: "ALTER TABLE inventory_stock ADD COLUMN propagation_form TEXT" }, // 种源形态（种子/种苗/实生苗/扦插苗/嫁接苗/组培苗/分株苗/种球/球根）
     { name: 'source_form', sql: "ALTER TABLE inventory_stock ADD COLUMN source_form TEXT" },          // 育苗/种植产物类型
+    { name: 'area_name', sql: "ALTER TABLE inventory_stock ADD COLUMN area_name TEXT" },              // 2026-06-19: 种植区域（反查 plantings.area_name）
   ];
   for (const col of inventoryStockExtColumns) {
     try {
