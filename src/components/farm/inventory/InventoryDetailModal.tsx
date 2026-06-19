@@ -185,7 +185,7 @@ export function InventoryDetailModal({ isOpen, stock, onClose }: InventoryDetail
           )}
 
           {tab === 'basic'   && <BasicTab stock={stock} sourceInfo={sourceInfo} statusInfo={statusInfo} gradeInfo={gradeInfo} available={available} freezesCount={freezes.length} />}
-          {tab === 'history' && <HistoryTab transactions={transactions} loading={loading} />}
+          {tab === 'history' && <HistoryTab transactions={transactions} loading={loading} error={error} onRetry={loadAllData} />}
           {tab === 'trace'   && (
             <TraceTab
               upstream={upstream}
@@ -383,13 +383,36 @@ function BasicTab({
 }
 
 // ---------- 操作历史 Tab（Phase 13.2.2-4: Timeline + 日期分组 + 冻结/解冻细分） ----------
-function HistoryTab({ transactions, loading }: { transactions: InventoryTransaction[]; loading: boolean }) {
+function HistoryTab({ transactions, loading, error, onRetry }: {
+  transactions: InventoryTransaction[];
+  loading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+}) {
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>;
+    return (
+      <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
+        <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <span>加载中...</span>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+        <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+        <div className="text-sm text-red-700 mb-3">{error}</div>
+        {onRetry && (
+          <Button size="sm" variant="outline" onClick={onRetry}>
+            <RefreshCw className="w-3 h-3 mr-1" /> 重试
+          </Button>
+        )}
+      </div>
+    );
   }
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-12 text-gray-500">
         <History className="w-12 h-12 mx-auto mb-2 text-gray-300" />
         <p>暂无操作历史</p>
       </div>
@@ -413,63 +436,58 @@ function HistoryTab({ transactions, loading }: { transactions: InventoryTransact
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="text-xs text-gray-500">共 {transactions.length} 条操作记录（按时间倒序）</div>
-      {Object.entries(groups).map(([day, txs]) => (
-        <div key={day}>
-          <div className="text-xs font-medium text-gray-600 mb-2 px-1">{day}</div>
-          {/* Timeline 样式：左边竖线 + 圆点 */}
-          <div className="relative pl-6 border-l-2 border-emerald-300 space-y-2">
-            {txs.map((tx) => {
-              const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType, icon: <Edit3 className="w-3.5 h-3.5" />, color: 'text-gray-600 bg-gray-50 border-gray-200' };
+      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+            <tr>
+              <th className="px-3 py-2 text-left whitespace-nowrap">类型</th>
+              <th className="px-3 py-2 text-right whitespace-nowrap">数量</th>
+              <th className="px-3 py-2 text-right whitespace-nowrap">变动前</th>
+              <th className="px-3 py-2 text-right whitespace-nowrap">变动后</th>
+              <th className="px-3 py-2 text-left whitespace-nowrap">业务类型</th>
+              <th className="px-3 py-2 text-left whitespace-nowrap">业务单号</th>
+              <th className="px-3 py-2 text-left whitespace-nowrap">操作人</th>
+              <th className="px-3 py-2 text-left whitespace-nowrap">时间</th>
+              <th className="px-3 py-2 text-left">备注</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {transactions.map((tx) => {
+              const meta = TX_TYPE_META[tx.transactionType] || { label: tx.transactionType, color: 'text-gray-600 bg-gray-50 border-gray-200' };
               const isOut = tx.transactionType === 'outbound' || tx.transactionType === 'unfreeze' || (tx.transactionType === 'adjust' && tx.quantity < 0);
               return (
-                <div key={tx.id} className="relative bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm">
-                  {/* 圆点 */}
-                  <div className={`absolute -left-[31px] top-4 w-4 h-4 rounded-full border-2 border-white ${meta.color.includes('emerald') ? 'bg-emerald-500' : meta.color.includes('red') ? 'bg-red-500' : meta.color.includes('blue') ? 'bg-blue-500' : meta.color.includes('cyan') ? 'bg-cyan-500' : meta.color.includes('purple') ? 'bg-purple-500' : meta.color.includes('amber') ? 'bg-amber-500' : 'bg-gray-500'}`} />
-                  <div className="flex items-start gap-3">
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded border text-xs font-medium ${meta.color}`}>
-                      {meta.icon}
+                <tr key={tx.id} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${meta.color}`}>
                       {meta.label}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-500">数量:</span>
-                        <span className={`font-mono font-semibold ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
-                          {tx.quantity > 0 && !isOut ? '+' : ''}{tx.quantity}
-                        </span>
-                        <span className="text-gray-400 text-xs ml-2">
-                          {tx.balanceBefore} → {tx.balanceAfter}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-3 flex-wrap">
-                        <span>操作人: {tx.operatorName || '-'}</span>
-                        <span>·</span>
-                        <span>{tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN') : '-'}</span>
-                        {tx.businessType && (
-                          <>
-                            <span>·</span>
-                            <span>业务: {BUSINESS_TYPE_META[tx.businessType]?.label || tx.businessType}</span>
-                          </>
-                        )}
-                        {tx.businessCode && (
-                          <>
-                            <span>·</span>
-                            <span className="font-mono">{tx.businessCode}</span>
-                          </>
-                        )}
-                      </div>
-                      {tx.remarks && (
-                        <div className="text-xs text-gray-600 mt-1 italic">备注: {tx.remarks}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                  </td>
+                  <td className={`px-3 py-2 text-right font-mono font-semibold whitespace-nowrap ${isOut ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {tx.quantity > 0 && !isOut ? '+' : ''}{tx.quantity}
+                  </td>
+                  <td className="px-3 py-2 text-right text-gray-500 font-mono whitespace-nowrap">{tx.balanceBefore}</td>
+                  <td className="px-3 py-2 text-right text-gray-700 font-mono whitespace-nowrap">{tx.balanceAfter}</td>
+                  <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                    {BUSINESS_TYPE_META[tx.businessType]?.label || tx.businessType || '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700 font-mono text-xs whitespace-nowrap">
+                    {tx.businessCode || '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{tx.operatorName || '-'}</td>
+                  <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">
+                    {tx.operateDate ? new Date(tx.operateDate).toLocaleString('zh-CN') : '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-600 text-xs max-w-xs truncate" title={tx.remarks || ''}>
+                    {tx.remarks || '-'}
+                  </td>
+                </tr>
               );
             })}
-          </div>
-        </div>
-      ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
