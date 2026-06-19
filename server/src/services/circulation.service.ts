@@ -68,6 +68,74 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+/**
+ * 2026-06-19: 生成业务编号（残株回种源 / 自交种子入种源时使用）
+ * 规则：
+ * - 扦插繁殖 → SRC-CUT-YYYYMMDD-XXX（3 位流水号，从 001 开始按日累加）
+ * - 留种     → SRC-SS-YYYYMMDD-XXX（3 位流水号，从 001 开始按日累加）
+ * - 数量回填 → 不建新种源，编号 = 原种源编号 + 后缀（如 SS-20260101-001+R1）
+ */
+function generatePropagationCode(method: 'cutting' | 'seed_saving'): string {
+  const db = getDatabase()
+  const today = formatLocalDateISO().replace(/-/g, '')  // YYYYMMDD
+  const prefix = method === 'cutting' ? 'SRC-CUT' : 'SRC-SS'
+  const pattern = `${prefix}-${today}-%`
+
+  // 查询今日已生成的最大流水号
+  const stmt = db.prepare(
+    `SELECT source_code FROM seed_sources
+     WHERE source_code LIKE ?
+     ORDER BY LENGTH(source_code) DESC, source_code DESC
+     LIMIT 1`
+  )
+  stmt.bind([pattern])
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+
+  let seq = 1
+  if (row && row.source_code) {
+    // 提取末尾 3 位数字
+    const m = String(row.source_code).match(/-(\d+)$/)
+    if (m) {
+      seq = parseInt(m[1], 10) + 1
+    }
+  }
+
+  return `${prefix}-${today}-${String(seq).padStart(3, '0')}`
+}
+
+/**
+ * 2026-06-19: 生成数量回填后缀
+ * 在原种源编号后追加 +R{N}（N 从 1 开始，按原种源累加）
+ * 例如 SS-20260101-001+R1, SS-20260101-001+R2
+ *
+ * 注：数量回填不建新种源记录（executeQuantityToSeedSource 只 UPDATE remaining_quantity），
+ *     该函数保留供未来审计/追溯场景使用
+ */
+function generateQuantityRefillSuffix(parentSourceCode: string, parentSourceId: string): string {
+  const db = getDatabase()
+  const pattern = `${parentSourceCode}+R%`
+
+  const stmt = db.prepare(
+    `SELECT source_code FROM seed_sources
+     WHERE source_code LIKE ?
+     ORDER BY LENGTH(source_code) DESC, source_code DESC
+     LIMIT 1`
+  )
+  stmt.bind([pattern])
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+
+  let seq = 1
+  if (row && row.source_code) {
+    const m = String(row.source_code).match(/\+R(\d+)$/)
+    if (m) {
+      seq = parseInt(m[1], 10) + 1
+    }
+  }
+  return `${parentSourceCode}+R${seq}`
+}
+
 // ============================================================
 // executeCirculation 主函数
 // ============================================================
@@ -123,8 +191,15 @@ export function executeCirculation(rawInput: unknown): CirculationResult {
 function executePropagation(input: CirculationInput, circId: string): CirculationResult {
   const db = getDatabase()
   const newSourceId = generateId('SRC')
+  // 2026-06-19: 业务编号按 subType 区分（扦插 CUT / 留种 SS，前缀+日期+3位流水号）
+  const newSourceCode = input.subType === 'cutting' || input.subType === 'seed_saving'
+    ? generatePropagationCode(input.subType)
+    : generateId('SRC')  // g0_g1 等其他子类型兜底用旧规则
   const newOrigin = deriveOriginFromContext(input)
-  const circulationDate = formatLocalDateISO()
+  // 2026-06-19: 用完整 ISO 格式（new Date().toISOString()）作为 create_time/update_time
+  // 之前用 formatLocalDateISO() 返回 'YYYY-MM-DD' 短日期，导致与手动种源的完整 ISO 时间混排错位
+  const nowISO = new Date().toISOString()
+  const circulationDate = formatLocalDateISO()  // 保留短日期用于 purchase_date / circulation_date
   // 2026-06-18: PROPAGATION 也把 quantity 写入新种源 remaining_quantity
   // 让 cutting/seed_saving/self_seed 实际可用数量反映填入的数量
   const seedQuantity = input.quantity ?? 0
@@ -166,6 +241,16 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
     : input.subType === 'g0_g1' ? 'g0_g1'
     : null
 
+  // 2026-06-19: propagation_type 按 subType 动态映射（与 PROPAGATION_TYPE_LABELS 对齐）
+  // - cutting       → 'asexual'   (无性繁殖)
+  // - seed_saving  → 'seed_saving' (种植留种)
+  // - g0_g1        → 'breeding'   (G0/G1 代育种)
+  // 之前硬编码 'asexual'，导致所有回流（cutting + seed_saving）都显示"无性繁殖"（不合理）
+  const propagationTypeDb = input.subType === 'cutting' ? 'asexual'
+    : input.subType === 'seed_saving' ? 'seed_saving'
+    : input.subType === 'g0_g1' ? 'breeding'
+    : 'asexual'  // 兜底
+
   // 2026-06-18: 全量继承 parent + 新追溯字段
   db.run(`
     INSERT INTO seed_sources (
@@ -183,18 +268,18 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
       ?, ?, ?,
       ?, ?, ?, 0, ?,
       'active', ?, ?, ?, ?,
-      'asexual', 'in_stock', ?,
+      ?, 'in_stock', ?,
       ?, ?,
       ?
     )
   `, [
-    newSourceId, `SRC-${Date.now()}`, parent?.source_name || null, newOrigin, input.parentSourceId,
+    newSourceId, newSourceCode, parent?.source_name || null, newOrigin, input.parentSourceId,
     parent?.crop_name || planting?.crop_name || null, parent?.crop_variety || planting?.crop_variety || null, parent?.crop_code || planting?.crop_code || null,
     parent?.crop_category || null, parent?.type_name || null, parent?.variety_name || null,
     parent?.supplier_id || null, parent?.supplier_name || null, parent?.production_plan_code || planting?.production_plan_code || null,
     seedQuantity, input.unit || parent?.unit || null, circulationDate.split('T')[0], seedQuantity,
-    input.operatorId || 'system', input.operatorId || null, circulationDate, circulationDate,
-    propagationMethod,
+    input.operatorId || 'system', input.operatorId || null, nowISO, nowISO,
+    propagationTypeDb, propagationMethod,
     input.sourceModule === 'planting' ? input.sourceId : null, sourcePlantingCode,
     input.subType === 'seed_saving' ? 'F1' : (input.subType === 'cutting' ? '无性' : null),
   ])

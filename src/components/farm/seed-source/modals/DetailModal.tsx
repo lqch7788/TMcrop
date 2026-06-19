@@ -18,7 +18,15 @@ const PROPAGATION_TYPE_LABELS: Record<string, string> = {
   external: '外购入库', breeding: '育种计划产出', seed_saving: '种植留种', asexual: '无性繁殖',
 };
 const PROPAGATION_STATUS_LABELS: Record<string, string> = {
-  planned: '已计划', in_progress: '进行中', harvested: '已采收', quality_checked: '已质检', completed: '已入库', failed: '失败',
+  planned: '已计划', in_progress: '进行中', harvested: '已采收', quality_checked: '已质检',
+  // 2026-06-19: 补 in_stock 映射（circulation.service 写入的硬编码值）
+  in_stock: '已入库', completed: '已入库', failed: '失败',
+};
+// 2026-06-19: 补繁殖方法标签（circulation.service 写入 cutting/seed_saving/g0_g1）
+const PROPAGATION_METHOD_LABELS: Record<string, string> = {
+  cutting: '扦插繁殖',
+  seed_saving: '留种',
+  g0_g1: 'G0/G1 代',
 };
 
 interface DetailModalProps {
@@ -184,7 +192,10 @@ export function DetailModal({
               {record.propagationMethod && (
                 <div className="flex items-center">
                   <span className="text-sm text-gray-500 w-24">具体方法：</span>
-                  <span className="text-sm text-gray-900">{record.propagationMethod}</span>
+                  <span className="text-sm text-gray-900">
+                    {/* 2026-06-19: 查表翻译 cutting/seed_saving/g0_g1 */}
+                    {PROPAGATION_METHOD_LABELS[record.propagationMethod] || record.propagationMethod}
+                  </span>
                 </div>
               )}
               {record.propagationStartDate && (
