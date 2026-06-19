@@ -47,7 +47,7 @@ export interface InboundFromSourceInput {
   greenhouseNames?: string[];
   harvesterIds?: string[];
   harvesterNames?: string[];
-  auditor?: string;
+  operator?: string;
   remarks?: string;
   saleType?: 'self_use' | 'external_sale';
   isSupplementary?: boolean;
@@ -167,7 +167,7 @@ export async function executeInboundFromSource(
       greenhouse_name: input.greenhouseNames?.[0] || null,
       harvester_ids: input.harvesterIds ? JSON.stringify(input.harvesterIds) : null,
       harvester_names: input.harvesterNames ? JSON.stringify(input.harvesterNames) : null,
-      auditor_id: input.auditor || null,
+      auditor_id: input.operator || null,
       remarks: input.remarks || null,
       warehouse_id: input.warehouseId,
       unit_price: input.unitPrice || 0,

@@ -39,6 +39,7 @@ import type { EndType } from '../../../../types/cropCirculation'
 import type { AddHarvestRecordInput } from '@/services/apiPlantingService'
 import { showAlert, showConfirm } from '@/lib/dialogService'
 import { usePlantingStore } from '@/stores/usePlantingStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useWarehouseStore } from '@/stores/useWarehouseStore'
 import { useDictionaryStore, getDictItems, getDictItemName } from '@/stores/useDictionaryStore'
 import { todayLocal } from '@/lib/dateUtils'
@@ -103,6 +104,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
   const [submitting, setSubmitting] = useState(false)
   // 2026-06-19: 采收形态（仅 destination='harvest' 必填）— 区分果实/种子/种苗/枝条等
   const [sourceForm, setSourceForm] = useState<string>('')
+  // 2026-06-19: 操作员，默认 = 当前登录人员姓名
+  const currentUser = useAuthStore((s) => s.currentUser)
 
   const addHarvestRecord = usePlantingStore((s) => s.addHarvestRecord)
   const harvestRecordsMap = usePlantingStore((s) => s.harvestRecords)
@@ -219,8 +222,8 @@ export function HarvestRecordModal({ isOpen, onClose, onSuccess, record }: Harve
         quantity: qtyNum,
         unit,
         notes,
-        createBy: 'system',
-        operatorName: 'system',
+        createBy: currentUser?.realName || 'system',
+        operatorName: currentUser?.realName || 'system',
         // 2026-06-19: 采收形态（仅 harvest）
         sourceForm: destination === 'harvest' ? sourceForm : undefined,
       }
