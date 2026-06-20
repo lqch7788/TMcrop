@@ -93,6 +93,30 @@ async function start() {
     saveDatabase();
     console.log('数据库保存完成');
 
+    // 2026-06-20: 周期性落盘 + 优雅退出保护
+    // 原因：sql.js 是纯内存数据库，db.run() 后只在内存生效，必须显式 saveDatabase() 落盘
+    // 若服务被硬杀（taskkill /F、断电），最后一次 saveDatabase 之后的写入全部丢失
+    // 周期落盘 + 退出钩子双保险
+    setInterval(() => {
+      try {
+        saveDatabase();
+      } catch (e) {
+        console.error('[periodic-save] 周期落盘失败:', e);
+      }
+    }, 30_000);
+    const gracefulExit = (signal: string) => {
+      console.log(`\n[${signal}] 收到退出信号，正在保存数据库...`);
+      try {
+        saveDatabase();
+        console.log('[graceful-exit] 数据库已保存');
+      } catch (e) {
+        console.error('[graceful-exit] 保存失败:', e);
+      }
+      process.exit(0);
+    };
+    process.on('SIGINT', () => gracefulExit('SIGINT'));
+    process.on('SIGTERM', () => gracefulExit('SIGTERM'));
+
     // 中间件
     app.use(cors);
     app.use(requestLogger);
