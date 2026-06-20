@@ -221,16 +221,56 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
   // ---- 字典项 ----
   const unitOptions = useMemo(() => {
     const items = getDictItems?.(dictionaries, 'unit') || []
-    return items.length > 0
-      ? items.map((it: any) => ({ value: it.dictCode, label: it.dictValue || it.dictCode }))
-      : [
-          { value: '克', label: '克' },
-          { value: 'kg', label: '千克' },
-          { value: '株', label: '株' },
-          { value: '枝', label: '枝' },
-          { value: '个', label: '个' },
-          { value: '袋', label: '袋' },
-        ]
+    if (items.length > 0) {
+      return items.map((it: any) => ({ value: it.dictCode, label: it.dictValue || it.dictCode }))
+    }
+    // 字典未加载时使用全量单位 fallback（按类型分组，覆盖种源/育苗/种植常见场景）
+    return [
+      // === 重量类 ===
+      { value: '克', label: '克（g）' },
+      { value: 'kg', label: '千克（kg）' },
+      { value: '吨', label: '吨（t）' },
+      { value: 'mg', label: '毫克（mg）' },
+      { value: '斤', label: '斤（500g）' },
+      { value: '两', label: '两（50g）' },
+      // === 体积类 ===
+      { value: 'ml', label: '毫升（ml）' },
+      { value: '升', label: '升（L）' },
+      { value: '立方米', label: '立方米（m³）' },
+      // === 数量/个数类（种子/种苗/果实/包装）===
+      { value: '粒', label: '粒' },
+      { value: '颗', label: '颗' },
+      { value: '片', label: '片' },
+      { value: '块', label: '块' },
+      { value: '包', label: '包' },
+      { value: '袋', label: '袋' },
+      { value: '盒', label: '盒' },
+      { value: '箱', label: '箱' },
+      { value: '件', label: '件' },
+      { value: '把', label: '把' },
+      { value: '串', label: '串' },
+      { value: '束', label: '束' },
+      { value: '双', label: '双' },
+      { value: '套', label: '套' },
+      { value: '个', label: '个' },
+      // === 农业特有（植株/果实）===
+      { value: '株', label: '株' },
+      { value: '枝', label: '枝' },
+      { value: '穗', label: '穗' },
+      { value: '捆', label: '捆' },
+      { value: '筐', label: '筐' },
+      { value: '篓', label: '篓' },
+      { value: '坛', label: '坛' },
+      { value: '盆', label: '盆' },
+      // === 长度类 ===
+      { value: '米', label: '米（m）' },
+      { value: 'cm', label: '厘米（cm）' },
+      { value: 'mm', label: '毫米（mm）' },
+      // === 面积类（种植面积）===
+      { value: '平方米', label: '平方米（m²）' },
+      { value: '亩', label: '亩' },
+      { value: '公顷', label: '公顷（ha）' },
+    ]
   }, [dictionaries])
 
   const productsLocked = stockType !== 'product'
@@ -333,10 +373,20 @@ export const UnifiedRowHarvestInboundModal: React.FC<UnifiedRowHarvestInboundMod
       size="xxl"
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={submitting}
+          >
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
             {submitting ? '提交中...' : '确认入库'}
           </Button>
         </div>
