@@ -201,7 +201,7 @@ export class SeedSourceService {
     }
 
     // L3: 拒绝 FAILED 状态扣减
-    if (existing.propagation_status === 'failed') {
+    if (existing.propagationStatus === 'failed') {
       throw new BusinessError(SeedSourceErrorCode.FAILED_STATUS, '种源已标记为失败，不允许扣减');
     }
 
@@ -350,7 +350,7 @@ export class SeedSourceService {
       throw new Error('种源记录不存在');
     }
 
-    const currentStage = (existing.propagation_status || 'planned') as PropagationStage;
+    const currentStage = (existing.propagationStatus || 'planned') as PropagationStage;
     const nextStage = safeData.new_stage;
 
     // C6: 禁止跳跃（只能 +1 进入下一个阶段；允许任意状态 → failed）
@@ -390,9 +390,9 @@ export class SeedSourceService {
     }
 
     // C7: 必须先经过 quality_checked 阶段
-    if (existing.propagation_status !== 'quality_checked') {
+    if (existing.propagationStatus !== 'quality_checked') {
       throw new Error(
-        `当前 propagation_status=${existing.propagation_status || 'null'}，必须先推进到 quality_checked 才能完成入库`
+        `当前 propagationStatus=${existing.propagationStatus || 'null'}，必须先推进到 quality_checked 才能完成入库`
       );
     }
 
