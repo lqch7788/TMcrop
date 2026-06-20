@@ -104,7 +104,7 @@ export const DICTIONARY_MODULES: DictionaryModule[] = [
     code: 'task',
     name: '任务通用',
     icon: 'ClipboardList',
-    categories: ['announcement_category', 'cost_category', 'performance_status', 'task_priority', 'task_status', 'unit']
+    categories: ['announcement_category', 'cost_category', 'performance_status', 'task_priority', 'task_status', 'unit', 'area_unit']
   },
   {
     code: 'approval',
@@ -271,6 +271,7 @@ export const CATEGORY_CHINESE_NAMES: Record<string, string> = {
   quality_grade: '品质等级',
   responsible_person: '负责人',
   unit: '单位',
+  area_unit: '面积单位',
   yes_no: '是否',
   // 库存管理相关
   inbound_type: '入库类型',
