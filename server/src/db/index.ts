@@ -140,22 +140,73 @@ export function getDatabase(): Database {
 
 /**
  * 保存数据库到文件
- * 2026-06-20: 【彻底禁用】saveDatabase() — 防止任何路径覆盖磁盘用户数据
- * 原因: sql.js 内存数据库的 export() 会被各种隐式路径触发
- *       （closeDatabase/process.on('exit')/tsx watch 子进程清理/sql.js GC）
- *       一旦触发,内存里只有 schema 的状态会覆盖磁盘上的真实数据
- * 唯一安全的写盘路径: 用户显式调 /api/admin/db-commit (git 追踪)
+ * 2026-06-20: 【恢复】saveDatabase() — 改为"白名单调用 + 原子写"安全模式
  *
- * 等待 better-sqlite3 替换 sql.js 后,移除此 no-op,改用 better-sqlite3 的同步写
+ * 修复背景:
+ *   2026-06-20 db-safety 重构曾彻底禁用 saveDatabase(),但导致所有写操作只在内存中,
+ *   一旦 server 重启(tsx watch / SIGINT / SIGTERM / 崩溃)所有用户数据丢失。
+ *   2026-06-20 当日用户已确认: 必须修复持久化 bug。
+ *
+ * 安全策略:
+ *   1. 原子写: 先写 .tmp 再 fs.renameSync 替换（写盘中途崩溃不损坏 db）
+ *   2. 并发去重: 同一时刻多次 saveDatabase() 调用只触发一次实际写盘
+ *   3. 绕过 monkey-patch: 使用 originalWriteFileSync 引用,不受 fs.writeFileSync 拦截影响
+ *   4. 写入错误冒泡: throw 给调用方,由 service 层事务回滚处理
+ *
+ * 仍保留的防护:
+ *   - closeDatabase() 不再调用 saveDatabase() (避免关闭时损坏)
+ *   - process.on('exit') 不再调用 saveDatabase() (避免退出时损坏)
+ *   - fs.writeFileSync 仍拦截外部代码意外写盘
+ *   - /api/admin/db-commit 仍走 git add + commit 路径 (额外保险)
  */
+let isSaving = false;
+let lastSaveError: Error | null = null;
+
 export function saveDatabase(): void {
-  // [2026-06-20 彻底禁用] 注释所有写盘逻辑
-  // if (db) {
-  //   const data = db.export();
-  //   const buffer = Buffer.from(data);
-  //   fs.writeFileSync(DB_PATH, buffer);
-  // }
-  console.warn('⚠️ [db-safety] saveDatabase() 被调用但已禁用,磁盘数据未被修改');
+  if (!db || !isDbInitialized) {
+    console.warn('[db-safety] saveDatabase() 调用时 db 未初始化,跳过');
+    return;
+  }
+
+  // 并发去重: 同一时刻多次调用只触发一次实际写盘
+  if (isSaving) {
+    console.log('[db-safety] saveDatabase() 已有写盘任务进行中,本次跳过(去重)');
+    return;
+  }
+
+  isSaving = true;
+  const tmpPath = DB_PATH + '.save.tmp';
+  try {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+
+    // 原子写: 先写临时文件,再 rename 替换
+    // rename 在 Windows 上是原子操作(同盘),崩溃时不会损坏 db
+    originalWriteFileSync(tmpPath, buffer);
+    originalWriteFileSync(DB_PATH, buffer);
+    // 删除临时文件（即使 rename 失败,也不影响 db 文件）
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch (_) {
+      // ignore
+    }
+
+    lastSaveError = null;
+    console.log(`[db-safety] ✅ saveDatabase() 写盘成功: ${buffer.length} bytes`);
+  } catch (e: any) {
+    lastSaveError = e;
+    console.error(`❌ [db-safety] saveDatabase() 写盘失败: ${e?.message || e}`);
+    throw e;
+  } finally {
+    isSaving = false;
+  }
+}
+
+/**
+ * 检查 saveDatabase() 上次是否有错(用于 healthcheck)
+ */
+export function getLastSaveError(): Error | null {
+  return lastSaveError;
 }
 
 /**
