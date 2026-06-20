@@ -115,11 +115,13 @@ router.post('/circulation', (req, res) => {
  */
 router.get('/circulation', (req, res) => {
   try {
-    const { sourceModule, sourceId, parentSourceId } = req.query
+    const { sourceModule, sourceId, parentSourceId, newSourceId, seedSourceId } = req.query
     const records = listCirculations({
       sourceModule: sourceModule as string | undefined,
       sourceId: sourceId as string | undefined,
       parentSourceId: parentSourceId as string | undefined,
+      newSourceId: newSourceId as string | undefined,
+      seedSourceId: seedSourceId as string | undefined,
     })
     res.json({ success: true, data: records })
   } catch (e: any) {

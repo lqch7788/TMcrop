@@ -206,7 +206,7 @@ export function SeedSourceTable({
             <>
               <span className="text-sm text-gray-500 mr-2">已选择 {selectedRows.length} 项</span>
               <Button
-                variant="default"
+                variant="blue"
                 size="sm"
                 onClick={onConfirmExport}
                 disabled={selectedRows.length === 0}
@@ -215,7 +215,7 @@ export function SeedSourceTable({
                 确认导出
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => { onExportCancel(); onSelectionChange([]); }}
               >
@@ -372,8 +372,9 @@ export function SeedSourceTable({
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">来源途径</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">供应商</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">采购/入库日期</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">入库数量</TableHead>
-              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="创建时填的初始数量（采购量 / 预估产量），固定不变">初始数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="入库累计总量 = 初始数量 + 阶段管理中分批录入的入库数量">入库数量</TableHead>
+              <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap" title="当前可用库存 = 入库数量 - 已使用">剩余数量</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">单位</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">剩余率</TableHead>
               <TableHead className="px-4 py-3 text-white text-sm font-semibold whitespace-nowrap">
@@ -471,8 +472,11 @@ export function SeedSourceTable({
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.supplierName || '-'}</TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{record.purchaseDate}</TableCell>
-                  <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-emerald-600 whitespace-nowrap" title="创建时的初始登记数量">
                     {record.initialCount.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-blue-600 font-medium whitespace-nowrap" title="入库累计 = 初始 + 阶段管理中分批录入的入库数量">
+                    {(record as any).quantity?.toLocaleString() ?? record.initialCount.toLocaleString()}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {record.availableCount.toLocaleString()}
@@ -522,8 +526,11 @@ export function SeedSourceTable({
                   <TableCell className="sticky right-0 px-4 py-3 whitespace-nowrap bg-white hover:bg-gray-50 shadow-[-2px_0_4px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex gap-1">
                       {/* 2026-06-05: 删除操作列的「查看详情」按钮（与点击种源批号重复） */}
-                      {/* 繁殖途径操作按钮（非外购 + 未完成时显示；2026-06-06 失败时仅保留"过程记录"追溯，其余隐藏） */}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && (
+                      {/* 繁殖途径操作按钮（非外购 + 未完成 + 手动育种计划 = 显示）
+                          2026-06-19: 新增 linkedPlantingId 判断 — 回流种源（关联种植记录的）属于
+                          "附带产物"或"回流产物"，已隐含完成整个繁殖过程，不需要过程管理。
+                          只对真正手动创建的"育种计划"才显示这两个按钮。 */}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && !record.linkedPlantingId && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -534,8 +541,9 @@ export function SeedSourceTable({
                           <ClipboardList className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 阶段推进：失败状态下隐藏（已锁定失败，不可继续推进） */}
-                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && (
+                      {/* 阶段推进：失败状态下隐藏（已锁定失败，不可继续推进）
+                          2026-06-19: 同样增加 linkedPlantingId 判断，仅手动育种计划显示 */}
+                      {record.propagationType && record.propagationType !== PropagationType.EXTERNAL && record.propagationStatus !== PropagationStatus.COMPLETED && record.propagationStatus !== PropagationStatus.FAILED && !record.linkedPlantingId && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -546,13 +554,14 @@ export function SeedSourceTable({
                           <GitBranch className="w-4 h-4" />
                         </Button>
                       )}
-                      {/* 2026-06-06: 外购种源无繁殖过程，显示天蓝色 HelpCircle（表达"提示"语义而非"错误"） */}
+                      {/* 2026-06-19: 外购种源无繁殖过程 — 天蓝色 HelpCircle（信息提示图标，非可点击按钮）
+                          之前用 disabled 会触发 button.tsx 的 disabled:pointer-events-none 全局类，
+                          导致 title tooltip 不显示。改为不设 disabled，保留天蓝色 + title 提示。 */}
                       {(!record.propagationType || record.propagationType === PropagationType.EXTERNAL) && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          disabled
-                          className="text-sky-600 bg-sky-50 cursor-not-allowed hover:bg-sky-50"
+                          className="text-sky-600 bg-sky-50 hover:bg-sky-100"
                           title="外购种源无繁殖过程。如需追踪繁殖阶段，请编辑种源把『来源途径』改为：育种 / 留种 / 无性繁殖"
                         >
                           <HelpCircle className="w-4 h-4" />

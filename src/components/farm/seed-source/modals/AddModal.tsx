@@ -918,9 +918,18 @@ export function AddModal({
             />
           </div>
 
-          {/* 登记数量 */}
+          {/* 数量字段 — 2026-06-19 标签按模式动态切换
+              外购入库：实际到货数量，作为初始库存
+              育种/留种/无性：预估产量/计划数量，最终入库数量在「阶段管理」中分批录入 */}
           <div>
-            <Label className="text-gray-900">登记数量</Label>
+            <Label className="text-gray-900">
+              {formData.propagationType === PropagationType.EXTERNAL ? '采购数量' : '预估产量 / 计划数量'}
+            </Label>
+            <p className="text-xs text-gray-500 mb-1">
+              {formData.propagationType === PropagationType.EXTERNAL
+                ? '实际到货的数量，将作为初始库存写入'
+                : '预估产量或计划数量，仅作记录。最终入库数量在「阶段管理 → 完成入库」中分批录入'}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 type="number"

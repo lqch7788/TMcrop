@@ -1592,6 +1592,27 @@ export async function fixMissingSchema(): Promise<void> {
     else seedLog.skip('• seed_sources.print_count:', e.message);
   }
 
+  // 2026-06-19: 添加 initial_count 列（创建种源时填的初始登记数量，固定值）
+  // 区别于 quantity（入库累计 = initial + 累加入库）
+  try {
+    db.run(`ALTER TABLE seed_sources ADD COLUMN initial_count REAL DEFAULT 0`);
+    seedLog.info('✓ seed_sources 表添加 initial_count 列');
+  } catch (e: any) {
+    if (e.message.includes('duplicate column')) seedLog.skip('• seed_sources.initial_count 列已存在');
+    else seedLog.skip('• seed_sources.initial_count:', e.message);
+  }
+  // 老数据回填：initial_count 默认等于 quantity（创建时填的数量等于 initial）
+  try {
+    const stmt = db.prepare(`UPDATE seed_sources SET initial_count = quantity WHERE initial_count = 0 AND quantity > 0 AND deleted_at IS NULL`);
+    stmt.run();
+    const changes = db.exec('SELECT changes()')[0]?.values[0]?.[0] || 0;
+    if (Number(changes) > 0) {
+      seedLog.info(`  ✓ 老种源 initial_count 回填：${changes} 条`);
+    }
+  } catch (e: any) {
+    seedLog.error('initial_count 回填失败:', e.message);
+  }
+
   // P0 #1: 为 seed_sources 表添加 pictures 列（种源图片）
   try {
     db.run(`ALTER TABLE seed_sources ADD COLUMN pictures TEXT DEFAULT '[]'`);
@@ -2591,6 +2612,104 @@ function fixApprovedProductionPlanStatus(): void {
     seedLog.info('  ✓ planting_move_records 表 + 2 索引就绪');
   } catch (e: any) {
     seedLog.error('planting_move_records 创建失败:', e.message);
+  }
+
+  // 2026-06-19: 回流种源 propagation_status 修正（in_stock → completed）
+  // executePropagation 旧代码写 'in_stock'，但这值不属于 PropagationStatus 枚举。
+  // 新代码写 'completed'（已完成整个繁殖过程）；老数据需要一次迁移。
+  // 判别条件：source_origin ∈ {cutting, internal_seed, seedling_split} 且 linkedPlantingId 有值（回流特征）
+  try {
+    const stmt = db.prepare(`
+      UPDATE seed_sources
+      SET propagation_status = 'completed'
+      WHERE deleted_at IS NULL
+        AND propagation_status = 'in_stock'
+        AND source_origin IN ('cutting', 'internal_seed', 'seedling_split')
+        AND linked_planting_id IS NOT NULL
+        AND linked_planting_id != ''
+    `);
+    stmt.run();
+    const changes = db.exec('SELECT changes()')[0]?.values[0]?.[0] || 0;
+    if (Number(changes) > 0) {
+      seedLog.info(`  ✓ 回流种源 propagation_status 修正：${changes} 条 in_stock → completed`);
+    }
+  } catch (e: any) {
+    seedLog.error('回流种源状态修正失败:', e.message);
+  }
+
+  // 2026-06-19: 回流记录 → material_flow_log 老数据回填
+  // executePropagation 旧代码没写 material_flow_log，导致 FlowLogTab 看不到回流链路。
+  // 从 crop_circulation_records 反向生成 material_flow_log 记录：
+  // - PROPAGATION: source=(source_module, source_id, planting_code) → target=(new_source_id, source_code)
+  // - QUANTITY:    source=(source_module, source_id, planting_code) → target=(parent_source_id, source_code)
+  // 判重：business_code = CIRC.id，重复运行不会重复插入（INSERT OR IGNORE）
+  try {
+    const existsCheck = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='material_flow_log'");
+    if (!existsCheck || existsCheck.length === 0) {
+      seedLog.skip('material_flow_log 表未创建，跳过回流流水回填');
+    } else {
+      const stmt = db.prepare(`
+        INSERT OR IGNORE INTO material_flow_log (
+          id, oid, flow_type,
+          crop_code, crop_name, crop_variety,
+          source_type, source_id, source_code, source_quantity, source_unit, source_category,
+          target_type, target_id, target_code, target_quantity, target_unit,
+          business_id, business_code, created_at, created_by
+        )
+        SELECT
+          lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))),
+          (SELECT COALESCE(MAX(oid), 0) FROM material_flow_log) + ROW_NUMBER() OVER (ORDER BY cr.circulation_date, cr.id),
+          cr.source_module || '→seed_source',
+          ss.crop_code, ss.crop_name, ss.crop_variety,
+          cr.source_module, cr.source_id,
+          (SELECT planting_code FROM plantings WHERE id = cr.source_id AND cr.source_module = 'planting'),
+          cr.quantity, cr.unit,
+          CASE cr.source_module WHEN 'planting' THEN 'planting' WHEN 'seedling' THEN 'seedling' ELSE 'seed_source' END,
+          'seed_source',
+          CASE WHEN cr.circulation_type = 'PROPAGATION' THEN cr.new_source_id ELSE cr.parent_source_id END,
+          COALESCE((SELECT source_code FROM seed_sources WHERE id = CASE WHEN cr.circulation_type = 'PROPAGATION' THEN cr.new_source_id ELSE cr.parent_source_id END), ''),
+          cr.quantity, cr.unit,
+          cr.id, cr.id,
+          cr.created_at, COALESCE(cr.operator_id, 'system')
+        FROM crop_circulation_records cr
+        LEFT JOIN seed_sources ss ON ss.id = CASE WHEN cr.circulation_type = 'PROPAGATION' THEN cr.new_source_id ELSE cr.parent_source_id END
+        WHERE cr.is_revoked = 0
+          AND cr.circulation_type IN ('PROPAGATION', 'QUANTITY')
+          AND cr.id NOT IN (SELECT business_code FROM material_flow_log WHERE business_code IS NOT NULL)
+      `);
+      stmt.run();
+      const inserted = db.exec('SELECT changes()')[0]?.values[0]?.[0] || 0;
+      if (Number(inserted) > 0) {
+        seedLog.info(`  ✓ material_flow_log 回流链路回填：${inserted} 条新记录`);
+      } else {
+        seedLog.skip('• material_flow_log 回流回填：无新记录（可能已全部迁移）');
+      }
+    }
+  } catch (e: any) {
+    seedLog.error('material_flow_log 回流回填失败:', e.message);
+  }
+
+  // 2026-06-19: crop_circulation_records.PROPAGATION 老记录 quantity 补全
+  // 旧代码 executePropagation 写入 crop_circulation_records 时漏了 quantity 列
+  // 从对应 seed_sources.quantity 反查补全（回流时新种源的 quantity = input.quantity）
+  try {
+    const stmt = db.prepare(`
+      UPDATE crop_circulation_records
+      SET quantity = (SELECT quantity FROM seed_sources WHERE id = crop_circulation_records.new_source_id)
+      WHERE circulation_type = 'PROPAGATION'
+        AND quantity IS NULL
+        AND new_source_id IS NOT NULL
+        AND (SELECT quantity FROM seed_sources WHERE id = crop_circulation_records.new_source_id) IS NOT NULL
+    `);
+    stmt.run();
+    const changes = db.exec('SELECT changes()')[0]?.values[0]?.[0] || 0;
+    if (Number(changes) > 0) {
+      seedLog.info(`  ✓ crop_circulation_records.PROPAGATION 数量补全：${changes} 条`);
+    } else {
+      seedLog.skip('• crop_circulation_records.PROPAGATION 数量补全：无新记录');
+    }
+  } catch (e: any) {
+    seedLog.error('PROPAGATION 数量补全失败:', e.message);
   }
 }
 
