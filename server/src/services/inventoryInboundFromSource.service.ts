@@ -306,6 +306,19 @@ export async function executeInboundFromSource(
         stockRecord.area_name,
         stockRecord.status, stockRecord.version, stockRecord.create_time, stockRecord.update_time,
       ]);
+
+      // 2026-06-19: 种源行入库时同步扣减种源 remaining_quantity
+      // 业务语义：种源"入库"是产物离开种源进入作物库存（内部使用 → 对外）
+      // 种源剩余必须扣减，否则无论登记多少都不变，不合理
+      // 只对 seed_source 类型扣减，seedling 行不扣（育苗还没"入库"概念）
+      if (input.sourceModule === 'seed_source') {
+        db.run(
+          `UPDATE seed_sources
+           SET remaining_quantity = MAX(0, COALESCE(remaining_quantity, 0) - ?)
+           WHERE id = ? AND deleted_at IS NULL`,
+          [product.harvestQuantity, input.sourceRecordId]
+        );
+      }
       writtenStockIds.push(stockId);
 
       // 步骤 3：写 inventory_inbound_records
