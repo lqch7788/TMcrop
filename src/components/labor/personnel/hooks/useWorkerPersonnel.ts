@@ -61,14 +61,14 @@ export function useWorkerPersonnel() {
   // 统计
   const stats = useMemo(() => ({
     total: workers.length,
-    inService: workers.filter(w => w.status === '在职').length,
-    left: workers.filter(w => w.status === '离职').length,
+    inService: workers.filter(w => w.status === '在职' || w.status === 'active').length,
+    left: workers.filter(w => w.status === '离职' || w.status === 'inactive').length,
     retired: workers.filter(w => w.status === '退休').length,
   }), [workers]);
 
   // 获取部门列表
   const departments = useMemo(() => {
-    const depts = [...new Set(workers.map(w => w.department))];
+    const depts = [...new Set(workers.map(w => w.department || w.departmentName).filter(Boolean))];
     return ['全部', ...depts];
   }, [workers]);
 

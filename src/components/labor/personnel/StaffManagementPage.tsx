@@ -3,8 +3,7 @@
  * 架构：useWorkerStore (Zustand Store → API) + useWorkerPersonnel (筛选Hook)
  */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
+import { Download, Edit2, Plus, Trash2, Users, X } from 'lucide-react';
 import { showAlert, showConfirm } from '@/lib/dialogService';
 import { Worker } from '../../../types';
 import { useWorkerStore } from '@/stores/useWorkerStore';
@@ -261,26 +260,6 @@ export function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-none">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/settings/personnel"
-            className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center hover:from-gray-200 hover:to-gray-300 transition-colors"
-            title="返回人事管理"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </Link>
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
-            <Users className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">人员管理</h1>
-            <p className="text-gray-500">员工信息管理</p>
-          </div>
-        </div>
-      </div>
-
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <div className="bg-blue-50 rounded-lg p-2">
@@ -340,121 +319,94 @@ export function StaffManagementPage() {
         onStatusChange={setStatusFilter}
       />
 
-      {/* 操作栏 */}
-      <div className="flex justify-end">
-        {batchEditMode ? (
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setShowBatchEditModal(true)}
-              className="gap-2"
-            >
-              <Edit2 className="w-4 h-4" />
-              确认编辑
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleCancelBatchEdit}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </div>
-        ) : batchDeleteMode ? (
-          <div className="flex gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => setShowDeleteWarning(true)}
-              className="gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              确认删除
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleCancelBatchDelete}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </div>
-        ) : exportMode ? (
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setShowExportModal(true)}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              确认导出
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleCancelExport}
-              className="gap-2"
-            >
-              <X className="w-4 h-4" /> 取消
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            {canEdit && (
-              <Button
-                variant="default"
-                onClick={handleBatchEditClick}
-                className="gap-2"
-              >
-                <Edit2 className="w-4 h-4" />
-                编辑
-              </Button>
-            )}
-            {canDelete && (
-              <Button
-                variant="destructive"
-                onClick={handleBatchDeleteClick}
-                className="gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                删除
-              </Button>
-            )}
-            {canExport && (
-              <Button
-                onClick={handleExportClick}
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                导出
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                onClick={handleAddWorker}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                新增员工
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* 表格组件 */}
-      {isLoading ? (
-        <div className="bg-white rounded-xl p-8 text-center text-gray-500 shadow-sm">
-          加载中...
-        </div>
-      ) : (
-        <PersonnelTable
-          workers={filteredWorkers}
-          onViewWorker={handleViewWorker}
-          onEditWorker={handleEditWorker}
-          onDeleteWorker={handleDeleteWorker}
-          showBatchSelect={batchEditMode || batchDeleteMode || exportMode}
-          selectedRows={selectedRows}
-          onSelectAll={handleSelectAll}
-          onSelectRow={handleSelectRow}
-        />
-      )}
+      {(() => {
+        // 表格标题栏右侧按钮（与"员工信息"标题同行，靠右排列）
+        // 统一使用 UI 库 Button 规范：size="sm"（h-8），不重复 className="gap-2"（Button 已内置）
+        const headerActions = (
+          <div className="flex gap-2">
+            {batchEditMode ? (
+              <>
+                <Button size="sm" onClick={() => setShowBatchEditModal(true)}>
+                  <Edit2 className="w-4 h-4" />
+                  确认编辑
+                </Button>
+                <Button size="sm" variant="secondary" onClick={handleCancelBatchEdit}>
+                  <X className="w-4 h-4" /> 取消
+                </Button>
+              </>
+            ) : batchDeleteMode ? (
+              <>
+                <Button size="sm" variant="destructive" onClick={() => setShowDeleteWarning(true)}>
+                  <Trash2 className="w-4 h-4" />
+                  确认删除
+                </Button>
+                <Button size="sm" variant="secondary" onClick={handleCancelBatchDelete}>
+                  <X className="w-4 h-4" /> 取消
+                </Button>
+              </>
+            ) : exportMode ? (
+              <>
+                <Button size="sm" onClick={() => setShowExportModal(true)}>
+                  <Download className="w-4 h-4" />
+                  确认导出
+                </Button>
+                <Button size="sm" variant="secondary" onClick={handleCancelExport}>
+                  <X className="w-4 h-4" /> 取消
+                </Button>
+              </>
+            ) : (
+              <>
+                {canCreate && (
+                  <Button size="sm" onClick={handleAddWorker}>
+                    <Plus className="w-4 h-4" />
+                    新增员工
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button size="sm" variant="blue" onClick={handleBatchEditClick}>
+                    <Edit2 className="w-4 h-4" />
+                    编辑
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button size="sm" variant="destructive" onClick={handleBatchDeleteClick}>
+                    <Trash2 className="w-4 h-4" />
+                    删除
+                  </Button>
+                )}
+                {canExport && (
+                  <Button size="sm" variant="default" onClick={handleExportClick}>
+                    <Download className="w-4 h-4" />
+                    导出
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        );
+
+        if (isLoading) {
+          return (
+            <div className="bg-white rounded-xl p-8 text-center text-gray-500 shadow-sm">
+              加载中...
+            </div>
+          );
+        }
+        return (
+          <PersonnelTable
+            workers={filteredWorkers}
+            onViewWorker={handleViewWorker}
+            onEditWorker={handleEditWorker}
+            onDeleteWorker={handleDeleteWorker}
+            headerActions={headerActions}
+            showBatchSelect={batchEditMode || batchDeleteMode || exportMode}
+            selectedRows={selectedRows}
+            onSelectAll={handleSelectAll}
+            onSelectRow={handleSelectRow}
+          />
+        );
+      })()}
 
       {/* 详情弹窗 */}
       {showDetailModal && (

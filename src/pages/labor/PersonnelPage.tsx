@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Users, UserPlus, Briefcase, GraduationCap, FileSignature, Award, UserMinus, Search } from 'lucide-react';
 import { TabHeader } from '../../components/common/TabHeader';
-import { PersonnelManagementPage } from '../../components/labor/personnel/PersonnelManagementPage';
+import { StaffManagementPage } from '../../components/labor/personnel/StaffManagementPage';
 import { TempWorkerPage } from '../../components/labor/tempWorker/TempWorkerPage';
 import { RecruitmentPage } from '../../components/labor/recruitment/RecruitmentPage';
 import { OnboardingPage } from '../../components/labor/onboarding/OnboardingPage';
@@ -42,7 +42,7 @@ export default function PersonnelPage() {
 
       {/* Tab内容区域 */}
       <div>
-        {activeTab === 'staff' && <PersonnelManagementPage />}
+        {activeTab === 'staff' && <StaffManagementPage />}
         {activeTab === 'temp-worker' && <TempWorkerPage />}
         {activeTab === 'recruitment' && <RecruitmentPage />}
         {activeTab === 'recruitment-apply' && <RecruitmentApplyPage />}
