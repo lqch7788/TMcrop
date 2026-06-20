@@ -16,6 +16,7 @@
  */
 import { getDatabase, saveDatabase } from '../db';
 import { formatLocalDateISO } from '../utils/dateUtil';
+import { writeFlowLog } from './flowLogService';
 import { z } from 'zod';
 
 // ============================================================
@@ -268,7 +269,7 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
       ?, ?, ?,
       ?, ?, ?, 0, ?,
       'active', ?, ?, ?, ?,
-      ?, 'in_stock', ?,
+      ?, 'completed', ?,
       ?, ?,
       ?
     )
@@ -286,9 +287,37 @@ function executePropagation(input: CirculationInput, circId: string): Circulatio
 
   db.run(`
     INSERT INTO crop_circulation_records
-    (id, circulation_type, source_module, source_id, parent_source_id, new_source_id, unit, circulation_date, operator_id, notes)
-    VALUES (?, 'PROPAGATION', ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, newSourceId, input.unit, circulationDate, input.operatorId, input.notes])
+    (id, circulation_type, source_module, source_id, parent_source_id, new_source_id, quantity, unit, circulation_date, operator_id, notes)
+    VALUES (?, 'PROPAGATION', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, newSourceId, seedQuantity, input.unit, circulationDate, input.operatorId, input.notes])
+
+  // 2026-06-19: 写 material_flow_log，让 DetailModal「流转记录」Tab 能看到回流链路
+  try {
+    const flowType = `${input.sourceModule || 'seed_source'}→seed_source`
+    writeFlowLog({
+      flow_type: flowType,
+      crop_name: planting?.crop_name || (parent as any)?.crop_name || '',
+      crop_variety: planting?.crop_variety || (parent as any)?.crop_variety || null,
+      crop_code: planting?.crop_code || (parent as any)?.crop_code || null,
+      source_type: input.sourceModule || null,
+      source_id: input.sourceId || null,
+      source_code: input.sourceRecordCode || input.sourceId || null,
+      source_quantity: input.quantity ?? null,
+      source_unit: input.unit || null,
+      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
+      target_type: 'seed_source',
+      target_id: newSourceId,
+      target_code: newSourceCode,
+      target_quantity: input.quantity ?? null,
+      target_unit: input.unit || null,
+      business_id: circId,
+      business_code: circId,
+      created_by: input.operatorId || 'system',
+    })
+  } catch (e: any) {
+    // 写 flow_log 失败不阻断主流程
+    console.warn('[executePropagation] writeFlowLog failed:', e.message)
+  }
 
   saveDatabase()
   return { circulationId: circId, newSourceId }
@@ -306,6 +335,30 @@ function executeQuantityToSeedSource(input: CirculationInput, circId: string): C
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes)
     VALUES (?, 'QUANTITY', ?, ?, ?, ?, ?, ?, ?, ?)
   `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit, circulationDate, input.operatorId, input.notes])
+
+  // 2026-06-19: 写 material_flow_log（数量回填到原种源）
+  try {
+    writeFlowLog({
+      flow_type: `${input.sourceModule || 'seed_source'}→seed_source`,
+      crop_name: '',
+      source_type: input.sourceModule || null,
+      source_id: input.sourceId || null,
+      source_code: input.sourceRecordCode || input.sourceId || null,
+      source_quantity: quantity,
+      source_unit: input.unit || null,
+      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
+      target_type: 'seed_source',
+      target_id: input.parentSourceId || '',
+      target_code: input.parentSourceId || '',
+      target_quantity: quantity,
+      target_unit: input.unit || null,
+      business_id: circId,
+      business_code: circId,
+      created_by: input.operatorId || 'system',
+    })
+  } catch (e: any) {
+    console.warn('[executeQuantityToSeedSource] writeFlowLog failed:', e.message)
+  }
 
   saveDatabase()
   return { circulationId: circId }
@@ -346,6 +399,30 @@ function executeDisposal(input: CirculationInput, circId: string): CirculationRe
     (id, circulation_type, source_module, source_id, parent_source_id, quantity, unit, circulation_date, operator_id, notes, disposition)
     VALUES (?, 'DISPOSAL', ?, ?, ?, ?, ?, ?, ?, ?, 'DISPOSAL')
   `, [circId, input.sourceModule, input.sourceId, input.parentSourceId, quantity, input.unit, circulationDate, input.operatorId, input.notes])
+
+  // 2026-06-19: 写 material_flow_log（处置废弃）— 用 correction 类型记录数量变化
+  try {
+    writeFlowLog({
+      flow_type: 'correction',
+      crop_name: '',
+      source_type: input.sourceModule || null,
+      source_id: input.sourceId || null,
+      source_code: input.sourceRecordCode || input.sourceId || null,
+      source_quantity: -quantity, // 处置为减少
+      source_unit: input.unit || null,
+      source_category: input.sourceModule === 'planting' ? 'planting' : (input.sourceModule === 'seedling' ? 'seedling' : 'seed_source'),
+      target_type: 'disposal',
+      target_id: circId,
+      target_code: circId,
+      target_quantity: null,
+      target_unit: input.unit || null,
+      business_id: circId,
+      business_code: circId,
+      created_by: input.operatorId || 'system',
+    })
+  } catch (e: any) {
+    console.warn('[executeDisposal] writeFlowLog failed:', e.message)
+  }
 
   saveDatabase()
   return { circulationId: circId }
@@ -399,13 +476,25 @@ export function revokeCirculation(circId: string, rawInput: unknown): void {
  * 查询回流记录 (按 sourceId 或 parentSourceId 过滤)
  * 注: sql.js 用 step() + getAsObject() 遍历结果, 不用 .all()
  */
-export function listCirculations(filter: { sourceModule?: string; sourceId?: string; parentSourceId?: string }): any[] {
+export function listCirculations(filter: {
+  sourceModule?: string;
+  sourceId?: string;
+  parentSourceId?: string;
+  newSourceId?: string;
+  seedSourceId?: string;
+}): any[] {
   const db = getDatabase()
   const conditions: string[] = []
   const params: any[] = []
   if (filter.sourceModule) { conditions.push('source_module = ?'); params.push(filter.sourceModule) }
   if (filter.sourceId) { conditions.push('source_id = ?'); params.push(filter.sourceId) }
   if (filter.parentSourceId) { conditions.push('parent_source_id = ?'); params.push(filter.parentSourceId) }
+  if (filter.newSourceId) { conditions.push('new_source_id = ?'); params.push(filter.newSourceId) }
+  // 2026-06-19: 双向上下溯源 — 同时查 parent_source_id 和 new_source_id
+  if (filter.seedSourceId) {
+    conditions.push('(parent_source_id = ? OR new_source_id = ?)')
+    params.push(filter.seedSourceId, filter.seedSourceId)
+  }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const stmt = db.prepare(`SELECT * FROM crop_circulation_records ${where} ORDER BY created_at DESC`)
   stmt.bind(params)
@@ -414,5 +503,53 @@ export function listCirculations(filter: { sourceModule?: string; sourceId?: str
     records.push(stmt.getAsObject())
   }
   stmt.free()
+
+  // 2026-06-19: 补 3 个来源批号字段（来源单号 / 父种源批号 / 子种源批号）
+  // 用单条 SELECT CASE 一次性查，避免每行 3 次往返
+  if (records.length === 0) return records
+  const ids = new Set<string>()
+  records.forEach((r) => {
+    if (r.source_id) ids.add(r.source_id)
+    if (r.parent_source_id) ids.add(r.parent_source_id)
+    if (r.new_source_id) ids.add(r.new_source_id)
+  })
+  const idArr = Array.from(ids)
+  const codeMap = new Map<string, { planting?: string; seedling?: string; seed?: string }>()
+  if (idArr.length > 0) {
+    const placeholders = idArr.map(() => '?').join(',')
+    const pStmt = db.prepare(`SELECT id, planting_code FROM plantings WHERE id IN (${placeholders})`)
+    pStmt.bind(idArr)
+    while (pStmt.step()) {
+      const r: any = pStmt.getAsObject()
+      if (!codeMap.has(r.id)) codeMap.set(r.id, {})
+      codeMap.get(r.id)!.planting = r.planting_code
+    }
+    pStmt.free()
+    const sStmt = db.prepare(`SELECT id, seedling_code FROM seedlings WHERE id IN (${placeholders})`)
+    sStmt.bind(idArr)
+    while (sStmt.step()) {
+      const r: any = sStmt.getAsObject()
+      if (!codeMap.has(r.id)) codeMap.set(r.id, {})
+      codeMap.get(r.id)!.seedling = r.seedling_code
+    }
+    sStmt.free()
+    const ssStmt = db.prepare(`SELECT id, source_code FROM seed_sources WHERE id IN (${placeholders})`)
+    ssStmt.bind(idArr)
+    while (ssStmt.step()) {
+      const r: any = ssStmt.getAsObject()
+      if (!codeMap.has(r.id)) codeMap.set(r.id, {})
+      codeMap.get(r.id)!.seed = r.source_code
+    }
+    ssStmt.free()
+  }
+  // 优先按 source_module 选对应表批号，兜底用 seed_sources
+  records.forEach((r) => {
+    const srcInfo = codeMap.get(r.source_id)
+    r.sourceCode = r.source_module === 'planting' ? srcInfo?.planting
+                 : r.source_module === 'seedling' ? srcInfo?.seedling
+                 : srcInfo?.seed || srcInfo?.planting || srcInfo?.seedling || ''
+    r.parentSourceCode = r.parent_source_id ? (codeMap.get(r.parent_source_id)?.seed || '') : ''
+    r.newSourceCode = r.new_source_id ? (codeMap.get(r.new_source_id)?.seed || '') : ''
+  })
   return records
 }
