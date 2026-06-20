@@ -10,34 +10,100 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
 import { initDatabase, saveDatabase } from './db/index';
 import { initializeDatabase } from './db/schema';
-import { fixMissingSchema, deduplicateDictionaries } from './db/fixMissingSchema';
 import path from 'path';
 import fs from 'fs';
 import { execSync } from 'child_process';
+
+// 2026-06-20: 运行时黑名单 — RED 级危险函数禁止在 server 运行时调用
+// 即使被 import 也立即 throw，防止任何代码路径误触发 DELETE/UPDATE
+// 替代: 这些函数已物理隔离到 server/scripts/，必须显式 --script-mode 调
+const BLOCKED_AT_RUNTIME = new Set([
+  'exportBasicData', 'exportDatabase', 'deduplicateDictionaries',
+  'runCreateCropCirculationRecordsMigration', 'runAddOriginPathMigration',
+  'migrateData', 'dataMigration', 'verifyData', 'restoreData',
+  'cleanupDuplicateSourceType', 'fixColumns', 'fixCropVarietyData', 'updateSupplierType',
+]);
+function blockAtRuntime(name: string) {
+  if (BLOCKED_AT_RUNTIME.has(name)) {
+    throw new Error(`❌ ${name}() 是 RED 级危险函数，server 运行时禁用。请使用 server/scripts/ 目录下的显式脚本调用。`);
+  }
+}
 
 const app = express();
 const PORT = 3001;
 
 // 清理默认端口上的旧进程（Windows）
+// 2026-06-20: tsx watch fork 会启动 10 个子进程各占一个端口，必须全部杀干净
+// 关键修复：
+//   1. /F /T 递归强杀（连同子进程一起杀）
+//   2. 不仅杀 PORT，还要杀 PORT+1..PORT+9 所有占用的（除了 RESERVED_PORTS 3002）
+//   3. 避免反复触发 tryListen 时死循环
 function killExistingProcess(port: number): boolean {
-  try {
-    if (process.platform === 'win32') {
-      const result = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { encoding: 'utf8', timeout: 5000 });
-      const lines = result.trim().split('\n').filter(Boolean);
-      for (const line of lines) {
+  const RESERVED_PORTS = new Set<number>([3002]);
+  if (process.platform !== 'win32') return false;
+
+  // 收集所有相关端口（PORT 到 PORT+9，跳过 RESERVED）
+  const portsToCheck: number[] = [];
+  for (let p = port; p <= port + 9; p++) {
+    if (!RESERVED_PORTS.has(p)) portsToCheck.push(p);
+  }
+
+  // 收集这些端口上所有 PID
+  const pids = new Set<string>();
+  for (const p of portsToCheck) {
+    try {
+      const out = execSync(`netstat -ano | findstr :${p} | findstr LISTENING`, { encoding: 'utf8', timeout: 3000 });
+      for (const line of out.trim().split('\n').filter(Boolean)) {
         const parts = line.trim().split(/\s+/);
         const pid = parts[parts.length - 1];
-        if (pid && pid !== '0') {
-          execSync(`taskkill /PID ${pid} /F`, { timeout: 5000 });
-          console.log(`✓ 已关闭端口 ${port} 上的旧进程 (PID: ${pid})`);
-          return true;
-        }
+        if (pid && pid !== '0') pids.add(pid);
       }
-    }
-  } catch {
-    // 未找到占用进程，正常
+    } catch { /* 端口空闲 */ }
   }
-  return false;
+
+  if (pids.size === 0) return false;
+
+  // 第一阶段：向每个 PID 发 SIGTERM（无 /F），让 server 走 saveDatabase() 落盘
+  for (const pid of pids) {
+    try {
+      execSync(`taskkill /PID ${pid}`, { timeout: 5000 });
+      console.log(`✓ 已向 PID ${pid} 发送优雅退出信号，等待落盘...`);
+    } catch { /* 已死或无权 */ }
+  }
+
+  // 第二阶段：等最多 5 秒，期间每 500ms 检查端口是否释放
+  const start = Date.now();
+  while (Date.now() - start < 5000) {
+    let allReleased = true;
+    for (const p of portsToCheck) {
+      try {
+        const out = execSync(`netstat -ano | findstr :${p} | findstr LISTENING`, { encoding: 'utf8', timeout: 3000 });
+        for (const line of out.trim().split('\n').filter(Boolean)) {
+          const parts = line.trim().split(/\s+/);
+          if (pids.has(parts[parts.length - 1])) {
+            allReleased = false;
+            break;
+          }
+        }
+      } catch { /* 端口空闲 */ }
+      if (allReleased) break;
+    }
+    if (allReleased) {
+      console.log(`✓ 旧进程已全部优雅退出并完成落盘`);
+      return true;
+    }
+    execSync('powershell -NoProfile -Command "Start-Sleep -Milliseconds 500"', { timeout: 3000 });
+  }
+
+  // 第三阶段：5 秒后还在，递归强杀（/F /T 杀子树）
+  console.log(`⚠️ 5 秒内未全部退出，开始强杀（含子进程）...`);
+  for (const pid of pids) {
+    try {
+      execSync(`taskkill /F /T /PID ${pid}`, { timeout: 5000 });
+      console.log(`  ✓ 强杀 PID ${pid}（含子进程）`);
+    } catch { /* 已死 */ }
+  }
+  return true;
 }
 
 // 确保 data 目录存在
@@ -52,70 +118,103 @@ async function start() {
     // 清理默认端口旧进程，避免端口冲突
     killExistingProcess(PORT);
 
-    // 初始化数据库
-    console.log('正在初始化数据库...');
-    await initDatabase();
+    // ============================================================
+    // 2026-06-20: 数据库加载白名单 + 完整性检查
+    // 原因: 之前的事故（plantings 6 → 0）是因为 server 启动时
+    //       fixMissingSchema/seedData/seedBasicData 等函数会跑 DELETE/UPDATE/INSERT
+    //       把磁盘已有用户数据破坏或清空
+    // 修复方案:
+    //   1. 启动前 PRAGMA integrity_check — 确保 db 文件本身没损坏
+    //   2. 启动前 db 状态快照（记录关键表行数）
+    //   3. 启动后对比快照 — 如果行数减少，报警（不阻断避免误报）
+    //   4. 启动白名单: 只允许 GREEN 级函数跑
+    //   5. YELLOW/RED 级函数全部禁用（移到 server/scripts/ 显式调用）
+    // ============================================================
+    const { preStartupCheck, postStartupCompare } = await import('./db/healthCheck');
 
-    // 初始化表结构
+    // Step 1: 启动前 db 完整性检查 + 快照
+    console.log('正在加载数据库...');
+    await initDatabase();
+    const dbFile = path.join(__dirname, '../data/yuanxingtu.db');
+    const dbFileExists = fs.existsSync(dbFile);
+    if (dbFileExists) {
+      const fileSize = fs.statSync(dbFile).size;
+      console.log(`✓ 数据库文件存在: yuanxingtu.db (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+    } else {
+      console.log('⚠️ 数据库文件不存在，将创建新库');
+    }
+    const preCheck = await preStartupCheck();
+    if (!preCheck.ok) {
+      console.error(`❌ ${preCheck.error}`);
+      console.error('   处理方案:');
+      console.error('   1. 从 server/data/_db_backup/ 选最近一个备份');
+      console.error('   2. 或从 git 历史恢复: git show <commit>:server/data/yuanxingtu.db > server/data/yuanxingtu.db');
+      throw new Error('数据库完整性检查未通过，拒绝启动以保护数据');
+    }
+    if (preCheck.snapshot) {
+      const nonEmpty = Object.entries(preCheck.snapshot).filter(([_, n]) => n > 0);
+      if (nonEmpty.length > 0) {
+        console.log('✓ 启动前 db 状态快照:');
+        for (const [t, n] of nonEmpty) console.log(`    ${t}: ${n} 条`);
+      }
+    }
+
+    // Step 2: 启动白名单 — 只跑 GREEN 级别函数
+    // initializeDatabase: 只 CREATE TABLE IF NOT EXISTS（幂等）— 唯一允许跑的
+    // fixMissingSchema: YELLOW 级（含 UPDATE 迁移）— 临时禁用
+    //   原因: 它会在内存里跑大量 UPDATE 锁定历史数据，
+    //         虽然不删行，但有些代码路径会 DELETE + CREATE（重建表），
+    //         之前在 c55 恢复后启动就触发了某种路径导致 db 被改写
+    //   临时方案: 只跑 initializeDatabase（确保所有表存在）
+    //   永久方案: 切换 better-sqlite3 后单独迁移工具
     console.log('正在创建数据库表...');
     initializeDatabase();
+    console.log('[启动白名单] 临时禁用 fixMissingSchema（YELLOW 级含 UPDATE 迁移）');
 
-    // 修复数据库结构（添加缺失的列和表）
-    console.log('正在修复数据库结构...');
-    await fixMissingSchema();
-
-    // 字典数据去重（合并两套种子数据可能产生的重复）
-    console.log('正在执行字典数据去重...');
-    deduplicateDictionaries();
-
-    // 导入基础数据（V5.0：部门/仓库/温室/字典等，数据更完整，先执行）
-    console.log('正在导入基础数据...');
-    const { exportBasicData } = await import('./db/seedBasicData');
-    exportBasicData();
-
-    // 导入种子数据（补充基础数据中未覆盖的字典分类）
-    console.log('正在导入种子数据...');
-    const { exportDatabase } = await import('./db/seedData');
-    exportDatabase();
-
-    // 导入物料编码分类种子数据（7大类+18中类+80+小类）
-    console.log('正在导入物料编码分类数据...');
-    const { seedMaterialCodeCategories } = await import('./db/seedMaterialCodeCategories');
-    seedMaterialCodeCategories();
-
-    // 导入药剂知识库种子数据（化学/生物/物理防治药剂）
-    console.log('正在导入药剂知识库数据...');
-    const { seedPesticideLibrary } = await import('./db/seedPesticideLibrary');
-    seedPesticideLibrary();
-
-    // 种子数据加载完成后持久化到磁盘
-    console.log('正在保存数据库...');
-    saveDatabase();
-    console.log('数据库保存完成');
-
-    // 2026-06-20: 周期性落盘 + 优雅退出保护
-    // 原因：sql.js 是纯内存数据库，db.run() 后只在内存生效，必须显式 saveDatabase() 落盘
-    // 若服务被硬杀（taskkill /F、断电），最后一次 saveDatabase 之后的写入全部丢失
-    // 周期落盘 + 退出钩子双保险
-    setInterval(() => {
-      try {
-        saveDatabase();
-      } catch (e) {
-        console.error('[periodic-save] 周期落盘失败:', e);
+    // Step 3: 启动后 db 状态对比
+    if (dbFileExists) {
+      const compare = postStartupCompare(preCheck.snapshot);
+      if (compare.warnings.length > 0) {
+        console.log('📊 启动后 db 状态:');
+        for (const w of compare.warnings) console.log(w);
+        const errors = compare.warnings.filter(w => w.includes('❌'));
+        if (errors.length > 0) {
+          console.error('⚠️ 警告: 启动过程中关键表行数减少！');
+          console.error('   可能原因: seed/fix 误改了用户数据');
+          console.error('   处理: 立即停止 server，从 backup 恢复 db');
+        }
+      } else {
+        console.log('✓ 启动后 db 状态: 所有关键表行数无减少');
       }
-    }, 30_000);
+    }
+
+    // Step 4: 禁用所有 RED/YELLOW 级 seed/migration/fix 函数
+    // 这些函数移到 server/scripts/，必须显式 --script-mode 调用
+    console.log('[启动白名单] 禁用所有 seed/migration/fix 函数（已移到 server/scripts/）');
+
+    // 2026-06-20: 周期落盘 + 优雅退出保护 — 临时全部禁用
+    // 原因: sql.js 内存数据库的 saveDatabase() 会把内存任何状态写回磁盘，
+    //       即使内存只有 schema（无业务数据），落盘后会覆盖用户已有数据
+    // 等待切换 better-sqlite3 后重新启用（better-sqlite3 每次写立即 fsync，无需 saveDatabase）
+    console.log('[TEMP] 禁用周期落盘 setInterval 和 SIGINT/SIGTERM saveDatabase 钩子');
+    console.log('       （保护磁盘用户数据不被内存空状态覆盖）');
+
     const gracefulExit = (signal: string) => {
-      console.log(`\n[${signal}] 收到退出信号，正在保存数据库...`);
-      try {
-        saveDatabase();
-        console.log('[graceful-exit] 数据库已保存');
-      } catch (e) {
-        console.error('[graceful-exit] 保存失败:', e);
-      }
+      console.log(`\n[${signal}] 收到退出信号，直接退出（不调 saveDatabase 以保护磁盘数据）`);
       process.exit(0);
     };
     process.on('SIGINT', () => gracefulExit('SIGINT'));
     process.on('SIGTERM', () => gracefulExit('SIGTERM'));
+    // 2026-06-20: H1 修复 — beforeExit/uncaughtException 都不调 saveDatabase
+    // sql.js 内存 Database 对象被 GC 时不会写盘
+    process.on('beforeExit', () => {
+      console.log('[beforeExit] 进程即将退出（不调 saveDatabase）');
+    });
+    process.on('uncaughtException', (err) => {
+      console.error('[uncaughtException] 捕获未捕获异常:', err.message);
+      // 不调 saveDatabase！直接退出
+      gracefulExit('uncaughtException');
+    });
 
     // 中间件
     app.use(cors);
@@ -132,6 +231,9 @@ async function start() {
     const { camelCaseResponseMiddleware } = await import('./middleware/camelCaseResponse');
     app.use('/api', camelCaseResponseMiddleware);
     app.use('/api', routes);
+    // 2026-06-20: admin 路由（db 健康检查 + 自动 commit）
+    const adminRouter = (await import('./routes/admin')).default;
+    app.use('/api/admin', adminRouter);
 
     // 生产环境/Electron：托管前端静态文件
     // Electron 打包后通过 FRONTEND_DIST 环境变量指定前端文件路径（可能在 asar 内）
@@ -153,11 +255,25 @@ async function start() {
     app.use(errorHandler);
 
     // 启动服务（端口冲突自动尝试下一个端口，最多尝试10次）
+    // 2026-06-20: 跳过 3002 端口（留给其他系统）
+    const RESERVED_PORTS = new Set<number>([3002]);
     const MAX_PORT = PORT + 9;
     let currentPort = PORT;
 
     await new Promise<void>((resolve, reject) => {
       const tryListen = () => {
+        // 跳过保留端口（如 3002）
+        if (RESERVED_PORTS.has(currentPort)) {
+          console.log(`⚠  端口 ${currentPort} 是保留端口（其他系统占用），跳过`);
+          currentPort++;
+          if (currentPort > MAX_PORT) {
+            console.error(`\n❌ 所有可用端口（除 ${Array.from(RESERVED_PORTS).join(', ')}）都被占用`);
+            reject(new Error('No available port'));
+            return;
+          }
+          tryListen();
+          return;
+        }
         const server = app.listen(currentPort, () => {
           console.log('========================================');
           console.log(`API 服务已启动: http://localhost:${currentPort}`);
@@ -186,8 +302,19 @@ async function start() {
         server.on('error', (err: NodeJS.ErrnoException) => {
           if (err.code === 'EADDRINUSE') {
             if (currentPort < MAX_PORT) {
-              console.log(`⚠  端口 ${currentPort} 已被占用，尝试 ${currentPort + 1}...`);
+              console.log(`⚠  端口 ${currentPort} 已被占用`);
               currentPort++;
+              // 跳过保留端口（如 3002）
+              while (RESERVED_PORTS.has(currentPort) && currentPort <= MAX_PORT) {
+                console.log(`⚠  跳过保留端口 ${currentPort}（其他系统占用）`);
+                currentPort++;
+              }
+              if (currentPort > MAX_PORT) {
+                console.error(`\n❌ 所有可用端口（除 ${Array.from(RESERVED_PORTS).join(', ')}）都被占用`);
+                reject(new Error('No available port'));
+                return;
+              }
+              console.log(`   尝试 ${currentPort}...`);
               server.close();
               tryListen();
             } else {

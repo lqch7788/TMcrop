@@ -184,6 +184,32 @@ export function PlantingTable({
       }
     }
 
+    // 2026-06-20 兜底：后端 GET /plantings 已 LEFT JOIN crop_varieties 带回 categoryName/typeName/varietyName/subVariety1Name
+    // 当 cropCode 在前端 varietyCache 查不到时（如 GS010100200 未在 crop_varieties 表），
+    // 用 record 自身 JOIN 出的字段组装一个伪 CropVariety，确保列表能展示
+    if (record.cropCode && record.categoryName) {
+      return {
+        id: '',
+        cropCode: record.cropCode,
+        categoryCode: '' as any,
+        categoryName: record.categoryName || '',
+        typeCode: '',
+        typeName: record.typeName || '',
+        varietyCode: '',
+        varietyName: record.varietyName || '',
+        subVariety1Code: '',
+        subVariety1Name: record.subVariety1Name || '',
+        subVariety2Code: '',
+        subVariety2Name: '',
+        detailVarietyCode: '',
+        detailVarietyName: '',
+        alias: [],
+        status: 'active',
+        createTime: '',
+        updateTime: '',
+      } as CropVariety;
+    }
+
     // 仍然找不到，返回 null（不应该发生，所有作物必须有编码）
     return null;
   };

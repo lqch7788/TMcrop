@@ -1955,7 +1955,7 @@ export async function fixMissingSchema(): Promise<void> {
 
   // ① crop_circulation_records 新表 + 3 索引 (任务 1)
   try {
-    const { runCreateCropCirculationRecordsMigration } = await import('./migrations/cropCirculationRecords');
+    const { runCreateCropCirculationRecordsMigration } = await import('../../scripts/db-migrations/cropCirculationRecords');
     runCreateCropCirculationRecordsMigration(db);
   } catch (e: any) {
     seedLog.skip('• crop_circulation_records 迁移:', e.message);
@@ -1979,7 +1979,7 @@ export async function fixMissingSchema(): Promise<void> {
 
   // ② plantings.origin_path 两步迁移 (任务 2)
   try {
-    const { runAddOriginPathMigration } = await import('./migrations/originPath');
+    const { runAddOriginPathMigration } = await import('../../scripts/db-migrations/originPath');
     runAddOriginPathMigration(db, { dryRun: false });
   } catch (e: any) {
     seedLog.skip('• plantings.origin_path 迁移:', e.message);
