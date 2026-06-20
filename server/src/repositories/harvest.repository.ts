@@ -6,6 +6,31 @@
 import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 
+/**
+ * 生成采收编号 HS+年月日+4位流水号
+ * 例如 HS202606200001
+ *
+ * 2026-06-20 修复: 之前 harvest_code 字段 NOT NULL 但 service/repository
+ *   都没自动生成,导致独立 /api/harvest 页面创建采收时 500 报错。
+ *   统一在 repository 层兜底生成(与 pest-records.generateRecordCode 风格一致)。
+ */
+function generateHarvestCode(db: any): string {
+  const today = new Date();
+  const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  const prefix = `HS${datePrefix}`;
+  const rows = queryToObjects<{ harvest_code: string }>(
+    db,
+    `SELECT harvest_code FROM harvest_records WHERE harvest_code LIKE ?`,
+    [`${prefix}%`]
+  );
+  let maxSeq = 0;
+  for (const r of rows) {
+    const seq = parseInt((r.harvest_code || '').replace(prefix, ''), 10);
+    if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+  }
+  return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
+}
+
 /** 前端驼峰字段 → 数据库蛇形列名映射（白名单） */
 const FIELD_MAP: Record<string, string> = {
   harvestCode: 'harvest_code',
@@ -276,6 +301,11 @@ export class HarvestRepository {
     const snakeData = toSnakeFields(data as Record<string, any>);
     console.log('[HarvestRepository] create() 转换后的字段:', JSON.stringify(snakeData, null, 2));
     console.log('[HarvestRepository] 原始数据字段:', Object.keys(data));
+
+    // 2026-06-20: harvest_code 自动兜底生成（之前未生成时会导致 NOT NULL 失败）
+    if (!snakeData.harvest_code) {
+      snakeData.harvest_code = generateHarvestCode(db);
+    }
 
     // 将 harvesterIds 数组和 harvesterNames 数组转换为 JSON 字符串存储
     const harvesterIdsJson = snakeData.harvester_ids
