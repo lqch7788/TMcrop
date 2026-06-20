@@ -523,7 +523,7 @@ export function BatchEditModal({
                 <div>
                   <div className="text-xs text-gray-500 mb-1">面积单位</div>
                   <DictSelect
-                    category="unit"
+                    category="area_unit"
                     value={editedData.plantingAreaUnit || currentBatch.plantingAreaUnit || ''}
                     onChange={(v) => handleFieldChange('plantingAreaUnit', v)}
                     placeholder="选择面积单位"

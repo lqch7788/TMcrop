@@ -354,6 +354,7 @@ export function useProductionActions({
               if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
               if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
               if (edited.plantingArea !== undefined) apiData.plantingArea = edited.plantingArea;
+              if (edited.plantingAreaUnit !== undefined) apiData.plantingAreaUnit = edited.plantingAreaUnit;
               if (edited.plantingMode !== undefined) apiData.plantingMode = edited.plantingMode;
               if (edited.startDate !== undefined) apiData.startDate = edited.startDate;
               if (edited.expectedHarvestDate !== undefined) apiData.expectedHarvestDate = edited.expectedHarvestDate;
@@ -528,6 +529,7 @@ export function useProductionActions({
             if (edited.greenhouseName !== undefined) apiData.greenhouseName = edited.greenhouseName;
             if (edited.greenhouseId !== undefined) apiData.greenhouseId = edited.greenhouseId;
             if (edited.plantingArea !== undefined) apiData.plantingArea = edited.plantingArea;
+            if (edited.plantingAreaUnit !== undefined) apiData.plantingAreaUnit = edited.plantingAreaUnit;
             if (edited.plantingMode !== undefined) apiData.plantingMode = edited.plantingMode;
             if (edited.startDate !== undefined) apiData.startDate = edited.startDate;
             if (edited.expectedHarvestDate !== undefined) apiData.expectedHarvestDate = edited.expectedHarvestDate;

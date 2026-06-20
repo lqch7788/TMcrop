@@ -525,7 +525,7 @@ export function CreateBatchModal({
           <div>
             <FormField label="面积单位">
               <DictSelect
-                category="unit"
+                category="area_unit"
                 value={formData.plantingAreaUnit}
                 onChange={(value) => onFormChange('plantingAreaUnit', value)}
               />
