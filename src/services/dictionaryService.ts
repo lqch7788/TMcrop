@@ -354,7 +354,7 @@ interface SaveResult<T> {
 
 /**
  * 获取字典列表
- * 字段映射: 后端 snake_case (category_code, dict_code) → 前端 camelCase (category, code)
+ * 字段映射：后端经 camelCaseResponseMiddleware 输出 camelCase，前端统一读 camelCase
  * 失败直接抛错，禁止 localStorage 兜底（V2.1 铁律）
  */
 export async function getDictionaries(category?: string): Promise<Dictionary[]> {
@@ -367,14 +367,14 @@ export async function getDictionaries(category?: string): Promise<Dictionary[]> 
 
   return data.map((item) => ({
     id: item.id as string,
-    category: item.category_code as string,
-    code: item.dict_code as string,
-    name: item.dict_label as string,
-    displayName: (item.display_name as string) || (item.dict_label as string),
-    sortNumber: item.sort_order as number,
+    category: item.categoryCode as string,
+    code: item.dictCode as string,
+    name: item.dictLabel as string,
+    displayName: (item.displayName as string) || (item.dictLabel as string),
+    sortNumber: item.sortOrder as number,
     status: item.status as string,
-    createdAt: item.created_at as string,
-    updatedAt: item.updated_at as string,
+    createdAt: item.createdAt as string,
+    updatedAt: item.updatedAt as string,
   }));
 }
 
