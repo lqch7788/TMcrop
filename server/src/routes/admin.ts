@@ -8,6 +8,7 @@ import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { diagnose, postStartupCompare, preStartupCheck } from '../db/healthCheck';
+import { acquireWriteLock, releaseWriteLock } from '../db/index';
 
 const router = Router();
 
@@ -76,8 +77,15 @@ router.post(
       const safeTrigger = rawTrigger.replace(/['"\\]/g, '\\$&');
       const msg = `chore(db): auto-snapshot ${timestamp} [trigger: ${safeTrigger}]`;
       try {
-        execSync(`git add "${dbFile}"`, { cwd: ROOT_DIR, stdio: 'pipe' });
-        execSync(`git commit -m "${msg}"`, { cwd: ROOT_DIR, stdio: 'pipe' });
+        // 2026-06-20: 临时解锁写盘（这是 server 运行中唯一合法的写盘路径）
+        acquireWriteLock();
+        try {
+          execSync(`git add "${dbFile}"`, { cwd: ROOT_DIR, stdio: 'pipe' });
+          execSync(`git commit -m "${msg}"`, { cwd: ROOT_DIR, stdio: 'pipe' });
+        } finally {
+          // 立即恢复只读
+          releaseWriteLock();
+        }
         // 2026-06-20: C3 修复: 记录 audit log（写到服务端日志，不入 db 避免日志丢失）
         console.log(`[admin/db-commit] 触发者: ${safeTrigger} | commit: ${msg}`);
         res.json({ success: true, message: '已自动 commit db', committed: true, message_detail: msg });
