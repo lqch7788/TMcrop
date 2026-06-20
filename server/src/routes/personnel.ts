@@ -38,7 +38,7 @@ router.get('/', (req: Request, res: Response) => {
       params.push(position);
     }
 
-    sql += ' ORDER BY create_time DESC';
+    sql += ' ORDER BY created_at DESC';
 
     const offset = (Number(page) - 1) * Number(limit);
     sql += ` LIMIT ${Number(limit)} OFFSET ${offset}`;

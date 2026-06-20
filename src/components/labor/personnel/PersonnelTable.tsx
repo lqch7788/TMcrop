@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { Eye, Edit2, Trash2 } from 'lucide-react';
 import { Worker, WORKER_STATUS_CONFIG, SKILL_LEVEL_CONFIG } from '../../../types';
 import { Button } from '@/components/ui';
@@ -10,6 +11,8 @@ interface PersonnelTableProps {
   onViewWorker: (worker: Worker) => void;
   onEditWorker: (worker: Worker) => void;
   onDeleteWorker: (worker: Worker) => void;
+  // 标题栏右侧操作按钮（由父组件传入）
+  headerActions?: ReactNode;
   // Batch selection props
   showBatchSelect?: boolean;
   selectedRows?: number[];
@@ -33,6 +36,7 @@ export function PersonnelTable({
   onViewWorker,
   onEditWorker,
   onDeleteWorker,
+  headerActions,
   showBatchSelect = false,
   selectedRows = [],
   onSelectAll,
@@ -54,18 +58,21 @@ export function PersonnelTable({
       {/* 表格标题栏 */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">员工信息</h3>
-        {showBatchSelect && (
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSelectAll}
-            >
-              {selectedRows.length === workers.length ? '全不选' : '全选'}
-            </Button>
-            <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {showBatchSelect && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSelectAll}
+              >
+                {selectedRows.length === workers.length ? '全不选' : '全选'}
+              </Button>
+              <span className="text-sm text-gray-500">已选择 {selectedRows.length} 项</span>
+            </>
+          )}
+          {headerActions}
+        </div>
       </div>
 
       <div className="overflow-x-auto">

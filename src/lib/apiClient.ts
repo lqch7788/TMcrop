@@ -66,8 +66,13 @@ class EnhancedApiClient {
         const response = await this.fetch(fullUrl, method, data);
         return response as T;
       } catch (error) {
-        lastError = error as Error;
-        console.warn(`[EnhancedApiClient] 请求失败 (${i + 1}/${maxRetries}):`, error);
+        lastError = error as Error & { status?: number };
+        // HTTP 4xx/5xx 不重试：业务错误（如 500 永久失败、字段名 SQL bug）重试只会浪费 7s+ 退避时间
+        if (typeof lastError.status === 'number') {
+          console.warn(`[EnhancedApiClient] HTTP ${lastError.status} 不重试:`, lastError);
+          throw lastError;
+        }
+        console.warn(`[EnhancedApiClient] 请求失败 (${i + 1}/${maxRetries}):`, lastError);
         if (i < maxRetries - 1) {
           const delay = 1000 * Math.pow(2, i); // 指数退避
           await this.delay(delay);
@@ -202,7 +207,10 @@ class EnhancedApiClient {
         } catch {
           // 忽略解析错误
         }
-        throw new Error(errorMessage);
+        // 附带 status 字段，便于 request() 区分 HTTP 错误（不重试）和网络错误（重试）
+        const httpError = new Error(errorMessage) as Error & { status?: number };
+        httpError.status = response.status;
+        throw httpError;
       }
 
       const result = await response.json();

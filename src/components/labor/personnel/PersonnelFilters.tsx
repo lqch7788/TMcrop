@@ -41,8 +41,8 @@ export function PersonnelFilters({
           onChange={(e) => onDepartmentChange(e.target.value)}
           className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[140px]"
         >
-          {departments.map((dept) => (
-            <option key={dept} value={dept}>{dept}</option>
+          {departments.map((dept, idx) => (
+            <option key={`dept-${idx}-${dept}`} value={dept}>{dept}</option>
           ))}
         </select>
 
