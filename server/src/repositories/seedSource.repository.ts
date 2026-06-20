@@ -105,12 +105,12 @@ export class SeedSourceRepository {
       ss.supplier_id AS supplierId,
       ss.supplier_name AS supplierName,
       ss.purchase_date AS purchaseDate,
-      ss.quantity,
+      ss.quantity,                                  -- 入库累计总量 = initial_count + 累加入库
       ss.unit,
       ss.purchase_price AS unitPrice,
       ss.total_amount AS totalAmount,
-      ss.remaining_quantity AS availableCount,
-      ss.quantity AS initialCount,
+      ss.remaining_quantity AS availableCount,     -- 当前可用
+      COALESCE(ss.initial_count, ss.quantity, 0) AS initialCount,  -- 2026-06-19: 修正 — 创建时填的初始登记数量
       COALESCE(ss.pictures, '[]') AS pictures,
       ss.used_quantity AS usedQuantity,
       ss.remaining_quantity,

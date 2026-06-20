@@ -31,11 +31,16 @@ const CAMEL_TO_SNAKE_MAP: Record<string, string> = {
   supplierId: 'supplier_id',
   supplierName: 'supplier_name',
   purchaseDate: 'purchase_date',
+  // 2026-06-19: 修正字段映射
+  // 前端 initialCount → 后端 initial_count（创建时填的采购/预估数量，固定值）
+  // 前端 availableCount → 后端 remaining_quantity（当前可用，可能被扣减/累加）
+  // 前端 quantity 保留 → 后端 quantity（入库累计总量 = initial + 累加入库）
+  initialCount: 'initial_count',
+  availableCount: 'remaining_quantity',
   quantity: 'quantity',
   unit: 'unit',
   unitPrice: 'purchase_price',
   totalAmount: 'total_amount',
-  availableCount: 'remaining_quantity',
   usedQuantity: 'used_quantity',
   remarks: 'remarks',
   createBy: 'create_by',
@@ -201,7 +206,8 @@ function transformSingleSeedSource(item: BackendSeedSource): SeedSource {
     unitPrice: item.unitPrice || 0,
     totalAmount: item.totalAmount || 0,
     initialCount: item.initialCount || 0,
-    availableCount: item.availableCount || 0,
+    // 2026-06-19: 兼容两种来源 — list API 用 alias availableCount，findById 用 SELECT * 然后 mapRowToCamel 得 remainingQuantity
+    availableCount: (item as any).availableCount ?? (item as any).remainingQuantity ?? 0,
     pictures: pictures,
     remarks: item.remarks || '',
     // status 字段已废弃（2026-06-04 改为实时计算），不再写入前端 SeedSource 对象
