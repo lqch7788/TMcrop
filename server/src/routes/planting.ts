@@ -81,6 +81,11 @@ router.get('/', (req: Request, res: Response) => {
       p.crop_code AS cropCode,
       p.crop_name AS cropName,
       p.crop_variety AS cropVariety,
+      -- 2026-06-20: 兜底品种路径 — 当 crop_code 在前端 varietyCache 查不到时回填
+      cv.category_name AS categoryName,
+      cv.type_name AS typeName,
+      cv.variety_name AS varietyName,
+      cv.sub_variety1_name AS subVariety1Name,
       p.area_id AS areaId,
       p.area_name AS areaName,
       p.root_name AS rootName,
@@ -142,6 +147,7 @@ router.get('/', (req: Request, res: Response) => {
       -- 2026-06-18: 去掉 circulate_to_inventory（4 个去向变 4 个：harvest/circulate/self_seed/dispose）
     FROM plantings p
     LEFT JOIN planting_harvest_records phr ON phr.planting_id = p.id
+    LEFT JOIN crop_varieties cv ON cv.crop_code = p.crop_code
     WHERE p.deleted_at IS NULL`;
     const params: any[] = [];
 

@@ -180,12 +180,10 @@ export function AddModal({
     const dateStr = todayLocal().replace(/-/g, '');
     const traceabilityCode = 'TR' + dateStr + formData.cropName.substring(0, 2);
 
-    // 作物编码 (从品种信息中获取，sourceCode 选择时已自动填入 cropName/cropVariety)
-    const cropInfo = cropVarietyService.getCropCodeInfo(formData.cropName);
-    let cropCode = '';
-    if (cropInfo) {
-      cropCode = `${cropInfo.categoryCode}${cropInfo.typeCode}${cropInfo.subCode}001`;
-    }
+    // 作物编码：优先用种源已有的 cropCode（handleSeedSourceChange/handleSeedlingChange 已填入 selectedCropCode）
+    // 2026-06-20 修复：之前调用 getCropCodeInfo 重新计算，走旧的 produceCodeRule 系统，
+    // 与作物品种库不是同一体系，找不到就返回空 → 列表显示 sourceCode 代替品种名
+    const cropCode = formData.selectedCropCode || '';
 
     // 获取区域信息
     const area = areas.find(a => a.value === formData.areaId);

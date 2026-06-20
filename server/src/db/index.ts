@@ -83,13 +83,26 @@ export function saveDatabase(): void {
 
 /**
  * 关闭数据库连接
+ * 2026-06-20: 禁用隐式 saveDatabase() — 防止任何关闭路径覆盖磁盘用户数据
+ * 改为只 close() 不 save（sql.js 内存数据丢弃即可）
+ * 如果确实需要落盘，调用方必须显式 saveDatabase()
  */
 export function closeDatabase(): void {
   if (db) {
-    saveDatabase();
+    // [2026-06-20] 注释掉 saveDatabase()，避免覆盖磁盘数据
+    // saveDatabase();
     db.close();
     db = null;
   }
 }
+
+// 2026-06-20: 注册 process.on('exit') 钩子，确保 closeDatabase 不写盘
+process.on('exit', () => {
+  if (db) {
+    // 不调 saveDatabase！直接 close
+    try { db.close(); } catch { /* ignore */ }
+    db = null;
+  }
+});
 
 export default { initDatabase, getDatabase, saveDatabase, closeDatabase };
