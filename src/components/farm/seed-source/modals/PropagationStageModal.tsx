@@ -110,12 +110,17 @@ export function PropagationStageModal({
   const handleAdvance = async () => {
     if (!nextStage) return;
     setConfirming(true);
-    const success = await updatePropagationStage(record.id, nextStage);
-    setConfirming(false);
-    if (success) {
+    try {
+      // 2026-06-19: updatePropagationStage 返回 Promise<void>，不能用 if (success) 判断
+      await updatePropagationStage(record.id, nextStage);
       // 2026-06-05: 立即更新本地 stage 状态，否则 modal 内阶段路径不刷新
       setCurrentStage(nextStage);
       onSuccess?.();
+    } catch (e: any) {
+      // 抛错时弹错误提示，finally 确保按钮复位
+      await showAlert(`推进阶段失败：${e?.message || String(e)}`);
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -126,12 +131,16 @@ export function PropagationStageModal({
       return;
     }
     setConfirming(true);
-    const success = await completePropagation(record.id, harvestQuantity);
-    setConfirming(false);
-    if (success) {
+    try {
+      // completePropagation 返回 Promise<void>
+      await completePropagation(record.id, harvestQuantity);
       await loadItems();
       onSuccess?.();
       onClose();
+    } catch (e: any) {
+      await showAlert(`完成入库失败：${e?.message || String(e)}`);
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -144,11 +153,14 @@ export function PropagationStageModal({
     );
     if (!ok) return;
     setConfirming(true);
-    const success = await updatePropagationStage(record.id, PropagationStatus.FAILED);
-    setConfirming(false);
-    if (success) {
+    try {
+      await updatePropagationStage(record.id, PropagationStatus.FAILED);
       setCurrentStage(PropagationStatus.FAILED);
       onSuccess?.();
+    } catch (e: any) {
+      await showAlert(`标记失败失败：${e?.message || String(e)}`);
+    } finally {
+      setConfirming(false);
     }
   };
 

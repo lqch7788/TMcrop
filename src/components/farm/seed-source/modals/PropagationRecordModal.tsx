@@ -323,7 +323,8 @@ export function PropagationRecordModal({
               />
             </div>
 
-            {/* 阶段 */}
+            {/* 阶段 — 仅手动录入的 5 个阶段 + 失败
+                in_stock / completed 是回流/入库的自动终态，不应让用户手动选 */}
             <div>
               <Label className="text-gray-600 text-xs">当前阶段</Label>
               <Select
@@ -334,9 +335,10 @@ export function PropagationRecordModal({
                   <SelectValue placeholder="选择阶段" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(STAGE_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
+                  {(['planned', 'in_progress', 'harvested', 'quality_checked', 'failed'] as const)
+                    .map((k) => (
+                      <SelectItem key={k} value={k}>{STAGE_LABELS[k] || k}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
