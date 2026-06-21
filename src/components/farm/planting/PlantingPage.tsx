@@ -29,7 +29,7 @@ import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { movePlanting } from '@/services/apiPlantingService';
+import { movePlantingV2, MovePlantingInputV2 } from '@/services/apiPlantingService';
 
 export default function PlantingPage() {
 
@@ -282,21 +282,25 @@ export default function PlantingPage() {
     setMarkModalOpen(true);
   };
 
-  // 2026-06-19: 整批级别移入/移出（不再依赖 plant_labels 表）
+  // 2026-06-21: 整批级别移入/移出 V2
   const handleMoveSubmit = async (data: { operationType: 'move_in' | 'move_out'; toAreaId: string; toAreaName: string; quantity: number; operationDate: string; remarks: string }) => {
     if (!currentRecord) {
       await showAlert('未选择种植记录');
       return false
     }
     try {
-      const result = await movePlanting(currentRecord.id, {
+      const input: MovePlantingInputV2 = {
         operationType: data.operationType,
         toAreaId: data.toAreaId,
         toAreaName: data.toAreaName,
+        // 调出时弹窗未回传 from 区，从当前种植记录取（V2 调出必填）
+        fromAreaId: data.operationType === 'move_out' ? (currentRecord as any).areaId : undefined,
+        fromAreaName: data.operationType === 'move_out' ? (currentRecord as any).areaName : undefined,
         quantity: data.quantity,
         operationDate: data.operationDate,
         remarks: data.remarks,
-      })
+      }
+      await movePlantingV2(currentRecord.id, input)
       await showAlert(`${data.operationType === 'move_in' ? '移入' : '移出'}成功：${data.toAreaName}（${data.quantity} 株）`)
       // 刷新种植列表（更新 areaId/areaName 显示）
       await loadItems()
