@@ -2,11 +2,11 @@
  * 施肥数据表格组件
  * 列：施肥编号(链接→详情)、肥料名称(加粗)、肥料类型(Badge)、作物品种、
  *     温室位置、稀释比例、施肥量(绿色加粗)、总成本(amber)、
- *     施肥时间(日期时间)、数据来源(Badge)、操作员、操作区(查看/编辑/删除)
+ *     施肥时间(日期时间)、数据来源(Badge)、操作员、操作区(编辑/删除)
  * IoT记录行有绿色左边框，仅可查看不可编辑删除
  */
 import React from 'react';
-import { Eye, Edit2, Trash2, Plus, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit2, Trash2, Plus, Download, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { FertilizerData } from '@/stores';
 import { getDictItemName } from '@/stores/useDictionaryStore';
 import IotDataIndicator, { IotDeviceStatus } from './IotDataIndicator';
@@ -26,6 +26,8 @@ interface FertilizerTableProps {
   onDelete: (id: string) => void;
   onAdd: () => void;
   onBatchDeleteMode: () => void;
+  onConfirmBatchDelete: () => void;
+  onCancelBatchDelete: () => void;
   onExportMode: () => void;
   iotDevices?: IotDeviceStatus[];
   iotLoading?: boolean;
@@ -44,6 +46,8 @@ export function FertilizerTable({
   onDelete,
   onAdd,
   onBatchDeleteMode,
+  onConfirmBatchDelete,
+  onCancelBatchDelete,
   onExportMode,
   iotDevices = [],
   iotLoading = false,
@@ -143,31 +147,54 @@ export function FertilizerTable({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onAdd}
-          >
-            <Plus className="w-4 h-4" />
-            新增
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onBatchDeleteMode}
-            className={operationMode === 'delete' ? 'bg-red-700' : ''}
-          >
-            <Trash2 className="w-4 h-4" />
-            批量删除
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onExportMode}
-          >
-            <Download className="w-4 h-4" />
-            导出
-          </Button>
+          {operationMode === 'delete' ? (
+            <>
+              <span className="text-sm text-red-700">已选择 {selectedIds.length} 条</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onConfirmBatchDelete}
+                disabled={selectedIds.length === 0}
+              >
+                <Trash2 className="w-4 h-4" />
+                确认删除
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onCancelBatchDelete}
+              >
+                取消
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onAdd}
+              >
+                <Plus className="w-4 h-4" />
+                新增
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onBatchDeleteMode}
+              >
+                <Trash2 className="w-4 h-4" />
+                批量删除
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onExportMode}
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -281,18 +308,9 @@ export function FertilizerTable({
                     <TableCell className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                       {record.operatorName || '-'}
                     </TableCell>
-                    {/* 操作区 */}
+                    {/* 操作区 - 2026-06-21: 删除"查看"按钮（与点施肥编号重复，统一通过编号查看详情） */}
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onDetail(record)}
-                          className="text-gray-500 hover:text-blue-600"
-                          title="查看详情"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
                         {!isIot && (
                           <>
                             <Button

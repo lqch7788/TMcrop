@@ -2,9 +2,10 @@
  * 病虫害防治记录表格组件
  * V12.0 新增 - 折叠形式展示多药剂/多制剂/多叶面肥详情
  * 列：勾选框、编号、防治日期、防治类型（彩色Badge）、作物、防治区域、操作人、操作（展开/编辑/删除）
+ * 2026-06-21: 删除操作列"查看"按钮（与点击编号重复，统一通过编号查看详情）
  */
 import React from 'react';
-import { ChevronDown, ChevronRight, Download, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Edit2, Plus, Trash2, X } from 'lucide-react';
 import { PestControlData, useDictionaryStore } from '@/stores';
 import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
@@ -347,18 +348,9 @@ export function PestControlTable({
                           {record.status === 'completed' ? '已完成' : record.status || '已完成'}
                         </Badge>
                       </TableCell>
-                      {/* 操作 */}
+                      {/* 操作 - 2026-06-21: 删除"查看"按钮（与点击编号重复） */}
                       <TableCell className="px-4 py-3 whitespace-nowrap">
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDetail(record)}
-                            className="text-gray-500 hover:text-blue-600"
-                            title="查看详情"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
