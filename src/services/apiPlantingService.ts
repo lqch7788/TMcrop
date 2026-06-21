@@ -401,3 +401,48 @@ export async function generatePlantCode(): Promise<string> {
 export async function resetPlantings(): Promise<void> {
   await enhancedApiClient.post('/plantings/reset');
 }
+
+/**
+ * 调入/调出 V2 输入（spec 2026-06-21）
+ */
+export interface MovePlantingInputV2 {
+  operationType: 'move_in' | 'move_out';
+  toAreaId?: string;
+  toAreaName: string;
+  fromAreaId?: string;       // 调出必填
+  fromAreaName?: string;     // 调出必填
+  quantity: number;
+  operationDate: string;
+  remarks?: string;
+  // 调入必填
+  sourceType?: 'seed' | 'seedling';
+  sourceId?: string;
+  sourceCode?: string;
+  // 调出必填
+  targetPlantingId?: string;
+  targetAreaId?: string;
+  targetAreaName?: string;
+}
+
+export interface MovePlantingResultV2 {
+  id: string;
+  plantingId: string;
+  toAreaName: string;
+  quantity: number;
+  softWarning: string | null;
+}
+
+/**
+ * 调入/调出 V2
+ * 数据流：API → SQLite DB（事务原子）
+ */
+export async function movePlantingV2(
+  plantingId: string,
+  input: MovePlantingInputV2
+): Promise<MovePlantingResultV2> {
+  const data = await enhancedApiClient.post<MovePlantingResultV2>(
+    `/plantings/${plantingId}/move`,
+    input
+  );
+  return data;
+}
