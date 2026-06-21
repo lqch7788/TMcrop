@@ -275,15 +275,32 @@ router.post('/:id/move', (req, res) => {
       return res.status(400).json({ success: false, error: '请选择目标区域' });
     }
 
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ success: false, error: '数量必须 > 0' });
+    }
+
     const db = getDatabase();
-    // 查询原区域
-    const current = queryToObjects<any>(db, `SELECT id, planting_code, area_id, area_name FROM plantings WHERE id = ?`, [id]);
+    // 查询当前 planting（拿 planting_quantity 用于 move_out 上限校验）
+    // 2026-06-21: queryToObjects 已经把 snake_case 转 camelCase,所以读 plantingQuantity
+    const current = queryToObjects<any>(db,
+      `SELECT id, planting_code, area_id, area_name, planting_quantity FROM plantings WHERE id = ?`, [id]);
     if (current.length === 0) {
       return res.status(404).json({ success: false, error: '种植记录不存在' });
     }
     const cur = current[0];
+    const currentQty = Number(cur.plantingQuantity) || 0;
+
+    // 2026-06-21: 移出上限校验 — 不能超过当前种植数量
+    if (operationType === 'move_out' && qty > currentQty) {
+      return res.status(400).json({
+        success: false,
+        error: `移出数量 ${qty} 超过当前种植数量 ${currentQty}`,
+      });
+    }
 
     // 1. 写入 planting_move_records
+    // 2026-06-21: cur.planting_code/area_id/area_name 必须用 camelCase(queryToObjects 已转换)
     const moveId = `MOV_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
     db.run(
@@ -291,13 +308,13 @@ router.post('/:id/move', (req, res) => {
       [
         moveId,
         id,
-        cur.planting_code,
+        cur.plantingCode,
         operationType,
-        cur.area_id,
-        cur.area_name,
+        cur.areaId,
+        cur.areaName,
         toAreaId || '',
         toAreaName,
-        Number(quantity) || 0,
+        qty,
         operationDate || now.slice(0, 10),
         // 2026-06-19: 操作员从 req.user 取（中间件注入），缺省 system
         (req as any).user?.realName || (req as any).user?.username || 'system',
@@ -306,16 +323,29 @@ router.post('/:id/move', (req, res) => {
       ],
     );
 
-    // 2. 更新 plantings.areaId/areaName
-    db.run(`UPDATE plantings SET area_id = ?, area_name = ?, update_time = ? WHERE id = ?`, [
-      toAreaId || '',
-      toAreaName,
-      now,
-      id,
-    ]);
+    // 2. 更新 plantings：area + planting_quantity（事务原子）
+    // 2026-06-21: 修复数量不变化 bug — 之前只更新 area,不动 quantity
+    db.exec('BEGIN');
+    try {
+      const delta = operationType === 'move_out' ? -qty : qty;
+      db.run(
+        `UPDATE plantings SET area_id = ?, area_name = ?, planting_quantity = ?, update_time = ? WHERE id = ?`,
+        [
+          toAreaId || '',
+          toAreaName,
+          Math.max(0, currentQty + delta),  // 保底: 防止 race 条件出现负数
+          now,
+          id,
+        ],
+      );
+      db.exec('COMMIT');
+    } catch (txErr) {
+      try { db.exec('ROLLBACK') } catch {}
+      throw txErr;
+    }
 
     saveDatabase();
-    res.json({ success: true, data: { id: moveId, plantingId: id, toAreaName } });
+    res.json({ success: true, data: { id: moveId, plantingId: id, toAreaName, quantity: qty } });
   } catch (error: any) {
     console.error('移入/移出失败:', error);
     res.status(500).json({ success: false, error: error?.message || '移入/移出失败' });

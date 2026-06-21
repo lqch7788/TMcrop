@@ -236,8 +236,15 @@ export default function PlantingMoveModal({
           <Label className="text-gray-900">操作日期</Label>
           <DatePicker
             className="w-full"
-            value={form.operationDate}
-            onChange={(date) => handleChange('operationDate', date || todayLocal())}
+            // 2026-06-21: 修复 DatePicker prop 错配 — 之前用 `value` 字符串传入但组件只接受 `selected: Date`
+            // 表现：input 显示空字符串、点不动日历选择器
+            selected={form.operationDate ? new Date(form.operationDate) : undefined}
+            onChange={(date) =>
+              handleChange(
+                'operationDate',
+                date ? date.toISOString().slice(0, 10) : todayLocal()
+              )
+            }
             disabled={isHarvested}
           />
         </div>
