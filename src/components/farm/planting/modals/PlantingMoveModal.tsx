@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Button, UnifiedModal, Select, Label, Input, TextArea } from '@/components/ui';
-import { movePlantingV2, MovePlantingInputV2 } from '@/services/apiPlantingService';
+import { MovePlantingInputV2 } from '@/services/apiPlantingService';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { Sprout, AlertTriangle } from 'lucide-react';
@@ -9,10 +9,10 @@ interface PlantingMoveModalProps {
   isOpen: boolean;
   planting: any | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSubmit: (input: MovePlantingInputV2) => Promise<boolean | void> | void;
 }
 
-export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSaved }: PlantingMoveModalProps) {
+export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSubmit }: PlantingMoveModalProps) {
   const [opType, setOpType] = useState<'move_in' | 'move_out'>('move_in');
   const [toAreaId, setToAreaId] = useState('');
   const [toAreaName, setToAreaName] = useState('');
@@ -78,13 +78,8 @@ export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSaved
         targetAreaId: opType === 'move_out' ? toAreaId : undefined,
         targetAreaName: opType === 'move_out' ? toAreaName : undefined,
       };
-      const result = await movePlantingV2(planting.id, input);
-      if (result.softWarning) {
-        await showAlert(result.softWarning);
-      } else {
-        await showAlert(`${opType === 'move_in' ? '调入' : '调出'}成功：${toAreaName}（${quantity} 株）`);
-      }
-      onSaved();
+      // 弹窗只构造 V2 input 并交给父组件处理业务调用（统一在 handleMoveSubmit 里调 movePlantingV2）
+      await onSubmit(input);
       onClose();
     } catch (e: any) {
       showAlert(`操作失败：${e?.message || '未知错误'}`);
