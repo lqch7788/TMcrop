@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button, DeleteConfirmModal } from '@/components/ui';
-import { Sprout, Trash2, X } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 import { useFertilizerStore, FertilizerData, useIotStore, useToastStore } from '@/stores';
 import { FertilizerFilter } from './FertilizerFilter';
 import { FertilizerTable } from './FertilizerTable';
@@ -311,27 +311,7 @@ export default function FertilizerPage() {
         onReset={handleReset}
       />
 
-      {/* 批量删除操作栏 */}
-      {operationMode === 'delete' && selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          <span className="text-sm text-red-700">已选择 {selectedIds.length} 条记录</span>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBatchDelete}
-          >
-            <Trash2 className="w-4 h-4" />
-            确认删除
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => { setOperationMode('normal'); setSelectedIds([]); }}
-          >
-            <X className="w-4 h-4" /> 取消
-          </Button>
-        </div>
-      )}
+      {/* 批量删除操作栏 - 已移除：2026-06-21 改为在 FertilizerTable 工具栏原"批量删除"位置直接显示确认/取消按钮 */}
 
       {/* 错误提示 */}
       {error && (
@@ -352,6 +332,8 @@ export default function FertilizerPage() {
         onDelete={handleDelete}
         onAdd={handleAdd}
         onBatchDeleteMode={handleBatchDeleteMode}
+        onConfirmBatchDelete={handleBatchDelete}
+        onCancelBatchDelete={() => { setOperationMode('normal'); setSelectedIds([]); }}
         onExportMode={handleExport}
         iotDevices={iotDevices}
         iotLoading={isLoading}

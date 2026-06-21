@@ -40,6 +40,7 @@ const FLOW_TYPE_LABELS: Record<string, string> = {
   'correction': '修正',
   'manual_correction': '手动修正',
   'plan→seed_source': '计划→种源',
+  'planting→seed_source': '种植→种源',
   'other': '其他',
 };
 
@@ -61,6 +62,7 @@ const FLOW_TYPE_COLOR: Record<string, string> = {
   'correction':           'bg-gray-500',
   'manual_correction':    'bg-gray-500',
   'plan→seed_source':     'bg-sky-500',
+  'planting→seed_source': 'bg-teal-500',
   'other':                'bg-slate-500',
 };
 
@@ -81,6 +83,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   manual: '手动',
   gift: '赠送',
   transfer: '调拨',
+  planting: '种植',
   other: '其他',
 };
 
@@ -107,6 +110,8 @@ const TYPE_LABELS: Record<string, string> = {
   seed: '种源',
   external_seed: '外部种',
   external: '外部',
+  internal_planting: '内部种植',
+  transfer_out: '调拨出库',
   correction: '修正',
 };
 const CODE_PREFIX_TYPE: Record<string, string> = {
@@ -133,6 +138,8 @@ const TYPE_BADGE_COLOR: Record<string, string> = {
   库存: 'bg-cyan-100 text-cyan-700',
   外部种: 'bg-purple-100 text-purple-700',
   外部: 'bg-purple-100 text-purple-700',
+  内部种植: 'bg-teal-100 text-teal-700',
+  调拨出库: 'bg-rose-100 text-rose-700',
   阶段: 'bg-slate-100 text-slate-700',
   区域: 'bg-slate-100 text-slate-700',
   农场: 'bg-slate-100 text-slate-700',

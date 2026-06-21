@@ -42,19 +42,32 @@ interface FlowLogTabProps {
 
 const FLOW_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   'seed_source→seedling': { label: '种源 → 育苗', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  'seed_source→planting': { label: '种源 → 种植', color: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
   'seedling→planting':    { label: '育苗 → 种植', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   'planting→harvest':     { label: '种植 → 采收', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  'seedling→harvest':     { label: '育苗 → 采收', color: 'bg-green-100 text-green-800 border-green-300' },
   'external→seedling':    { label: '外部种源 → 育苗', color: 'bg-purple-100 text-purple-800 border-purple-300' },
   'external→planting':    { label: '外部 → 种植', color: 'bg-pink-100 text-pink-800 border-pink-300' },
+  'inventory→external':   { label: '库存 → 出库', color: 'bg-red-100 text-red-800 border-red-300' },
+  'inventory→planting':   { label: '库存 → 种植', color: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
+  'inventory→seedling':   { label: '库存 → 育苗', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+  'inventory→seed_source':{ label: '库存 → 种源', color: 'bg-sky-100 text-sky-800 border-sky-300' },
+  'seed_source→harvest':  { label: '种源 → 采收', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  'plan→seed_source':     { label: '计划 → 种源', color: 'bg-lime-100 text-lime-800 border-lime-300' },
+  'planting→seed_source': { label: '种植 → 种源', color: 'bg-rose-100 text-rose-800 border-rose-300' },
   'correction':           { label: '数量修正', color: 'bg-red-100 text-red-800 border-red-300' },
   'default':              { label: '其他流转', color: 'bg-gray-100 text-gray-800 border-gray-300' },
 };
 
 const SOURCE_CATEGORY_LABELS: Record<string, string> = {
   'self_produced': '自产',
-  'external_purchase': '外采',
+  'external_purchase': '外购',
   'asexual': '无性繁殖',
   'external': '外部',
+  'manual': '手动',
+  'planting': '种植',
+  'gift': '赠送',
+  'transfer': '调拨',
   'other': '其他',
 };
 
