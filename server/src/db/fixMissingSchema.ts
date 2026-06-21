@@ -7,6 +7,7 @@
 import { getDatabase, saveDatabase, initDatabase } from './index';
 import { seedLog } from '../lib/seedLogger';
 import { createMaterialFlowLogTable } from './materialFlowLog';
+import { createPlantingAreaStocksTable, migrateToAreaStocks } from './plantingAreaStocks';
 
 /**
  * 修复数据库结构 - 添加缺失的列和表
@@ -2271,6 +2272,10 @@ export async function fixMissingSchema(): Promise<void> {
   } catch (e: any) {
     seedLog.error(`  [P1-fix] ✗ crop_circulation_records 重建失败: ${e.message}`);
   }
+
+  // 2026-06-21: 种植 stocks 表（任务 1+2 引入）
+  createPlantingAreaStocksTable(db);
+  migrateToAreaStocks(db);
 
   saveDatabase();
 }
