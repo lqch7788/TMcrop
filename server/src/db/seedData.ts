@@ -5724,6 +5724,9 @@ export function exportDatabase() {
   seedInboundRecords();
   seedInventoryStock();
 
+  // 2026-06-21: 种植调入/调出 V2 一次性补建 planting_area_stocks 种子
+  seedPlantingAreaStocks();
+
   // 2026-06-04: 农事管理 workLog 数据迁移（V2.1 铁律改造）
   // 前端 usePersistentWorkLogs.ts INITIAL_WORK_LOGS 7 条同步到后端
   seedWorkLogInitialData();
@@ -5787,4 +5790,47 @@ function seedWorkLogInitialData() {
   }
   stmt.free();
   seedLog.info(`[seedData] workLog 种子数据已迁移: ${INITIAL_WORK_LOGS.length} 条`);
+}
+
+/**
+ * 2026-06-21：一次性补建 planting_area_stocks 种子
+ * 数据源：plantings.planting_quantity
+ * 行为：仅当 planting_area_stocks 表为空且存在 plantings 数据时插入
+ * 说明：fixMissingSchema 当前被启动白名单禁用，迁移函数未自动跑；
+ *       本函数在 seedDatabase 流程里作为兜底，幂等（NOT EXISTS 保护）。
+ */
+function seedPlantingAreaStocks() {
+  const db = getDatabase();
+
+  // 表不存在则跳过（schema 未就绪场景）
+  const tableCheck = db.exec(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='planting_area_stocks'"
+  );
+  if (!tableCheck[0] || !tableCheck[0].values.length) {
+    seedLog.skip('[seedData] planting_area_stocks 表不存在，跳过种子迁移');
+    return;
+  }
+
+  db.run(`
+    INSERT INTO planting_area_stocks
+      (id, planting_id, area_id, area_name, quantity, source_type, source_code, operation_date, create_time, update_time)
+    SELECT
+      'STK_seed_' || id,
+      id,
+      COALESCE(NULLIF(area_id, ''), 'UNASSIGNED'),
+      COALESCE(NULLIF(area_name, ''), '未分配'),
+      planting_quantity,
+      'seed',
+      planting_code,
+      COALESCE(planting_date, date('now')),
+      COALESCE(create_time, datetime('now')),
+      datetime('now')
+    FROM plantings
+    WHERE planting_quantity > 0
+      AND NOT EXISTS (SELECT 1 FROM planting_area_stocks s WHERE s.planting_id = plantings.id)
+  `);
+
+  const countResult = db.exec('SELECT COUNT(*) as count FROM planting_area_stocks');
+  const count = Number(countResult[0]?.values[0]?.[0]) || 0;
+  seedLog.info(`[seedData] planting_area_stocks 当前总数: ${count}`);
 }
