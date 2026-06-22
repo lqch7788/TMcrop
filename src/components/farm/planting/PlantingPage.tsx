@@ -28,7 +28,7 @@ import { useAuthPermission } from '../../../hooks/usePermission';
 import { DeleteConfirmModal } from '@/components/ui';
 import { enhancedApiClient } from '../../../lib/apiClient';
 import { showAlert } from '@/lib/dialogService';
-import { movePlantingV2, MovePlantingInputV2 } from '@/services/apiPlantingService';
+import type { MovePlantingInputV2 } from '@/services/apiPlantingService';
 
 export default function PlantingPage() {
 
@@ -281,22 +281,10 @@ export default function PlantingPage() {
     setMarkModalOpen(true);
   };
 
-  // 2026-06-21: 整批级别移入/移出 V2（弹窗已构造完整 MovePlantingInputV2，直接透传）
-  const handleMoveSubmit = async (input: MovePlantingInputV2) => {
-    if (!currentRecord) {
-      await showAlert('未选择种植记录');
-      return false
-    }
-    try {
-      await movePlantingV2(currentRecord.id, input)
-      await showAlert(`${input.operationType === 'move_in' ? '移入' : '移出'}成功：${input.toAreaName}（${input.quantity} 株）`)
-      // 刷新种植列表（更新 areaId/areaName 显示）
-      await loadItems()
-      return true
-    } catch (e: any) {
-      await showAlert(`操作失败：${e?.message || '未知错误'}`)
-      return false
-    }
+  // 2026-06-22: 弹窗内部已调 movePlantingV2；handleMoveSubmit 仅用于通知父组件刷新列表
+  const handleMoveSubmit = async (_input: MovePlantingInputV2) => {
+    await loadItems();
+    return true;
   };
 
   const handleMarkSubmit = async (markId: number, labelIds: number[]) => {
@@ -644,7 +632,8 @@ export default function PlantingPage() {
       {currentRecord && (
         <PlantingMoveModal
           isOpen={moveModalOpen}
-          planting={currentRecord}
+          initialPlanting={currentRecord}
+          availablePlantings={plantings}
           onClose={() => setMoveModalOpen(false)}
           onSubmit={handleMoveSubmit}
         />

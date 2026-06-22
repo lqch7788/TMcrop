@@ -1,23 +1,27 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Button, UnifiedModal, Select, Label, Input, TextArea } from '@/components/ui';
-import { MovePlantingInputV2 } from '@/services/apiPlantingService';
+import { Button, UnifiedModal, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Label, Input, TextArea } from '@/components/ui';
+import { MovePlantingInputV2, movePlantingV2 } from '@/services/apiPlantingService';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
 import { Sprout, AlertTriangle } from 'lucide-react';
 
 interface PlantingMoveModalProps {
   isOpen: boolean;
-  planting: any | null;
+  // 默认选中的订单（操作列点中的那行）；弹窗内可改成其他订单
+  initialPlanting: any | null;
+  // 所有可选订单（来自 usePlantingStore）
+  availablePlantings: any[];
   onClose: () => void;
+  // 弹窗内部已调 movePlantingV2，onSubmit 只用于通知父组件刷新
   onSubmit: (input: MovePlantingInputV2) => Promise<boolean | void> | void;
 }
 
-export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSubmit }: PlantingMoveModalProps) {
+export default function PlantingMoveModalV2({ isOpen, initialPlanting, availablePlantings, onClose, onSubmit }: PlantingMoveModalProps) {
   const [opType, setOpType] = useState<'move_in' | 'move_out'>('move_in');
   const [toAreaId, setToAreaId] = useState('');
   const [toAreaName, setToAreaName] = useState('');
-  const [fromAreaId, setFromAreaId] = useState(planting?.areaId || '');
-  const [fromAreaName, setFromAreaName] = useState(planting?.areaName || '');
+  const [fromAreaId, setFromAreaId] = useState(initialPlanting?.areaId || '');
+  const [fromAreaName, setFromAreaName] = useState(initialPlanting?.areaName || '');
   const [quantity, setQuantity] = useState<number>(0);
   const [operationDate, setOperationDate] = useState(todayLocal());
   const [remarks, setRemarks] = useState('');
@@ -32,26 +36,48 @@ export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSubmi
   const [targetAreaId, setTargetAreaId] = useState('');
   const [targetAreaName, setTargetAreaName] = useState('');
 
+  // 用户当前选中的订单 ID（可改）
+  const [selectedPlantingId, setSelectedPlantingId] = useState<string>('');
+
   const [submitting, setSubmitting] = useState(false);
   const [softWarning, setSoftWarning] = useState<string | null>(null);
 
-  // 重置
+  // 重置：弹窗打开时把 selectedPlantingId 初始化为 initialPlanting.id
   useEffect(() => {
-    if (isOpen && planting) {
+    if (isOpen && initialPlanting) {
       setOpType('move_in');
       setToAreaId(''); setToAreaName('');
-      setFromAreaId(planting.areaId || ''); setFromAreaName(planting.areaName || '');
+      setFromAreaId(initialPlanting.areaId || ''); setFromAreaName(initialPlanting.areaName || '');
       setQuantity(0);
       setOperationDate(todayLocal());
       setRemarks('');
       setSourceType('seed'); setSourceId(''); setSourceCode('');
       setTargetPlantingId(''); setTargetAreaId(''); setTargetAreaName('');
+      setSelectedPlantingId(String(initialPlanting.id));
       setSoftWarning(null);
     }
-  }, [isOpen, planting]);
+  }, [isOpen, initialPlanting]);
+
+  // 用户改了 selectedPlantingId 后，调出模式下"调出区域"应该跟着新订单的主区域走
+  useEffect(() => {
+    if (!selectedPlantingId) return;
+    const p = availablePlantings.find(x => String(x.id) === String(selectedPlantingId));
+    if (p && opType === 'move_out') {
+      setFromAreaId(p.areaId || '');
+      setFromAreaName(p.areaName || '');
+    }
+  }, [selectedPlantingId, opType, availablePlantings]);
 
   const handleSubmit = async () => {
-    if (!planting) return;
+    if (!selectedPlantingId) {
+      await showAlert('请选择种植订单');
+      return;
+    }
+    const targetRecord = availablePlantings.find(x => String(x.id) === String(selectedPlantingId));
+    if (!targetRecord) {
+      await showAlert('所选订单不存在，请刷新后重试');
+      return;
+    }
     if (quantity <= 0) {
       showAlert('数量必须 > 0');
       return;
@@ -78,7 +104,10 @@ export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSubmi
         targetAreaId: opType === 'move_out' ? toAreaId : undefined,
         targetAreaName: opType === 'move_out' ? toAreaName : undefined,
       };
-      // 弹窗只构造 V2 input 并交给父组件处理业务调用（统一在 handleMoveSubmit 里调 movePlantingV2）
+      // 弹窗内部直接调 movePlantingV2：targetRecord 是用户最新选中的订单
+      await movePlantingV2(String(targetRecord.id), input);
+      await showAlert(`${opType === 'move_in' ? '调入' : '调出'}成功：${toAreaName}（${quantity} 株）`);
+      // 通知父组件刷新列表
       await onSubmit(input);
       onClose();
     } catch (e: any) {
@@ -114,10 +143,21 @@ export default function PlantingMoveModalV2({ isOpen, planting, onClose, onSubmi
           </div>
         </div>
 
-        {/* 调出订单（显示只读） */}
+        {/* 调入/调出订单 — 可改 Select */}
         <div>
           <Label>调入/调出订单</Label>
-          <Input value={planting?.plantingCode || ''} disabled />
+          <Select value={selectedPlantingId} onValueChange={setSelectedPlantingId}>
+            <SelectTrigger className="border-gray-300">
+              <SelectValue placeholder="选择种植订单" />
+            </SelectTrigger>
+            <SelectContent>
+              {availablePlantings.map(p => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.plantCode} - {p.cropName} ({p.areaName})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* 调入特有字段 */}
