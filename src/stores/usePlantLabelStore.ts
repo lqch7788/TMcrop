@@ -22,18 +22,19 @@ export interface PlantLabel {
   create_time: string;
 }
 
+// P0 修复：履历字段统一 camelCase（与 API 响应一致 — Memory "API camelCase 响应中间件"）
 export interface PlantLabelResume {
   id: number;
-  label_id: number;
-  operation_type: 'move_in' | 'move_out' | 'mark';
-  from_area_name: string | null;
-  to_area_name: string | null;
-  mark_id: number | null;
-  mark_name: string | null;
-  mark_color: string | null;
-  operation_date: string;
-  operator_name: string | null;
-  create_time: string;
+  labelId: number;
+  operationType: 'move_in' | 'move_out' | 'mark';
+  fromAreaName: string | null;
+  toAreaName: string | null;
+  markId: number | null;
+  markName: string | null;
+  markColor: string | null;
+  operationDate: string;
+  operatorName: string | null;
+  createTime: string;
 }
 
 export interface PlantMark {
@@ -132,12 +133,11 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   loadResumes: async (labelId) => {
     try {
       const res = await enhancedApiClient.get(`/plant-labels/${labelId}/resumes`);
-      if (res.success) {
-        set((s) => ({ resumeMap: { ...s.resumeMap, [labelId]: res.data } }));
-        return res.data as PlantLabelResume[];
-      }
-    } catch { /* ignore */ }
-    return [];
+      // 兼容两种返回：apiClient 自动解包后 res 是数组，未解包时是 {success, data}
+      const list: PlantLabelResume[] = Array.isArray(res) ? res : ((res as any)?.data || []);
+      set((s) => ({ resumeMap: { ...s.resumeMap, [labelId]: list } }));
+      return list;
+    } catch { return []; }
   },
 
   /** 批量加载多个标签的履历 */
@@ -147,7 +147,9 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
     await Promise.all(labelIds.map(async (id) => {
       try {
         const res = await enhancedApiClient.get(`/plant-labels/${id}/resumes`);
-        if (res.success) map[id] = res.data;
+        // 兼容两种返回（apiClient 自动解包 vs 未解包）
+        const list: PlantLabelResume[] = Array.isArray(res) ? res : ((res as any)?.data || []);
+        map[id] = list;
       } catch { map[id] = []; }
     }));
     set((s) => ({

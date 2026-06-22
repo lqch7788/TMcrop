@@ -216,13 +216,13 @@ export default function SeedlingLabelManageModal({
               <LabelResumeTimeline
                 entries={selectedResumes.map((r): LabelResumeEntry => ({
                   id: r.id,
-                  operationType: r.operation_type,
-                  fromAreaName: r.from_area_name || undefined,
-                  toAreaName: r.to_area_name || undefined,
-                  operationDate: r.operation_date,
-                  markName: r.mark_name || undefined,
-                  markColor: r.mark_color || undefined,
-                  operatorName: r.operator_name || undefined,
+                  operationType: r.operationType,
+                  fromAreaName: r.fromAreaName || undefined,
+                  toAreaName: r.toAreaName || undefined,
+                  operationDate: r.operationDate,
+                  markName: r.markName || undefined,
+                  markColor: r.markColor || undefined,
+                  operatorName: r.operatorName || undefined,
                 }))}
                 currentLabel={selectedLabel?.labelNumber}
                 currentMark={undefined}
