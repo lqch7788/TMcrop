@@ -75,13 +75,22 @@ interface PlantLabelState {
   marksLoading: boolean;
 
   // 操作
-  loadLabels: (plantingId?: string) => Promise<void>;
+  loadLabels: (filter?: { plantingId?: string; seedlingId?: string }) => Promise<void>;
   loadResumes: (labelId: number) => Promise<PlantLabelResume[]>;
   loadResumesForLabels: (labelIds: number[]) => Promise<void>;
   loadMarks: () => Promise<void>;
 
   submitMove: (labelId: number, data: MoveFormData) => Promise<boolean>;
   submitMark: (markId: number, labelIds: number[]) => Promise<boolean>;
+
+  /** P0: 前端批量入库（保留前端 labelNumber 规则） */
+  batchCreateLabels: (labels: Array<{
+    labelNumber: string;
+    seedlingId?: string | null;
+    plantingId?: string | null;
+    moveInAreaName?: string | null;
+    moveInDate?: string | null;
+  }>) => Promise<{ inserted: number; insertedIds: number[] } | null>;
 
   /** 批量生成标签 */
   generateBatchLabels: (params: {
@@ -103,11 +112,12 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   marksLoading: false,
 
   /** 加载标签列表 */
-  loadLabels: async (plantingId) => {
+  loadLabels: async (filter) => {
     set({ labelsLoading: true });
     try {
       const params = new URLSearchParams();
-      if (plantingId) params.set('planting_id', plantingId);
+      if (filter?.plantingId) params.set('planting_id', filter.plantingId);
+      if (filter?.seedlingId) params.set('seedling_id', filter.seedlingId);
       params.set('limit', '200');
       const res = await enhancedApiClient.get(`/plant-labels?${params.toString()}`);
       // 2026-06-05: enhancedApiClient 已自动解包 data 字段；res 实际是数组或 {success, data, meta}，兼容两种
@@ -211,6 +221,20 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   generateBatchLabels: async (params) => {
     try {
       const res = await enhancedApiClient.post('/plant-labels/generate-batch', params);
+      if (res.success) {
+        await get().loadLabels();
+        return res.data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  /** P0: 前端批量入库（保留前端 labelNumber 规则） */
+  batchCreateLabels: async (labels) => {
+    try {
+      const res = await enhancedApiClient.post('/plant-labels/batch-create', { labels });
       if (res.success) {
         await get().loadLabels();
         return res.data;

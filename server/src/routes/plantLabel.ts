@@ -156,17 +156,18 @@ router.post('/generate-batch', (req: Request, res: Response) => {
   }
 });
 
-/** GET /api/plant-labels — 标签列表（支持按 planting_id 筛选） */
+/** GET /api/plant-labels — 标签列表（支持按 planting_id / seedling_id 筛选） */
 router.get('/', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
-    const { planting_id, page = '1', limit = '20' } = req.query as Record<string, string>;
+    const { planting_id, seedling_id, page = '1', limit = '20' } = req.query as Record<string, string>;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const conditions: string[] = [];
     const params: any[] = [];
 
     if (planting_id) { conditions.push('planting_id = ?'); params.push(planting_id); }
+    if (seedling_id) { conditions.push('seedling_id = ?'); params.push(seedling_id); }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const total = db.exec(`SELECT COUNT(*) as cnt FROM plant_labels ${whereClause}`, params)[0]?.values[0]?.[0] ?? 0;
@@ -288,6 +289,52 @@ router.delete('/:id', (req: Request, res: Response) => {
     db.run(`DELETE FROM plant_label_resume WHERE label_id = ?`, [id]);
     db.run(`DELETE FROM plant_labels WHERE id = ?`, [id]);
     res.json({ success: true, data: { id } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message });
+  }
+});
+
+/**
+ * POST /api/plant-labels/batch-create — 前端批量入库（保留前端编号规则）
+ * 用于 PrintLabelModal batch 模式打印时同步入库
+ * 与 /generate-batch 区别：本端点接受完整标签列表，编号由前端指定
+ */
+router.post('/batch-create', (req: Request, res: Response) => {
+  try {
+    const db = getDatabase();
+    const { labels } = req.body;
+    if (!Array.isArray(labels) || labels.length === 0) {
+      res.status(400).json({ success: false, error: 'labels 数组为必填项' });
+      return;
+    }
+
+    const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    let inserted = 0;
+    const insertedIds: number[] = [];
+
+    for (const item of labels) {
+      if (!item.labelNumber) continue;
+      db.run(
+        `INSERT INTO plant_labels (label_number, planting_id, seedling_id, move_in_area_name, move_in_date, create_time)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          item.labelNumber,
+          item.plantingId || null,
+          item.seedlingId || null,
+          item.moveInAreaName || null,
+          item.moveInDate || null,
+          now,
+        ]
+      );
+      const id = db.exec('SELECT last_insert_rowid()')[0]?.values[0]?.[0];
+      if (id !== undefined) insertedIds.push(Number(id));
+      inserted++;
+    }
+
+    res.status(201).json({
+      success: true,
+      data: { inserted, insertedIds },
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }

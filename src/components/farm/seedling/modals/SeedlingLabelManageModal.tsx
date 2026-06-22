@@ -36,17 +36,15 @@ export default function SeedlingLabelManageModal({
   const [labelPage, setLabelPage] = useState(1);
   const [selectedLabelId, setSelectedLabelId] = useState<number | null>(null);
 
-  // 加载标签数据
+  // 加载标签数据 — P1: 传 seedlingId 给后端直接过滤（避免前端分页漏数据）
   useEffect(() => {
     if (isOpen && seedlingId) {
-      loadLabels();
+      loadLabels({ seedlingId });
     }
   }, [isOpen, seedlingId, loadLabels]);
 
-  // 筛选与该育苗相关的标签（2026-06-05: API 返回 camelCase seedlingId，之前写 snake_case 永远 0 条匹配）
-  const seedlingLabels = useMemo(() => {
-    return labels.filter((l) => String(l.seedlingId) === String(seedlingId));
-  }, [labels, seedlingId]);
+  // 标签列表已是后端按 seedlingId 过滤后的结果，直接使用
+  const seedlingLabels = labels;
 
   // 搜索过滤
   const filteredLabels = useMemo(() => {

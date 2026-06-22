@@ -8,7 +8,7 @@ import { Download, Printer, X } from 'lucide-react';
 import { UnifiedModal } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Seedling } from '../../../../types/crop';
-import { useUserStore } from '../../../../stores';
+import { useUserStore, usePlantLabelStore } from '../../../../stores';
 import { Input } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
@@ -31,26 +31,52 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const [loading, setLoading] = useState(false);
   const [printLabels, setPrintLabels] = useState<string[]>([]);
 
+  // P0: 标签 Store（用于 batch 模式打印时同步入库）
+  const batchCreateLabels = usePlantLabelStore((s) => s.batchCreateLabels);
+  // P2: 标签 Store 的 loadLabels 和 labels（用于从后端读取已入库标签填充列表）
+  const loadLabels = usePlantLabelStore((s) => s.loadLabels);
+
   // 获取当前操作员
   const storeUsers = useUserStore((s) => s.users);
   const currentOperator = storeUsers.length > 0 ? storeUsers[0]?.name : (localStorage.getItem('username') || '系统管理员');
 
-  // 初始化标签编号列表（直接从record字段生成，不依赖API或Store）
+  // 初始化标签编号列表（P2: 优先从后端读取已入库标签，后端无数据时前端拼接兜底）
   useEffect(() => {
     if (!isOpen || !record?.id) return;
-    const seedlingCode = record.seedlingCode || '';
-    // 使用成活数量作为标签数量上限
-    const count = record.survivalCount || record.initialCount || 0;
-    if (seedlingCode && count > 0) {
-      const nums: string[] = [];
-      const maxLabels = Math.min(count, 200);
-      for (let i = 0; i < maxLabels; i++) {
-        nums.push(`${seedlingCode}-${String(i + 1).padStart(4, '0')}`);
+    let cancelled = false;
+
+    (async () => {
+      // 从后端按 seedlingId 加载已入库的标签
+      await loadLabels({ seedlingId: record.id });
+      if (cancelled) return;
+
+      const storeLabels = usePlantLabelStore.getState().labels;
+      const labelNumbers = storeLabels
+        .filter((l) => String(l.seedlingId) === String(record.id))
+        .map((l) => l.labelNumber);
+
+      if (labelNumbers.length > 0) {
+        // 后端有数据：用真实标签列表
+        setAllLabelNumbers(labelNumbers);
+        setPreviewLabel(labelNumbers[0]);
+      } else {
+        // 兜底：首次生成场景（后端无任何标签），前端拼接初始列表
+        const seedlingCode = record.seedlingCode || '';
+        const count = record.survivalCount || record.initialCount || 0;
+        if (seedlingCode && count > 0) {
+          const nums: string[] = [];
+          const maxLabels = Math.min(count, 200);
+          for (let i = 0; i < maxLabels; i++) {
+            nums.push(`${seedlingCode}-${String(i + 1).padStart(4, '0')}`);
+          }
+          setAllLabelNumbers(nums);
+          setPreviewLabel(nums[0]);
+        }
       }
-      setAllLabelNumbers(nums);
-      setPreviewLabel(nums[0]);
-    }
-  }, [isOpen, record?.id, record?.seedlingCode, record?.survivalCount, record?.initialCount]);
+    })();
+
+    return () => { cancelled = true; };
+  }, [isOpen, record?.id, record?.seedlingCode, record?.survivalCount, record?.initialCount, loadLabels]);
 
   // printLabels更新后触发打印
   useEffect(() => {
@@ -67,31 +93,59 @@ export function PrintLabelModal({ isOpen, onClose, record }: PrintLabelModalProp
   const remainingCount = record?.survivalCount || record?.initialCount || 0;
 
   // 处理打印
-  const handlePrint = () => {
+  const handlePrint = async () => {
     setLoading(true);
     try {
       let labelsToPrint: string[] = [];
 
       if (printMode === 'single') {
-        if (!previewLabel) { showAlert('请选择要打印的标签'); return; }
+        if (!previewLabel) { showAlert('请选择要打印的标签'); setLoading(false); return; }
         labelsToPrint = [previewLabel];
       } else if (printMode === 'multi') {
-        if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); return; }
+        if (selectedLabels.length === 0) { showAlert('请选择要打印的标签'); setLoading(false); return; }
         labelsToPrint = [...selectedLabels];
       } else {
         // 批量生成
-        const startIdx = allLabelNumbers.length;
+        // P2: startIdx 用后端真实标签数（避免重复入库/编号错乱）
+        const existingLabels = usePlantLabelStore.getState().labels.filter(
+          (l) => String(l.seedlingId) === String(record.id)
+        );
+        const startIdx = existingLabels.length;
+        const newLabels: Array<{
+          labelNumber: string;
+          seedlingId?: string | null;
+          moveInAreaName?: string | null;
+          moveInDate?: string | null;
+        }> = [];
         for (let i = 0; i < printCount; i++) {
-          labelsToPrint.push(`${record.seedlingCode}-${String(startIdx + i + 1).padStart(4, '0')}`);
+          const labelNumber = `${record.seedlingCode}-${String(startIdx + i + 1).padStart(4, '0')}`;
+          labelsToPrint.push(labelNumber);
+          newLabels.push({
+            labelNumber,
+            seedlingId: record.id,
+            moveInAreaName: record.siteName || null,
+            moveInDate: record.startDate || null,
+          });
         }
-        // 刷新标签列表
-        const totalCount = allLabelNumbers.length + printCount;
-        const refreshed: string[] = [];
-        const maxShow = Math.min(totalCount, 200);
-        for (let i = 0; i < maxShow; i++) {
-          refreshed.push(`${record.seedlingCode}-${String(i + 1).padStart(4, '0')}`);
+
+        // P0: 同步入库（让标签管理弹窗能看到这些标签）
+        if (newLabels.length > 0) {
+          const result = await batchCreateLabels(newLabels);
+          if (!result) {
+            showAlert('标签入库失败，打印已中止');
+            setLoading(false);
+            return;
+          }
         }
-        setAllLabelNumbers(refreshed);
+
+        // P2: 刷新本地 allLabelNumbers 用后端最新数据（来源真实）
+        const refreshedStoreLabels = usePlantLabelStore.getState().labels;
+        const refreshedNumbers = refreshedStoreLabels
+          .filter((l) => String(l.seedlingId) === String(record.id))
+          .map((l) => l.labelNumber);
+        if (refreshedNumbers.length > 0) {
+          setAllLabelNumbers(refreshedNumbers.slice(0, 200));
+        }
       }
 
       setPrintLabels(labelsToPrint);

@@ -250,7 +250,7 @@ export default function PlantingPage() {
   // 标签详情 - 加载该种植的标签并打开弹窗
   const handleLabelDetail = async (record: Planting) => {
     setCurrentLabelPlanting(record);
-    await loadLabels(record.id);
+    await loadLabels({ plantingId: record.id });
     // 从 store 读取最新状态（避免闭包陷阱）
     const freshLabels = usePlantLabelStore.getState().labels;
     const labelIds = freshLabels.map(l => l.id);
@@ -276,7 +276,7 @@ export default function PlantingPage() {
   // 标记管理 - 加载标签和标记后打开弹窗
   const handleMark = async (record: Planting) => {
     setCurrentLabelPlanting(record);
-    await loadLabels(record.id);
+    await loadLabels({ plantingId: record.id });
     await loadMarks();
     setMarkModalOpen(true);
   };
