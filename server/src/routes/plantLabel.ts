@@ -3,7 +3,7 @@
  * plant_labels + plant_label_resume + plant_marks
  */
 import { Router, Request, Response } from 'express';
-import { getDatabase } from '../db';
+import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects } from '../utils/queryHelper';
 
 const router = Router();
@@ -47,6 +47,7 @@ router.post('/marks/assign', (req: Request, res: Response) => {
     }
 
     res.status(201).json({ success: true, data: { mark_id, mark_name: mark[0].name, assigned_count: count } });
+    saveDatabase();
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -151,6 +152,7 @@ router.post('/generate-batch', (req: Request, res: Response) => {
       success: true,
       data: { labels, totalPrinted: existingCount + count },
     });
+    saveDatabase();
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -260,6 +262,7 @@ router.post('/:id/resumes', (req: Request, res: Response) => {
     );
 
     res.status(201).json({ success: true, data: { labelId, operation_type, operation_date } });
+    saveDatabase();
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
@@ -335,6 +338,7 @@ router.post('/batch-create', (req: Request, res: Response) => {
       success: true,
       data: { inserted, insertedIds },
     });
+    saveDatabase();
   } catch (error) {
     res.status(500).json({ success: false, error: (error as Error).message });
   }
