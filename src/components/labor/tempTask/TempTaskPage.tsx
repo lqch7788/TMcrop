@@ -1463,7 +1463,7 @@ export function TempTaskPage() {
                     '开始': 'start', '启动': 'start',
                     '提交': 'submit', '上报': 'submit',
                     '通过': 'approve', '审核': 'approve',
-                    '完成': 'complete', '完成': 'complete',
+                    '完成': 'complete',
                   };
                   for (const [key, val] of Object.entries(typeMap)) {
                     if (opType.includes(key)) { action = val; break; }

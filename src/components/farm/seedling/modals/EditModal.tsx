@@ -589,7 +589,6 @@ export function EditModal({
             }}
             className={deepInputClass}
             placeholder="请输入育苗工时"
-            min="0"
             step="0.5"
           />
         </div>
