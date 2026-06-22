@@ -4,7 +4,7 @@
  * 标签列表 + 标签履历时间线 + 标签数据导出(1000/2000/全部)
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Search, Tag, Download } from 'lucide-react';
+import { X, Search, Tag, Download, Plus, ArrowRight, ArrowLeft, MapPin, Stamp, Camera, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { LabelResumeTimeline, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Pagination } from '../../../ui';
 import type { LabelResumeEntry } from '../../../ui/LabelResumeTimeline';
@@ -13,6 +13,16 @@ import type { PlantLabel, PlantLabelResume } from '../../../../stores/usePlantLa
 import { Input } from '@/components/ui';
 import { showAlert } from '@/lib/dialogService';
 import { todayLocal } from '@/lib/dateUtils';
+import { enhancedApiClient } from '@/lib/apiClient';
+import { useAuthStore } from '../../../../stores/useAuthStore';
+
+// 标记选项（与后端 plant_marks 默认数据一致）
+const MARK_OPTIONS = [
+  { id: 1, name: '正常', color: '#22c55e' },
+  { id: 2, name: '关注', color: '#f59e0b' },
+  { id: 3, name: '问题', color: '#ef4444' },
+  { id: 4, name: '优质', color: '#3b82f6' },
+];
 
 const PAGE_SIZE = 20;
 const EXPORT_SIZES = [1000, 2000, 0]; // 0 = 全部
@@ -73,6 +83,87 @@ export default function SeedlingLabelManageModal({
     setSelectedLabelId(labelId);
     await loadResumesForLabels([labelId]);
   }, [loadResumesForLabels]);
+
+  // ========== 新增履历表单（行内表单，无独立 Modal） ==========
+  const [showAddResume, setShowAddResume] = useState(false);
+  const [addOpType, setAddOpType] = useState<'move_in' | 'move_out' | 'mark'>('move_in');
+  const [addOpDate, setAddOpDate] = useState(todayLocal());
+  const [addAreaName, setAddAreaName] = useState('');
+  const [addMarkId, setAddMarkId] = useState<number>(2);
+  const [addRemarks, setAddRemarks] = useState('');
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  // 2026-06-22: 履历现场拍照（Base64 内嵌）
+  const [addPhotoBase64, setAddPhotoBase64] = useState<string | null>(null);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  // 选择图片 → FileReader → Base64 预览
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showAlert('图片不能超过 2MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setAddPhotoBase64((ev.target?.result as string) || null);
+    reader.readAsDataURL(file);
+    e.target.value = ''; // 允许选同一张图
+  };
+
+  // 切换标签时收起表单
+  useEffect(() => {
+    setShowAddResume(false);
+  }, [selectedLabelId]);
+
+  const handleSubmitResume = async () => {
+    if (!selectedLabelId) { showAlert('请先选择左侧标签'); return; }
+    if (addOpType !== 'mark' && !addAreaName.trim()) { showAlert('请输入区域名称'); return; }
+    setAddSubmitting(true);
+    try {
+      const operatorName =
+        useAuthStore.getState().currentUser?.realName ||
+        useAuthStore.getState().currentUser?.username ||
+        'system';
+
+      if (addOpType === 'mark') {
+        // 打标记（后端 mark 接口只接 mark_id + label_ids）
+        const res: any = await enhancedApiClient.post('/plant-labels/marks/assign', {
+          mark_id: addMarkId,
+          label_ids: [selectedLabelId],
+        });
+        const ok = res?.success !== false; // apiClient 已解包，res 可能是数据或 {success, data}
+        if (ok) {
+          await loadResumesForLabels([selectedLabelId]);
+          setShowAddResume(false);
+          setAddAreaName('');
+          setAddRemarks('');
+        } else {
+          showAlert('标记失败：' + (res?.error || '未知错误'));
+        }
+      } else {
+        // 移入/移出
+        const res: any = await enhancedApiClient.post(`/plant-labels/${selectedLabelId}/resumes`, {
+          operation_type: addOpType,
+          to_area_name: addAreaName.trim(),
+          operation_date: addOpDate,
+          operator_name: operatorName,
+          remarks: addRemarks.trim() || null,
+          image_base64: addPhotoBase64,
+        });
+        const ok = res?.success !== false;
+        if (ok) {
+          await loadResumesForLabels([selectedLabelId]);
+          setShowAddResume(false);
+          setAddAreaName('');
+          setAddRemarks('');
+          setAddPhotoBase64(null);
+        } else {
+          showAlert('录入失败：' + (res?.error || '未知错误'));
+        }
+      }
+    } catch (e) {
+      showAlert('网络错误：' + (e as Error).message);
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
 
   // 导出标签数据
   const handleExport = useCallback((size: number) => {
@@ -223,6 +314,7 @@ export default function SeedlingLabelManageModal({
                   markName: r.markName || undefined,
                   markColor: r.markColor || undefined,
                   operatorName: r.operatorName || undefined,
+                  imageBase64: r.imageBase64 || undefined,
                 }))}
                 currentLabel={selectedLabel?.labelNumber}
                 currentMark={undefined}
@@ -231,14 +323,133 @@ export default function SeedlingLabelManageModal({
           </div>
         </div>
 
+        {/* 新增履历行内表单（B 方案补的录入入口） */}
+        {showAddResume && (
+          <div className="px-4 py-3 border-t border-emerald-200 bg-emerald-50 flex-shrink-0">
+            <div className="text-xs font-semibold text-emerald-900 mb-2">
+              新增履历 — 当前标签：{selectedLabel?.labelNumber || '-'}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 操作类型 Tab */}
+              {([
+                { v: 'move_in', label: '移入', icon: <ArrowRight className="w-3 h-3" />, cls: 'bg-emerald-100 text-emerald-700' },
+                { v: 'move_out', label: '移出', icon: <ArrowLeft className="w-3 h-3" />, cls: 'bg-orange-100 text-orange-700' },
+                { v: 'mark', label: '打标记', icon: <Stamp className="w-3 h-3" />, cls: 'bg-purple-100 text-purple-700' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setAddOpType(opt.v)}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                    addOpType === opt.v ? opt.cls + ' ring-2 ring-offset-1 ring-emerald-400' : 'bg-white text-gray-600 border border-gray-300'
+                  }`}
+                >
+                  {opt.icon}{opt.label}
+                </button>
+              ))}
+              {/* 日期 */}
+              <Input
+                type="date"
+                value={addOpDate}
+                onChange={(e) => setAddOpDate(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7"
+              />
+              {/* 区域输入（移入/移出用）*/}
+              {addOpType !== 'mark' && (
+                <Input
+                  type="text"
+                  value={addAreaName}
+                  onChange={(e) => setAddAreaName(e.target.value)}
+                  placeholder={addOpType === 'move_in' ? '移入到哪个区域（如：东区-A区）' : '移出到哪个区域（如：隔离区）'}
+                  className="px-2 py-1 border border-gray-300 rounded text-xs h-7 w-48"
+                />
+              )}
+              {/* 标记选择 */}
+              {addOpType === 'mark' && (
+                <div className="flex gap-1">
+                  {MARK_OPTIONS.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setAddMarkId(m.id)}
+                      className={`px-2 py-1 rounded text-xs font-medium text-white ${
+                        addMarkId === m.id ? 'ring-2 ring-offset-1 ring-emerald-400' : 'opacity-70'
+                      }`}
+                      style={{ backgroundColor: m.color }}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* 备注 */}
+              <Input
+                type="text"
+                value={addRemarks}
+                onChange={(e) => setAddRemarks(e.target.value)}
+                placeholder="备注（可选）"
+                className="px-2 py-1 border border-gray-300 rounded text-xs h-7 flex-1 min-w-[160px]"
+              />
+              {/* 拍照按钮（移动端会调起相机，PC 端是文件选择器） */}
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              <Button
+                onClick={() => photoInputRef.current?.click()}
+                variant="outline"
+                size="sm"
+                title="拍照/选择图片"
+              >
+                <Camera className="w-4 h-4" />
+                {addPhotoBase64 ? '已附图' : '拍照'}
+              </Button>
+              <Button onClick={handleSubmitResume} disabled={addSubmitting} size="sm">
+                {addSubmitting ? '提交中...' : '确认'}
+              </Button>
+              <Button onClick={() => { setShowAddResume(false); setAddPhotoBase64(null); }} variant="secondary" size="sm">
+                取消
+              </Button>
+            </div>
+            {/* 图片预览 */}
+            {addPhotoBase64 && (
+              <div className="mt-2 flex items-center gap-2">
+                <img src={addPhotoBase64} alt="预览" className="w-16 h-16 object-cover rounded border border-gray-300" />
+                <button
+                  type="button"
+                  onClick={() => setAddPhotoBase64(null)}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  删除图片
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 底部 */}
         <div className="p-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
           <span className="text-xs text-gray-400">
             共 {filteredLabels.length} 个标签
           </span>
-          <Button onClick={onClose} variant="secondary" size="sm">
-            <X className="w-4 h-4" /> 关闭
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowAddResume((v) => !v)}
+              disabled={!selectedLabelId}
+              variant="default"
+              size="sm"
+              title={!selectedLabelId ? '请先在左侧选择一个标签' : '为当前标签新增履历'}
+            >
+              <Plus className="w-4 h-4" /> 新增履历
+            </Button>
+            <Button onClick={onClose} variant="secondary" size="sm">
+              <X className="w-4 h-4" /> 关闭
+            </Button>
+          </div>
         </div>
       </div>
     </div>

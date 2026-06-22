@@ -34,6 +34,8 @@ export interface PlantLabelResume {
   markColor: string | null;
   operationDate: string;
   operatorName: string | null;
+  // 2026-06-22: 现场拍照存证（Base64 内嵌，与项目其它表 pictures 字段一致）
+  imageBase64?: string | null;
   createTime: string;
 }
 

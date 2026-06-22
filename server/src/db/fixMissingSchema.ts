@@ -1892,6 +1892,16 @@ export async function fixMissingSchema(): Promise<void> {
     seedLog.skip('• 肥料库库存初始化跳过:', fixErr.message);
   }
 
+  // G12 2026-06-22: plant_label_resume 加 image_base64 列（履历拍照存证）
+  try {
+    db.run(`ALTER TABLE plant_label_resume ADD COLUMN image_base64 TEXT`);
+    seedLog.info('✓ plant_label_resume 表添加 image_base64 列');
+  } catch (e: any) {
+    if (!e.message.includes('duplicate column')) {
+      seedLog.skip('• plant_label_resume.image_base64:', e.message);
+    }
+  }
+
   saveDatabase();
   seedLog.info('\n数据库结构修复完成！');
 

@@ -237,7 +237,7 @@ router.post('/:id/resumes', (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const labelId = parseInt(req.params.id, 10);
-    const { operation_type, from_area_name, to_area_name, mark_id, mark_name, mark_color, operation_date, operator_name } = req.body;
+    const { operation_type, from_area_name, to_area_name, mark_id, mark_name, mark_color, operation_date, operator_name, image_base64 } = req.body;
 
     if (!operation_type || !operation_date) {
       res.status(400).json({ success: false, error: 'operation_type 和 operation_date 为必填项' });
@@ -255,10 +255,11 @@ router.post('/:id/resumes', (req: Request, res: Response) => {
         [to_area_name || '', operation_date, labelId]);
     }
 
-    db.run(`INSERT INTO plant_label_resume (label_id, operation_type, from_area_name, to_area_name, mark_id, mark_name, mark_color, operation_date, operator_name)
-      VALUES (?,?,?,?,?,?,?,?,?)`,
+    db.run(`INSERT INTO plant_label_resume (label_id, operation_type, from_area_name, to_area_name, mark_id, mark_name, mark_color, operation_date, operator_name, image_base64)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [labelId, operation_type, from_area_name || null, to_area_name || null, mark_id || null,
-       mark_name || null, mark_color || null, operation_date, operator_name || null]
+       mark_name || null, mark_color || null, operation_date, operator_name || null,
+       image_base64 || null]
     );
 
     res.status(201).json({ success: true, data: { labelId, operation_type, operation_date } });

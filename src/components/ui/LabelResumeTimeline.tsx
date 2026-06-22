@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { MapPin, Tag, ArrowRight, ArrowLeft } from 'lucide-react';
+import { MapPin, Tag, ArrowRight, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
 // ========== 数据接口 ==========
 
@@ -19,6 +19,8 @@ export interface LabelResumeEntry {
   markName?: string;
   markColor?: string;
   operatorName?: string;
+  // 2026-06-22: 现场拍照存证
+  imageBase64?: string | null;
 }
 
 export interface LabelResumeTimelineProps {
@@ -195,6 +197,23 @@ function ResumeCard({
         {entry.operationDate}
         {entry.operatorName && <span> · {entry.operatorName}</span>}
       </p>
+
+      {/* 现场照片缩略图（点击放大） */}
+      {entry.imageBase64 && (
+        <a
+          href={entry.imageBase64}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block"
+          title="点击查看大图"
+        >
+          <img
+            src={entry.imageBase64}
+            alt="现场照片"
+            className="w-24 h-24 object-cover rounded border border-gray-200 hover:border-emerald-400 transition-colors cursor-zoom-in"
+          />
+        </a>
+      )}
     </div>
   );
 }
