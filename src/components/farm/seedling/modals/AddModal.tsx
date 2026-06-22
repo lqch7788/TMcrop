@@ -22,7 +22,7 @@ import { PlanType } from '../../../../types';
 import { useApprovalContext } from '../../../../contexts/ApprovalContext';
 import { ApprovalType, ApprovalStatus } from '../../../../types/approval';
 import { DictSelect } from '../../../common/settings/DictSelect';
-import { Input } from '@/components/ui';
+import { Input, NumberInput } from '@/components/ui';
 import { DatePicker } from '@/components/ui';
 import { Label } from '@/components/ui';
 import { TextArea } from '@/components/ui';
@@ -1082,13 +1082,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                     母株数量 <span className="text-red-500">*</span>
                     <span className="text-xs text-gray-500 ml-2">（匍匐茎/组培/扦插/分株）</span>
                   </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.motherPlantCount || ''}
-                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                  <NumberInput
+                    value={formData.motherPlantCount}
+                    onChange={(val) => setFormData({ ...formData, motherPlantCount: parseFloat(val) || 0 })}
                     className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                     placeholder="请输入母株数量（>0）"
+                    decimals={0}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     子苗通过每日记录"新出苗数"累加；母株可继续产苗或一次性分出
@@ -1100,13 +1099,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <Label className="text-gray-900">
                     初始数量 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.initialCount || ''}
-                    onChange={(e) => setFormData({ ...formData, initialCount: Number(e.target.value) })}
+                  <NumberInput
+                    value={formData.initialCount}
+                    onChange={(val) => setFormData({ ...formData, initialCount: parseFloat(val) || 0 })}
                     className={`${deepInputClass} ${initialCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                     placeholder="请输入播种数量（1:1 模式）"
+                    decimals={0}
                   />
                   {initialCountExceeds && (
                     <p className="text-xs text-red-500 mt-1">
@@ -1121,21 +1119,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                 <Label className="text-gray-900">
                   目标成苗率（%）<span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.targetSurvivalRate || ''}
-                  onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
-                  onBlur={(e) => {
-                    const val = Number(e.target.value);
-                    if (!isNaN(val) && val > 0) {
-                      setFormData({ ...formData, targetSurvivalRate: Math.round(val * 100) / 100 });
-                    }
-                  }}
+                <NumberInput
+                  value={formData.targetSurvivalRate}
+                  onChange={(val) => setFormData({ ...formData, targetSurvivalRate: parseFloat(val) || 0 })}
                   className={deepInputClass}
                   placeholder="0-100%"
-                  step="0.01"
+                  decimals={2}
                 />
               </div>
 
@@ -1180,12 +1169,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <Label className="text-gray-900">
                     母株数量 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="number"
-                    value={formData.motherPlantCount || ''}
-                    onChange={(e) => setFormData({ ...formData, motherPlantCount: Number(e.target.value) })}
+                  <NumberInput
+                    value={formData.motherPlantCount}
+                    onChange={(val) => setFormData({ ...formData, motherPlantCount: parseFloat(val) || 0 })}
                     className={`${deepInputClass} ${motherCountExceeds ? 'border-red-500 ring-1 ring-red-300' : ''}`}
                     placeholder="投入的基础种苗数量"
+                    decimals={0}
                   />
                   {motherCountExceeds && (
                     <p className="text-xs text-red-500 mt-1">
@@ -1221,12 +1210,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <Label className="text-gray-900">
                     自定义扩繁倍数 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="number"
-                    value={formData.customMultiple || ''}
-                    onChange={(e) => setFormData({ ...formData, customMultiple: Number(e.target.value) })}
+                  <NumberInput
+                    value={formData.customMultiple}
+                    onChange={(val) => setFormData({ ...formData, customMultiple: parseFloat(val) || 0 })}
                     className={deepInputClass}
                     placeholder="请输入扩繁倍数"
+                    decimals={2}
                   />
                 </div>
               )}
@@ -1249,15 +1238,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
                   <Label className="text-gray-900">
                     目标成苗率（%）<span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.targetSurvivalRate || ''}
-                    onChange={(e) => setFormData({ ...formData, targetSurvivalRate: Number(e.target.value) })}
+                  <NumberInput
+                    value={formData.targetSurvivalRate}
+                    onChange={(val) => setFormData({ ...formData, targetSurvivalRate: parseFloat(val) || 0 })}
                     className={deepInputClass}
                     placeholder="0-100%"
-                  step="0.01"
+                    decimals={2}
                   />
                 </div>
               </div>
@@ -1408,14 +1394,12 @@ ${formData.calculateMode === SeedlingCalculateMode.PROPAGATION ? `扩繁模式�
             {/* 方案2.6: 育苗工时（整行独占，2 个一排规则例外） */}
             <div className="col-span-2">
               <Label className="text-gray-900">工时（小时）</Label>
-              <Input
-                type="number"
-                value={formData.workHours || ''}
-                onChange={(e) => setFormData({ ...formData, workHours: Number(e.target.value) || 0 })}
+              <NumberInput
+                value={formData.workHours}
+                onChange={(val) => setFormData({ ...formData, workHours: parseFloat(val) || 0 })}
                 className={deepInputClass}
                 placeholder="请输入育苗工时（预估执行时间）"
-                min="0"
-                step="0.5"
+                decimals={1}
               />
               <p className="text-xs text-gray-500 mt-1">预估本次育苗的执行工时</p>
             </div>
