@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { seedSourceRepository, SeedSourceRepository } from '../repositories/seedSource.repository';
+import { getDatabase } from '../db';
 import {
   SeedSourceQuery,
   CreateSeedSourceDTO,
@@ -137,6 +138,24 @@ export class SeedSourceService {
       quantity: data.quantity || 0
     };
 
+    // 2026-06-22 修复 8 处查重：POST 前查重 source_code（仅 active，软删可复用）
+    const sourceCode = (data as any).source_code || (data as any).sourceCode;
+    if (sourceCode) {
+      const db = getDatabase();
+      const dupStmt = db.prepare(`
+        SELECT 1 FROM seed_sources WHERE source_code = ? AND deleted_at IS NULL LIMIT 1
+      `);
+      dupStmt.bind([sourceCode]);
+      if (dupStmt.step()) {
+        dupStmt.free();
+        throw new BusinessError(
+          SeedSourceErrorCode.INVALID_DECREASE_COUNT,
+          `编号 ${sourceCode} 已存在`,
+        );
+      }
+      dupStmt.free();
+    }
+
     // 返回 repository.create 的完整记录（含 create_time/update_time）
     return await this.repository.create(record);
   }
@@ -241,15 +260,39 @@ export class SeedSourceService {
   /**
    * 生成种源编码
    * @param dateStr 日期字符串 (YYYYMMDD)
-   * @returns 生成的编码，如 ZZ20260513-001
+   * @returns 生成的编码，如 ZZ20260513-001；重试耗尽时返回 null
+   *
+   * 2026-06-22 修复 8 处查重：
+   * - getTodayMaxSerial 已过滤 deleted_at IS NULL（仅 active）
+   * - 候选号若与全表（含 soft-deleted）冲突则 +1 重试
+   * - 最多 10 次重试
    */
-  async generateCode(dateStr: string): Promise<string> {
-    // 获取当日最大序号
-    const maxSerial = await this.repository.getTodayMaxSerial(dateStr);
-    const nextSerial = maxSerial + 1;
-    // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
-    const code = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
-    return code;
+  async generateCode(dateStr: string): Promise<string | null> {
+    const db = getDatabase();
+    const MAX_RETRIES = 10;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // 获取当日最大序号（仅 active）
+      const maxSerial = await this.repository.getTodayMaxSerial(dateStr);
+      const nextSerial = maxSerial + 1 + attempt;
+      // 格式: ZZ + 日期(8位) + "-" + 流水号(3位)
+      const candidate = `ZZ${dateStr}-${nextSerial.toString().padStart(3, '0')}`;
+
+      // 全表查重：包括软删记录（防历史 conflict）
+      const stmt = db.prepare(`
+        SELECT 1 FROM seed_sources WHERE source_code = ? LIMIT 1
+      `);
+      stmt.bind([candidate]);
+      const exists = stmt.step();
+      stmt.free();
+
+      if (!exists) {
+        return candidate;
+      }
+    }
+
+    // 重试耗尽
+    return null;
   }
 
   // ========== 繁殖过程记录业务逻辑 ==========

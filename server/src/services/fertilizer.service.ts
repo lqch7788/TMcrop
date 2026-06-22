@@ -88,24 +88,50 @@ export class FertilizerService {
 
   /**
    * 生成施肥记录编号 SF+YYYYMMDD-4位流水号
+   *
+   * 2026-06-22 修复 8 处查重：
+   * - fertilizer_records 表无 deleted_at 列（全表唯一）
+   * - 候选号若冲突则 +1 重试
+   * - 最多 10 次重试；重试耗尽时返回 null
+   * - 注：fertilizer_code 已有 UNIQUE 约束，POST 端做友好错误提示即可
    */
-  generateCode(): string {
+  generateCode(): string | null {
     const today = new Date();
     const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
     const prefix = `SF${datePrefix}`;
     const db = getDatabase();
-    const allCodes = queryToObjects<{ fertilizerCode: string }>(db,
-      `SELECT fertilizer_code FROM fertilizer_records`,
-    );
-    let maxSeq = 0;
-    for (const row of allCodes) {
-      const code = row.fertilizerCode || '';
-      if (code.startsWith(prefix)) {
-        const seq = parseInt(code.split('-').pop() || '0', 10);
-        if (seq > maxSeq) maxSeq = seq;
+    const MAX_RETRIES = 10;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // 全表扫描（无 deleted_at 列）取当日 MAX
+      const allCodes = queryToObjects<{ fertilizerCode: string }>(db,
+        `SELECT fertilizer_code FROM fertilizer_records`,
+      );
+      let maxSeq = 0;
+      for (const row of allCodes) {
+        const code = row.fertilizerCode || '';
+        if (code.startsWith(prefix)) {
+          const seq = parseInt(code.split('-').pop() || '0', 10);
+          if (seq > maxSeq) maxSeq = seq;
+        }
+      }
+      const candidate = `${prefix}-${String(maxSeq + 1 + attempt).padStart(4, '0')}`;
+
+      // 候选号查重（全表）
+      const checkStmt = db.prepare(`
+        SELECT 1 FROM fertilizer_records WHERE fertilizer_code = ? LIMIT 1
+      `);
+      checkStmt.bind([candidate]);
+      const exists = checkStmt.step();
+      checkStmt.free();
+
+      if (!exists) {
+        return candidate;
       }
     }
-    return `${prefix}-${String(maxSeq + 1).padStart(4, '0')}`;
+
+    // 重试耗尽
+    return null;
   }
 
   /**
@@ -133,6 +159,13 @@ export class FertilizerService {
     try {
       // generateCode 在事务内（避免并发 UNIQUE 冲突）
       const code = this.generateCode();
+      if (!code) {
+        db.exec('ROLLBACK');
+        throw new BusinessError(
+          FertilizerErrorCode.INVALID_QUANTITY,
+          `生成施肥编号失败（重试 10 次仍冲突），请稍后重试`,
+        );
+      }
       // 1) 若传了 fertilizerId，先校验库存在 + 库存够
       if (data.fertilizerId) {
         const lib = this.repository.findLibraryById(data.fertilizerId);
@@ -156,6 +189,22 @@ export class FertilizerService {
       }
 
       // 3) 写记录
+      // 2026-06-22 修复 8 处查重：INSERT 前再查一次 fertilizer_code（防 race condition）
+      // UNIQUE 约束已天然防重，这里加防御性 SELECT 给前端友好错误
+      const dupStmt = db.prepare(`
+        SELECT 1 FROM fertilizer_records WHERE fertilizer_code = ? LIMIT 1
+      `);
+      dupStmt.bind([code]);
+      if (dupStmt.step()) {
+        dupStmt.free();
+        db.exec('ROLLBACK');
+        throw new BusinessError(
+          FertilizerErrorCode.INVALID_QUANTITY,
+          `编号 ${code} 已存在`,
+        );
+      }
+      dupStmt.free();
+
       const record: FertilizerRecord = {
         id,
         fertilizer_code: code,
@@ -379,6 +428,7 @@ export class FertilizerService {
         }
 
         const code = this.generateCode();
+        if (!code) { skipped++; continue; }
         const id = `fer-iot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${inserted}`;
         const recordRow: FertilizerRecord = {
           id,

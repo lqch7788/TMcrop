@@ -63,6 +63,22 @@ export class HarvestController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = req.body;
+
+      // 2026-06-22 修复 8 处查重：POST 前查重 harvest_code
+      // 防止前端传重复的 harvest_code（harvest_records 表无 deleted_at 列）
+      const harvestCode = (data as any).harvest_code || (data as any).harvestCode;
+      if (harvestCode) {
+        const { getDatabase } = require('../db');
+        const db = getDatabase();
+        const dupStmt = db.prepare(`SELECT 1 FROM harvest_records WHERE harvest_code = ? LIMIT 1`);
+        dupStmt.bind([harvestCode]);
+        if (dupStmt.step()) {
+          dupStmt.free();
+          return res.status(400).json({ success: false, error: `编号 ${harvestCode} 已存在` });
+        }
+        dupStmt.free();
+      }
+
       const result = await this.service.create(data);
       // 写入 material_flow_log
       try {
