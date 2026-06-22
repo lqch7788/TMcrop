@@ -2727,6 +2727,7 @@ export function initializeDatabase() {
       mark_color TEXT,
       operation_date TEXT NOT NULL,
       operator_name TEXT,
+      image_base64 TEXT,
       create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
