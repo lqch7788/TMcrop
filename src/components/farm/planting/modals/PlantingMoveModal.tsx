@@ -123,6 +123,8 @@ export default function PlantingMoveModalV2({ isOpen, initialPlanting, available
       onClose={onClose}
       title={opType === 'move_in' ? '调入到种植订单' : '从种植订单调出'}
       size="md"
+      width={600}
+      height={800}
       showFooter
       footer={
         <div className="flex gap-3">

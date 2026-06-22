@@ -197,6 +197,11 @@ router.get('/', (req: Request, res: Response) => {
  * GET /api/plantings/generate-code
  * 格式: ZZ + YYYYMMDD + - + 3位流水号 (如 ZZ20260228-001)
  * 与种源/育苗保持一致；流水号按当日自增（查询当日 MAX+1）
+ *
+ * 2026-06-22 修复 8 处查重：
+ * - SQL 过滤 deleted_at IS NULL（仅 active）
+ * - 候选号若与全表（含 soft-deleted）冲突则 +1 重试
+ * - 最多 10 次重试；找不到目标 pattern 时返回 null
  */
 router.get('/generate-code', (req: Request, res: Response) => {
   try {
@@ -206,25 +211,44 @@ router.get('/generate-code', (req: Request, res: Response) => {
     const day = String(now.getDate()).padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
 
-    // 查询当日最大序号: ZZ + 8位日期 + - + 3位序号 = 14 字符
     const db = getDatabase();
-    const pattern = `ZZ${dateStr}-___`;
-    const stmt = db.prepare(`
-      SELECT planting_code FROM plantings
-      WHERE planting_code LIKE ? AND LENGTH(planting_code) = 14
-      ORDER BY planting_code DESC LIMIT 1
-    `);
-    stmt.bind([pattern]);
-    let maxSerial = 0;
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as { planting_code: string };
-      maxSerial = parseInt(row.planting_code.slice(-3), 10) || 0;
-    }
-    stmt.free();
+    const MAX_RETRIES = 10;
 
-    const seq = String(maxSerial + 1).padStart(3, '0');
-    const code = `ZZ${dateStr}-${seq}`;
-    res.json({ success: true, data: code });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // 查询当日最大序号（仅 active）: ZZ + 8位日期 + - + 3位序号 = 14 字符
+      const pattern = `ZZ${dateStr}-___`;
+      const stmt = db.prepare(`
+        SELECT planting_code FROM plantings
+        WHERE planting_code LIKE ? AND LENGTH(planting_code) = 14
+          AND (deleted_at IS NULL OR deleted_at = '')
+        ORDER BY planting_code DESC LIMIT 1
+      `);
+      stmt.bind([pattern]);
+      let maxSerial = 0;
+      if (stmt.step()) {
+        const row = stmt.getAsObject() as { planting_code: string };
+        maxSerial = parseInt(row.planting_code.slice(-3), 10) || 0;
+      }
+      stmt.free();
+
+      // 候选号 = MAX+1+尝试次数；先验 active 无冲突，再验全表（含 soft-deleted）无冲突
+      const candidate = `ZZ${dateStr}-${String(maxSerial + 1 + attempt).padStart(3, '0')}`;
+
+      // 全表查重：包括软删记录（防历史 conflict）
+      const checkStmt = db.prepare(`
+        SELECT 1 FROM plantings WHERE planting_code = ? LIMIT 1
+      `);
+      checkStmt.bind([candidate]);
+      const exists = checkStmt.step();
+      checkStmt.free();
+
+      if (!exists) {
+        return res.json({ success: true, data: candidate });
+      }
+    }
+
+    // 重试耗尽：返回 null（前端处理）
+    res.json({ success: true, data: null });
   } catch (error) {
     res.status(500).json({ success: false, error: '生成种植批号失败' });
   }
@@ -642,6 +666,18 @@ router.post('/', (req: Request, res: Response) => {
     const finalProductionPlanCode = body.production_plan_code || body.productionPlanCode || '';
 
     const db = getDatabase();
+
+    // 2026-06-22 修复 8 处查重：POST 前全表查重（含软删记录）
+    // 防止前端传重复的 planting_code
+    const dupStmt = db.prepare(`
+      SELECT 1 FROM plantings WHERE planting_code = ? LIMIT 1
+    `);
+    dupStmt.bind([finalPlantCode]);
+    if (dupStmt.step()) {
+      dupStmt.free();
+      return res.status(400).json({ success: false, error: `编号 ${finalPlantCode} 已存在` });
+    }
+    dupStmt.free();
 
     // 事务开始：扣减来源数量 + 插入种植记录 + 写物料流转流水
     db.exec('BEGIN');

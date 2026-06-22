@@ -298,32 +298,56 @@ export class HarvestService {
    * 格式: CS + YYYYMM + 3位月度流水号 (如 CS202601001), 共 11 字符
    * 流水号按当月自增（查询当月 MAX+1）
    * 与种子数据 harvest_code 历史契约一致
-   * @returns 采收单号
+   *
+   * 2026-06-22 修复 8 处查重：
+   * - harvest_records 表无 deleted_at 列，全表唯一即可
+   * - 候选号若冲突则 +1 重试
+   * - 最多 10 次重试；找不到 pattern 时返回 null
+   * @returns 采收单号或 null（重试耗尽）
    */
-  generateCode(): string {
+  generateCode(): string | null {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const monthStr = `${year}${month}`;
 
-    // 查询当月最大序号: CS + 6位年月 + 3位序号 = 11 字符
     const db = getDatabase();
-    const pattern = `CS${monthStr}___`;
-    const stmt = db.prepare(`
-      SELECT harvest_code FROM harvest_records
-      WHERE harvest_code LIKE ? AND LENGTH(harvest_code) = 11
-      ORDER BY harvest_code DESC LIMIT 1
-    `);
-    stmt.bind([pattern]);
-    let maxSerial = 0;
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as { harvest_code: string };
-      maxSerial = parseInt(row.harvest_code.slice(-3), 10) || 0;
-    }
-    stmt.free();
+    const MAX_RETRIES = 10;
 
-    const seq = String(maxSerial + 1).padStart(3, '0');
-    return `CS${monthStr}${seq}`;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // 查询当月最大序号: CS + 6位年月 + 3位序号 = 11 字符
+      const pattern = `CS${monthStr}___`;
+      const stmt = db.prepare(`
+        SELECT harvest_code FROM harvest_records
+        WHERE harvest_code LIKE ? AND LENGTH(harvest_code) = 11
+        ORDER BY harvest_code DESC LIMIT 1
+      `);
+      stmt.bind([pattern]);
+      let maxSerial = 0;
+      if (stmt.step()) {
+        const row = stmt.getAsObject() as { harvest_code: string };
+        maxSerial = parseInt(row.harvest_code.slice(-3), 10) || 0;
+      }
+      stmt.free();
+
+      // 候选号 = MAX+1+尝试次数
+      const candidate = `CS${monthStr}${String(maxSerial + 1 + attempt).padStart(3, '0')}`;
+
+      // 全表查重（harvest_records 无 deleted_at）
+      const checkStmt = db.prepare(`
+        SELECT 1 FROM harvest_records WHERE harvest_code = ? LIMIT 1
+      `);
+      checkStmt.bind([candidate]);
+      const exists = checkStmt.step();
+      checkStmt.free();
+
+      if (!exists) {
+        return candidate;
+      }
+    }
+
+    // 重试耗尽
+    return null;
   }
 }
 
