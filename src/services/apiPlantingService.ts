@@ -190,8 +190,8 @@ export async function getPlantingsBySourceId(sourceId: string): Promise<Planting
  * 数据流：API → SQLite DB
  */
 export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' | 'updateTime'>): Promise<Planting> {
-  const result = await enhancedApiClient.post<{ id: string }>('/plantings', planting);
-  return { ...planting, id: result.id } as Planting;
+  const result = await enhancedApiClient.post<any>('/plantings', planting);
+  return result as Planting;
 }
 
 /**
@@ -219,8 +219,8 @@ export async function updatePlanting(id: string, updates: Partial<Planting>): Pr
     const mappedKey = FIELD_MAP[key] || key;
     backendUpdates[mappedKey] = value;
   }
-  const result = await enhancedApiClient.put<{ id: string }>(`/plantings/${id}`, backendUpdates);
-  return result ? { ...updates, id } as Planting : null;
+  const result = await enhancedApiClient.put<any>(`/plantings/${id}`, backendUpdates);
+  return result as Planting;
 }
 
 /**

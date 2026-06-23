@@ -2745,6 +2745,46 @@ function fixApprovedProductionPlanStatus(): void {
   } catch (e: any) {
     seedLog.error('PROPAGATION 数量补全失败:', e.message);
   }
+
+  // ========== V13.0: 采收入库审批表 (harvest_inbounds) ==========
+  try {
+    seedLog.info('检查 harvest_inbounds 表...');
+    db.run(`CREATE TABLE IF NOT EXISTS harvest_inbounds (
+      id TEXT PRIMARY KEY,
+      inbound_code TEXT UNIQUE NOT NULL,
+      harvest_record_id TEXT,
+      harvest_code TEXT,
+      stock_type TEXT NOT NULL,
+      source_module TEXT NOT NULL,
+      source_record_id TEXT,
+      source_record_code TEXT,
+      crop_name TEXT NOT NULL,
+      crop_variety TEXT,
+      quantity REAL DEFAULT 0,
+      unit TEXT DEFAULT '公斤',
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      inbound_date TEXT,
+      status TEXT DEFAULT 'pending',
+      sale_type TEXT,
+      unit_price REAL DEFAULT 0,
+      total_amount REAL DEFAULT 0,
+      auditor TEXT,
+      audit_time TEXT,
+      audit_opinion TEXT,
+      operator_name TEXT,
+      remarks TEXT,
+      create_time TEXT,
+      update_time TEXT,
+      deleted_at TEXT
+    )`);
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_code ON harvest_inbounds(inbound_code)'); } catch (e) {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_status ON harvest_inbounds(status)'); } catch (e) {}
+    try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_stock_type ON harvest_inbounds(stock_type)'); } catch (e) {}
+    seedLog.info('  harvest_inbounds 表初始化完成');
+  } catch (e: any) {
+    seedLog.error('harvest_inbounds 表创建失败:', e.message);
+  }
 }
 
 // 不再模块级自动执行 — 由 index.ts 统一控制启动顺序

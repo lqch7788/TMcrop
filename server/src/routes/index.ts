@@ -9,6 +9,7 @@ import seedlingRouter from './seedling';
 import seedSourceRouter from './seedSource';
 import plantingRouter from './planting';
 import harvestRouter from './harvest';
+import harvestInboundRouter from './harvestInbound';
 import supplierRouter from './supplier';
 import cropInstanceRouter from './cropInstance';
 import farmTaskRouter from './farmTask';
@@ -132,6 +133,7 @@ router.use('/plantings', requireAuth, plantingRouter);
 
 // 采收管理路由 - 需要认证
 router.use('/harvest', requireAuth, harvestRouter);
+router.use('/harvest-inbounds', requireAuth, harvestInboundRouter);
 
 // 供应商路由 - 需要认证
 router.use('/suppliers', requireAuth, supplierRouter);

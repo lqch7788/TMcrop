@@ -72,7 +72,7 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '添加种植失败' });
-        return null;
+        throw error;
       }
     },
 
@@ -83,7 +83,7 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '更新种植失败' });
-        return null;
+        throw error;
       }
     },
 
@@ -94,7 +94,7 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '删除种植失败' });
-        return false;
+        throw error;
       }
     },
 
@@ -105,7 +105,7 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '批量删除种植失败' });
-        return false;
+        throw error;
       }
     },
 
@@ -124,7 +124,7 @@ export const usePlantingStore = create<PlantingState>()(
         return result;
       } catch (error) {
         set({ error: (error as Error).message || '采收种植失败' });
-        return false;
+        throw error;
       }
     },
 
@@ -156,7 +156,7 @@ export const usePlantingStore = create<PlantingState>()(
         return record;
       } catch (error) {
         set({ error: (error as Error).message || '添加采收记录失败' });
-        return null;
+        throw error;
       }
     },
 
@@ -174,7 +174,7 @@ export const usePlantingStore = create<PlantingState>()(
         return record;
       } catch (error) {
         set({ error: (error as Error).message || '更新采收记录失败' });
-        return null;
+        throw error;
       }
     },
 
@@ -190,7 +190,7 @@ export const usePlantingStore = create<PlantingState>()(
         return true;
       } catch (error) {
         set({ error: (error as Error).message || '删除采收记录失败' });
-        return false;
+        throw error;
       }
     },
 
