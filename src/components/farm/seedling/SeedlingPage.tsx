@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Edit2, Trash2, Printer, Eye, Image, X, Check, FileText, Shovel, Sprout, Download } from 'lucide-react';
 import { SeedlingFilter } from './components/SeedlingFilter';
 import { SeedlingTable } from './components/SeedlingTable';
@@ -23,6 +23,7 @@ import * as cropVarietyService from '../../../services/cropVarietyService';
 import * as cropBatchService from '../../../services/apiCropBatchService';
 import { useAuthPermission } from '../../../hooks/usePermission';
 import { showAlert, showConfirm } from '@/lib/dialogService';
+import { enhancedApiClient } from '@/lib/apiClient';
 // 2026-06-09 删除警告弹窗（统一为 UI 库 DeleteConfirmModal，与技术方案一致）
 import { DeleteConfirmModal } from '@/components/ui';
 import { InventoryInboundModal } from '../inventory/InventoryInboundModal';
@@ -31,6 +32,7 @@ import type { InventoryInboundRecord } from '@/types/inventoryInbound';
 
 export default function SeedlingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // 权限检查 - 已取消，所有人可使用所有功能
   // const { can } = useAuthPermission();
@@ -164,6 +166,44 @@ export default function SeedlingPage() {
     }
   }, [error, toast, clearError]);
 
+  // 2026-06-23: 扫码跳转 — 解析 URL ?labelNumber= 参数，自动打开标签管理弹窗
+  useEffect(() => {
+    const labelNumber = searchParams.get('labelNumber');
+    if (!labelNumber) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res: any = await enhancedApiClient.get(`/plant-labels/by-number/${encodeURIComponent(labelNumber)}`);
+        // enhancedApiClient 已解包 data，兼容 {success, data} 和直接返回
+        const payload = res?.data || res;
+        const label = payload?.label || payload;
+        if (!label || !label.seedlingId) return;
+        if (cancelled) return;
+
+        // 从 labelNumber 提取 seedlingCode（格式：{seedlingCode}-{4位序号}）
+        const parts = String(labelNumber).split('-');
+        const seedlingCode = parts.length > 1 ? parts.slice(0, -1).join('-') : labelNumber;
+
+        setLabelManageRecord({ id: String(label.seedlingId), seedlingCode } as Seedling);
+        setAutoSelectLabelNumber(labelNumber);
+        setLabelManageOpen(true);
+
+        // 清理 URL 参数，避免刷新重复打开
+        const next = new URLSearchParams(searchParams);
+        next.delete('labelNumber');
+        const newUrl = next.toString()
+          ? `${window.location.pathname}?${next.toString()}`
+          : window.location.pathname;
+        window.history.replaceState(null, '', newUrl);
+      } catch {
+        // 扫码查询失败，静默处理
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []); // 仅在 mount 时执行一次
+
   // 弹窗状态
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -174,6 +214,7 @@ export default function SeedlingPage() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [labelManageOpen, setLabelManageOpen] = useState(false);
   const [labelManageRecord, setLabelManageRecord] = useState<Seedling | null>(null);
+  const [autoSelectLabelNumber, setAutoSelectLabelNumber] = useState<string | undefined>(undefined);
   const [currentRecord, setCurrentRecord] = useState<Seedling | null>(null);
   const [currentImages, setCurrentImages] = useState<string[]>([]);
 
@@ -765,9 +806,10 @@ export default function SeedlingPage() {
       {labelManageRecord && (
         <SeedlingLabelManageModal
           isOpen={labelManageOpen}
-          onClose={() => { setLabelManageOpen(false); setLabelManageRecord(null); }}
+          onClose={() => { setLabelManageOpen(false); setLabelManageRecord(null); setAutoSelectLabelNumber(undefined); }}
           seedlingId={labelManageRecord.id}
           seedlingCode={labelManageRecord.seedlingCode}
+          autoSelectLabelNumber={autoSelectLabelNumber}
         />
       )}
 
