@@ -9,7 +9,11 @@ import { queryToObjects, execCount } from '../utils/queryHelper';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 import { handleMove } from '../services/plantingMoveHandler';
 import { authenticate } from '../middleware/auth';
-
+import { executeCirculation } from '../services/circulation.service';
+import { formatLocalDateISO, formatLocalDateYYYYMMDD } from '../utils/dateUtil';
+import { HarvestService } from '../services/harvest.service';
+import { generateInstanceId } from '../services/inventory.service';
+const harvestService = new HarvestService();
 const router = Router();
 
 // C1：全局应用 auth 中间件（演示模式自动放行）
@@ -481,8 +485,7 @@ router.put('/:id/harvest-records/:recordId', async (req, res) => {
         finalSubType = subType;
       }
       const circType = subType === 'quantity_refill' ? 'QUANTITY' : 'PROPAGATION';
-      // 动态 require 避免循环依赖（与 POST 路由一致）
-      const { executeCirculation } = require('../services/circulation.service');
+
       const result = executeCirculation({
         circulationType: circType,
         sourceModule: 'planting',
@@ -779,7 +782,8 @@ router.post('/', (req: Request, res: Response) => {
 
       db.exec('COMMIT');
       saveDatabase();
-      res.status(201).json({ success: true, data: { id: newId } });
+      const _newItems = queryToObjects<any>(db, 'SELECT * FROM plantings WHERE id = ?', [newId]);
+      res.status(201).json({ success: true, data: _newItems[0] || { id: newId } });
     } catch (txErr) {
       try { db.exec('ROLLBACK'); } catch {}
       throw txErr;
@@ -856,7 +860,8 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     saveDatabase();
-    res.json({ success: true, data: { id } });
+    const _updItems = queryToObjects<any>(db, "SELECT * FROM plantings WHERE id = ?", [id]);
+    res.json({ success: true, data: _updItems[0] || { id } });
   } catch (error) {
     res.status(500).json({ success: false, error: '更新种植记录失败' });
   }
@@ -1347,8 +1352,7 @@ router.post('/:id/harvest-records', async (req, res) => {
       }
 
       const circType = subType === 'quantity_refill' ? 'QUANTITY' : 'PROPAGATION'
-      // 动态 require 避免循环依赖
-      const { executeCirculation } = require('../services/circulation.service')
+
       const result = executeCirculation({
         circulationType: circType,
         sourceModule: 'planting',
@@ -1443,13 +1447,7 @@ router.post('/:id/harvest-records', async (req, res) => {
   }
 })
 
-import { executeCirculation } from '../services/circulation.service'
-import { formatLocalDateISO } from '../utils/dateUtil'
-import { HarvestService } from '../services/harvest.service'
-import { generateInstanceId } from '../services/inventory.service'
-import { formatLocalDateYYYYMMDD } from '../utils/dateUtil'
 
-const harvestService = new HarvestService()
 
 router.post('/:id/end', async (req, res) => {
   try {

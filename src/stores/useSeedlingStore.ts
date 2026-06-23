@@ -45,98 +45,62 @@ export const useSeedlingStore = create<SeedlingState>()(
     },
 
     addItem: async (item) => {
-      try {
         const result = await seedlingService.addSeedling(item);
         if (result) {
           set((s) => ({ items: [result, ...s.items] }));
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 添加育苗失败:', error);
-        return null;
-      }
     },
 
     updateItem: async (id, updates) => {
-      try {
         const result = await seedlingService.updateSeedling(id, updates);
         if (result) {
           set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 更新育苗失败:', error);
-        return null;
-      }
     },
 
     deleteItem: async (id) => {
-      try {
         const result = await seedlingService.deleteSeedling(id);
         if (result) {
           set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 删除育苗失败:', error);
-        return false;
-      }
     },
 
     deleteItems: async (ids) => {
-      try {
         const result = await seedlingService.deleteSeedlings(ids);
         if (result) {
           set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 批量删除育苗失败:', error);
-        return false;
-      }
     },
 
     addDailyRecord: async (seedlingId, record) => {
-      try {
         const result = await seedlingService.addDailyRecord(seedlingId, record);
         if (result) {
           await get().loadItems();
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 添加每日记录失败:', error);
-        return null;
-      }
     },
 
     updateDailyRecord: async (seedlingId, recordId, updates) => {
-      try {
         const result = await seedlingService.updateDailyRecord(seedlingId, recordId, updates);
         if (result) {
           await get().loadItems();
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 更新每日记录失败:', error);
-        return false;
-      }
     },
 
     deleteDailyRecord: async (seedlingId, recordId) => {
-      try {
         const result = await seedlingService.deleteDailyRecord(seedlingId, recordId);
         if (result) {
           await get().loadItems();
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 删除每日记录失败:', error);
-        return false;
-      }
     },
 
     increasePlantedCount: async (id, count) => {
-      try {
         const result = await seedlingService.increasePlantedCount(id, count);
         if (result) {
           // 2026-06-16: 数量体系重构 — 后端 increase-planted 路由累加到 auto_planted_count
@@ -148,10 +112,6 @@ export const useSeedlingStore = create<SeedlingState>()(
           }));
         }
         return result;
-      } catch (error) {
-        // logger.error('[useSeedlingStore] 增加定植数量失败:', error);
-        return false;
-      }
     },
   })
 );

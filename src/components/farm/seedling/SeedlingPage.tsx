@@ -452,7 +452,6 @@ export default function SeedlingPage() {
       const result = await updateItem(record.id, {
         endType,
         endTime: todayLocal(),
-        productionPlanCode: null as unknown as string, // 清空关联（解幽灵引用）
       });
       if (result) {
         await showAlert(isNormal ? '育苗记录已正常结束（强结）' : '育苗记录已异常结束（强结）');
