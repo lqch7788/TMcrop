@@ -790,7 +790,7 @@ router.post('/', (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('创建种植记录失败:', error);
-    res.status(500).json({ success: false, error: '创建种植记录失败' });
+    res.status(500).json({ success: false, error: `创建种植记录失败: ${error instanceof Error ? error.message : String(error)}` });
   }
 });
 
