@@ -414,7 +414,7 @@ export default function SeedlingPage() {
     // 2026-06-13: 放宽限制 — 没关联生产计划的记录也允许结束（仅关本记录，不动生产计划）
     const planCode = record.productionPlanCode;
     const isNormal = endType === 'normal';
-    const confirmMsg = planCode
+    let confirmMsg = planCode
       ? (isNormal
           ? `确认正常结束此生产计划？\n\n结束后禁止一切入库和补录操作`
           : `确认异常结束此生产计划？\n\n结束后如需补录，需提交审核申请`)
@@ -427,7 +427,7 @@ export default function SeedlingPage() {
       if (!await showConfirm(confirmMsg)) return;
       const result = await updateItem(record.id, {
         endType,
-        endTime: new Date().toISOString(),
+        endTime: todayLocal(),
       });
       if (result) {
         await showAlert(isNormal ? '育苗记录已正常结束' : '育苗记录已异常结束');
@@ -451,7 +451,7 @@ export default function SeedlingPage() {
       const isNormal = endType === 'normal';
       const result = await updateItem(record.id, {
         endType,
-        endTime: new Date().toISOString(),
+        endTime: todayLocal(),
         productionPlanCode: null as unknown as string, // 清空关联（解幽灵引用）
       });
       if (result) {

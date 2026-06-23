@@ -71,7 +71,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: [result, ...s.items] }));
         return result;
       } catch (error) {
-        // logger.error('[usePlantingStore] 添加种植失败:', error);
+        set({ error: (error as Error).message || '添加种植失败' });
         return null;
       }
     },
@@ -82,7 +82,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.map((i) => i.id === id ? { ...i, ...updates } : i) }));
         return result;
       } catch (error) {
-        // logger.error('[usePlantingStore] 更新种植失败:', error);
+        set({ error: (error as Error).message || '更新种植失败' });
         return null;
       }
     },
@@ -93,7 +93,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return result;
       } catch (error) {
-        // logger.error('[usePlantingStore] 删除种植失败:', error);
+        set({ error: (error as Error).message || '删除种植失败' });
         return false;
       }
     },
@@ -104,7 +104,7 @@ export const usePlantingStore = create<PlantingState>()(
         if (result) set((s) => ({ items: s.items.filter((i) => !ids.includes(i.id)) }));
         return result;
       } catch (error) {
-        // logger.error('[usePlantingStore] 批量删除种植失败:', error);
+        set({ error: (error as Error).message || '批量删除种植失败' });
         return false;
       }
     },
@@ -123,7 +123,7 @@ export const usePlantingStore = create<PlantingState>()(
         }
         return result;
       } catch (error) {
-        // logger.error('[usePlantingStore] 采收种植失败:', error);
+        set({ error: (error as Error).message || '采收种植失败' });
         return false;
       }
     },
@@ -138,8 +138,7 @@ export const usePlantingStore = create<PlantingState>()(
           harvestLoading: false,
         }));
       } catch (error) {
-        // logger.error('[usePlantingStore] 加载采收记录失败:', error);
-        set({ harvestLoading: false });
+        set({ error: (error as Error).message || '加载采收记录失败', harvestLoading: false });
       }
     },
 
@@ -156,7 +155,7 @@ export const usePlantingStore = create<PlantingState>()(
         }
         return record;
       } catch (error) {
-        // logger.error('[usePlantingStore] 添加采收记录失败:', error);
+        set({ error: (error as Error).message || '添加采收记录失败' });
         return null;
       }
     },
@@ -174,7 +173,7 @@ export const usePlantingStore = create<PlantingState>()(
         }
         return record;
       } catch (error) {
-        // logger.error('[usePlantingStore] 更新采收记录失败:', error);
+        set({ error: (error as Error).message || '更新采收记录失败' });
         return null;
       }
     },
@@ -190,7 +189,7 @@ export const usePlantingStore = create<PlantingState>()(
         }));
         return true;
       } catch (error) {
-        // logger.error('[usePlantingStore] 删除采收记录失败:', error);
+        set({ error: (error as Error).message || '删除采收记录失败' });
         return false;
       }
     },
@@ -212,7 +211,7 @@ export const usePlantingStore = create<PlantingState>()(
         }));
         return true;
       } catch (error) {
-        // logger.error('[usePlantingStore] 结束种植失败:', error);
+        set({ error: (error as Error).message || '结束种植失败' });
         return false;
       }
     },
