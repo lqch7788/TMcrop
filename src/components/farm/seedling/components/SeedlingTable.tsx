@@ -533,7 +533,7 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                     {(() => {
                       // 2026-06-15: 数量体系重构 — 6 模式 → 2 模式
-                      const mode = (record as any).propagationMode || 'one_to_one';
+                      const mode = record.propagationMode || 'one_to_one';
                       const map: Record<string, {label:string, color:string}> = {
                         one_to_one:   {label:'1:1', color:'bg-blue-100 text-blue-700'},
                         one_to_many:  {label:'1:多', color:'bg-pink-100 text-pink-700'},
@@ -583,44 +583,44 @@ export function SeedlingTable({
                   </td>
                   {/* 母株存活数 = motherPlantCount */}
                   <td className="px-2 py-1.5 text-sm text-gray-700 text-center whitespace-nowrap bg-indigo-50/30">
-                    {((record as any).motherPlantCount || 0).toLocaleString()}
+                    {(record.motherPlantCount || 0).toLocaleString()}
                   </td>
                   {/* 母株累计损耗 = motherLossCount（1:1 模式恒 0） */}
                   <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-indigo-50/30">
-                    {((record as any).motherLossCount || 0).toLocaleString()}
+                    {(record.motherLossCount || 0).toLocaleString()}
                   </td>
                   {/* 补苗累计 = replantCount */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-indigo-50/30">
-                    {((record as any).replantCount || 0).toLocaleString()}
+                    {(record.replantCount || 0).toLocaleString()}
                   </td>
                   {/* ===== 小苗池（5 列） — 与 thead bg-emerald-500/30 对应 ===== */}
                   {/* 小苗累计产出 = expandedPlantCount */}
                   <td className="px-2 py-1.5 text-sm text-emerald-600 font-medium text-center bg-emerald-50/30">
-                    {((record as any).expandedPlantCount || 0).toLocaleString()}
+                    {(record.expandedPlantCount || 0).toLocaleString()}
                   </td>
                   {/* 小苗累计损耗 = seedlingLossCount */}
                   <td className="px-2 py-1.5 text-sm text-red-500 font-medium text-center bg-emerald-50/30">
-                    {((record as any).seedlingLossCount || 0).toLocaleString()}
+                    {(record.seedlingLossCount || 0).toLocaleString()}
                   </td>
                   {/* 小苗剩余数量 = expanded - loss - trans - auto - harvest（派生列） */}
                   <td className="px-2 py-1.5 text-sm text-emerald-700 font-medium text-center bg-emerald-50/30">
                     {(() => {
-                      const expanded = (record as any).expandedPlantCount || 0;
-                      const loss = (record as any).seedlingLossCount || 0;
-                      const trans = (record as any).transplantedCount || 0;
-                      const auto = (record as any).autoPlantedCount || 0;
-                      const harvest = (record as any).harvestStockedCount || 0;
+                      const expanded = record.expandedPlantCount || 0;
+                      const loss = record.seedlingLossCount || 0;
+                      const trans = record.transplantedCount || 0;
+                      const auto = record.autoPlantedCount || 0;
+                      const harvest = record.harvestStockedCount || 0;
                       const remaining = Math.max(0, expanded - loss - trans - auto - harvest);
                       return remaining.toLocaleString();
                     })()}
                   </td>
                   {/* 人工定植累计 = transplantedCount */}
                   <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
-                    {((record as any).transplantedCount || 0).toLocaleString()}
+                    {(record.transplantedCount || 0).toLocaleString()}
                   </td>
                   {/* 自动定植累计 = autoPlantedCount */}
                   <td className="px-2 py-1.5 text-sm text-blue-600 font-medium text-center bg-emerald-50/30">
-                    {((record as any).autoPlantedCount || 0).toLocaleString()}
+                    {(record.autoPlantedCount || 0).toLocaleString()}
                   </td>
                   {/* ===== 派生 ===== */}
                   {/* 目标成苗数 = targetSurvivalCount */}
@@ -630,7 +630,7 @@ export function SeedlingTable({
                   <td className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                     {/* 2026-06-16: 完成比例 = 小苗累计产出 / 目标成苗数（统一公式，不区分模式） */}
                     {record.targetSurvivalCount && record.targetSurvivalCount > 0 ? (() => {
-                      const expanded = Math.max(0, (record as any).expandedPlantCount || 0);
+                      const expanded = Math.max(0, record.expandedPlantCount || 0);
                       const ratio = expanded / record.targetSurvivalCount;
                       return (
                         <span className={`font-medium ${

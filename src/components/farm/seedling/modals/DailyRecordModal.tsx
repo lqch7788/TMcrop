@@ -117,13 +117,13 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并！）
     // 母株池剩余可用 = 母株存活 - 母株损耗 + 补苗累计（1:1 = 母株存活 + 补苗；1:多 = 母株存活 - 母株损耗 + 补苗）
     const motherAvailable = Math.max(0,
-      ((record as any).motherPlantCount || 0) - ((record as any).motherLossCount || 0) + ((record as any).replantCount || 0)
+      (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0)
     );
     // 小苗池剩余可用 = DB 累计产出 + 本次产出 + 本次补苗（1:1 模式补种子计入小苗池；1:多 模式补母株不计入小苗池） - DB 累计消耗（损耗/定植/自动定植/采收入库）
     // ⚠️ 注意：本次损耗 lc 和本次定植 tc 不参与"剩余可用"计算（避免双重扣减）
     //   校验逻辑是 lc+tc ≤ seedlingAvailable（即：用户本次最多可扣减多少）
     const seedlingAvailable = Math.max(0,
-      ((record as any).expandedPlantCount || 0)
+      (record.expandedPlantCount || 0)
       + ri                          // 本次产出
       + (isMotherMode ? 0 : rc)     // 2026-06-16 修复：1:1 模式补苗计入小苗池（补种子）
       - (record.seedlingLossCount || 0)
@@ -228,8 +228,8 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
     setEditingId(r.id);
     const cleanRow: Partial<DailyRecord> = {};
     BUSINESS_FIELDS.forEach(k => {
-      if ((r as any)[k] !== undefined) {
-        (cleanRow as any)[k] = (r as any)[k];
+      if (r[k] !== undefined) {
+        cleanRow[k] = r[k];
       }
     });
     setEditingRow(cleanRow);
@@ -248,14 +248,14 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
       // 2026-06-14: 与 POST addDailyRecord 保持一致结构 — 业务字段打包成 data 对象
       // 后端 PUT 路由：req.body.data = 业务字段对象 → JSON.stringify 存到 data 列
       // 这样写入的 data JSON 结构干净，下次 GET 能正常 spread 还原
-      const data = (editingRow as any).data && typeof (editingRow as any).data === 'object'
-        ? (editingRow as any).data
+      const data = editingRow.data && typeof editingRow.data === 'object'
+        ? editingRow.data
         : (() => {
             const biz: any = {};
             ['temperature', 'humidity', 'watering', 'abnormality',
              'survivalCountChange', 'plantedCountChange', 'lossCountChange',
              'runnerIncreaseCount', 'phValue', 'ecValue', 'operator'].forEach(k => {
-              if ((editingRow as any)[k] !== undefined) biz[k] = (editingRow as any)[k];
+              if (editingRow[k] !== undefined) biz[k] = editingRow[k];
             });
             return biz;
           })();

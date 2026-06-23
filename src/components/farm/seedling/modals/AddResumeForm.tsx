@@ -68,7 +68,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
 
   // 提交
   const handleSubmit = async () => {
-    const labelId = (selectedLabel as any)?.id as number | undefined;
+    const labelId = selectedLabel?.id as number | undefined;
     if (!labelId) { showAlert('请先选择左侧标签'); return; }
     if (addOpType !== 'mark' && addOpType !== 'void' && !addAreaName.trim()) {
       showAlert('请输入区域名称');
@@ -108,7 +108,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
         // 数量变更（2026-06-23 新增）
         if (quantityChange !== '') {
           payload.quantity_change = Number(quantityChange);
-          payload.expected_quantity = (selectedLabel as any).quantity ?? undefined;
+          payload.expected_quantity = selectedLabel.quantity ?? undefined;
         }
         // 原因
         if (reason.trim()) {
@@ -129,7 +129,7 @@ export function AddResumeForm({ selectedLabel, onSubmitted, onCancel }: AddResum
     }
   };
 
-  const selectedLabelNumber = (selectedLabel as any)?.labelNumber || '-';
+  const selectedLabelNumber = selectedLabel?.labelNumber || '-';
 
   return (
     <div className="px-4 py-3 border-t border-emerald-200 bg-emerald-50 flex-shrink-0">
