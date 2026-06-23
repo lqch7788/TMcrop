@@ -3154,6 +3154,58 @@ export function initializeDatabase() {
   } catch (e) {}
 
   console.log('库存中心表初始化完成');
+  // ========== V13.0: 采收入库表 (harvest_inbounds) ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS harvest_inbounds (
+      id TEXT PRIMARY KEY,
+      inbound_code TEXT UNIQUE NOT NULL,
+      source_type TEXT NOT NULL,
+      source_id TEXT,
+      source_code TEXT,
+      crop_name TEXT NOT NULL,
+      variety_name TEXT,
+      inbound_date TEXT NOT NULL,
+      quantity REAL DEFAULT 0,
+      unit TEXT DEFAULT '公斤',
+      warehouse_id TEXT,
+      warehouse_name TEXT,
+      batch_code TEXT,
+      status TEXT DEFAULT 'pending',
+      auditor_id TEXT,
+      auditor_name TEXT,
+      audit_opinion TEXT,
+      audit_time TEXT,
+      operator_id TEXT,
+      operator_name TEXT,
+      remarks TEXT,
+      is_deleted INTEGER DEFAULT 0,
+      created_at TEXT,
+      updated_at TEXT
+    )
+  `);
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_code ON harvest_inbounds(inbound_code)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_status ON harvest_inbounds(status)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_source_type ON harvest_inbounds(source_type)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_harvest_inbounds_date ON harvest_inbounds(inbound_date)'); } catch (e) {}
+  console.log('采收入库表初始化完成');
+
+  // ========== V13.0: 审计日志表 (audit_logs) ==========
+  db.run(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      business_type TEXT NOT NULL,
+      business_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      operator_id TEXT,
+      operator_name TEXT,
+      opinion TEXT,
+      created_at TEXT
+    )
+  `);
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_business ON audit_logs(business_type, business_id)'); } catch (e) {}
+  try { db.run('CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)'); } catch (e) {}
+  console.log('审计日志表初始化完成');
+
 
   // ========== V12.0: 工作日志表 ==========
   db.run(`
