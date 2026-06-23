@@ -19,6 +19,9 @@ export interface PlantLabel {
   move_out_area_id: number | null;
   move_out_area_name: string | null;
   move_out_date: string | null;
+  // 2026-06-23: 粒度扩展
+  quantity: number;
+  status: string;
   create_time: string;
 }
 
@@ -26,7 +29,7 @@ export interface PlantLabel {
 export interface PlantLabelResume {
   id: number;
   labelId: number;
-  operationType: 'move_in' | 'move_out' | 'mark';
+  operationType: 'move_in' | 'move_out' | 'mark' | 'void';
   fromAreaName: string | null;
   toAreaName: string | null;
   markId: number | null;
@@ -36,6 +39,10 @@ export interface PlantLabelResume {
   operatorName: string | null;
   // 2026-06-22: 现场拍照存证（Base64 内嵌，与项目其它表 pictures 字段一致）
   imageBase64?: string | null;
+  // 2026-06-23: 数量追踪
+  quantityChange?: number | null;
+  quantityAfter?: number | null;
+  reason?: string | null;
   createTime: string;
 }
 
@@ -56,6 +63,8 @@ export interface MoveFormData {
   targetArea: string;
   operationDate: string;
   remarks: string;
+  quantityChange?: number;
+  expectedQuantity?: number;
 }
 
 // ========== 预加载的标记种子数据（与后端一致） ==========
@@ -93,6 +102,7 @@ interface PlantLabelState {
     plantingId?: string | null;
     moveInAreaName?: string | null;
     moveInDate?: string | null;
+    quantity?: number;  // 2026-06-23: 标签代表的苗数
   }>) => Promise<{ inserted: number; insertedIds: number[] } | null>;
 
   /** 批量生成标签 */
@@ -189,6 +199,8 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
         operation_date: data.operationDate,
         operator_name: operatorName,
         remarks: data.remarks || null,  // 单独传备注（之前混在 operator_name 里）
+        quantity_change: data.quantityChange || null,
+        expected_quantity: data.expectedQuantity ?? undefined,
       });
       if (res.success) {
         // 刷新标签列表和履历
@@ -238,7 +250,16 @@ export const usePlantLabelStore = create<PlantLabelState>((set, get) => ({
   /** P0: 前端批量入库（保留前端 labelNumber 规则） */
   batchCreateLabels: async (labels) => {
     try {
-      const res = await enhancedApiClient.post('/plant-labels/batch-create', { labels });
+      const res = await enhancedApiClient.post('/plant-labels/batch-create', {
+        labels: labels.map(l => ({
+          labelNumber: l.labelNumber,
+          seedlingId: l.seedlingId || null,
+          plantingId: l.plantingId || null,
+          moveInAreaName: l.moveInAreaName || null,
+          moveInDate: l.moveInDate || null,
+          quantity: l.quantity ?? 1,
+        }))
+      });
       if (res.success) {
         await get().loadLabels();
         return res.data;
