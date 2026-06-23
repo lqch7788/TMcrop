@@ -36,6 +36,13 @@ describe('数据库表结构初始化', () => {
     // 模拟每次 run 都不报错（表已存在等错误在实现中被捕获）
     mockDb.run.mockImplementation(() => {});
     mockDb.exec.mockReturnValue([]);
+    // 模拟 prepare 返回有效的 Statement mock（V9.0 迁移调用 prepare + step + getAsObject + free）
+    mockDb.prepare.mockReturnValue({
+      step: vi.fn().mockReturnValue(true),
+      getAsObject: vi.fn().mockReturnValue({ cnt: 0 }),
+      free: vi.fn(),
+      bind: vi.fn(),
+    });
   });
 
   afterEach(() => {
