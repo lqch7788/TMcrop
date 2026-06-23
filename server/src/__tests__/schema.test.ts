@@ -20,6 +20,7 @@ const mockDb = {
 // 模拟 getDatabase
 vi.mock('../db/index', () => ({
   getDatabase: () => mockDb,
+  saveDatabase: vi.fn(),
 }));
 
 // 模拟 createIndexes
