@@ -188,3 +188,137 @@ batch 模式加 **"标签类型"** 切换（3 选 1）：
 - 二维码内容加密
 - 图片上传数量限制（已 2MB 单图）
 - 履历导出 CSV/Excel
+
+## 实施计划（基于 plan-eng-review 决策）
+
+### 范围调整（Step 0）
+
+- ❌ 删除 `src/pages/LabelDetail.tsx`（不复用单独页面）
+- ✅ 复用 `SeedlingLabelManageModal` + SeedlingPage URL 参数自动打开
+- ✅ 触文件数：7 个（< 8 smell 阈值）
+
+### 决策汇总（11 个）
+
+**Section 1 Architecture（5 决策）**
+
+| # | 问题 | 决策 |
+|---|---|---|
+| #3 | plant_label_resume.quantity 字段语义 | **quantity_change + quantity_after 双字段**（本次量 + 操作后剩余）|
+| #1 | 状态机并发安全 | **乐观锁 + expected_quantity**（POST 时传期望值，后端 CAS 校验）|
+| #2 | moved_out vs voided 区分 | **保留 3 状态**（active/moved_out/voided）|
+| #5 | 扫码查询鉴权 | **不鉴权**（演示系统，生产再补）|
+| #4 | API 幂等性 | **不防重复**（演示系统，生产再补）|
+
+**Section 2 Code Quality（3 决策）**
+
+| # | 问题 | 决策 |
+|---|---|---|
+| #1 | SeedlingLabelManageModal 457 行 | **拆 4 子组件**（LabelTable / LabelResumePanel / AddResumeForm / LabelBadge）|
+| #2 | 两个 modal 重复逻辑 | **抽 LabelTypeSelector 公共组件**到 src/components/ui/|
+| #3 | plantLabel.ts 后端 348 行 | **拆 3 文件**（plantLabels.ts / plantLabelResumes.ts / plantMarks.ts）|
+
+**Section 3 Test Review（1 决策）**
+
+| # | 问题 | 决策 |
+|---|---|---|
+| Test | 测试覆盖率（当前 0%）| **100% 路径 + 1 E2E**（Vitest 后端全覆盖 + Vitest 前端 4 子组件 + 1 Playwright 完整闭环）|
+
+**Section 4 Performance（2 决策）**
+
+| # | 问题 | 决策 |
+|---|---|---|
+| #1 | 批量 5000 INSERT 25s | **后端单事务批量 INSERT**（多行 VALUES 语法，5000 条 ~500ms）|
+| #2 | 单育苗 5000 标签被截断 | **后端分页 + 前端 page 参数**（limit=100/page=1..N）|
+
+### 优化后的实施步骤（基于 11 个决策调整）
+
+1. **schema 扩展**：plant_labels + quantity/status；plant_label_resume + quantity_change/quantity_after/reason + ALTER 落盘
+2. **后端拆分**：plantLabel.ts → plantLabels.ts / plantLabelResumes.ts / plantMarks.ts
+3. **后端 API**：
+   - POST /batch-create：批量 INSERT 多行 VALUES
+   - POST /:id/resumes：乐观锁（expected_quantity CAS）+ quantity_after 计算 + quantity→0 自动 voided
+   - GET /plant-labels：加 page/limit 分页
+   - GET /by-number/:labelNumber：扫码查询
+4. **Store 类型**：PlantLabel + quantity/status；PlantLabelResume + quantity_change/quantity_after/reason；batchCreateLabels 接受 quantity 数组
+5. **公共组件**：`src/components/ui/LabelTypeSelector.tsx`（批次/单株/混合切换）
+6. **SeedlingLabelManageModal 拆分**：
+   - `LabelTable.tsx`（标签列表 + 状态徽章 + quantity 列）
+   - `LabelResumePanel.tsx`（履历时间线）
+   - `AddResumeForm.tsx`（行内录入表单 + quantity/reason）
+   - `LabelBadge.tsx`（状态徽章）
+   - `SeedlingLabelManageModal.tsx` 缩到 ~150 行编排代码
+7. **PrintLabelModal 升级**：用 LabelTypeSelector + 混合模式预览表格
+8. **URL 参数解析**：SeedlingPage page load 时解析 `?seedlingId=&labelNumber=`，自动开 SeedlingLabelManageModal 并选中标签
+9. **测试**：
+   - Vitest：后端 routes 测试（labels/resumes/marks 各自 file）
+   - Vitest：前端 4 子组件 + LabelTypeSelector 测试
+   - Playwright：1 个 e2e/plantLabel.spec.ts（批次生成→录入履历→扫码查询完整闭环）
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | ISSUES_OPEN | 11 issues, 0 critical gaps |
+
+### Architecture (5)
+
+1. **[D3 - resolved]** `plant_label_resume.quantity` 语义模糊 → 拆 `quantity_change` + `quantity_after` 双字段
+2. **[D1 - resolved]** 状态机自动转换无并发保护 → 乐观锁 `expected_quantity` CAS 校验
+3. **[D2 - resolved]** `moved_out` 与 `voided` 语义重叠 → 保留 3 状态，明确区分（位置变化 vs 不可恢复）
+4. **[D5 - resolved]** by-number 端点无鉴权 → 暂不鉴权（演示优先）
+5. **[D4 - resolved]** API 无幂等键 → 暂不防重复（演示优先）
+
+### Code Quality (3)
+
+6. **[D1 - resolved]** SeedlingLabelManageModal 457 行超 SRP → 拆 4 子组件
+7. **[D2 - resolved]** 两个 modal 重复"标签类型"逻辑 → 抽 `LabelTypeSelector` 公共组件
+8. **[D3 - resolved]** plantLabel.ts 348 行混 3 类路由 → 拆 3 文件
+
+### Test Review (1)
+
+9. **[D1 - resolved]** plantLabel 测试覆盖率 0% → 100% 路径覆盖 + 1 E2E
+
+### Performance (2)
+
+10. **[D1 - resolved]** 批量 5000 INSERT 25s → 单事务多行 VALUES（~500ms）
+11. **[D2 - resolved]** 单育苗 5000 标签被 limit=200 截断 → 后端分页 + 前端 page 参数
+
+- **UNRESOLVED:** 0（11 个决策全部用户审批）
+- **VERDICT:** ENG CLEARED — ready to implement
+
+## Implementation Tasks
+
+Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship.
+
+- [ ] **T1 (P1, human: ~30min / CC: ~45min)** — schema 扩展 + DB 迁移
+  - Surfaced by: Architecture 整体（4 决策）
+  - Files: `server/src/db/schema.ts`, `server/src/db/fixMissingSchema.ts`
+  - Verify: `npx tsc --noEmit` + 手动 ALTER + `fs.writeFileSync` 落盘
+- [ ] **T2 (P1, human: ~1h / CC: ~1.5h)** — 后端拆分 + API 扩展 + 乐观锁
+  - Surfaced by: Code Quality #3 + Architecture #1
+  - Files: `server/src/routes/plantLabel.ts` → `plantLabels.ts` / `plantLabelResumes.ts` / `plantMarks.ts`
+  - Verify: curl 测试状态机 + 乐观锁 CAS 冲突 + 分页
+- [ ] **T3 (P1, human: ~30min / CC: ~30min)** — Store 类型扩展
+  - Surfaced by: Architecture 整体
+  - Files: `src/stores/usePlantLabelStore.ts`
+  - Verify: TypeScript 编译通过
+- [ ] **T4 (P2, human: ~30min / CC: ~30min)** — 公共组件 LabelTypeSelector
+  - Surfaced by: Code Quality #2
+  - Files: `src/components/ui/LabelTypeSelector.tsx`（新）
+  - Verify: 单测 + 视觉回归（手动）
+- [ ] **T5 (P1, human: ~3h / CC: ~1.5h)** — SeedlingLabelManageModal 拆 4 子组件 + 功能扩展
+  - Surfaced by: Code Quality #1 + Architecture 整体
+  - Files: `src/components/farm/seedling/modals/SeedlingLabelManageModal.tsx` + 4 个新子组件
+  - Verify: 子组件单测 + 手动验证 status 徽章 + 补充生成 + 行内录入新字段
+- [ ] **T6 (P1, human: ~1h / CC: ~45min)** — PrintLabelModal 升级 + 扫码 URL 参数解析
+  - Surfaced by: PrintLabelModal + SeedlingPage 集成
+  - Files: `PrintLabelModal.tsx`, `SeedlingPage.tsx`
+  - Verify: 手动验证批次/单株/混合 3 模式 + URL ?seedlingId=&labelNumber= 自动打开
+- [ ] **T7 (P1, human: ~3h / CC: ~2h)** — 测试 100% 覆盖 + 1 E2E
+  - Surfaced by: Test Review #1
+  - Files: `server/src/__tests__/plantLabels.test.ts`, `server/src/__tests__/plantLabelResumes.test.ts`, `server/src/__tests__/plantMarks.test.ts`, `src/components/ui/__tests__/LabelTypeSelector.test.tsx`, `src/components/farm/seedling/modals/__tests__/*.test.tsx`, `e2e/plantLabel.spec.ts`（新）
+  - Verify: `npm run test:run` 100% 通过 + `npx playwright test e2e/plantLabel.spec.ts` 通过
+- [ ] **T8 (P1, human: ~30min / CC: ~30min)** — 后端单事务批量 INSERT + 分页
+  - Surfaced by: Performance #1 #2
+  - Files: `server/src/routes/plantLabels.ts` (重构后)
+  - Verify: 5000 条批量 < 1s + 分页 page=1..N 测试
