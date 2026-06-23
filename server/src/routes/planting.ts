@@ -8,8 +8,12 @@ import { getDatabase, saveDatabase } from '../db';
 import { queryToObjects, execCount } from '../utils/queryHelper';
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 import { handleMove } from '../services/plantingMoveHandler';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+// C1：全局应用 auth 中间件（演示模式自动放行）
+router.use(authenticate);
 
 /**
  * 2026-06-18: 单位字典白名单

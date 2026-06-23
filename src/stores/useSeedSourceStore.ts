@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { SeedSource, PropagationRecord, PropagationStatus } from '../types/crop';
 import * as seedSourceService from '../services/apiSeedSourceService';
 import type { CheckDeletableResult, DeletableReference } from '../services/apiSeedSourceService';
+import { todayLocal } from '@/lib/dateUtils';
 
 /** 结束类型 */
 export type EndType = 'normal' | 'abnormal';
@@ -141,7 +142,7 @@ export const useSeedSourceStore = create<SeedSourceState>()((set, get) => ({
     // 强结分支
     await get().updateItem(id, {
       endType: params.endType,
-      endTime: new Date().toISOString(),
+      endTime: todayLocal(),
       // 强结时清空关联（避免误导）
       productionPlanCode: null as unknown as string,
     });
