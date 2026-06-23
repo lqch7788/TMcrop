@@ -12,6 +12,7 @@ import { seedSourceService, BusinessError, SeedSourceErrorCode } from '../servic
 import { writeFlowLog, writeCorrection } from '../services/flowLogService';
 import { mapPropagationToCategory } from '../lib/sourceCategoryMapper';
 import { seedLog } from '../lib/seedLogger';
+import { formatLocalDateISO } from '../utils/dateUtil';
 
 const router = Router();
 
@@ -1365,7 +1366,7 @@ router.post('/:id/daily-records', (req: Request, res: Response) => {
       newId,
       newOid,
       'seedling',
-      record_date || now.split('T')[0],
+      record_date || formatLocalDateISO(),
       id,
       (seedling as any).seedling_code,
       'seedling',
@@ -1632,7 +1633,7 @@ router.post('/:id/transplant-records', (req: Request, res: Response) => {
       area_name || (seedling as any).area_name,
       from_location || ' nursery',
       to_location,
-      transplant_date || now.split('T')[0],
+      transplant_date || formatLocalDateISO(),
       transplant_quantity || (seedling as any).survival_quantity || 0,
       survival_quantity || 0,
       survival_rate || 0,
