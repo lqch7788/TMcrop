@@ -76,3 +76,7 @@ export {
   DeleteWarningModalLegacy1,
   DeleteWarningModalLegacy2,
 } from './DeleteConfirmModal'
+
+// 标签类型选择器
+export { LabelTypeSelector } from './LabelTypeSelector'
+export type { LabelType } from './LabelTypeSelector'
