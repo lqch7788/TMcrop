@@ -1902,6 +1902,25 @@ export async function fixMissingSchema(): Promise<void> {
     }
   }
 
+  // 2026-06-23: 标签粒度扩展 — plant_labels +quantity/status, plant_label_resume +quantity_change/quantity_after/reason
+  const labelCols = [
+    { name: 'quantity', sql: 'ALTER TABLE plant_labels ADD COLUMN quantity INTEGER DEFAULT 1' },
+    { name: 'status', sql: "ALTER TABLE plant_labels ADD COLUMN status TEXT DEFAULT 'active'" },
+    { name: 'quantity_change', sql: 'ALTER TABLE plant_label_resume ADD COLUMN quantity_change INTEGER' },
+    { name: 'quantity_after', sql: 'ALTER TABLE plant_label_resume ADD COLUMN quantity_after INTEGER' },
+    { name: 'reason', sql: 'ALTER TABLE plant_label_resume ADD COLUMN reason TEXT' },
+  ];
+  for (const col of labelCols) {
+    try {
+      db.run(col.sql);
+      seedLog.info(`✓ ${col.name} 列添加成功`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column')) {
+        seedLog.skip(`• ${col.name}: ${e.message}`);
+      }
+    }
+  }
+
   saveDatabase();
   seedLog.info('\n数据库结构修复完成！');
 

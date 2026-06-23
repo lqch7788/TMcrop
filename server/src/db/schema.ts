@@ -2711,6 +2711,8 @@ export function initializeDatabase() {
       move_out_area_id INTEGER,
       move_out_area_name TEXT,
       move_out_date TEXT,
+      quantity INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'active',
       create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
@@ -2728,6 +2730,9 @@ export function initializeDatabase() {
       operation_date TEXT NOT NULL,
       operator_name TEXT,
       image_base64 TEXT,
+      quantity_change INTEGER,
+      quantity_after INTEGER,
+      reason TEXT,
       create_time TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
