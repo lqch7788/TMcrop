@@ -37,6 +37,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const isMotherMode = propagationMode === 'one_to_many';
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
   const addDailyRecord = useSeedlingStore((state) => state.addDailyRecord);
+  const addDailyRecord = useSeedlingStore((state) => state.addDailyRecord);
   const updateDailyRecord = useSeedlingStore((state) => state.updateDailyRecord);
   const deleteDailyRecord = useSeedlingStore((state) => state.deleteDailyRecord);
 
