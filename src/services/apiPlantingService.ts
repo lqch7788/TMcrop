@@ -190,7 +190,26 @@ export async function getPlantingsBySourceId(sourceId: string): Promise<Planting
  * 数据流：API → SQLite DB
  */
 export async function addPlanting(planting: Omit<Planting, 'id' | 'createTime' | 'updateTime'>): Promise<Planting> {
-  const result = await enhancedApiClient.post<any>('/plantings', planting);
+  const result: any = await enhancedApiClient.post<any>('/plantings', planting);
+  // 归一化 POST SELECT * 返回的字段名，对齐 GET 端点 SQL 别名（Planting 接口）
+  if (result) {
+    if (result.plantingCode !== undefined && result.plantCode === undefined) {
+      result.plantCode = result.plantingCode;
+      delete result.plantingCode;
+    }
+    if (result.sourceName !== undefined && result.sourceCode === undefined) {
+      result.sourceCode = result.sourceName;
+      delete result.sourceName;
+    }
+    if (result.soilPh !== undefined && result.soilPH === undefined) {
+      result.soilPH = result.soilPh;
+      delete result.soilPh;
+    }
+    if (result.soilEc !== undefined && result.soilEC === undefined) {
+      result.soilEC = result.soilEc;
+      delete result.soilEc;
+    }
+  }
   return result as Planting;
 }
 

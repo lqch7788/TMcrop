@@ -33,8 +33,10 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const dictionaries = useDictionaryStore((state) => state.dictionaries);
   // 2026-06-15: 数量体系重构 — 2 模式判断
   const propagationMode = (record.propagationMode as string) || 'one_to_one';
-  const isMotherMode = propagationMode === 'one_to_many';  // 2026-06-15: 6 种 → 1 种（one_to_many）
+  // 6 种繁殖模式：seed/layering/tissue_culture/cutting = 1:1 逻辑；one_to_many = 母株+小苗双池逻辑
+  const isMotherMode = propagationMode === 'one_to_many';
   const loadDictionaries = useDictionaryStore((state) => state.loadDictionaries);
+  const addDailyRecord = useSeedlingStore((state) => state.addDailyRecord);
   const updateDailyRecord = useSeedlingStore((state) => state.updateDailyRecord);
   const deleteDailyRecord = useSeedlingStore((state) => state.deleteDailyRecord);
 
@@ -46,9 +48,15 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   // 拉取每日记录历史
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
-    const list = await getDailyRecords(String(record.id));
-    setDailyRecords(list);
-    setLoadingHistory(false);
+    try {
+      const list = await getDailyRecords(String(record.id));
+      setDailyRecords(list || []);
+    } catch (error) {
+      // logger.error('加载每日记录失败:', error);
+      setDailyRecords([]);
+    } finally {
+      setLoadingHistory(false);
+    }
   }, [record.id]);
 
   useEffect(() => {
@@ -178,7 +186,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
         ecValue: formData.ecValue,
         operator: formData.operator || undefined,
       };
-      const result = await useSeedlingStore.getState().addDailyRecord(String(record.id), {
+      const result = await addDailyRecord(String(record.id), {
         recordDate: formData.recordDate,
         data: bizData,  // 后端 JSON.stringify 一次存到 data 列
         remarks: formData.remarks || undefined,
@@ -221,7 +229,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   const BUSINESS_FIELDS = [
     'recordDate', 'temperature', 'humidity', 'watering', 'abnormality',
     'survivalCountChange', 'plantedCountChange', 'lossCountChange',
-    'runnerIncreaseCount', 'phValue', 'ecValue', 'operator', 'remarks',
+    'runnerIncreaseCount', 'replantChange', 'phValue', 'ecValue', 'operator', 'remarks',
   ] as const;
 
   const handleStartEdit = (r: DailyRecord) => {
@@ -244,6 +252,7 @@ export function DailyRecordModal({ isOpen, onClose, onSuccess, record }: DailyRe
   // 保存编辑
   const handleSaveEdit = async () => {
     if (!editingId) return;
+    if (!editingRow.recordDate) { await showAlert('请选择记录日期'); return; }
     try {
       // 2026-06-14: 与 POST addDailyRecord 保持一致结构 — 业务字段打包成 data 对象
       // 后端 PUT 路由：req.body.data = 业务字段对象 → JSON.stringify 存到 data 列

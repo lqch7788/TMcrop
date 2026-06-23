@@ -457,8 +457,8 @@ export function EditModal({
             type="number"
             min={0}
             value={formData.survivalCount || ''}
-            readOnly
-            className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
+            title="从每日记录累加（手动修改仅用于纠错）"
+            className={`${deepInputClass} bg-gray-100`}
           />
         </div>
 
@@ -472,8 +472,8 @@ export function EditModal({
             type="number"
             min={0}
             value={(record.transplantedCount || 0) + (record.autoPlantedCount || 0) || ''}
-            readOnly
-            className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
+            title="从每日记录累加（手动修改仅用于纠错）"
+            className={`${deepInputClass} bg-gray-100`}
           />
         </div>
 
@@ -485,39 +485,39 @@ export function EditModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-gray-700">母株累计损耗</Label>
-              <Input type="number" value={formData.motherLossCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.motherLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
               <Label className="text-gray-700">小苗累计产出</Label>
-              <Input type="number" value={formData.expandedPlantCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.expandedPlantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
               <Label className="text-gray-700">小苗累计损耗</Label>
-              <Input type="number" value={formData.seedlingLossCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.seedlingLossCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
               <Label className="text-gray-700">人工定植累计</Label>
-              <Input type="number" value={formData.transplantedCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.transplantedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
               <Label className="text-gray-700">自动定植累计</Label>
-              <Input type="number" value={formData.autoPlantedCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.autoPlantedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             <div>
               <Label className="text-gray-700">采收入库累计</Label>
-              <Input type="number" value={formData.harvestStockedCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.harvestStockedCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
             {/* 2026-06-16: 补苗累计（严格区分母株/小苗池子） */}
             <div>
               <Label className="text-gray-700">补苗累计</Label>
-              <Input type="number" value={formData.replantCount || ''} readOnly
-                className={`${deepInputClass} bg-gray-100 cursor-not-allowed`} />
+              <Input type="number" value={formData.replantCount || ''} title="从每日记录累加（手动修改仅用于纠错）"
+                className={`${deepInputClass} bg-gray-100`} />
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
