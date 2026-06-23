@@ -51,7 +51,7 @@ export function LabelResumePanel({ selectedLabel, resumes, loading }: LabelResum
   return (
     <LabelResumeTimeline
       entries={entries}
-      currentLabel={(selectedLabel as any).labelNumber}
+      currentLabel={selectedLabel.labelNumber}
       currentMark={undefined}
     />
   );

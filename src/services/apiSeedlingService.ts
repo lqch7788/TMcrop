@@ -160,35 +160,35 @@ function transformSingleSeedling(item: BackendSeedling): Seedling {
     subVarietyName: item.subVarietyName,
     varietyPath: varietyPath,
     // 2026-06-15: 透传繁殖模式 — 修复列表"无论选什么都显示种子育苗"bug
-    propagationMode: (item.propagationMode as any) || 'one_to_one',  // 2026-06-15: 默认 1:1
+    propagationMode: item.propagationMode || 'one_to_one',  // 2026-06-15: 默认 1:1
     motherPlantCount: item.motherPlantCount ?? 0,
     expandedPlantCount: item.expandedPlantCount ?? 0,
     scionCount: item.scionCount ?? 0,
     // 2026-06-15: 透传负责人 — 修复编辑弹窗"负责人"显示空 bug
-    chargePerson: (item as any).chargePerson ?? '',
+    chargePerson: item.chargePerson ?? '',
     // 2026-06-15: 数量体系重构 — 透传 5 业务字段
-    motherLossCount: (item as any).motherLossCount ?? 0,
-    seedlingLossCount: (item as any).seedlingLossCount ?? 0,
-    transplantedCount: (item as any).transplantedCount ?? 0,
-    autoPlantedCount: (item as any).autoPlantedCount ?? 0,
-    harvestStockedCount: (item as any).harvestStockedCount ?? 0,
+    motherLossCount: item.motherLossCount ?? 0,
+    seedlingLossCount: item.seedlingLossCount ?? 0,
+    transplantedCount: item.transplantedCount ?? 0,
+    autoPlantedCount: item.autoPlantedCount ?? 0,
+    harvestStockedCount: item.harvestStockedCount ?? 0,
     // 2026-06-16: 透传补苗累计
-    replantCount: (item as any).replantCount ?? 0,
+    replantCount: item.replantCount ?? 0,
     // 2026-06-16: 派生字段 — 可定植数量 = expanded - 损耗 - 人工定植 - 自动定植 - 采收入库
     // 种植管理"经育苗移栽"模式下拉取此值显示
     availableTransplantCount: Math.max(0,
-      ((item as any).expandedPlantCount ?? 0)
-      - ((item as any).seedlingLossCount ?? 0)
-      - ((item as any).transplantedCount ?? 0)
-      - ((item as any).autoPlantedCount ?? 0)
-      - ((item as any).harvestStockedCount ?? 0)
+      (item.expandedPlantCount ?? 0)
+      - (item.seedlingLossCount ?? 0)
+      - (item.transplantedCount ?? 0)
+      - (item.autoPlantedCount ?? 0)
+      - (item.harvestStockedCount ?? 0)
     ),
     // 2026-06-15: 5 预估字段
-    propagationMultiple: (item as any).propagationMultiple ?? 0,
-    customMultiple: (item as any).customMultiple ?? 0,
-    theoreticalYield: (item as any).theoreticalYield ?? 0,
-    targetSurvivalRate: (item as any).targetSurvivalRate ?? 0,
-    targetSurvivalCount: (item as any).targetSurvivalCount ?? 0,
+    propagationMultiple: item.propagationMultiple ?? 0,
+    customMultiple: item.customMultiple ?? 0,
+    theoreticalYield: item.theoreticalYield ?? 0,
+    targetSurvivalRate: item.targetSurvivalRate ?? 0,
+    targetSurvivalCount: item.targetSurvivalCount ?? 0,
   };
 }
 
@@ -291,11 +291,11 @@ export async function addSeedling(seedling: Omit<Seedling, 'id' | 'createTime' |
     work_hours: seedling.workHours,
     pictures: Array.isArray(seedling.pictures) ? JSON.stringify(seedling.pictures) : seedling.pictures,
     // 2026-06-13: 外部种源字段（从 Record<string, unknown> 透传）
-    source_mode: (seedling as any).sourceMode,
-    external_seed_code: (seedling as any).externalSeedCode,
-    external_seed_name: (seedling as any).externalSeedName,
-    external_seed_quantity: (seedling as any).externalSeedQuantity,
-    external_seed_note: (seedling as any).externalSeedNote,
+    source_mode: seedling.sourceMode,
+    external_seed_code: seedling.externalSeedCode,
+    external_seed_name: seedling.externalSeedName,
+    external_seed_quantity: seedling.externalSeedQuantity,
+    external_seed_note: seedling.externalSeedNote,
   };
 
   const result = await enhancedApiClient.post<any>('/seedlings', backendData);
@@ -321,11 +321,11 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     crop_name: s.cropName,
     crop_variety: s.cropVariety,
     seedling_type: s.seedlingType,
-    greenhouse_name: (s as any).greenhouseName || s.siteName,
-    area_name: (s as any).areaName || s.siteId,
-    seedling_date: (s as any).seedlingDate || s.startDate,
-    expected_finish_date: (s as any).expectedFinishDate || s.expectedEndDate,
-    seedling_quantity: (s as any).seedlingQuantity ?? s.initialCount,
+    greenhouse_name: s.greenhouseName || s.siteName,
+    area_name: s.areaName || s.siteId,
+    seedling_date: s.seedlingDate || s.startDate,
+    expected_finish_date: s.expectedFinishDate || s.expectedEndDate,
+    seedling_quantity: s.seedlingQuantity ?? s.initialCount,
     // 2026-06-15: 停止写入旧字段（由新 5 业务字段 + 派生）
     survival_quantity: undefined,
     survival_rate: s.survivalRate ?? 0,
@@ -340,27 +340,27 @@ function toBackendSeedlingPayload(s: Record<string, unknown>): Record<string, un
     create_by: s.createBy,
     work_hours: s.workHours,
     pictures: Array.isArray(s.pictures) ? JSON.stringify(s.pictures) : s.pictures,
-    source_mode: (s as any).sourceMode || 'internal',
-    external_seed_code: (s as any).externalSeedCode,
-    external_seed_name: (s as any).externalSeedName,
-    external_seed_quantity: (s as any).externalSeedQuantity,
-    external_seed_note: (s as any).externalSeedNote,
-    propagation_mode: (s as any).propagationMode || 'one_to_one',  // 2026-06-15: 默认 1:1
-    mother_plant_count: (s as any).motherPlantCount ?? 0,
-    expanded_plant_count: (s as any).expandedPlantCount ?? 0,
-    scion_count: (s as any).scionCount ?? 0,
+    source_mode: s.sourceMode || 'internal',
+    external_seed_code: s.externalSeedCode,
+    external_seed_name: s.externalSeedName,
+    external_seed_quantity: s.externalSeedQuantity,
+    external_seed_note: s.externalSeedNote,
+    propagation_mode: s.propagationMode || 'one_to_one',  // 2026-06-15: 默认 1:1
+    mother_plant_count: s.motherPlantCount ?? 0,
+    expanded_plant_count: s.expandedPlantCount ?? 0,
+    scion_count: s.scionCount ?? 0,
     // 2026-06-15: 负责人（编辑弹窗显示空 bug 修复）
-    charge_person: (s as any).chargePerson ?? null,
+    charge_person: s.chargePerson ?? null,
     // 2026-06-15: 数量体系重构 — 5 业务字段
-    mother_loss_count: (s as any).motherLossCount ?? 0,
-    seedling_loss_count: (s as any).seedlingLossCount ?? 0,
-    transplanted_count: (s as any).transplantedCount ?? 0,
-    auto_planted_count: (s as any).autoPlantedCount ?? 0,
-    harvest_stocked_count: (s as any).harvestStockedCount ?? 0,
+    mother_loss_count: s.motherLossCount ?? 0,
+    seedling_loss_count: s.seedlingLossCount ?? 0,
+    transplanted_count: s.transplantedCount ?? 0,
+    auto_planted_count: s.autoPlantedCount ?? 0,
+    harvest_stocked_count: s.harvestStockedCount ?? 0,
     // 2026-06-15: 5 预估字段
-    propagation_multiple: (s as any).propagationMultiple ?? 0,
-    custom_multiple: (s as any).customMultiple ?? 0,
-    theoretical_yield: (s as any).theoreticalYield ?? 0,
+    propagation_multiple: s.propagationMultiple ?? 0,
+    custom_multiple: s.customMultiple ?? 0,
+    theoretical_yield: s.theoreticalYield ?? 0,
   };
 }
 

@@ -92,7 +92,7 @@ export function TransplantModal({ isOpen, onClose, onSuccess, record, areas }: T
         pictures: [],
         remarks: formData.remarks,
         status: PlantingStatus.PLANTED,
-        createBy: localStorage.getItem('username') || '陆启闯'
+        createBy: localStorage.getItem('username') || '未知用户'
       });
 
       // 2026-06-16: 数量体系重构 — 同时调 2 条路径：

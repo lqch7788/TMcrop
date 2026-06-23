@@ -407,7 +407,6 @@ export interface Seedling {
   productionPlanCode?: string;  // 关联生产计划批次号
   // 扩繁计算模式
   calculateMode?: SeedlingCalculateMode; // 计算模式：单株育苗/扩繁育苗
-  motherPlantCount?: number;     // 母株数量（扩繁模式用）
   propagationMultiple?: number;   // 扩繁倍数（扩繁模式用）
   theoreticalYield?: number;     // 理论产量（扩繁模式用）
   // 打印记录（新增）
@@ -424,6 +423,13 @@ export interface Seedling {
   // 结束标记（2026-06-05：强结分支，绕过生产计划联动）
   endType?: 'normal' | 'abnormal'; // 结束类型
   endTime?: string;                // 结束时间（ISO）
+  // 2026-06-15: 数量体系重构 — 5 业务字段（由每日记录自动累加）
+  motherLossCount?: number;    // 母株累计损耗（1:多模式专用）
+  seedlingLossCount?: number;  // 小苗累计损耗
+  transplantedCount?: number;  // 人工定植累计
+  autoPlantedCount?: number;   // 自动定植累计（种植管理触发）
+  harvestStockedCount?: number; // 采收入库累计
+  customMultiple?: number;     // 自定义扩繁倍数
 }
 
 // ========== 种植类型 ==========

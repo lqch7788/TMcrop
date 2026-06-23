@@ -60,28 +60,28 @@ export function EditModal({
     plantedCount: record.plantedCount,
     remarks: record.remarks || '',
     // 方案2.6: 育苗工时
-    workHours: (record as any).workHours || 0,
+    workHours: record.workHours || 0,
     // 新增缺失字段
     qualityGrade: record.qualityGrade || '',
     isFinished: record.isFinished || false,
     chargePerson: record.chargePerson || '',
     targetSurvivalCount: record.targetSurvivalCount || 0,
     // 补齐 AddModal 同名字段 — 否则编辑保存会丢这些值
-    targetSurvivalRate: (record as any).targetSurvivalRate || 0,
-    productionPlanId: (record as any).productionPlanCode || '',
-    planType: (record as any).planType || 'routine',
-    calculateMode: (record as any).calculateMode || 'single',
-    motherPlantCount: (record as any).motherPlantCount || 0,
-    propagationMultiple: (record as any).propagationMultiple || 0,
-    customMultiple: (record as any).customMultiple || 0,
-    theoreticalYield: (record as any).theoreticalYield || 0,
+    targetSurvivalRate: record.targetSurvivalRate || 0,
+    productionPlanId: record.productionPlanCode || '',
+    planType: record.planType || 'routine',
+    calculateMode: record.calculateMode || 'single',
+    motherPlantCount: record.motherPlantCount || 0,
+    propagationMultiple: record.propagationMultiple || 0,
+    customMultiple: record.customMultiple || 0,
+    theoreticalYield: record.theoreticalYield || 0,
     // 2026-06-15: 数量体系重构 — 5 业务字段（统一显示）
-    motherLossCount: (record as any).motherLossCount ?? 0,
-    seedlingLossCount: (record as any).seedlingLossCount ?? 0,
-    transplantedCount: (record as any).transplantedCount ?? 0,
-    autoPlantedCount: (record as any).autoPlantedCount ?? 0,
-    harvestStockedCount: (record as any).harvestStockedCount ?? 0,
-    replantCount: (record as any).replantCount ?? 0,  // 2026-06-16: 补苗累计
+    motherLossCount: record.motherLossCount ?? 0,
+    seedlingLossCount: record.seedlingLossCount ?? 0,
+    transplantedCount: record.transplantedCount ?? 0,
+    autoPlantedCount: record.autoPlantedCount ?? 0,
+    harvestStockedCount: record.harvestStockedCount ?? 0,
+    replantCount: record.replantCount ?? 0,  // 2026-06-16: 补苗累计
   });
 
   const updateItem = useSeedlingStore((s) => s.updateItem);
@@ -144,27 +144,27 @@ export function EditModal({
       plantedCount: record.plantedCount,
       remarks: record.remarks || '',
       // 方案2.6: 育苗工时
-      workHours: (record as any).workHours || 0,
+      workHours: record.workHours || 0,
       // 新增缺失字段
       qualityGrade: record.qualityGrade || '',
       isFinished: record.isFinished || false,
       chargePerson: record.chargePerson || '',
       targetSurvivalCount: record.targetSurvivalCount || 0,
       // 补齐 AddModal 同名字段
-      targetSurvivalRate: (record as any).targetSurvivalRate || 0,
-      productionPlanId: (record as any).productionPlanCode || '',
-      planType: (record as any).planType || 'routine',
-      calculateMode: (record as any).calculateMode || 'single',
-      motherPlantCount: (record as any).motherPlantCount || 0,
-      propagationMultiple: (record as any).propagationMultiple || 0,
-      customMultiple: (record as any).customMultiple || 0,
-      theoreticalYield: (record as any).theoreticalYield || 0,
+      targetSurvivalRate: record.targetSurvivalRate || 0,
+      productionPlanId: record.productionPlanCode || '',
+      planType: record.planType || 'routine',
+      calculateMode: record.calculateMode || 'single',
+      motherPlantCount: record.motherPlantCount || 0,
+      propagationMultiple: record.propagationMultiple || 0,
+      customMultiple: record.customMultiple || 0,
+      theoreticalYield: record.theoreticalYield || 0,
       // 2026-06-15: 数量体系重构 — 5 业务字段
-      motherLossCount: (record as any).motherLossCount ?? 0,
-      seedlingLossCount: (record as any).seedlingLossCount ?? 0,
-      transplantedCount: (record as any).transplantedCount ?? 0,
-      autoPlantedCount: (record as any).autoPlantedCount ?? 0,
-      harvestStockedCount: (record as any).harvestStockedCount ?? 0,
+      motherLossCount: record.motherLossCount ?? 0,
+      seedlingLossCount: record.seedlingLossCount ?? 0,
+      transplantedCount: record.transplantedCount ?? 0,
+      autoPlantedCount: record.autoPlantedCount ?? 0,
+      harvestStockedCount: record.harvestStockedCount ?? 0,
     });
   }, [record]);
 
@@ -280,7 +280,7 @@ export function EditModal({
                     one_to_one: '1:1 育苗',
                     one_to_many: '1:多 育苗',
                   };
-                  return map[(record as any).propagationMode || 'one_to_one'] || '1:1 育苗';
+                  return map[record.propagationMode || 'one_to_one'] || '1:1 育苗';
                 })()}
               </span>
               <span className="text-xs text-gray-500 ml-2">（建档后不可修改）</span>
@@ -450,7 +450,7 @@ export function EditModal({
         {/* 成活数量 / 母株数量（按模式显示，由每日记录自动累加，不可手动改） */}
         <div>
           <Label className="text-gray-700">
-            {(record as any).propagationMode === 'one_to_many' ? '母株数量' : '成活数量'}
+            {record.propagationMode === 'one_to_many' ? '母株数量' : '成活数量'}
             <span className="text-xs text-gray-500 ml-1">（每日记录自动累加）</span>
           </Label>
           <Input
@@ -471,7 +471,7 @@ export function EditModal({
           <Input
             type="number"
             min={0}
-            value={((record as any).transplantedCount || 0) + ((record as any).autoPlantedCount || 0) || ''}
+            value={(record.transplantedCount || 0) + (record.autoPlantedCount || 0) || ''}
             readOnly
             className={`${deepInputClass} bg-gray-100 cursor-not-allowed`}
           />
@@ -525,10 +525,10 @@ export function EditModal({
             {/* 1:1 模式：expanded = mother（后端同步），只算一次：expanded - 各种 */}
             {/* 1:多 模式：(母株存活 - 母株累计损耗) + 小苗累计产出 - 小苗累计损耗 - 人工定植累计 - 自动定植累计 - 采收入库累计 */}
             {(() => {
-              const is11 = ((record as any).propagationMode || 'one_to_one') === 'one_to_one';
+              const is11 = (record.propagationMode || 'one_to_one') === 'one_to_one';
               // 2026-06-16: 母株池 / 小苗池 严格分离计算（不合并）
-              const motherAvailable = ((record as any).motherPlantCount || 0) - ((record as any).motherLossCount || 0) + ((record as any).replantCount || 0);
-              const seedlingAvailable = ((record as any).expandedPlantCount || 0)
+              const motherAvailable = (record.motherPlantCount || 0) - (record.motherLossCount || 0) + (record.replantCount || 0);
+              const seedlingAvailable = (record.expandedPlantCount || 0)
                 - (formData.seedlingLossCount || 0)
                 - (formData.transplantedCount || 0)
                 - (formData.autoPlantedCount || 0)
